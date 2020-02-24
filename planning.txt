@@ -1,0 +1,73 @@
+
+                       *------------------------*
+                       |  Circuit Planning Doc  |
+                       *------------------------*
+ 
+a puzzle platformer where you record and replay your actions to clear levels.
+
+characters:
+    robots, with different sizes, attributes and actions.
+    
+    "A" - M - can Move, Jump, Walljump
+    "B" - S - can Move, Attack?
+    "C" - L - can Move, Jump, Grab & Drop Things, Throw Things
+    "D" - M - can Fly, Grab & Drop Things
+
+levels:
+ - predetermined set of characters per level (allowing duplicates?)
+ - assigned start & end locations for each character.
+ - order of use is pre-determined
+    - start controlling the next character when the previous one's circuit is completed
+    - if you "break" the circuit of a previous character, it will prevent you 
+      from completing the current one
+ - time limit per circuit (60 seconds generally?)
+ - ideally a single screen
+    
+ - goal: bring all characters from their start position to their end position.
+ 
+controls:
+ - WASD / arrow keys to move, jump, navigate menus
+ - space to jump
+ - JKL or ZXC to do special ability, pickup / drop items, etc. ?
+ - Esc to pause 
+ - R to restart current character, Shift-R to restart full level?
+    - esc -> restart
+    - esc -> pick character to restart from
+ - NO MOUSE, except optionally on menus
+ - gamepad support pls
+    
+ui:
+    *--------------------------------------*
+    | (robot1) (robot2) (robot3)           |  <-- robots in level
+    *[============ 0:45 ]->>---------------*  <-- clock & progress bar 
+    |                                      |
+    | Game                                 |
+    |                                      |
+    *--------------------------------------*
+    
+platformer mechanics:
+ ** this will require a lot of thought **
+ - moving platforms
+ - slopes
+ - platforms that can be controlled
+    - like with buttons, in monkey ball?
+ 
+ - switches...
+    - so boring, are these necessary?
+    - i actually hate switches so much
+    - let's see if we can avoid having them
+    
+ - no switches, no buttons, how does the player influence the level?
+    - must be position or impact-based
+        - this problem has been solved actually:
+            - mario-style action blocks you bonk on to activate?
+            - mario-style "p-switches"
+ 
+core features:
+ - easily edit / share levels (through cut and paste, like linerider)
+ - branching overworld map (like baba)
+ - save & reload replays (replay will auto play at end of each level, like meatboy)
+ 
+    
+ 
+ 
