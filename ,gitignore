@@ -1,1 +1,5 @@
 *.xcf
+*.mp4
+*.wav
+*.lnk
+*.DS_Store
