@@ -2,18 +2,18 @@
 require "src.globals"
 require "src.spriteref"
 
-local worldfactory = require "src.world"
+local worlds = require "src.worlds"
 
 function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
+    love.physics.setMeter(GLOBALS.cell_size) --the height of a meter our world
     
 	SPRITEREF:load_images_from_disk()
     
-    world = worldfactory.new_world()
+    world = worlds.WorldState:new()
     
-    player = worldfactory.new_player_a(world)
-    player.body:setX(32)
-    player.body:setY(20)
+    player = world:create_player(32, 20, GLOBALS.cell_size, GLOBALS.cell_size * 2)
+    blocks = {}
     
     local block_layout = {
         {0, 7, 2, 2},
@@ -23,13 +23,9 @@ function love.load()
         {9, 8, 1, 1},
         {10, 8, 1, 1}
     }
-    
-    blocks = {}
-    
+
     for i, b_layout in ipairs(block_layout) do 
-        local block = worldfactory.new_block(world, b_layout[3], b_layout[4])
-        block.body:setX(GLOBALS.cell_size * b_layout[1] + block.w / 2)
-        block.body:setY(GLOBALS.cell_size * b_layout[2] + block.h / 2)
+        local block = world:create_block(b_layout[1], b_layout[2], b_layout[3], b_layout[4])
         table.insert(blocks, block)
     end
 end
@@ -43,19 +39,19 @@ function love.draw()
     local player_sprite_2 = SPRITEREF.animate(SPRITEREF.player_b_idles, 20)
     love.graphics.draw(SPRITEREF.img_atlas, player_sprite_2, player_pos_2.x + GLOBALS.cell_size, player_pos_2.y, 0, -3, 3)
 
-    if player:get_current_sprite() then
+    if player:get_sprite() then
         love.graphics.draw(
             SPRITEREF.img_atlas, 
-            player:get_current_sprite(), 
+            player:get_sprite(), 
             player.body:getX() - player.w / 2, 
             player.body:getY() - player.h / 2, 0, GLOBALS.cell_size / 16, GLOBALS.cell_size / 16)
     end
 
-    for i, block in ipairs(blocks) do
-        if block:get_current_sprite() then
+    for _, block in ipairs(blocks) do
+        if block:get_sprite() then
             love.graphics.draw(
                 SPRITEREF.img_atlas, 
-                block:get_current_sprite(), 
+                block:get_sprite(), 
                 block.body:getX() - block.w / 2, 
                 block.body:getY() - block.h / 2, 0, GLOBALS.cell_size / 16, GLOBALS.cell_size / 16)
         end
@@ -76,7 +72,6 @@ function love.update(dt)
         player.body:applyForce(0, -1000)
     end
 
-    
     if full_update then
         world:update(1 / GLOBALS.tick_fps)
     end

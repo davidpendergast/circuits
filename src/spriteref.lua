@@ -31,8 +31,6 @@ function SPRITEREF.load_images_from_disk(self)
     self.blocks_1x1 = make_quads(0, 208, 16, 16, 2)
     self.blocks_2x2 = make_quads(0, 224, 32, 32, 1)
     self.blocks_5x2 = make_quads(0, 288, 5*16, 32, 1)
-    
-    print("player_a_idles[1] = ", tostring(self.player_a_idles[1]))
 end
 
 function SPRITEREF.animate(frames, frame_time)
