@@ -2,6 +2,9 @@
 require "src.globals"
 require "src.spriteref"
 
+io.stdout:setvbuf("no")     -- makes the console output display immediately
+show_anim_preview = false   -- debug thing to help draw animations
+
 local worlds = require "src.worlds"
 
 function love.load()
@@ -32,12 +35,20 @@ end
 
 player_pos_2 = {x = GLOBALS.cell_size * 9.5, y = GLOBALS.cell_size * 7}
 
-function love.draw()
+anim_preview = {x = GLOBALS.cell_size * 5, y = GLOBALS.cell_size * 4, scale=4, speed=20}
+
+function love.draw ()
     local str = "Fun Game! " .. tostring(GLOBALS.tick_count) .. " " .. tostring(GLOBALS.render_tick_count)
     love.graphics.print(str, 200, 100)
     
     local player_sprite_2 = SPRITEREF.animate(SPRITEREF.player_b_idles, 20)
     love.graphics.draw(SPRITEREF.img_atlas, player_sprite_2, player_pos_2.x + GLOBALS.cell_size, player_pos_2.y, 0, -3, 3)
+
+    if show_anim_preview and anim_preview then
+        local anim_preview_sprite = SPRITEREF.animate(SPRITEREF.anim_preview, anim_preview.speed)
+        love.graphics.draw(SPRITEREF.img_atlas, anim_preview_sprite, anim_preview.x, anim_preview.y, 0, 
+            anim_preview.scale, anim_preview.scale)
+    end
 
     if player:get_sprite() then
         love.graphics.draw(
@@ -70,6 +81,13 @@ function love.update(dt)
     
     if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
         player.body:applyForce(0, -1000)
+    end
+    
+    if show_anim_preview and anim_preview and (GLOBALS.tick_count % 60) == 0 then
+        print("reloading sprites...")
+        if not pcall(SPRITEREF.load_images_from_disk, SPRITEREF) then
+            print("FAILED!")
+        end
     end
 
     if full_update then
