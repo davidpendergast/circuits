@@ -73,14 +73,8 @@ end
 function love.update(dt)
     local full_update = GLOBALS:update(dt)
     
-    if love.keyboard.isDown("right") or love.keyboard.isDown("d") then
-        player.body:applyForce(400, 0)
-    elseif love.keyboard.isDown("left") or love.keyboard.isDown("a") then
-        player.body:applyForce(-400, 0)
-    end
-    
-    if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
-        player.body:applyForce(0, -1000)
+    if full_update then
+        player:update()
     end
     
     if show_anim_preview and anim_preview and (GLOBALS.tick_count % 60) == 0 then

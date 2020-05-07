@@ -184,14 +184,14 @@ function world.WorldState:create_player (x, y, w, h)
     -- factory method for player entities
     local res = world.PlayerEntity:new()
     res:set_size(w, h)
-    res:set_body(love.physics.newBody(self.box2d_world, x - w / 2, y - h / 2, "dynamic"))
+    res:set_body(love.physics.newBody(self.box2d_world, x + w / 2, y + h / 2, "dynamic"))
     
     res.body:setFixedRotation(true)
     res.shape = love.physics.newRectangleShape(w, h)
     res.fixture = love.physics.newFixture(res.body, res.shape, 1)
     
     -- building the "can I jump" detector
-    res.foot_sensor_shape = love.physics.newRectangleShape(0, h-1, w, 2)
+    res.foot_sensor_shape = love.physics.newRectangleShape(0, h/2-1, w-2, 2)
     res.foot_sensor_fixture = love.physics.newFixture(res.body, res.foot_sensor_shape)
     res.foot_sensor_fixture:setSensor(true)
     res.foot_sensor_id = "sensor_id_" .. tostring(res:get_id()) .. "foot"
@@ -202,6 +202,9 @@ function world.WorldState:create_player (x, y, w, h)
     
     res.sensor_states = {}  -- sensor_id -> collision_count
     
+    res.jump_cooldown = 0
+    res.jump_max_cooldown = 20
+    
     res:set_world(self)
     self:add_entity(res)
     
@@ -209,7 +212,43 @@ function world.WorldState:create_player (x, y, w, h)
 end
 
 function world.PlayerEntity:get_sprite ()
-    return SPRITEREF.animate(SPRITEREF.player_a_idles, 20)
+    if self:is_airborne() then
+        return SPRITEREF.animate(SPRITEREF.player_a_airbornes, 20)
+    else
+        return SPRITEREF.animate(SPRITEREF.player_a_idles, 20)
+    end
+end
+
+function world.PlayerEntity:is_airborne ()
+     return self:get_world():get_sensor_val(self.foot_sensor_id) == 0
+end
+
+function world.PlayerEntity:can_jump ()
+    return not self:is_airborne() and self.jump_cooldown <= 0
+end
+
+function world.PlayerEntity:do_jump ()
+    self.jump_cooldown = self.jump_max_cooldown
+end
+
+function world.PlayerEntity:update ()
+    local go_left = love.keyboard.isDown("left") or love.keyboard.isDown("a")
+    local go_right = love.keyboard.isDown("right") or love.keyboard.isDown("d")
+    local dx = 0
+    if go_left then dx = dx - 1 end
+    if go_right then dx = dx + 1 end
+    
+    if self:is_airborne() then
+        self.body:applyForce(dx * 300, 0)
+    else
+        self.body:applyForce(dx * 700, 0)
+    end
+        
+    if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
+        if self:can_jump() then
+            self.body:applyLinearImpulse(0, -400)
+        end
+    end
 end
     
 world.BlockEntity = world.Entity:new ({grid_w=0, grid_h=0, rand_seed=0})
