@@ -24,6 +24,8 @@ function SPRITEREF.load_images_from_disk(self)
     
     self.player_a_idles = make_quads(0, 0, 16, 32, 2)
     self.player_a_airbornes = make_quads(32, 0, 16, 32, 2)
+    self.player_a_wallslides = make_quads(64, 0, 16, 32, 2)
+    self.player_a_crouching = make_quads(96, 0, 16, 32, 2)
     self.player_b_idles = make_quads(0, 48, 16, 16, 2)
     self.player_c_idles = make_quads(0, 64, 32, 32, 2)
     self.player_d_idles = make_quads(0, 96, 16, 32, 2)

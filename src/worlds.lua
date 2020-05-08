@@ -14,11 +14,11 @@ world.WorldState = {        -- the prototype
 }  
 
 function world.WorldState:new (o)
-    o = o or {}
+    o = o or {gravity = 9.81 * GLOBALS.cell_size}
     setmetatable(o, self)
     self.__index = self
     
-    o.box2d_world = love.physics.newWorld(0, 9.81 * GLOBALS.cell_size, true)
+    o.box2d_world = love.physics.newWorld(0, o.gravity, true)
     o.box2d_world:setCallbacks(
         o:_make_callback3(o._begin_contact),
         o:_make_callback3(o._end_contact),
@@ -78,6 +78,40 @@ function world.WorldState:_post_solve (fix1, fix2, contact, normal, tangent)
     
 end
 
+function world.WorldState:draw_physics (camera)
+    for _, body in pairs(self.box2d_world:getBodies()) do
+        for _, fixture in pairs(body:getFixtures()) do
+            love.graphics.reset()
+            
+            local fixture_data = fixture:getUserData()
+            if fixture_data then
+                if fixture_data[world.USERDATA_SENSOR_ID] then
+                    love.graphics.setColor(1, 0.5, 0.5)
+                elseif fixture_data[world.USERDATA_ENTITY_TYPE] == world.USERDATA_ENTITY_BLOCK then
+                    love.graphics.setColor(0.5, 0.25, 1)
+                elseif fixture_data[world.USERDATA_ENTITY_TYPE] == world.USERDATA_ENTITY_PLAYER then
+                    love.graphics.setColor(0.5, 1, 0.5)
+                end
+            end
+            
+            local shape = fixture:getShape()
+     
+            if shape:typeOf("CircleShape") then
+                local cx, cy = body:getWorldPoints(shape:getPoint())
+                love.graphics.circle("fill", cx,  cy, shape:getRadius())
+            elseif shape:typeOf("PolygonShape") then
+                love.graphics.polygon("fill", body:getWorldPoints(shape:getPoints()))
+            else
+                love.graphics.line(body:getWorldPoints(shape:getPoints()))
+            end
+            
+            local bx, by = body:getWorldPoints(0, 0)
+            love.graphics.setColor(0, 0, 0)
+            love.graphics.circle("fill", bx, by, 2)
+        end
+    end
+end
+
 function world.WorldState:add_entity (ent)
     self.all_entities[ent:get_id()] = ent
 end
@@ -130,15 +164,6 @@ function world.Entity:set_world (w)
     self.world = w
 end
 
-function world.Entity:set_size (w, h)
-    self.w = w
-    self.h = h
-end
-
-function world.Entity:get_size ()
-    return self.w, self.h
-end
-
 function world.Entity:get_world (w)
     return self.world
 end
@@ -147,12 +172,11 @@ function world.Entity:get_sprite ()
     return nil
 end
 
-function world.Entity:get_rect ()
-    local w, h = self:get_size()
-    return {0, 0, w, h}  -- TODO
+function world.Entity:update ()
+    
 end
 
-function world.Entity:update ()
+function world.Entity:draw (camera)
     
 end
 
@@ -181,17 +205,18 @@ function world.PlayerEntity:new (o)
 end
 
 function world.WorldState:create_player (x, y, w, h)
-    -- factory method for player entities
     local res = world.PlayerEntity:new()
-    res:set_size(w, h)
     res:set_body(love.physics.newBody(self.box2d_world, x + w / 2, y + h / 2, "dynamic"))
     
     res.body:setFixedRotation(true)
     res.shape = love.physics.newRectangleShape(w, h)
-    res.fixture = love.physics.newFixture(res.body, res.shape, 1)
-    
+    res.fixture = love.physics.newFixture(res.body, res.shape, 2)
+    local main_body_user_data = {}
+    main_body_user_data[world.USERDATA_ENTITY_TYPE] = world.USERDATA_ENTITY_PLAYER
+    res.fixture:setUserData(main_body_user_data)
+
     -- building the "can I jump" detector
-    res.foot_sensor_shape = love.physics.newRectangleShape(0, h/2-1, w-2, 2)
+    res.foot_sensor_shape = love.physics.newRectangleShape(0, h / 2, w - 2, 2)
     res.foot_sensor_fixture = love.physics.newFixture(res.body, res.foot_sensor_shape)
     res.foot_sensor_fixture:setSensor(true)
     res.foot_sensor_id = "sensor_id_" .. tostring(res:get_id()) .. "foot"
@@ -200,10 +225,35 @@ function world.WorldState:create_player (x, y, w, h)
     foot_user_data[world.USERDATA_SENSOR_ID] = res.foot_sensor_id
     res.foot_sensor_fixture:setUserData(foot_user_data)
     
+    -- build left/right sensors
+    res.left_sensor_shape = love.physics.newRectangleShape(-w / 2, 0, 2, 0.8 * h)
+    res.left_sensor_fixture = love.physics.newFixture(res.body, res.left_sensor_shape)
+    res.left_sensor_fixture:setSensor(true)
+    res.left_sensor_id = "sensor_id_" .. tostring(res:get_id()) .. "left"
+    
+    local left_user_data = {}
+    left_user_data[world.USERDATA_SENSOR_ID] = res.left_sensor_id
+    res.left_sensor_fixture:setUserData(left_user_data)
+    
+    res.right_sensor_shape = love.physics.newRectangleShape(w / 2, 0, 2, 0.8 * h)
+    res.right_sensor_fixture = love.physics.newFixture(res.body, res.right_sensor_shape)
+    res.right_sensor_fixture:setSensor(true)
+    res.right_sensor_id = "sensor_id_" .. tostring(res:get_id()) .. "right"
+    
+    local right_user_data = {}
+    right_user_data[world.USERDATA_SENSOR_ID] = res.right_sensor_id
+    res.right_sensor_fixture:setUserData(right_user_data)
+    
     res.sensor_states = {}  -- sensor_id -> collision_count
     
     res.jump_cooldown = 0
     res.jump_max_cooldown = 20
+    res.facing_right = true
+    res.crouching = false
+    
+    res.max_x_vel = 4
+    res.min_x_vel = 1
+    res.x_accel = 0.25
     
     res:set_world(self)
     self:add_entity(res)
@@ -213,14 +263,32 @@ end
 
 function world.PlayerEntity:get_sprite ()
     if self:is_airborne() then
-        return SPRITEREF.animate(SPRITEREF.player_a_airbornes, 20)
+        if self:is_left_walled() or self:is_right_walled() then
+            return SPRITEREF.animate(SPRITEREF.player_a_wallslides, 20)
+        else
+            return SPRITEREF.animate(SPRITEREF.player_a_airbornes, 20)
+        end
+    elseif self:is_crouching() then
+        return SPRITEREF.animate(SPRITEREF.player_a_crouching, 20)
     else
         return SPRITEREF.animate(SPRITEREF.player_a_idles, 20)
     end
 end
 
 function world.PlayerEntity:is_airborne ()
-     return self:get_world():get_sensor_val(self.foot_sensor_id) == 0
+    return self:get_world():get_sensor_val(self.foot_sensor_id) == 0
+end
+
+function world.PlayerEntity:is_left_walled ()
+    return self:get_world():get_sensor_val(self.left_sensor_id) > 0
+end
+
+function world.PlayerEntity:is_right_walled ()
+    return self:get_world():get_sensor_val(self.right_sensor_id) > 0
+end
+
+function world.PlayerEntity:is_crouching ()
+    return self.crouching and not self:is_airborne()
 end
 
 function world.PlayerEntity:can_jump ()
@@ -249,6 +317,32 @@ function world.PlayerEntity:update ()
             self.body:applyLinearImpulse(0, -400)
         end
     end
+    
+    self.crouching = love.keyboard.isDown("s") or love.keyboard.isDown("down")
+    
+    local x_vel, _ = self.body:getLinearVelocity()
+    if x_vel < -0.15 then
+        self.facing_right = false
+    elseif x_vel > 0.15 then
+        self.facing_right = true
+    end
+end
+
+function world.PlayerEntity:draw (camera)
+    local sprite = self:get_sprite()
+    
+    local center_x = self.body:getX() - camera.x_offset
+    local bottom_y = self.body:getY() + self.h / 2 - camera.y_offset
+    local xflip = self.facing_right and 1 or -1
+    
+    if sprite then
+        local _, _, spr_w, spr_h = sprite:getViewport()
+        love.graphics.draw(
+            SPRITEREF.img_atlas, 
+            sprite, 
+            center_x - xflip * spr_w / 2 * camera.zoom, 
+            bottom_y - spr_h * camera.zoom, 0, xflip * camera.zoom, camera.zoom)
+    end
 end
     
 world.BlockEntity = world.Entity:new ({grid_w=0, grid_h=0, rand_seed=0})
@@ -269,7 +363,6 @@ function world.WorldState:create_block (grid_x, grid_y, grid_w, grid_h)
     local w = grid_w * GLOBALS.cell_size
     local h = grid_h * GLOBALS.cell_size
     
-    res:set_size(w, h)
     res:set_body(love.physics.newBody(self.box2d_world, x + w / 2, y + h / 2))
     
     res.body:setFixedRotation(true)

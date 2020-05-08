@@ -10,7 +10,7 @@ GLOBALS.tick_count = 0
 GLOBALS.cell_size = 48 -- in pixels
 
 function GLOBALS.update(self, dt)
-    self.time_accum = self.time_accum + dt
+    self.time_accum = self.time_accum + dt  -- TODO fix potential death spiral
     local do_logic_update = false
     if self.time_accum >= 1 / self.tick_fps then
         self.tick_count = self.tick_count + 1
