@@ -154,8 +154,6 @@ class _GameLoop:
             if not ignore_resize_events_this_tick and len(all_resize_events) > 0:
                 last_resize_event = all_resize_events[-1]
 
-                print("INFO: resizing to {}, {}".format(last_resize_event.w, last_resize_event.h))
-
                 window.get_instance().set_window_size(last_resize_event.w, last_resize_event.h)
 
                 display_w, display_h = window.get_instance().get_display_size()
@@ -179,7 +177,7 @@ class _GameLoop:
                 if spr is not None:
                     renderengine.get_instance().update(spr)
 
-            renderengine.get_instance().set_clear_color((0.66, 0.66, 0.66))
+            renderengine.get_instance().set_clear_color(configs.clear_color)
             renderengine.get_instance().render_layers()
 
             pygame.display.flip()

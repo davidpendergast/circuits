@@ -4,14 +4,14 @@ import os
 import pathlib
 
 import configs
-import src.example.demogame
+import src.game.circuits
 
 
 """
 The main entry point.
 """
 
-game_class = src.example.demogame.DemoGame  # <--- change this to your actual game class
+game_class = src.game.circuits.CircuitsGame  # <--- change this to your actual game class
 
 
 def _get_crash_report_file_name():

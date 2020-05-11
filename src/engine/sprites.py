@@ -450,6 +450,73 @@ class LineSprite(MultiSprite):
         return type(self).__name__ + "({}, {})".format(self.p1(), self.p2())
 
 
+class RectangleSprite(MultiSprite):
+
+    def __init__(self, layer_id, x, y, w, h, color=(1, 1, 1), depth=1):
+        MultiSprite.__init__(self, SpriteTypes.TRIANGLE, layer_id)
+        self._x = x
+        self._y = y
+        self._w = w
+        self._h = h
+        self._color = color
+        self._depth = depth
+
+        self._top_left_sprite = None
+        self._bottom_right_sprite = None
+
+        self._build_sprites()
+
+    def get_rect(self):
+        return (self._x, self._y, self._w, self._h)
+
+    def _build_sprites(self):
+        if self._top_left_sprite is None:
+            self._top_left_sprite = TriangleSprite(self.layer_id())
+        self._top_left_sprite = self._top_left_sprite.update(
+                                                   new_p1=(self._x, self._y),
+                                                   new_p2=(self._x + self._w, self._y),
+                                                   new_p3=(self._x, self._y + self._h),
+                                                   new_color=self._color,
+                                                   new_depth=self._depth)
+        if self._bottom_right_sprite is None:
+            self._bottom_right_sprite = TriangleSprite(self.layer_id())
+        self._bottom_right_sprite = self._bottom_right_sprite.update(
+                                                   new_p1=(self._x + self._w, self._y + self._h),
+                                                   new_p2=(self._x, self._y + self._h),
+                                                   new_p3=(self._x + self._w, self._y),
+                                                   new_color=self._color,
+                                                   new_depth=self._depth)
+
+    def update(self, new_x=None, new_y=None, new_w=None, new_h=None, new_color=None, new_depth=None):
+        did_change = False
+
+        if new_x is not None and new_x != self._x:
+            did_change = True
+            self._x = new_x
+        if new_y is not None and new_y != self._y:
+            did_change = True
+            self._y = new_y
+        if new_w is not None and new_w != self._w:
+            did_change = True
+            self._w = new_w
+        if new_h is not None and new_h != self._h:
+            did_change = True
+            self._h = new_h
+        if new_color is not None and new_color != self._color:
+            did_change = True
+            self._color = new_color
+        if new_depth is not None and new_depth != self._depth:
+            did_change = True
+            self._depth = new_depth
+
+        if did_change:
+            self._build_sprites()
+
+    def all_sprites_nullable(self):
+        yield self._top_left_sprite
+        yield self._bottom_right_sprite
+
+
 class TextSprite(MultiSprite):
 
     DEFAULT_X_KERNING = 0
