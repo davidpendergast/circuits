@@ -1,7 +1,7 @@
 
 import src.engine.game as game
 import src.engine.layers as layers
-import src.engine.sprites as sprites
+import src.game.worlds as worlds
 
 import src.game.spriteref as spriteref
 
@@ -10,7 +10,7 @@ class CircuitsGame(game.Game):
 
     def __init__(self):
         game.Game.__init__(self)
-        self._my_rect = None
+        self._world = None
 
     def create_sheets(self):
         return []
@@ -24,8 +24,11 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19, sort_sprites=True, use_color=True)
 
     def update(self):
-        if self._my_rect is None:
-            self._my_rect = sprites.RectangleSprite(spriteref.POLYGON_LAYER, 50, 50, 50, 50, color=(1, 1, 1))
+        if self._world is None:
+            self._world = worlds.World.new_test_world()
+
+        self._world.update()
 
     def all_sprites(self):
-        yield self._my_rect
+        for spr in self._world.all_sprites():
+            yield spr

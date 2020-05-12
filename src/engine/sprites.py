@@ -512,6 +512,8 @@ class RectangleSprite(MultiSprite):
         if did_change:
             self._build_sprites()
 
+        return self
+
     def all_sprites_nullable(self):
         yield self._top_left_sprite
         yield self._bottom_right_sprite
