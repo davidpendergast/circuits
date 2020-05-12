@@ -122,7 +122,7 @@ class Utils:
                 int(rect[1] + rect[3] / 2))
 
     @staticmethod
-    def get_rect_corners(rect, inclusive=False):
+    def all_rect_corners(rect, inclusive=False):
         yield (rect[0], rect[1])
         if inclusive:
             if rect[2] == 0 or rect[3] == 0:
@@ -328,6 +328,13 @@ class Utils:
             i += 1
 
         del l[(last_element + 1):]
+
+    @staticmethod
+    def extend_or_empty_list_to_length(l, n, creator=None):
+        while len(l) > n:
+            l.pop(-1)
+        while len(l) < n:
+            l.append(None if creator is None else creator())
 
     @staticmethod
     def cells_between(p1, p2, include_endpoints=True):

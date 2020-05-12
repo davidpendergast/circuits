@@ -3,6 +3,7 @@ import src.game.globalstate as gs
 import src.game.spriteref as spriteref
 import src.game.colors as colors
 
+import src.utils.util as util
 import src.engine.sprites as sprites
 
 
@@ -16,7 +17,9 @@ class World:
     @staticmethod
     def new_test_world():
         res = World()
-        res.add_entity(BlockEntity(4, 4, 3, 1), next_update=False)
+        cs = gs.get_instance().cell_size
+        res.add_entity(BlockEntity(cs * 4, cs * 11, cs * 15, cs * 1), next_update=False)
+        res.add_entity(BlockEntity(cs * 9, cs * 10, cs * 2, cs * 1), next_update=False)
 
         return res
 
@@ -50,8 +53,14 @@ class World:
             for spr in ent.all_sprites():
                 yield spr
 
+    def all_debug_sprites(self):
+        for ent in self.entities:
+            for spr in ent.all_debug_sprites():
+                yield spr
+
 
 _ENT_ID = 0
+
 
 def next_entity_id():
     global _ENT_ID
@@ -64,9 +73,10 @@ class Entity:
     def __init__(self, x=0, y=0, w=0, h=0):
         self._ent_id = next_entity_id()
         self._rect = [x, y, w, h]
-        self._colliders = []
 
-        self.world = None  # world updates this when entity is added / removed
+        self.world = None  # world sets this when entity is added / removed
+
+        self._debug_sprites = {}
 
     def get_world(self):
         return self.world
@@ -86,11 +96,45 @@ class Entity:
     def get_h(self):
         return self._rect[3]
 
+    def get_xy(self):
+        return (self.get_x(), self.get_y())
+
+    def get_size(self):
+        return (self.get_w(), self.get_h())
+
     def update(self):
         pass
 
+    def all_colliders(self):
+        return []
+
     def all_sprites(self):
         return []
+
+    def all_debug_sprites(self):
+        main_rect_key = "main_rect"
+        if main_rect_key not in self._debug_sprites:
+            self._debug_sprites[main_rect_key] = sprites.RectangleSprite(spriteref.POLYGON_LAYER)
+        self._debug_sprites[main_rect_key].update(new_rect=self.get_rect(), new_color=self.get_debug_color(),
+                                                  new_depth=20)
+        yield self._debug_sprites[main_rect_key]
+
+        colliders_key = "colliders"
+        if colliders_key not in self._debug_sprites:
+            self._debug_sprites[colliders_key] = []
+
+        all_colliders = [c for c in self.all_colliders()]
+
+        util.Utils.extend_or_empty_list_to_length(self._debug_sprites[colliders_key], len(all_colliders),
+                                                  creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
+        for collider, rect_sprite in zip(all_colliders, self._debug_sprites[colliders_key]):
+            color = colors.RED
+            rect = collider.get_rect(offs=self.get_xy())
+            rect_sprite.update(new_rect=rect, new_color=color, new_outline=2, new_depth=5)
+            yield rect_sprite
+
+    def get_debug_color(self):
+        return colors.WHITE
 
     def __eq__(self, other):
         if isinstance(other, Entity):
@@ -107,24 +151,26 @@ class Entity:
 
 class BlockEntity(Entity):
 
-    def __init__(self, x, y, grid_w, grid_h):
-        cell_size = gs.get_instance().cell_size
-        Entity.__init__(self, x=x, y=y, w=grid_w * cell_size, h=grid_h * cell_size)
+    def __init__(self, x, y, w, h):
+        Entity.__init__(self, x=x, y=y, w=w, h=h)
 
-        self._rect_sprite = None
+        self._rect_collider = RectangleCollider([0, 0, w, h], mask=CollisionMasks.BLOCK, dynamic=False)
 
     def update(self):
-        if self._rect_sprite is None:
-            self._rect_sprite = sprites.RectangleSprite(spriteref.POLYGON_LAYER, 0, 0, 0, 0)
-        self._rect_sprite = self._rect_sprite.update(new_x=self.get_x(), new_y=self.get_y(),
-                                                     new_w=self.get_w(), new_h=self.get_h(),
-                                                     new_color=colors.DARK_GRAY, new_depth=10)
+        pass
+
+    def get_debug_color(self):
+        return colors.DARK_GRAY
 
     def all_sprites(self):
-        if gs.get_instance().debug_render:
-            yield self._rect_sprite
-        else:
-            return []
+        return []
+
+    def all_colliders(self):
+        yield self._rect_collider
+
+
+class PlayerEntity(Entity):
+    pass
 
 
 class CollisionMask:
@@ -149,11 +195,12 @@ class CollisionMasks:
     ACTOR = CollisionMask("actor", collides_with=("block"))
 
 
-class Collider:
+class PolygonCollider:
 
-    def __init__(self, mask=None, dynamic=True):
+    def __init__(self, points, mask=None, dynamic=True):
         self._mask = mask
         self._dynamic = dynamic
+        self._points = points
 
     def get_mask(self):
         return self._mask
@@ -162,4 +209,18 @@ class Collider:
         return self._dynamic
 
     def get_points(self, offs=(0, 0)):
-        return []
+        return [(p[0] + offs[0], p[1] + offs[1]) for p in self._points]
+
+    def get_rect(self, offs=(0, 0)):
+        pts = self.get_points(offs=offs)
+        if len(pts) == 0:
+            return [0, 0, 0, 0]
+        else:
+            return util.Utils.get_rect_containing_points(pts)
+
+
+class RectangleCollider(PolygonCollider):
+
+    def __init__(self, rect, mask=None, dynamic=True):
+        points = [p for p in util.Utils.all_rect_corners(rect, inclusive=False)]
+        PolygonCollider.__init__(self, points, mask=mask, dynamic=dynamic)

@@ -452,8 +452,13 @@ class LineSprite(MultiSprite):
 
 class RectangleSprite(MultiSprite):
 
-    def __init__(self, layer_id, x, y, w, h, color=(1, 1, 1), depth=1):
+    def __init__(self, layer_id, rect=None, x=0, y=0, w=0, h=0, color=(1, 1, 1), depth=1):
         MultiSprite.__init__(self, SpriteTypes.TRIANGLE, layer_id)
+        if rect is not None:
+            x = rect[0]
+            y = rect[1]
+            w = rect[2]
+            h = rect[3]
         self._x = x
         self._y = y
         self._w = w
@@ -487,8 +492,14 @@ class RectangleSprite(MultiSprite):
                                                    new_color=self._color,
                                                    new_depth=self._depth)
 
-    def update(self, new_x=None, new_y=None, new_w=None, new_h=None, new_color=None, new_depth=None):
+    def update(self, new_rect=None, new_x=None, new_y=None, new_w=None, new_h=None, new_color=None, new_depth=None):
         did_change = False
+
+        if new_rect is not None:
+            new_x = new_rect[0]
+            new_y = new_rect[1]
+            new_w = new_rect[2]
+            new_h = new_rect[3]
 
         if new_x is not None and new_x != self._x:
             did_change = True
@@ -518,6 +529,122 @@ class RectangleSprite(MultiSprite):
         yield self._top_left_sprite
         yield self._bottom_right_sprite
 
+
+class RectangleOutlineSprite(MultiSprite):
+
+    def __init__(self, layer_id, rect=None, x=0, y=0, w=0, h=0, outline=1, color=(1, 1, 1), depth=1):
+        MultiSprite.__init__(self, SpriteTypes.TRIANGLE, layer_id)
+        if rect is not None:
+            x = rect[0]
+            y = rect[1]
+            w = rect[2]
+            h = rect[3]
+        self._x = x
+        self._y = y
+        self._w = w
+        self._h = h
+        self._outline = outline
+        self._color = color
+        self._depth = depth
+
+        self._top_sprite = None
+        self._bottom_sprite = None
+        self._left_sprite = None
+        self._right_sprite = None
+
+        self._build_sprites()
+
+    def _build_sprites(self):
+        if self._outline <= 0:
+            self._top_sprite = None
+            self._bottom_sprite = None
+            self._left_sprite = None
+            self._right_sprite = None
+
+        elif self._outline * 2 >= self._w or self._outline * 2 >= self._h:
+            # outline is so thick that it fills the entire rectangle
+            if self._top_sprite is None:
+                self._top_sprite = RectangleSprite(self.layer_id())
+            self._top_sprite.update(new_rect=[self._x, self._y, self._w, self._h],
+                                    new_depth=self._depth, new_color=self._color)
+            self._bottom_sprite = None
+            self._left_sprite = None
+            self._right_sprite = None
+
+        else:
+            if self._top_sprite is None:
+                self._top_sprite = RectangleSprite(self.layer_id())
+            if self._bottom_sprite is None:
+                self._bottom_sprite = RectangleSprite(self.layer_id())
+            if self._left_sprite is None:
+                self._left_sprite = RectangleSprite(self.layer_id())
+            if self._right_sprite is None:
+                self._right_sprite = RectangleSprite(self.layer_id())
+            """ 
+            like this:
+            *--------------------*
+            |        TOP         |
+            *---*------------*---*
+            |   |            |   |
+            | L |            | R |
+            |   |            |   |
+            *---*------------*---*
+            |       BOTTOM       |
+            *--------------------*
+            """
+            self._top_sprite.update(new_rect=[self._x, self._y, self._w, self._outline],
+                                    new_depth=self._depth, new_color=self._color)
+            self._bottom_sprite.update(new_rect=[self._x, self._y + self._h - self._outline, self._w, self._outline],
+                                       new_depth=self._depth, new_color=self._color)
+            self._left_sprite.update(new_x=self._x, new_y=self._y + self._outline,
+                                     new_w=self._outline, new_h=self._h - 2 * self._outline,
+                                     new_depth=self._depth, new_color=self._color)
+            self._right_sprite.update(new_x=self._x + self._w - self._outline,
+                                      new_y=self._y + self._outline,
+                                      new_w=self._outline, new_h=self._h - 2 * self._outline,
+                                      new_depth=self._depth, new_color=self._color)
+
+    def all_sprites_nullable(self):
+        yield self._top_sprite
+        yield self._bottom_sprite
+        yield self._left_sprite
+        yield self._right_sprite
+
+    def update(self, new_rect=None, new_x=None, new_y=None, new_w=None, new_h=None, new_outline=None, new_color=None, new_depth=None):
+        did_change = False
+
+        if new_rect is not None:
+            new_x = new_rect[0]
+            new_y = new_rect[1]
+            new_w = new_rect[2]
+            new_h = new_rect[3]
+
+        if new_x is not None and new_x != self._x:
+            did_change = True
+            self._x = new_x
+        if new_y is not None and new_y != self._y:
+            did_change = True
+            self._y = new_y
+        if new_w is not None and new_w != self._w:
+            did_change = True
+            self._w = new_w
+        if new_h is not None and new_h != self._h:
+            did_change = True
+            self._h = new_h
+        if new_outline is not None and new_outline != self._outline:
+            did_change = True
+            self._outline = new_outline
+        if new_color is not None and new_color != self._color:
+            did_change = True
+            self._color = new_color
+        if new_depth is not None and new_depth != self._depth:
+            did_change = True
+            self._depth = new_depth
+
+        if did_change:
+            self._build_sprites()
+
+        return self
 
 class TextSprite(MultiSprite):
 

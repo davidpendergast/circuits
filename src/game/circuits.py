@@ -2,6 +2,7 @@
 import src.engine.game as game
 import src.engine.layers as layers
 import src.game.worlds as worlds
+import src.game.globalstate as gs
 
 import src.game.spriteref as spriteref
 
@@ -30,5 +31,9 @@ class CircuitsGame(game.Game):
         self._world.update()
 
     def all_sprites(self):
-        for spr in self._world.all_sprites():
-            yield spr
+        if gs.get_instance().debug_render:
+            for spr in self._world.all_debug_sprites():
+                yield spr
+        else:
+            for spr in self._world.all_sprites():
+                yield spr
