@@ -1,7 +1,7 @@
 
 import src.engine.globaltimer as globaltimer
 
-_INSTANCE = None
+_INSTANCE = None  # should access this via get_instance(), at the bottom of the file
 
 
 def create_instance():
@@ -11,10 +11,6 @@ def create_instance():
         return _INSTANCE
     else:
         raise ValueError("There is already an InputState initialized.")
-
-
-def get_instance():
-    return _INSTANCE
 
 
 class InputState:
@@ -123,3 +119,8 @@ class InputState:
         self._pressed_this_frame.clear()
         self._pressed_this_frame.update(self._pressed_last_frame)
         self._pressed_last_frame.clear()
+
+
+def get_instance() -> InputState:
+    return _INSTANCE
+

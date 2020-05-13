@@ -61,7 +61,7 @@ class DemoGame(game.Game):
 
     cell_size = 32
 
-    demo_sheet = DemoSheet()
+    demo_sheet = None
 
     def __init__(self):
         game.Game.__init__(self)
@@ -102,6 +102,9 @@ class DemoGame(game.Game):
         self.text_box_sprite = None
         self.text_box_text_sprite = None
 
+    def initialize(self):
+        DemoGame.demo_sheet = DemoSheet()
+
     def all_sprites(self):
         for spr in self.floor_sprites:
             yield spr
@@ -123,10 +126,10 @@ class DemoGame(game.Game):
         yield self.text_box_sprite
         yield self.text_box_text_sprite
 
-    def create_sheets(self):
+    def get_sheets(self):
         yield DemoGame.demo_sheet
 
-    def create_layers(self):
+    def get_layers(self):
         COLOR = True
         SORTS = True
         yield layers.ImageLayer(DemoGame.FLOOR_LAYER, 0, False, COLOR)

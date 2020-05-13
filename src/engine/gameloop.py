@@ -4,6 +4,7 @@ from src.utils.util import Utils
 import src.engine.sounds as sounds
 import src.engine.window as window
 import src.engine.inputs as inputs
+import src.engine.keybinds as keybinds
 
 import src.engine.renderengine as renderengine
 import src.engine.spritesheets as spritesheets
@@ -28,6 +29,7 @@ class _GameLoop:
     def __init__(self, game):
         self._game = game
         self._clock = pygame.time.Clock()
+        self._requested_fullscreen_toggle_this_tick = False
 
         print("INFO: pygame version: " + pygame.version.ver)
         print("INFO: initializing sounds...")
@@ -47,8 +49,14 @@ class _GameLoop:
         render_eng.init(*configs.default_window_size)
         render_eng.set_min_size(*configs.minimum_window_size)
 
+        inputs.create_instance()
+        keybinds.create_instance()
+
         sprite_atlas = spritesheets.create_instance()
-        for sheet in self._game.create_sheets():
+
+        self._game.initialize()
+
+        for sheet in self._game.get_sheets():
             sprite_atlas.add_sheet(sheet)
 
         atlas_surface = sprite_atlas.create_atlas_surface()
@@ -61,13 +69,18 @@ class _GameLoop:
         height = atlas_surface.get_height()
         render_eng.set_texture(texture_data, width, height)
 
-        for layer in self._game.create_layers():
+        for layer in self._game.get_layers():
             renderengine.get_instance().add_layer(layer)
-
-        inputs.create_instance()
 
         px_scale = self._calc_pixel_scale(window.get_instance().get_display_size())
         render_eng.set_pixel_scale(px_scale)
+
+        if configs.is_dev:
+            keybinds.get_instance().set_global_action(pygame.K_F1, "toggle profiling", lambda: self._toggle_profiling())
+
+        if configs.allow_fullscreen:
+            keybinds.get_instance().set_global_action(pygame.K_F4, "toggle fullscreen",
+                                                      lambda: self._request_fullscreen_toggle())
 
     def _calc_pixel_scale(self, screen_size):
         if configs.auto_resize_pixel_scale:
@@ -97,6 +110,14 @@ class _GameLoop:
         else:
             return configs.optimal_pixel_scale
 
+    def _toggle_profiling(self):
+        # used to help find performance bottlenecks
+        import src.utils.profiling as profiling
+        profiling.get_instance().toggle()
+
+    def _request_fullscreen_toggle(self):
+        self._requested_fullscreen_toggle_this_tick = True
+
     def run(self):
         running = True
 
@@ -113,6 +134,8 @@ class _GameLoop:
                     continue
                 elif py_event.type == pygame.KEYDOWN:
                     input_state.set_key(py_event.key, True)
+                    keybinds.get_instance().do_global_action_if_necessary(py_event.key)
+
                 elif py_event.type == pygame.KEYUP:
                     input_state.set_key(py_event.key, False)
 
@@ -135,7 +158,7 @@ class _GameLoop:
             ignore_resize_events_this_tick = ignore_resize_events_next_tick
             ignore_resize_events_next_tick = False
 
-            if input_state.was_pressed(pygame.K_F4) and configs.allow_fullscreen:
+            if self._requested_fullscreen_toggle_this_tick:
                 win = window.get_instance()
                 win.set_fullscreen(not win.is_fullscreen())
 
@@ -151,6 +174,8 @@ class _GameLoop:
                 # before the fullscreen happened.
                 ignore_resize_events_next_tick = True
 
+            self._requested_fullscreen_toggle_this_tick = False
+
             if not ignore_resize_events_this_tick and len(all_resize_events) > 0:
                 last_resize_event = all_resize_events[-1]
 
@@ -160,11 +185,6 @@ class _GameLoop:
                 new_pixel_scale = self._calc_pixel_scale((last_resize_event.w, last_resize_event.h))
 
                 renderengine.get_instance().resize(display_w, display_h, px_scale=new_pixel_scale)
-
-            if configs.is_dev and input_state.was_pressed(pygame.K_F1):
-                # used to help find performance bottlenecks
-                import src.utils.profiling as profiling
-                profiling.get_instance().toggle()
 
             input_state.update()
             sounds.update()

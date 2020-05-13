@@ -7,10 +7,13 @@ class Game:
     def __init__(self):
         pass
 
-    def create_sheets(self):
+    def initialize(self):
+        pass
+
+    def get_sheets(self):
         raise NotImplementedError()
 
-    def create_layers(self):
+    def get_layers(self):
         raise NotImplementedError()
 
     def update(self):
