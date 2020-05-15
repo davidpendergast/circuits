@@ -34,6 +34,9 @@ class Entity:
     def get_rect(self):
         raise NotImplementedError()
 
+    def is_dynamic(self):
+        return False
+
     def get_x(self):
         return self.get_rect()[0]
 
@@ -106,7 +109,7 @@ class BlockEntity(Entity):
 
         self._rect = [x, y, w, h]
 
-        self._rect_collider = RectangleCollider([0, 0, w, h], mask=CollisionMasks.BLOCK, dynamic=False)
+        self._rect_collider = RectangleCollider([0, 0, w, h], mask=CollisionMasks.BLOCK)
 
     def get_rect(self):
         return self._rect
@@ -124,13 +127,11 @@ class BlockEntity(Entity):
         yield self._rect_collider
 
 
-class PlayerEntity(Entity):
+class DynamicEntity(Entity):
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, priority=0):
         Entity.__init__(self)
-
-        self._w = gs.get_instance().cell_size * 1
-        self._h = gs.get_instance().cell_size * 2
+        self._priority = priority
 
         self._x = x
         self._y = y
@@ -138,17 +139,52 @@ class PlayerEntity(Entity):
         self._x_vel = 0  # pixels per tick
         self._y_vel = 0
 
+    def is_dynamic(self):
+        return True
+
+    def get_collision_priority(self):
+        return self._priority
+
+    def get_vel(self):
+        return (self._x_vel, self._y_vel)
+
+    def set_vel(self, v_xy):
+        self.set_x_vel(v_xy[0])
+        self.set_y_vel(v_xy[1])
+
+    def set_x_vel(self, x_vel):
+        self._x_vel = x_vel
+
+    def set_y_vel(self, y_vel):
+        self._y_vel = y_vel
+
+    def set_xy(self, xy):
+        self._x = xy[0]
+        self._y = xy[1]
+
+    def calc_next_xy(self):
+        return (self._x + self._x_vel, self._y + self._y_vel)
+
+
+class PlayerEntity(DynamicEntity):
+
+    def __init__(self, x, y):
+        DynamicEntity.__init__(self, x, y)
+
+        self._w = gs.get_instance().cell_size * 1
+        self._h = gs.get_instance().cell_size * 2
+
         self._y_vel_max = 5 * gs.get_instance().cell_size
         self._x_vel_max_grounded = 0.1 * gs.get_instance().cell_size
 
         self._x_accel_grounded = 0.25
 
-        self._gravity = 0  # 0.10  # TODO figure out the units on this
+        self._gravity = 0.10  # TODO figure out the units on this
 
         self._vert_collider = RectangleCollider([self._w * 0.1, 0, self._w * 0.8, self._h],
-                                                mask=CollisionMasks.ACTOR, dynamic=True, color=colors.WHITE)
+                                                mask=CollisionMasks.ACTOR, ignore_horz=True, color=colors.WHITE)
         self._horz_collider = RectangleCollider([0, self._h * 0.1, self._w, self._h * 0.8],
-                                                mask=CollisionMasks.ACTOR, dynamic=True, color=colors.WHITE)
+                                                mask=CollisionMasks.ACTOR, ignore_vert=True, color=colors.WHITE)
 
     def get_rect(self):
         return [int(self._x), int(self._y), self._w, self._h]
@@ -167,9 +203,6 @@ class PlayerEntity(Entity):
         if self._y_vel > self._y_vel_max:
             self._y_vel = self._y_vel_max
 
-        self._x += self._x_vel
-        self._y += self._y_vel
-
     def _handle_inputs(self):
         keys = keybinds.get_instance()
         request_left = inputs.get_instance().is_held(keys.get_keys(const.MOVE_LEFT))
@@ -184,8 +217,8 @@ class PlayerEntity(Entity):
 
         self._x_vel = dx * self._x_vel_max_grounded
 
-
-
+        if request_jump:
+            self._y_vel -= 4
 
     def get_debug_color(self):
         return colors.BLUE
@@ -224,10 +257,13 @@ def _next_collider_id():
 
 class PolygonCollider:
 
-    def __init__(self, points, mask=None, dynamic=True, color=colors.RED):
+    def __init__(self, points, mask=None, dynamic=True, ignore_horz=False, ignore_vert=False, color=colors.RED):
         self._mask = mask
         self._dynamic = dynamic
         self._points = points
+
+        self._is_horz = not ignore_horz
+        self._is_vert = not ignore_vert
 
         self._debug_color = color
         self._id = _next_collider_id()
@@ -235,8 +271,28 @@ class PolygonCollider:
     def get_mask(self):
         return self._mask
 
+    def collides_with(self, other):
+        if not self.get_mask().collides_with(other.get_mask()):
+            return False
+        else:
+            if self.is_horz() and other.is_horz():
+                return True
+            elif self.is_vert() and other.is_vert():
+                return True
+            else:
+                return False
+
+    def is_colliding_with(self, offs, other, other_offs):
+        raise NotImplementedError()  # TODO general polygon collisions
+
     def is_dynamic(self):
         return self._dynamic
+
+    def is_horz(self):
+        return self._is_horz
+
+    def is_vert(self):
+        return self._is_vert
 
     def get_points(self, offs=(0, 0)):
         return [(p[0] + offs[0], p[1] + offs[1]) for p in self._points]
@@ -263,8 +319,17 @@ class PolygonCollider:
 
 class RectangleCollider(PolygonCollider):
 
-    def __init__(self, rect, mask=None, dynamic=True, color=colors.RED):
+    def __init__(self, rect, mask=None, ignore_horz=False, ignore_vert=False, color=colors.RED):
         points = [p for p in util.Utils.all_rect_corners(rect, inclusive=False)]
-        PolygonCollider.__init__(self, points, mask=mask, dynamic=dynamic, color=color)
+        PolygonCollider.__init__(self, points, mask=mask,
+                                 ignore_horz=ignore_horz, ignore_vert=ignore_vert, color=color)
+
+    def is_colliding_with(self, offs, other, other_offs):
+        if not self.collides_with(other):
+            return False
+        elif not isinstance(other, RectangleCollider):
+            return super().is_colliding_with(offs, other, other_offs)
+        else:
+            return util.Utils.get_rect_intersect(self.get_rect(offs=offs), other.get_rect(offs=other_offs)) is not None
 
 
