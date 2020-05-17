@@ -16,6 +16,8 @@ class World:
         self._to_add = set()     # set of new entities to add next frame
         self._to_remove = set()  # set of entities to remove next frame
 
+        self._sensor_states = {}  # sensor_id -> list of entities
+
     @staticmethod
     def new_test_world():
         res = World()
@@ -74,6 +76,13 @@ class World:
             new_invalids = CollisionResolver.move_dynamic_entities_and_resolve_collisions(self, group_ents)
             invalids.extend(new_invalids)
 
+        self._sensor_states.clear()
+
+        for group_key in ordered_phys_groups:
+            group_ents = phys_groups[group_key]
+            new_sensor_states = CollisionResolver.calc_sensor_states(self, group_ents)
+            self._sensor_states.update(new_sensor_states)
+
         if len(invalids) > 0:
             print("WARN: failed to solve collisions with: {}".format(invalids))
 
@@ -95,6 +104,12 @@ class World:
         for ent in self.entities:
             for spr in ent.all_debug_sprites():
                 yield spr
+
+    def get_sensor_state(self, sensor_id):
+        if sensor_id not in self._sensor_states:
+            return []
+        else:
+            return self._sensor_states[sensor_id]
 
 
 class _Contact:
@@ -254,4 +269,19 @@ class CollisionResolver:
                 if collider.is_colliding_with(xy, b_collider, b.get_xy()):
                     return True
         return False
+
+    @staticmethod
+    def calc_sensor_states(world, dyna_ents):
+        # TODO - this assumes we only care about sensing blocks
+        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.BlockEntity))]
+        res = {}
+        for ent in dyna_ents:
+            ent_xy = ent.get_xy()
+            for c in ent.all_colliders(sensor=True):
+                c_state = []
+                for b in all_blocks:
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
+                        c_state.append(b)
+                res[c.get_id()] = c_state
+        return res
 

@@ -139,9 +139,11 @@ class Entity:
     def update(self):
         pass
 
-    def all_colliders(self, solid=None):
+    def all_colliders(self, solid=None, sensor=None):
         for c in self._colliders:
             if solid is not None and solid != c.is_solid():
+                continue
+            if sensor is not None and sensor != c.is_sensor():
                 continue
             yield c
 
@@ -169,6 +171,10 @@ class Entity:
                                                   creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
         for collider, rect_sprite in zip(all_colliders, self._debug_sprites[colliders_key]):
             color = collider.get_debug_color()
+
+            if collider.is_sensor() and len(self.get_world().get_sensor_state(collider.get_id())) <= 0:
+                color = colors.PINK
+
             rect = collider.get_rect(offs=self.get_xy())
             rect_sprite.update(new_rect=rect, new_color=color, new_outline=1, new_depth=5)
             yield rect_sprite
@@ -278,6 +284,10 @@ class PlayerEntity(Entity):
         right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
                                          CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
 
+        self.foot_sensor_id = foot_sensor.get_id()
+        self.left_sensor_id = left_sensor.get_id()
+        self.right_sensor_id = right_sensor.get_id()
+
         self.set_colliders([vert_env_collider, horz_env_collider, foot_sensor, left_sensor, right_sensor])
 
     def is_dynamic(self):
@@ -305,7 +315,7 @@ class PlayerEntity(Entity):
 
         self.set_x_vel(dx * self._x_vel_max_grounded)
 
-        if request_jump:
+        if request_jump and len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0:
             self.set_y_vel(self._y_vel - 3)
 
     def get_debug_color(self):
@@ -314,9 +324,10 @@ class PlayerEntity(Entity):
 
 class CollisionMask:
 
-    def __init__(self, name, is_solid=True, collides_with=()):
+    def __init__(self, name, is_solid=True, is_sensor=False, collides_with=()):
         self._name = name
         self._is_solid = is_solid
+        self._is_sensor = is_sensor
         self._collides_with = collides_with
 
     def get_name(self) -> str:
@@ -324,6 +335,9 @@ class CollisionMask:
 
     def is_solid(self) -> bool:
         return self._is_solid
+
+    def is_sensor(self) -> bool:
+        return self._is_sensor
 
     def collides_with(self, mask) -> bool:
         if mask is None:
@@ -337,7 +351,7 @@ class CollisionMasks:
     BLOCK = CollisionMask("block")
     ACTOR = CollisionMask("actor", collides_with=("block"))
 
-    BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, collides_with=("block"))
+    BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, collides_with=("block"))
 
 
 class CollisionResolutionHint:
@@ -388,6 +402,9 @@ class PolygonCollider:
         self._debug_color = color
         self._id = _next_collider_id()
 
+    def get_id(self):
+        return self._id
+
     def get_mask(self):
         return self._mask
 
@@ -405,6 +422,9 @@ class PolygonCollider:
 
     def is_solid(self):
         return self._mask.is_solid()
+
+    def is_sensor(self):
+        return self._mask.is_sensor()
 
     def get_points(self, offs=(0, 0)):
         return [(p[0] + offs[0], p[1] + offs[1]) for p in self._points]
