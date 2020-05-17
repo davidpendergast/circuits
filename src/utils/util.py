@@ -5,6 +5,7 @@ import json
 import numbers
 import pathlib
 import sys
+import heapq
 
 
 class Utils:
@@ -206,7 +207,6 @@ class Utils:
                     res.append((new_rect[0] + new_rect[2], r[1] + r[3]))
         return res
 
-
     @staticmethod
     def pack_rects_into_smallest_rect(rect_sizes):
         """
@@ -365,6 +365,66 @@ class Utils:
         return res
 
     @staticmethod
+    def bfs(start_node, is_correct, get_neighbors,
+            is_valid=lambda n: True, get_cost=lambda n: 0, limit=-1, find_path=False):
+        """
+        param start_node: starting node
+        param is_correct: node -> bool
+        param get_neighbors: node -> list of neighbors of node
+        param is_valid: node -> bool, whether a node is valid to check
+        param get_cost: node -> comparable (or None to evaluate nodes in an arbitrary order)
+        param limit: maximum number of nodes to evaluate (or -1 to search indefinitely)
+        param find_path: whether to return the entire solution path [start_node, ..., end_node]
+
+        return: list: [start_node, ..., end_node] if the solution exists and find_path is True
+                end_node if the solution exists and find_path is False
+                None if no solution was found
+        """
+        if is_valid(start_node) and is_correct(start_node):
+            return start_node if not find_path else [start_node]
+
+        count = [0]
+        seen = set()
+        q = []
+
+        prevs = {} if find_path else None  # node -> prev_node
+
+        def add_to_queue(n, prev_n=None):
+            if n in seen:
+                return
+            else:
+                count[0] = count[0] + 1
+                heapq.heappush(q, (get_cost(n), count[0], n))
+                seen.add(n)
+                if prevs is not None:
+                    prevs[n] = prev_n
+
+        add_to_queue(start_node)
+
+        end_node = None
+
+        while len(q) > 0 and (limit < 0 or count[0] <= limit):
+            _, _, node = heapq.heappop(q)
+            if is_correct(node):
+                end_node = node
+                break
+            else:
+                for n in get_neighbors(node):
+                    if is_valid(n):
+                        add_to_queue(n, node)
+
+        if end_node is None or not find_path:
+            return end_node
+        else:
+            path = [end_node]  # building it in reverse
+            n = end_node
+            while prevs[n] is not None:
+                path.append(prevs[n])
+                n = prevs[n]
+            path.reverse()
+            return path
+
+    @staticmethod
     def add_to_list_and_return(val, the_list):
         the_list.append(val)
         return val
@@ -447,6 +507,18 @@ class Utils:
     @staticmethod
     def read_map(json_blob, key, default):
         return default  # hmmm, one day~
+
+    @staticmethod
+    def assert_int(n, msg=None, error=True):
+        if n != int(n):
+            msg = "expected an integer: {}".format(n) if msg is None else msg
+            if error:
+                raise ValueError(msg)
+            else:
+                print("WARN: " + msg)
+                return int(n)
+        else:
+            return int(n)
 
     @staticmethod
     def parabola_height(vertex_y, x):
