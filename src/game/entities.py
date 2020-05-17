@@ -45,6 +45,8 @@ class Entity:
 
         self._debug_sprites = {}
 
+        self._colliders = []
+
     def get_world(self):
         return self.world
 
@@ -137,8 +139,14 @@ class Entity:
     def update(self):
         pass
 
-    def all_colliders(self):
-        return []
+    def all_colliders(self, solid=None):
+        for c in self._colliders:
+            if solid is not None and solid != c.is_solid():
+                continue
+            yield c
+
+    def set_colliders(self, colliders):
+        self._colliders = [c for c in colliders]
 
     def all_sprites(self):
         return []
@@ -186,7 +194,7 @@ class BlockEntity(Entity):
     def __init__(self, x, y, w, h):
         Entity.__init__(self, x, y, w, h)
 
-        self._rect_collider = RectangleCollider([0, 0, w, h], mask=CollisionMasks.BLOCK)
+        self.set_colliders([RectangleCollider([0, 0, w, h], CollisionMasks.BLOCK)])
 
     def update(self):
         pass
@@ -199,9 +207,6 @@ class BlockEntity(Entity):
 
     def all_sprites(self):
         return []
-
-    def all_colliders(self):
-        yield self._rect_collider
 
     def get_physics_group(self):
         return _ENVIRONMENT_GROUP
@@ -236,7 +241,6 @@ class MovingBlockEntity(BlockEntity):
         prog = (tick_count % self._period) / self._period
         pos = util.Utils.smooth_interp(p1, p2, prog)
 
-        print("INFO: pos={}".format(pos))
         self.set_xy(pos, update_vel=True)
 
 
@@ -256,20 +260,26 @@ class PlayerEntity(Entity):
         self._gravity = 0.10  # TODO figure out the units on this
 
         w_inset = int(self.get_w() * 0.15)
-        h_inset = int(self.get_h() * 0.1)
-        self._vert_collider = RectangleCollider([w_inset, 0, self.get_w() - (w_inset * 2), self.get_h()],
-                                                mask=CollisionMasks.ACTOR, ignore_horz=True, color=colors.WHITE)
-        self._horz_collider = RectangleCollider([0, h_inset, self.get_w(), self.get_h() - (h_inset * 2)],
-                                                mask=CollisionMasks.ACTOR, ignore_vert=True, color=colors.WHITE)
+        h_inset = int(self.get_h() * 0.15)
+
+        vert_env_collider = RectangleCollider([w_inset, 0, self.get_w() - (w_inset * 2), self.get_h()],
+                                              CollisionMasks.ACTOR, color=colors.WHITE)
+        horz_env_collider = RectangleCollider([0, h_inset, self.get_w(), self.get_h() - (h_inset * 2)],
+                                              CollisionMasks.ACTOR, color=colors.WHITE)
+
+        foot_sensor = RectangleCollider([0, self.get_h(), self.get_w(), 1],
+                                        CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
+
+        left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
+                                        CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
+        
+        right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
+                                         CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
+
+        self.set_colliders([vert_env_collider, horz_env_collider, foot_sensor, left_sensor, right_sensor])
 
     def is_dynamic(self):
         return True
-
-    def all_colliders(self):
-        return [
-            self._vert_collider,
-            # self._horz_collider
-        ]
 
     def update(self):
         self._handle_inputs()
@@ -302,12 +312,16 @@ class PlayerEntity(Entity):
 
 class CollisionMask:
 
-    def __init__(self, name, collides_with=()):
+    def __init__(self, name, is_solid=True, collides_with=()):
         self._name = name
+        self._is_solid = is_solid
         self._collides_with = collides_with
 
     def get_name(self) -> str:
         return self._name
+
+    def is_solid(self) -> bool:
+        return self._is_solid
 
     def collides_with(self, mask) -> bool:
         if mask is None:
@@ -321,6 +335,8 @@ class CollisionMasks:
     BLOCK = CollisionMask("block")
     ACTOR = CollisionMask("actor", collides_with=("block"))
 
+    BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, collides_with=("block"))
+
 
 _COLLIDER_ID = 0
 
@@ -333,13 +349,9 @@ def _next_collider_id():
 
 class PolygonCollider:
 
-    def __init__(self, points, mask=None, dynamic=True, ignore_horz=False, ignore_vert=False, color=colors.RED):
+    def __init__(self, points, mask, color=colors.RED):
         self._mask = mask
-        self._dynamic = dynamic
         self._points = points
-
-        self._is_horz = not ignore_horz
-        self._is_vert = not ignore_vert
 
         self._debug_color = color
         self._id = _next_collider_id()
@@ -348,27 +360,16 @@ class PolygonCollider:
         return self._mask
 
     def collides_with(self, other):
-        if not self.get_mask().collides_with(other.get_mask()):
-            return False
-        else:
-            if self.is_horz() and other.is_horz():
-                return True
-            elif self.is_vert() and other.is_vert():
-                return True
-            else:
-                return False
+        return self.get_mask().collides_with(other.get_mask())
 
-    def is_colliding_with(self, offs, other, other_offs):
+    def is_overlapping(self, offs, other, other_offs):
         raise NotImplementedError()  # TODO general polygon collisions
 
-    def is_dynamic(self):
-        return self._dynamic
+    def is_colliding_with(self, offs, other, other_offs):
+        return self.collides_with(other) and self.is_overlapping(offs, other, other_offs)
 
-    def is_horz(self):
-        return self._is_horz
-
-    def is_vert(self):
-        return self._is_vert
+    def is_solid(self):
+        return self._mask.is_solid()
 
     def get_points(self, offs=(0, 0)):
         return [(p[0] + offs[0], p[1] + offs[1]) for p in self._points]
@@ -395,16 +396,13 @@ class PolygonCollider:
 
 class RectangleCollider(PolygonCollider):
 
-    def __init__(self, rect, mask=None, ignore_horz=False, ignore_vert=False, color=colors.RED):
+    def __init__(self, rect, mask=None, color=colors.RED):
         points = [p for p in util.Utils.all_rect_corners(rect, inclusive=False)]
-        PolygonCollider.__init__(self, points, mask=mask,
-                                 ignore_horz=ignore_horz, ignore_vert=ignore_vert, color=color)
+        PolygonCollider.__init__(self, points, mask=mask, color=color)
 
-    def is_colliding_with(self, offs, other, other_offs):
-        if not self.collides_with(other):
-            return False
-        elif not isinstance(other, RectangleCollider):
-            return super().is_colliding_with(offs, other, other_offs)
+    def is_overlapping(self, offs, other, other_offs):
+        if not isinstance(other, RectangleCollider):
+            return super().is_overlapping(offs, other, other_offs)
         else:
             return util.Utils.get_rect_intersect(self.get_rect(offs=offs), other.get_rect(offs=other_offs)) is not None
 

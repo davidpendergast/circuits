@@ -196,7 +196,7 @@ class CollisionResolver:
                 yield n
 
         def is_correct(xy):
-            return not CollisionResolver._has_contact(dyna_ent, xy, all_blocks)
+            return not CollisionResolver._has_solid_contact(dyna_ent, xy, all_blocks)
 
         def get_cost(xy):
             dx = abs(xy[0] - target_xy[0])
@@ -206,13 +206,13 @@ class CollisionResolver:
         return util.Utils.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=100)
 
     @staticmethod
-    def _has_contact(ent, xy, all_blocks) -> bool:
+    def _has_solid_contact(ent, xy, all_blocks) -> bool:
         for b in all_blocks:
             ent_rect = ent.get_rect()
             ent_rect_for_xy = [xy[0], xy[1], ent_rect[2], ent_rect[3]]
             if util.Utils.get_rect_intersect(b.get_rect(), ent_rect_for_xy) is not None:
-                for collider in ent.all_colliders():
-                    for b_collider in b.all_colliders():
+                for collider in ent.all_colliders(solid=True):
+                    for b_collider in b.all_colliders(solid=True):
                         if collider.is_colliding_with(xy, b_collider, b.get_xy()):
                             return True
         return False
