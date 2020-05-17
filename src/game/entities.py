@@ -259,11 +259,23 @@ class PlayerEntity(Entity):
         Entity.__init__(self, x, y, w, h)
 
         self._y_vel_max = 5 * gs.get_instance().cell_size
-        self._x_vel_max_grounded = 0.1 * gs.get_instance().cell_size
+        self._x_vel_max = 0.1 * gs.get_instance().cell_size
 
-        self._x_accel_grounded = 0.25
+        self._gravity = 0.15  # TODO figure out the units on this
+        self._jump_y_vel = 4
 
-        self._gravity = 0.10  # TODO figure out the units on this
+        self._bonus_y_fric_on_let_go = 0.85
+
+        self._wall_jump_x_vel = 1.5
+        self._wall_jump_y_vel = self._jump_y_vel
+
+        self._ground_accel = 0.75
+        self._ground_reverse_dir_bonus_accel = 0.3
+
+        self._air_accel = 0.15
+
+        self._air_x_friction = 0.95
+        self._ground_x_friction = 0.6
 
         w_inset = int(self.get_w() * 0.15)
         h_inset = int(self.get_h() * 0.10)
@@ -275,6 +287,7 @@ class PlayerEntity(Entity):
                                               CollisionMasks.ACTOR, resolution_hint=CollisionResolutionHints.HORZ_ONLY,
                                               color=colors.WHITE)
 
+        # TODO - may want the ground sensor to be as wide as the vert_env_collider
         foot_sensor = RectangleCollider([0, self.get_h(), self.get_w(), 1],
                                         CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
 
@@ -301,11 +314,21 @@ class PlayerEntity(Entity):
         if self._y_vel > self._y_vel_max:
             self._y_vel = self._y_vel_max
 
+    def is_grounded(self):
+        return len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0
+
+    def is_left_walled(self):
+        return len(self.get_world().get_sensor_state(self.left_sensor_id)) > 0
+
+    def is_right_walled(self):
+        return len(self.get_world().get_sensor_state(self.right_sensor_id)) > 0
+
     def _handle_inputs(self):
         keys = keybinds.get_instance()
         request_left = inputs.get_instance().is_held(keys.get_keys(const.MOVE_LEFT))
         request_right = inputs.get_instance().is_held(keys.get_keys(const.MOVE_RIGHT))
-        request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))
+        request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))  # TODO add some buffer
+        holding_jump = inputs.get_instance().is_held(keys.get_keys(const.JUMP))
 
         dx = 0
         if request_left:
@@ -313,10 +336,38 @@ class PlayerEntity(Entity):
         if request_right:
             dx += 1
 
-        self.set_x_vel(dx * self._x_vel_max_grounded)
+        if dx != 0:
+            accel = 0
+            if self.is_grounded():
+                if self._x_vel <= 0 < dx or dx < 0 <= self._x_vel:
+                    accel += self._ground_reverse_dir_bonus_accel
+                accel += self._ground_accel
+            else:
+                accel += self._air_accel
 
-        if request_jump and len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0:
-            self.set_y_vel(self._y_vel - 3)
+            new_x_vel = self._x_vel + dx * accel
+            new_x_vel_bounded = util.Utils.bound(new_x_vel, -self._x_vel_max, self._x_vel_max)
+
+            self.set_x_vel(new_x_vel_bounded)
+        else:
+            fric = self._ground_x_friction if self.is_grounded() else self._air_x_friction
+            self.set_x_vel(self._x_vel * fric)
+
+        if request_jump:
+            if self.is_grounded():
+                self.set_y_vel(self._y_vel - self._jump_y_vel)
+            else:
+                if self.is_left_walled() or self.is_right_walled():
+                    # TODO add a small jump cooldown (in case you're left & right walled)
+                    self.set_y_vel(-self._wall_jump_y_vel)
+
+                    if self.is_left_walled():
+                        self.set_x_vel(self._x_vel + self._wall_jump_x_vel)
+                    if self.is_right_walled():
+                        self.set_x_vel(self._x_vel - self._wall_jump_x_vel)
+
+        if self._y_vel < 0 and not holding_jump:
+            self._y_vel *= self._bonus_y_fric_on_let_go
 
     def get_debug_color(self):
         return colors.BLUE

@@ -24,6 +24,8 @@ class World:
         cs = gs.get_instance().cell_size
         res.add_entity(entities.BlockEntity(cs * 4, cs * 11, cs * 15, cs * 1), next_update=False)
         res.add_entity(entities.BlockEntity(cs * 9, cs * 10, cs * 2, cs * 1), next_update=False)
+        res.add_entity(entities.BlockEntity(cs * 5, cs * 7, cs * 0.5, cs * 4), next_update=False)
+        res.add_entity(entities.BlockEntity(cs * 0, cs * 7, cs * 5, cs * 1), next_update=False)
 
         pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
