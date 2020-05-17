@@ -258,10 +258,21 @@ class Utils:
 
     @staticmethod
     def linear_interp(v1, v2, a):
-        if isinstance(v1, numbers.Number):
-            return v1 * (1 - a) + v2 * a
+        if isinstance(v1, int) or isinstance(v1, float):
+            return Utils._lerp_num_safely(v1, v2, a)
         else:
-            return tuple([v1[i] * (1 - a) + v2[i] * a for i in range(0, len(v1))])
+            return tuple([Utils._lerp_num_safely(v1[i], v2[i], a) for i in range(0, len(v1))])
+
+    @staticmethod
+    def _lerp_num_safely(n1, n2, a, tolerance=0.00001):
+        if abs(n1 - n2) < tolerance:
+            return (n1 + n2) / 2
+        else:
+            return n1 * (1 - a) + n2 * a
+
+    @staticmethod
+    def smooth_interp(v1, v2, a):
+        return Utils.linear_interp(v1, v2, 0.5 * (1 - math.cos(a * math.pi)))
 
     @staticmethod
     def round(v):

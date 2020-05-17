@@ -23,8 +23,8 @@ class World:
         res.add_entity(entities.BlockEntity(cs * 4, cs * 11, cs * 15, cs * 1), next_update=False)
         res.add_entity(entities.BlockEntity(cs * 9, cs * 10, cs * 2, cs * 1), next_update=False)
 
-        moving_block = entities.MovingBlockEntity(cs * 16, cs * 6, cs * 2, cs * 1)
-        moving_block.get_vel = lambda: (0, 2 * math.sin(globaltimer.tick_count() / 30))
+        pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]
+        moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
         res.add_entity(moving_block, next_update=False)
 
         res.add_entity(entities.PlayerEntity(cs * 6, cs * 5), next_update=False)
@@ -58,11 +58,21 @@ class World:
 
         dyna_ents = [e for e in self.all_dynamic_entities()]
 
-        enviroment_ents = [e for e in dyna_ents if e.is_environment()]
-        CollisionResolver.move_dynamic_entities_and_resolve_collisions(self, enviroment_ents)
+        phys_groups = {}
+        for e in dyna_ents:
+            if e.get_physics_group() not in phys_groups:
+                phys_groups[e.get_physics_group()] = []
+            phys_groups[e.get_physics_group()].append(e)
 
-        other_ents = [e for e in dyna_ents if not e.is_environment()]
-        invalids = CollisionResolver.move_dynamic_entities_and_resolve_collisions(self, other_ents)
+        ordered_phys_groups = [group_key for group_key in phys_groups]
+        ordered_phys_groups.sort()
+
+        invalids = []
+
+        for group_key in ordered_phys_groups:
+            group_ents = phys_groups[group_key]
+            new_invalids = CollisionResolver.move_dynamic_entities_and_resolve_collisions(self, group_ents)
+            invalids.extend(new_invalids)
 
         if len(invalids) > 0:
             print("WARN: failed to solve collisions with: {}".format(invalids))
@@ -72,7 +82,7 @@ class World:
             if cond is None or cond(e):
                 yield e
 
-    def all_dynamic_entities(self, cond=None) -> typing.Iterable[entities.DynamicEntity]:
+    def all_dynamic_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
         for e in self.all_entities(cond=lambda _e: _e.is_dynamic() and (cond is None or cond(_e))):
             yield e
 

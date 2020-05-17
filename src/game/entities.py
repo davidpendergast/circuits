@@ -3,6 +3,7 @@ import src.utils.util as util
 import src.engine.sprites as sprites
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
+import src.engine.globaltimer as globaltimer
 
 import src.game.spriteref as spriteref
 import src.game.colors as colors
@@ -19,17 +20,26 @@ def next_entity_id():
     return _ENT_ID - 1
 
 
+# physics groups
+_UNKNOWN_GROUP = -1
+_ENVIRONMENT_GROUP = 5
+_ACTOR_GROUP = 10
+
+
 class Entity:
 
-    def __init__(self, w, h):
+    def __init__(self, x, y, w, h):
         self._ent_id = next_entity_id()
 
-        self._x = 0
-        self._y = 0
+        self._x = x
+        self._y = y
 
         w = util.Utils.assert_int(w, msg="width must be an integer: {}".format(w), error=True)
         h = util.Utils.assert_int(h, msg="height must be an integer: {}".format(h), error=True)
         self._size = w, h
+
+        self._x_vel = 0  # pixels per tick
+        self._y_vel = 0
 
         self.world = None  # world sets this when entity is added / removed
 
@@ -49,7 +59,10 @@ class Entity:
         else:
             return (int(self._x), int(self._y))
 
-    def set_xy(self, xy):
+    def set_xy(self, xy, update_vel=False):
+        if update_vel:
+            self.set_vel((xy[0] - self._x, xy[1] - self._y))
+
         self._x = xy[0]
         self._y = xy[1]
 
@@ -69,10 +82,11 @@ class Entity:
                 self._y = int(self._y) + dy
 
     def is_dynamic(self):
+        """whether this entity's movement is controlled by the physics system"""
         return False
 
-    def is_environment(self):
-        return False
+    def get_physics_group(self):
+        return _UNKNOWN_GROUP
 
     def get_x(self, raw=False):
         return self.get_xy(raw=raw)[0]
@@ -88,6 +102,37 @@ class Entity:
 
     def get_size(self):
         return self._size
+
+    def get_vel(self):
+        return (self._x_vel, self._y_vel)
+
+    def get_x_vel(self):
+        return self.get_vel()[0]
+
+    def get_y_vel(self):
+        return self.get_vel()[1]
+
+    def set_vel(self, v_xy):
+        self.set_x_vel(v_xy[0])
+        self.set_y_vel(v_xy[1])
+
+    def set_x_vel(self, x_vel):
+        self._x_vel = x_vel
+
+    def set_y_vel(self, y_vel):
+        self._y_vel = y_vel
+
+    def calc_next_xy(self, raw=False):
+        new_xy = self.get_x(raw=True) + self.get_x_vel(), self.get_y(raw=True) + self.get_y_vel()
+        if raw:
+            return new_xy
+        else:
+            return int(new_xy[0]), int(new_xy[1])
+
+    def calc_next_rect(self, raw=False):
+        next_xy = self.calc_next_xy(raw=raw)
+        size = self.get_size()
+        return [next_xy[0], next_xy[1], size[0], size[1]]
 
     def update(self):
         pass
@@ -139,16 +184,15 @@ class Entity:
 class BlockEntity(Entity):
 
     def __init__(self, x, y, w, h):
-        Entity.__init__(self, w, h)
-        self.set_xy((x, y))
+        Entity.__init__(self, x, y, w, h)
 
         self._rect_collider = RectangleCollider([0, 0, w, h], mask=CollisionMasks.BLOCK)
 
     def update(self):
         pass
 
-    def is_environment(self):
-        return True
+    def is_dynamic(self):
+        return False
 
     def get_debug_color(self):
         return colors.DARK_GRAY
@@ -159,76 +203,50 @@ class BlockEntity(Entity):
     def all_colliders(self):
         yield self._rect_collider
 
+    def get_physics_group(self):
+        return _ENVIRONMENT_GROUP
 
-class DynamicEntity(Entity):
 
-    def __init__(self, x, y, w, h, priority=0):
-        Entity.__init__(self, w, h)
-        self._priority = priority
+class MovingBlockEntity(BlockEntity):
 
-        self.set_xy((x, y))
-
-        self._x_vel = 0  # pixels per tick
-        self._y_vel = 0
+    def __init__(self, w, h, pts, period=90, loop=True):
+        BlockEntity.__init__(self, pts[0][0], pts[0][1], w, h)
+        self._pts = pts
+        self._period = period
+        self._loop = loop
 
     def is_dynamic(self):
-        return True
-
-    def is_environment(self):
         return False
 
-    def get_collision_priority(self):
-        return self._priority
+    def update(self):
+        tick_count = globaltimer.tick_count()  # TODO - hook up a real timer
 
-    def get_vel(self):
-        return (self._x_vel, self._y_vel)
+        step = tick_count // self._period
+        cycle = step // len(self._pts)
 
-    def get_x_vel(self):
-        return self.get_vel()[0]
-
-    def get_y_vel(self):
-        return self.get_vel()[1]
-
-    def set_vel(self, v_xy):
-        self.set_x_vel(v_xy[0])
-        self.set_y_vel(v_xy[1])
-
-    def set_x_vel(self, x_vel):
-        self._x_vel = x_vel
-
-    def set_y_vel(self, y_vel):
-        self._y_vel = y_vel
-
-    def calc_next_xy(self, raw=False):
-        new_xy = self.get_x(raw=True) + self.get_x_vel(), self.get_y(raw=True) + self.get_y_vel()
-        if raw:
-            return new_xy
+        if self._loop or cycle % 2 == 0:
+            # we're going forward
+            p1 = self._pts[step % len(self._pts)]
+            p2 = self._pts[(step + 1) % len(self._pts)]
         else:
-            return int(new_xy[0]), int(new_xy[1])
+            # backwards
+            p1 = self._pts[(-step) % len(self._pts)]
+            p2 = self._pts[(-step - 1) % len(self._pts)]
 
-    def calc_next_rect(self, raw=False):
-        next_xy = self.calc_next_xy(raw=raw)
-        size = self.get_size()
-        return [next_xy[0], next_xy[1], size[0], size[1]]
+        prog = (tick_count % self._period) / self._period
+        pos = util.Utils.smooth_interp(p1, p2, prog)
 
-
-class MovingBlockEntity(BlockEntity, DynamicEntity):
-
-    def __init__(self, x, y, w, h):
-        BlockEntity.__init__(self, x, y, w, h)
-        DynamicEntity.__init__(self, x, y, w, h, priority=1000)
-
-    def is_environment(self):
-        return True
+        print("INFO: pos={}".format(pos))
+        self.set_xy(pos, update_vel=True)
 
 
-class PlayerEntity(DynamicEntity):
+class PlayerEntity(Entity):
 
     def __init__(self, x, y):
         w = int(gs.get_instance().cell_size * 1)
         h = int(gs.get_instance().cell_size * 2)
 
-        DynamicEntity.__init__(self, x, y, w, h)
+        Entity.__init__(self, x, y, w, h)
 
         self._y_vel_max = 5 * gs.get_instance().cell_size
         self._x_vel_max_grounded = 0.1 * gs.get_instance().cell_size
@@ -243,6 +261,9 @@ class PlayerEntity(DynamicEntity):
                                                 mask=CollisionMasks.ACTOR, ignore_horz=True, color=colors.WHITE)
         self._horz_collider = RectangleCollider([0, h_inset, self.get_w(), self.get_h() - (h_inset * 2)],
                                                 mask=CollisionMasks.ACTOR, ignore_vert=True, color=colors.WHITE)
+
+    def is_dynamic(self):
+        return True
 
     def all_colliders(self):
         return [
