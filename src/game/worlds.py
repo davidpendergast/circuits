@@ -191,12 +191,42 @@ class CollisionResolver:
     @staticmethod
     def _find_nearest_valid_position(world, dyna_ent, target_xy, all_blocks):
 
+        blocked_colliders_cache = {}  # xy -> list of colliders
+
+        def _get_blocked_colliders(xy):
+            if xy not in blocked_colliders_cache:
+                blocked_colliders_cache[xy] = CollisionResolver._get_blocked_solid_colliders(dyna_ent, xy, all_blocks)
+            return blocked_colliders_cache[xy]
+
+        def _allow_shift_from(xy):
+            blocked_colliders = _get_blocked_colliders(xy)
+            if len(blocked_colliders) == 0:
+                return True, True  # i guess?
+            else:
+                allow_horz = False
+                allow_vert = False
+
+                for c in blocked_colliders:
+                    if c.get_resolution_hint().allows_horz():
+                        allow_horz = True
+                    if c.get_resolution_hint().allows_vert():
+                        allow_vert = True
+                    if allow_horz and allow_vert:
+                        break
+
+                return allow_horz, allow_vert
+
         def get_neighbors(xy):
-            for n in util.Utils.neighbors(xy[0], xy[1], and_diags=False):
-                yield n
+            allow_horz, allow_vert = _allow_shift_from(xy)
+            if allow_horz:
+                yield (xy[0] - 1, xy[1])
+                yield (xy[0] + 1, xy[1])
+            if allow_vert:
+                yield (xy[0], xy[1] - 1)
+                yield (xy[0], xy[1] + 1)
 
         def is_correct(xy):
-            return not CollisionResolver._has_solid_contact(dyna_ent, xy, all_blocks)
+            return len(_get_blocked_colliders(xy)) == 0
 
         def get_cost(xy):
             dx = abs(xy[0] - target_xy[0])
@@ -206,14 +236,22 @@ class CollisionResolver:
         return util.Utils.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=100)
 
     @staticmethod
-    def _has_solid_contact(ent, xy, all_blocks) -> bool:
+    def _get_blocked_solid_colliders(ent, xy, all_blocks) -> typing.List[entities.PolygonCollider]:
+        """
+        returns: list of ent's solid colliders that are colliding with at least one block
+        """
+        res = []
+        for collider in ent.all_colliders(solid=True):
+            if CollisionResolver._is_colliding_with_any_blocks(ent, collider, xy, all_blocks):
+                res.append(collider)
+        return res
+
+    @staticmethod
+    def _is_colliding_with_any_blocks(ent, collider, xy, all_blocks) -> bool:
+        # TODO - some pre-filtering based on AABB
         for b in all_blocks:
-            ent_rect = ent.get_rect()
-            ent_rect_for_xy = [xy[0], xy[1], ent_rect[2], ent_rect[3]]
-            if util.Utils.get_rect_intersect(b.get_rect(), ent_rect_for_xy) is not None:
-                for collider in ent.all_colliders(solid=True):
-                    for b_collider in b.all_colliders(solid=True):
-                        if collider.is_colliding_with(xy, b_collider, b.get_xy()):
-                            return True
+            for b_collider in b.all_colliders(solid=True):
+                if collider.is_colliding_with(xy, b_collider, b.get_xy()):
+                    return True
         return False
 

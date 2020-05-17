@@ -260,19 +260,21 @@ class PlayerEntity(Entity):
         self._gravity = 0.10  # TODO figure out the units on this
 
         w_inset = int(self.get_w() * 0.15)
-        h_inset = int(self.get_h() * 0.15)
+        h_inset = int(self.get_h() * 0.10)
 
         vert_env_collider = RectangleCollider([w_inset, 0, self.get_w() - (w_inset * 2), self.get_h()],
-                                              CollisionMasks.ACTOR, color=colors.WHITE)
-        horz_env_collider = RectangleCollider([0, h_inset, self.get_w(), self.get_h() - (h_inset * 2)],
-                                              CollisionMasks.ACTOR, color=colors.WHITE)
+                                              CollisionMasks.ACTOR, resolution_hint=CollisionResolutionHints.VERT_ONLY,
+                                              color=colors.WHITE)
+        horz_env_collider = RectangleCollider([0, 0, self.get_w(), self.get_h() - h_inset],
+                                              CollisionMasks.ACTOR, resolution_hint=CollisionResolutionHints.HORZ_ONLY,
+                                              color=colors.WHITE)
 
         foot_sensor = RectangleCollider([0, self.get_h(), self.get_w(), 1],
                                         CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
 
         left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
                                         CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
-        
+
         right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
                                          CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
 
@@ -338,6 +340,35 @@ class CollisionMasks:
     BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, collides_with=("block"))
 
 
+class CollisionResolutionHint:
+
+    def __init__(self, ident, allow_horz, allow_vert):
+        self._ident = ident
+        self._allow_horz = allow_horz
+        self._allow_vert = allow_vert
+
+    def allows_horz(self):
+        return self._allow_horz
+
+    def allows_vert(self):
+        return self._allow_vert
+
+    def __eq__(self, other):
+        if isinstance(other, CollisionResolutionHint):
+            return self._ident == other._ident
+        else:
+            return False
+
+    def __hash__(self):
+        return hash(self._ident)
+
+
+class CollisionResolutionHints:
+    HORZ_ONLY = CollisionResolutionHint("horz_only", True, False)
+    VERT_ONLY = CollisionResolutionHint("vert_only", False, True)
+    BOTH = CollisionResolutionHint("both", True, True)
+
+
 _COLLIDER_ID = 0
 
 
@@ -349,15 +380,19 @@ def _next_collider_id():
 
 class PolygonCollider:
 
-    def __init__(self, points, mask, color=colors.RED):
+    def __init__(self, points, mask, resolution_hint=None, color=colors.RED):
         self._mask = mask
         self._points = points
+        self._resolution_hint = resolution_hint if resolution_hint is not None else CollisionResolutionHints.BOTH
 
         self._debug_color = color
         self._id = _next_collider_id()
 
     def get_mask(self):
         return self._mask
+
+    def get_resolution_hint(self):
+        return self._resolution_hint
 
     def collides_with(self, other):
         return self.get_mask().collides_with(other.get_mask())
@@ -396,9 +431,9 @@ class PolygonCollider:
 
 class RectangleCollider(PolygonCollider):
 
-    def __init__(self, rect, mask=None, color=colors.RED):
+    def __init__(self, rect, mask=None, resolution_hint=None, color=colors.RED):
         points = [p for p in util.Utils.all_rect_corners(rect, inclusive=False)]
-        PolygonCollider.__init__(self, points, mask=mask, color=color)
+        PolygonCollider.__init__(self, points, mask=mask, resolution_hint=resolution_hint, color=color)
 
     def is_overlapping(self, offs, other, other_offs):
         if not isinstance(other, RectangleCollider):
