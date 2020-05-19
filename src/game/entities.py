@@ -281,8 +281,10 @@ class PlayerEntity(Entity):
 
         Entity.__init__(self, x, y, w, h)
 
-        self._y_vel_max = 5 * gs.get_instance().cell_size
-        self._x_vel_max = 0.1 * gs.get_instance().cell_size
+        self._y_vel_max = 20 * gs.get_instance().cell_size / 60
+        self._x_vel_max = 0.12 * gs.get_instance().cell_size
+
+        self._wall_cling_y_vel_max = 4 * gs.get_instance().cell_size / 60
 
         self._gravity = 0.15  # TODO figure out the units on this
         self._jump_y_vel = 4
@@ -292,13 +294,16 @@ class PlayerEntity(Entity):
         self._wall_jump_x_vel = 1.5
         self._wall_jump_y_vel = self._jump_y_vel
 
-        self._ground_accel = 0.75
+        self._ground_accel = 0.65
         self._ground_reverse_dir_bonus_accel = 0.3
 
         self._air_accel = 0.15
 
         self._air_x_friction = 0.95
         self._ground_x_friction = 0.6
+
+        self._wall_cling_time = 10   # how long you have to hold the direction to break the wall cling
+        self._wall_cling_count = 0
 
         w_inset = int(self.get_w() * 0.15)
         h_inset = int(self.get_h() * 0.10)
@@ -337,8 +342,9 @@ class PlayerEntity(Entity):
 
         self._y_vel += self._gravity
 
-        if self._y_vel > self._y_vel_max:
-            self._y_vel = self._y_vel_max
+        max_y_vel = self._y_vel_max if not self.is_clinging_to_wall() else self._wall_cling_y_vel_max
+        if self._y_vel > max_y_vel:
+            self._y_vel = max_y_vel
 
     def is_grounded(self):
         return len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0
@@ -348,6 +354,9 @@ class PlayerEntity(Entity):
 
     def is_right_walled(self):
         return len(self.get_world().get_sensor_state(self.right_sensor_id)) > 0
+
+    def is_clinging_to_wall(self):
+        return not self.is_grounded() and (self.is_left_walled() or self.is_right_walled())
 
     def _handle_inputs(self):
         keys = keybinds.get_instance()
@@ -361,6 +370,18 @@ class PlayerEntity(Entity):
             dx -= 1
         if request_right:
             dx += 1
+
+        # wall cling stuff
+        if not self.is_grounded() and (self.is_left_walled() or self.is_left_walled()):
+            if (dx == 1 and self.is_left_walled()) or (dx == -1 and self.is_right_walled()):
+                if self._wall_cling_count < self._wall_cling_time:
+                    dx = 0
+                self._wall_cling_count += 1
+            else:
+                dx = 0
+                self._wall_cling_count = 0
+        else:
+            self._wall_cling_count = 0
 
         if dx != 0:
             accel = 0
@@ -384,7 +405,6 @@ class PlayerEntity(Entity):
                 self.set_y_vel(self._y_vel - self._jump_y_vel)
             else:
                 if self.is_left_walled() or self.is_right_walled():
-                    # TODO add a small jump cooldown (in case you're left & right walled)
                     self.set_y_vel(-self._wall_jump_y_vel)
 
                     if self.is_left_walled():
@@ -393,6 +413,7 @@ class PlayerEntity(Entity):
                         self.set_x_vel(self._x_vel - self._wall_jump_x_vel)
 
         if self._y_vel < 0 and not holding_jump:
+            # short hopping
             self._y_vel *= self._bonus_y_fric_on_let_go
 
     def update_frame_of_reference_parent(self):
