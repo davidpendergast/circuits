@@ -24,6 +24,8 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.MOVE_RIGHT, [pygame.K_RIGHT, pygame.K_d])
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])
 
+        keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
+
         self._world = worlds.World.new_test_world()
 
     def get_sheets(self):
@@ -44,6 +46,10 @@ class CircuitsGame(game.Game):
             cell_size = gs.get_instance().cell_size
             print("INFO: mouse pressed at ({}, {})".format((pos[0] + camera_pos[0]) // cell_size,
                                                            (pos[1] + camera_pos[1]) // cell_size))
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
+            self._world = worlds.World.new_test_world()
+
         self._world.update()
 
     def all_sprites(self):
