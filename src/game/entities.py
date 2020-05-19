@@ -21,9 +21,9 @@ def next_entity_id():
 
 
 # physics groups
-_UNKNOWN_GROUP = -1
-_ENVIRONMENT_GROUP = 5
-_ACTOR_GROUP = 10
+UNKNOWN_GROUP = -1
+ENVIRONMENT_GROUP = 5
+ACTOR_GROUP = 10
 
 
 class Entity:
@@ -47,6 +47,9 @@ class Entity:
 
         self._colliders = []
 
+        self._frame_of_reference_parent = None
+        self._frame_of_reference_children = []
+
     def get_world(self):
         return self.world
 
@@ -61,34 +64,46 @@ class Entity:
         else:
             return (int(self._x), int(self._y))
 
-    def set_xy(self, xy, update_vel=False):
-        if update_vel:
-            self.set_vel((xy[0] - self._x, xy[1] - self._y))
+    def set_xy(self, xy, update_frame_of_reference=True):
+        if xy[0] is not None:
+            dx = xy[0] - self._x
+            self._x = xy[0]
 
-        self._x = xy[0]
-        self._y = xy[1]
+            if update_frame_of_reference:
+                for child in self._frame_of_reference_children:
+                    child.set_x(child.get_x(raw=True) + dx, update_frame_of_reference=True)
 
-    def set_x(self, x):
-        self._x = x
+        if xy[1] is not None:
+            dy = xy[1] - self._y
+            self._y = xy[1]
 
-    def set_y(self, y):
-        self._y = y
+            if update_frame_of_reference:
+                for child in self._frame_of_reference_children:
+                    child.set_y(child.get_y(raw=True) + dy, update_frame_of_reference=True)
 
-    def shift(self, raw=True, dx=0, dy=0):
-        if raw:
-            self._x += dx
-            self._y += dy
-        else:
-            if dx != 0:
-                self._x = int(self._x) + dx
-                self._y = int(self._y) + dy
+    def set_x(self, x, update_frame_of_reference=True):
+        self.set_xy((x, None), update_frame_of_reference=update_frame_of_reference)
+
+    def set_y(self, y, update_frame_of_reference=True):
+        self.set_xy((None, y), update_frame_of_reference=update_frame_of_reference)
 
     def is_dynamic(self):
         """whether this entity's movement is controlled by the physics system"""
         return False
 
     def get_physics_group(self):
-        return _UNKNOWN_GROUP
+        return UNKNOWN_GROUP
+
+    def set_frame_of_reference_parent(self, parent):
+        if parent == self._frame_of_reference_parent:
+            return
+        print("INFO: setting FOR to {}".format(parent))
+        if self._frame_of_reference_parent is not None:
+            if self in self._frame_of_reference_parent._frame_of_reference_children:  # family germs
+                self._frame_of_reference_parent._frame_of_reference_children.remove(self)
+        self._frame_of_reference_parent = parent
+        if parent is not None:
+            self._frame_of_reference_parent._frame_of_reference_children.append(self)
 
     def get_x(self, raw=False):
         return self.get_xy(raw=raw)[0]
@@ -137,6 +152,9 @@ class Entity:
         return [next_xy[0], next_xy[1], size[0], size[1]]
 
     def update(self):
+        pass
+
+    def update_frame_of_reference_parent(self):
         pass
 
     def all_colliders(self, solid=None, sensor=None):
@@ -215,7 +233,7 @@ class BlockEntity(Entity):
         return []
 
     def get_physics_group(self):
-        return _ENVIRONMENT_GROUP
+        return ENVIRONMENT_GROUP
 
 
 class MovingBlockEntity(BlockEntity):
@@ -247,7 +265,12 @@ class MovingBlockEntity(BlockEntity):
         prog = (tick_count % self._period) / self._period
         pos = util.Utils.smooth_interp(p1, p2, prog)
 
-        self.set_xy(pos, update_vel=True)
+        pos = int(pos[0]), int(pos[1])  # otherwise it's super jerky when the player rides it
+
+        old_xy = self.get_xy(raw=True)
+
+        self.set_xy(pos)
+        self.set_vel(util.Utils.sub(old_xy, pos))
 
 
 class PlayerEntity(Entity):
@@ -288,8 +311,8 @@ class PlayerEntity(Entity):
                                               color=colors.WHITE)
 
         # TODO - may want the ground sensor to be as wide as the vert_env_collider
-        foot_sensor = RectangleCollider([0, self.get_h(), self.get_w(), 1],
-                                        CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
+        self.foot_sensor = RectangleCollider([0, self.get_h(), self.get_w(), 1],
+                                             CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
 
         left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
                                         CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
@@ -297,14 +320,17 @@ class PlayerEntity(Entity):
         right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
                                          CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
 
-        self.foot_sensor_id = foot_sensor.get_id()
+        self.foot_sensor_id = self.foot_sensor.get_id()
         self.left_sensor_id = left_sensor.get_id()
         self.right_sensor_id = right_sensor.get_id()
 
-        self.set_colliders([vert_env_collider, horz_env_collider, foot_sensor, left_sensor, right_sensor])
+        self.set_colliders([vert_env_collider, horz_env_collider, self.foot_sensor, left_sensor, right_sensor])
 
     def is_dynamic(self):
         return True
+
+    def get_physics_group(self):
+        return ACTOR_GROUP
 
     def update(self):
         self._handle_inputs()
@@ -368,6 +394,33 @@ class PlayerEntity(Entity):
 
         if self._y_vel < 0 and not holding_jump:
             self._y_vel *= self._bonus_y_fric_on_let_go
+
+    def update_frame_of_reference_parent(self):
+        blocks_upon = self.get_world().get_sensor_state(self.foot_sensor_id)
+        if len(blocks_upon) == 0:
+            self.set_frame_of_reference_parent(None)
+        elif len(blocks_upon) == 1:
+            self.set_frame_of_reference_parent(blocks_upon[0])
+        else:
+            # figure out which one we're on more
+            xy = self.get_xy(raw=False)
+            collider_rect = self.foot_sensor.get_rect(xy)
+            max_overlap = -1
+            max_overlap_block = None
+            for block in blocks_upon:
+                for block_collider in block.all_colliders():
+                    block_collider_rect = block_collider.get_rect(block.get_xy(raw=False))
+                    overlap_rect = util.Utils.get_rect_intersect(collider_rect, block_collider_rect)
+                    if overlap_rect is None:
+                        continue  # ??
+                    elif overlap_rect[2] * overlap_rect[3] > max_overlap:
+                        max_overlap = overlap_rect[2] * overlap_rect[3]
+                        max_overlap_block = block
+
+            if max_overlap_block is not None:
+                self.set_frame_of_reference_parent(max_overlap_block)
+
+
 
     def get_debug_color(self):
         return colors.BLUE

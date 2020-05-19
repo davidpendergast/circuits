@@ -27,6 +27,9 @@ class World:
         res.add_entity(entities.BlockEntity(cs * 5, cs * 7, cs * 0.5, cs * 4), next_update=False)
         res.add_entity(entities.BlockEntity(cs * 0, cs * 7, cs * 5, cs * 1), next_update=False)
 
+        res.add_entity(entities.BlockEntity(cs * 21, cs * 3, cs * 0.5, cs * 4), next_update=False)
+        res.add_entity(entities.BlockEntity(cs * 21.5, cs * 3, cs * 2, cs * 2), next_update=False)
+
         pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
         res.add_entity(moving_block, next_update=False)
@@ -57,9 +60,6 @@ class World:
                 ent.world = None
         self._to_remove.clear()
 
-        for ent in self.entities:
-            ent.update()
-
         dyna_ents = [e for e in self.all_dynamic_entities()]
 
         phys_groups = {}
@@ -67,6 +67,9 @@ class World:
             if e.get_physics_group() not in phys_groups:
                 phys_groups[e.get_physics_group()] = []
             phys_groups[e.get_physics_group()].append(e)
+
+        for ent in self.entities:
+            ent.update()
 
         ordered_phys_groups = [group_key for group_key in phys_groups]
         ordered_phys_groups.sort()
@@ -80,10 +83,13 @@ class World:
 
         self._sensor_states.clear()
 
-        for group_key in ordered_phys_groups:
-            group_ents = phys_groups[group_key]
-            new_sensor_states = CollisionResolver.calc_sensor_states(self, group_ents)
+        if entities.ACTOR_GROUP in phys_groups:
+            actor_ents = phys_groups[entities.ACTOR_GROUP]
+            new_sensor_states = CollisionResolver.calc_sensor_states(self, actor_ents)
             self._sensor_states.update(new_sensor_states)
+
+            for actor in actor_ents:
+                actor.update_frame_of_reference_parent()
 
         if len(invalids) > 0:
             print("WARN: failed to solve collisions with: {}".format(invalids))

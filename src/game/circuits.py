@@ -4,6 +4,7 @@ import pygame
 import src.engine.game as game
 import src.engine.layers as layers
 import src.engine.keybinds as keybinds
+import src.engine.inputs as inputs
 
 import src.game.worlds as worlds
 import src.game.globalstate as gs
@@ -37,6 +38,12 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19, sort_sprites=True, use_color=True)
 
     def update(self):
+        if inputs.get_instance().mouse_was_pressed():  # debug
+            pos = inputs.get_instance().mouse_pos()
+            camera_pos = (0, 0)
+            cell_size = gs.get_instance().cell_size
+            print("INFO: mouse pressed at ({}, {})".format((pos[0] + camera_pos[0]) // cell_size,
+                                                           (pos[1] + camera_pos[1]) // cell_size))
         self._world.update()
 
     def all_sprites(self):
