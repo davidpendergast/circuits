@@ -30,7 +30,7 @@ class World:
         res.add_entity(entities.BlockEntity(cs * 21, cs * 3, cs * 0.5, cs * 4), next_update=False)
         res.add_entity(entities.BlockEntity(cs * 21.5, cs * 3, cs * 2, cs * 2), next_update=False)
 
-        pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]
+        pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs), (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
         res.add_entity(moving_block, next_update=False)
 
@@ -93,6 +93,8 @@ class World:
 
         if len(invalids) > 0:
             print("WARN: failed to solve collisions with: {}".format(invalids))
+            for i in invalids:
+                i.set_vel((0, 0))
 
     def all_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
         for e in self.entities:
@@ -173,6 +175,7 @@ class CollisionResolver:
                     if (0 < ent.get_y_vel()) == (next_positions[ent][1] < requested_next_positions[ent][1]):
                         ent.set_y_vel(0)
             else:
+                ent.set_vel((0, 0))
                 invalids.append(ent)
 
         return invalids
@@ -185,10 +188,6 @@ class CollisionResolver:
 
         for ent in dyna_ents:
             CollisionResolver._try_to_move(world, ent, start_positions, next_positions, all_blocks)
-
-        for ent in dyna_ents:
-            if next_positions[ent] is not None:
-                ent.set_xy(next_positions[ent])
 
     @staticmethod
     def _solve_pre_move_collisions(world, dyna_ent, start_positions, all_blocks):
