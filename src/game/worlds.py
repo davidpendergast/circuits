@@ -30,6 +30,9 @@ class World:
         res.add_entity(entities.BlockEntity(cs * 21, cs * 3, cs * 0.5, cs * 4), next_update=False)
         res.add_entity(entities.BlockEntity(cs * 21.5, cs * 3, cs * 2, cs * 2), next_update=False)
 
+        res.add_entity(entities.SlopeBlockEntity(cs * 11, cs * 10, entities.SlopeOrientations.HORZ_UPWARD_LEFT), next_update=False)
+        res.add_entity(entities.SlopeBlockEntity(cs * 7, cs * 10, entities.SlopeOrientations.HORZ_UPWARD_RIGHT), next_update=False)
+
         pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs), (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
         res.add_entity(moving_block, next_update=False)

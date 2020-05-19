@@ -4,6 +4,7 @@ import src.engine.sprites as sprites
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
 import src.engine.globaltimer as globaltimer
+import configs as configs
 
 import src.game.spriteref as spriteref
 import src.game.colors as colors
@@ -97,7 +98,6 @@ class Entity:
     def set_frame_of_reference_parent(self, parent):
         if parent == self._frame_of_reference_parent:
             return
-        print("INFO: setting FOR to {}".format(parent))
         if self._frame_of_reference_parent is not None:
             if self in self._frame_of_reference_parent._frame_of_reference_children:  # family germs
                 self._frame_of_reference_parent._frame_of_reference_children.remove(self)
@@ -179,15 +179,15 @@ class Entity:
                                                   new_depth=20)
         yield self._debug_sprites[main_rect_key]
 
-        colliders_key = "colliders"
-        if colliders_key not in self._debug_sprites:
-            self._debug_sprites[colliders_key] = []
+        rect_colliders_key = "rect_colliders"
+        if rect_colliders_key not in self._debug_sprites:
+            self._debug_sprites[rect_colliders_key] = []
 
-        all_colliders = [c for c in self.all_colliders()]
+        all_rect_colliders = [c for c in self.all_colliders() if isinstance(c, RectangleCollider)]
 
-        util.Utils.extend_or_empty_list_to_length(self._debug_sprites[colliders_key], len(all_colliders),
+        util.Utils.extend_or_empty_list_to_length(self._debug_sprites[rect_colliders_key], len(all_rect_colliders),
                                                   creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
-        for collider, rect_sprite in zip(all_colliders, self._debug_sprites[colliders_key]):
+        for collider, rect_sprite in zip(all_rect_colliders, self._debug_sprites[rect_colliders_key]):
             color = collider.get_debug_color()
 
             if collider.is_sensor() and len(self.get_world().get_sensor_state(collider.get_id())) <= 0:
@@ -196,6 +196,28 @@ class Entity:
             rect = collider.get_rect(offs=self.get_xy())
             rect_sprite.update(new_rect=rect, new_color=color, new_outline=1, new_depth=5)
             yield rect_sprite
+
+        triangle_colliders_key = "triangle_colliders"
+        if triangle_colliders_key not in self._debug_sprites:
+            self._debug_sprites[triangle_colliders_key] = []
+
+        all_triangle_colliders = [c for c in self.all_colliders() if isinstance(c, TriangleCollider)]
+
+        util.Utils.extend_or_empty_list_to_length(self._debug_sprites[triangle_colliders_key], len(all_triangle_colliders),
+                                                  creator=lambda: sprites.TriangleSprite(spriteref.POLYGON_LAYER))
+
+        new_triangle_sprites = []
+        for collider, triangle_sprite in zip(all_triangle_colliders, self._debug_sprites[triangle_colliders_key]):
+            color = collider.get_debug_color()
+
+            if collider.is_sensor() and len(self.get_world().get_sensor_state(collider.get_id())) <= 0:
+                color = colors.PINK
+
+            points = collider.get_points(offs=self.get_xy())
+            new_triangle_sprites.append(triangle_sprite.update(new_points=points, new_color=color, new_depth=5))
+            yield triangle_sprite
+
+        self._debug_sprites[triangle_colliders_key] = new_triangle_sprites
 
     def get_debug_color(self):
         return colors.WHITE
@@ -213,15 +235,16 @@ class Entity:
         return "{}({}, {})".format(type(self).__name__, self._ent_id, self.get_rect())
 
 
-class BlockEntity(Entity):
+class AbstractBlockEntity(Entity):
 
     def __init__(self, x, y, w, h):
         Entity.__init__(self, x, y, w, h)
 
-        self.set_colliders([RectangleCollider([0, 0, w, h], CollisionMasks.BLOCK)])
-
     def update(self):
         pass
+
+    def is_sloped(self):
+        return False
 
     def is_dynamic(self):
         return False
@@ -234,6 +257,15 @@ class BlockEntity(Entity):
 
     def get_physics_group(self):
         return ENVIRONMENT_GROUP
+
+
+class BlockEntity(AbstractBlockEntity):
+    """basic rectangular block."""
+
+    def __init__(self, x, y, w, h):
+        AbstractBlockEntity.__init__(self, x, y, w, h)
+
+        self.set_colliders([RectangleCollider([0, 0, w, h], CollisionMasks.BLOCK)])
 
 
 class MovingBlockEntity(BlockEntity):
@@ -273,6 +305,50 @@ class MovingBlockEntity(BlockEntity):
         self.set_vel(util.Utils.sub(old_xy, pos))
 
 
+class SlopeOrientation:
+    def __init__(self, pts):
+        self.pts = pts
+
+    def is_horz(self):
+        # making the assumption here that all slopes are 1x2 or 2x1
+        return any(p[0] == 2 for p in self.pts)
+
+    def is_vert(self):
+        return not self.is_horz()
+
+
+class SlopeOrientations:
+    HORZ_UPWARD_LEFT = SlopeOrientation([(0, 0), (0, 1), (2, 1)])
+    HORZ_UPWARD_RIGHT = SlopeOrientation([(2, 0), (2, 1), (0, 1)])
+
+
+class SlopeBlockEntity(AbstractBlockEntity):
+
+    def __init__(self, x, y, orientation):
+        w = gs.get_instance().cell_size * (2 if orientation.is_horz() else 1)
+        h = gs.get_instance().cell_size * (1 if orientation.is_horz() else 2)
+        super().__init__(x, y, w, h)
+        self._orientation = orientation
+
+        self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK)])
+
+    def get_points(self, origin=None):
+        if origin is None:
+            origin = self.get_xy(raw=False)
+        res = []
+        for pt in self._orientation.pts:
+            pt_x = origin[0] + pt[0] * gs.get_instance().cell_size
+            pt_y = origin[1] + pt[1] * gs.get_instance().cell_size
+            res.append((pt_x, pt_y))
+        return res
+
+    def get_orientation(self):
+        return self._orientation
+
+    def is_sloped(self):
+        return True
+
+
 class PlayerEntity(Entity):
 
     def __init__(self, x, y):
@@ -281,13 +357,13 @@ class PlayerEntity(Entity):
 
         Entity.__init__(self, x, y, w, h)
 
-        self._y_vel_max = 20 * gs.get_instance().cell_size / 60
-        self._x_vel_max = 0.12 * gs.get_instance().cell_size
+        self._y_vel_max = 20 * gs.get_instance().cell_size / configs.target_fps
+        self._x_vel_max = 7.2 * gs.get_instance().cell_size / configs.target_fps
 
-        self._wall_cling_y_vel_max = 4 * gs.get_instance().cell_size / 60
+        self._wall_cling_y_vel_max = 4 * gs.get_instance().cell_size / configs.target_fps
 
-        self._gravity = 0.15  # TODO figure out the units on this
-        self._jump_y_vel = 4
+        self._gravity = 0.15  # TODO split this into max_jump_height and jump_duration
+        self._jump_y_vel = 4  # TODO units
 
         self._bonus_y_fric_on_let_go = 0.85
 
@@ -302,7 +378,7 @@ class PlayerEntity(Entity):
         self._air_x_friction = 0.95
         self._ground_x_friction = 0.6
 
-        self._wall_cling_time = 10   # how long you have to hold the direction to break the wall cling
+        self._wall_cling_time = 14   # how long you have to hold the direction to break the wall cling
         self._wall_cling_count = 0
 
         w_inset = int(self.get_w() * 0.15)
@@ -441,8 +517,6 @@ class PlayerEntity(Entity):
             if max_overlap_block is not None:
                 self.set_frame_of_reference_parent(max_overlap_block)
 
-
-
     def get_debug_color(self):
         return colors.BLUE
 
@@ -474,6 +548,8 @@ class CollisionMask:
 class CollisionMasks:
 
     BLOCK = CollisionMask("block")
+    SLOPE_BLOCK = CollisionMask("slope_block")
+
     ACTOR = CollisionMask("actor", collides_with=("block"))
 
     BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, collides_with=("block"))
@@ -574,11 +650,22 @@ class PolygonCollider:
         return self._id
 
 
+class TriangleCollider(PolygonCollider):
+
+    def __init__(self, points, mask, resolution_hint=None, color=colors.RED):
+        if len(points) != 3:
+            raise ValueError("must have 3 points, instead got: {}".format(points))
+        PolygonCollider.__init__(self, points, mask, resolution_hint=resolution_hint, color=color)
+
+    def is_overlapping(self, offs, other, other_offs):
+        return False  # TODO math
+
+
 class RectangleCollider(PolygonCollider):
 
-    def __init__(self, rect, mask=None, resolution_hint=None, color=colors.RED):
+    def __init__(self, rect, mask, resolution_hint=None, color=colors.RED):
         points = [p for p in util.Utils.all_rect_corners(rect, inclusive=False)]
-        PolygonCollider.__init__(self, points, mask=mask, resolution_hint=resolution_hint, color=color)
+        PolygonCollider.__init__(self, points, mask, resolution_hint=resolution_hint, color=color)
 
     def is_overlapping(self, offs, other, other_offs):
         if not isinstance(other, RectangleCollider):
