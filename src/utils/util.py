@@ -257,6 +257,90 @@ class Utils:
         return res, total_bound
 
     @staticmethod
+    def dot_prod(p1, p2):
+        if isinstance(p1, int) or isinstance(p1, float):
+            return p1 * p2
+        else:
+            return sum(i1 * i2 for (i1, i2) in zip(p1, p2))
+
+    @staticmethod
+    def dist_from_point_to_line(p, l1, l2):
+        return Utils.mag(Utils.vector_from_point_to_line(p, l1, l2))
+
+    @staticmethod
+    def vector_from_point_to_line(p, l1, l2):
+        if l1 == l2:
+            return Utils.sub(p, l1)  # kind of a lie
+        else:
+            a = l1
+            n = Utils.set_length(Utils.sub(l2, a), 1)  # unit vector along line
+
+            # copied from wikipedia "Distance from a point to a line: Vector formulation"
+            a_minus_p = Utils.sub(a, p)
+            n_with_a_useful_length = Utils.set_length(n, Utils.dot_prod(a_minus_p, n))
+            return Utils.sub(a_minus_p, n_with_a_useful_length)
+
+    @staticmethod
+    def det2x2(a, b, c, d):
+        return a * d - b * c
+
+    @staticmethod
+    def line_line_intersection(xy1, xy2, xy3, xy4):
+        x1, y1 = xy1
+        x2, y2 = xy2
+        x3, y3 = xy3
+        x4, y4 = xy4
+
+        det = Utils.det2x2
+
+        denominator = det(
+            det(x1,  1, x2, 1),
+            det(y1,  1, y2, 1),
+            det(x3,  1, x4, 1),
+            det(y3,  1, y4, 1)
+        )
+
+        if denominator == 0:
+            # lines are parallel
+            return None
+
+        p_x_numerator = det(
+            det(x1, y1, x2, y2),
+            det(x1,  1, x2,  1),
+            det(x3, y3, x4, y4),
+            det(x3,  1, x4,  1)
+        )
+
+        p_y_numerator = det(
+            det(x1, y1, x2, y2),
+            det(y1,  1, y2, 1),
+            det(x3, y3, x4, y4),
+            det(y3,  1, y4, 1)
+        )
+
+        return (p_x_numerator / denominator,
+                p_y_numerator / denominator)
+
+    @staticmethod
+    def projection(v1, v2):
+        """finds the vector projection of v1 onto v2, or None if it doesn't exist"""
+        v2_mag = Utils.mag(v2)
+        if v2_mag == 0:
+            return None
+        else:
+            v1_dot_v2 = Utils.dot_prod(v1, v2)
+            return Utils.set_length(v2, v1_dot_v2 / v2_mag)
+
+    @staticmethod
+    def rejection(v1, v2):
+        """finds the vector rejection of v1 onto v2, or None if it doesn't exist"""
+        proj_v1_onto_v2 = Utils.projection(v1, v2)
+        if proj_v1_onto_v2 is None:
+            return None
+        else:
+            return Utils.sub(v1, proj_v1_onto_v2)
+
+    @staticmethod
     def linear_interp(v1, v2, a):
         if isinstance(v1, int) or isinstance(v1, float):
             return Utils._lerp_num_safely(v1, v2, a)

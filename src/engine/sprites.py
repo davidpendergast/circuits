@@ -646,6 +646,109 @@ class RectangleOutlineSprite(MultiSprite):
 
         return self
 
+
+class TriangleOutlineSprite(MultiSprite):
+
+    def __init__(self, layer_id, p1=(0, 0), p2=(0, 0), p3=(0, 0), outline=1, color=(1, 1, 1), depth=1):
+        MultiSprite.__init__(self, SpriteTypes.TRIANGLE, layer_id)
+        self._p1 = p1
+        self._p2 = p2
+        self._p3 = p3
+        self._outline = outline
+        self._color = color
+        self._depth = depth
+
+        self._sub_triangles = []
+
+    def all_sprites_nullable(self):
+        for spr in self._sub_triangles:
+            yield spr
+
+    def update(self, new_points=None, new_p1=None, new_p2=None, new_p3=None, new_outline=None, new_color=None, new_depth=None):
+        points = new_points if new_points is not None else (self._p1, self._p2, self._p3)
+        new_p1 = new_p1 if new_p1 is not None else points[0]
+        new_p2 = new_p2 if new_p2 is not None else points[1]
+        new_p3 = new_p3 if new_p3 is not None else points[2]
+
+        did_change = False
+
+        if new_p1 != self._p1:
+            did_change = True
+            self._p1 = new_p1
+        if new_p2 != self._p2:
+            did_change = True
+            self._p2 = new_p2
+        if new_p3 != self._p3:
+            did_change = True
+            self._p3 = new_p3
+        if new_outline is not None and new_outline != self._outline:
+            did_change = True
+            self._outline = new_outline
+        if new_color is not None and new_color != self._color:
+            did_change = True
+            self._color = new_color
+        if new_depth is not None and new_depth != self._depth:
+            did_change = True
+            self._depth = new_depth
+
+        if did_change:
+            self._build_sprites()
+
+        return self
+
+    def _build_sprites(self):
+        if self._outline <= 0:
+            self._sub_triangles = []
+            return
+
+        heights = [
+            Utils.dist_from_point_to_line(self._p1, self._p2, self._p3),
+            Utils.dist_from_point_to_line(self._p2, self._p1, self._p3),
+            Utils.dist_from_point_to_line(self._p3, self._p1, self._p2)
+        ]
+
+        if min(heights) <= self._outline:
+            # outline fills entire triangle
+            Utils.extend_or_empty_list_to_length(self._sub_triangles, 1, creator=lambda: TriangleSprite(self.layer_id()))
+            self._sub_triangles[0] = self._sub_triangles[0].update(new_p1=self._p1, new_p2=self._p2, new_p3=self._p3,
+                                                                   new_color=self._color, new_depth=self._depth)
+            return
+        else:
+            Utils.extend_or_empty_list_to_length(self._sub_triangles, 6, creator=lambda: TriangleSprite(self.layer_id()))
+            pts = [self._p1, self._p2, self._p3]
+
+            for i in range(0, 3):
+                A = pts[i]
+                B = pts[(i + 1) % 3]
+                C = pts[(i + 2) % 3]
+
+                """
+                 A    l1
+                 |    ab .
+                 |t1/  |       .
+                 |/ t2 |              . 
+                 C----cb/l2----------------B
+                """
+
+                B_to_AC = Utils.vector_from_point_to_line(B, A, C)
+                AC_to_B = Utils.sub((0, 0), B_to_AC)
+                AC_to_B_with_outline_len = Utils.set_length(AC_to_B, self._outline)
+
+                l1 = Utils.add(A, AC_to_B_with_outline_len)
+                l2 = Utils.add(C, AC_to_B_with_outline_len)
+                ab = Utils.line_line_intersection(l1, l2, A, B)
+                cb = Utils.line_line_intersection(l1, l2, C, B)
+
+                t1 = (A, ab, C)
+                t2 = (C, ab, cb)
+
+                old_t1_spr = self._sub_triangles[i * 2]
+                old_t2_spr = self._sub_triangles[i * 2 + 1]
+
+                self._sub_triangles[i * 2] = old_t1_spr.update(new_points=t1, new_color=self._color, new_depth=self._depth)
+                self._sub_triangles[i * 2 + 1] = old_t2_spr.update(new_points=t2, new_color=self._color, new_depth=self._depth)
+
+
 class TextSprite(MultiSprite):
 
     DEFAULT_X_KERNING = 0

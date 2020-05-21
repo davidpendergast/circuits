@@ -171,13 +171,17 @@ class Entity:
     def all_sprites(self):
         return []
 
-    def all_debug_sprites(self):
-        main_rect_key = "main_rect"
-        if main_rect_key not in self._debug_sprites:
-            self._debug_sprites[main_rect_key] = sprites.RectangleSprite(spriteref.POLYGON_LAYER)
-        self._debug_sprites[main_rect_key].update(new_rect=self.get_rect(), new_color=self.get_debug_color(),
+    def _update_main_body_debug_sprite(self, main_body_key):
+        if main_body_key not in self._debug_sprites:
+            self._debug_sprites[main_body_key] = sprites.RectangleSprite(spriteref.POLYGON_LAYER)
+        self._debug_sprites[main_body_key].update(new_rect=self.get_rect(), new_color=self.get_debug_color(),
                                                   new_depth=20)
-        yield self._debug_sprites[main_rect_key]
+
+    def all_debug_sprites(self):
+        main_body_key = "main_body"
+        self._update_main_body_debug_sprite(main_body_key)
+        if main_body_key in self._debug_sprites and self._debug_sprites[main_body_key] is not None:
+            yield self._debug_sprites[main_body_key]
 
         rect_colliders_key = "rect_colliders"
         if rect_colliders_key not in self._debug_sprites:
@@ -204,7 +208,7 @@ class Entity:
         all_triangle_colliders = [c for c in self.all_colliders() if isinstance(c, TriangleCollider)]
 
         util.Utils.extend_or_empty_list_to_length(self._debug_sprites[triangle_colliders_key], len(all_triangle_colliders),
-                                                  creator=lambda: sprites.TriangleSprite(spriteref.POLYGON_LAYER))
+                                                  creator=lambda: sprites.TriangleOutlineSprite(spriteref.POLYGON_LAYER))
 
         new_triangle_sprites = []
         for collider, triangle_sprite in zip(all_triangle_colliders, self._debug_sprites[triangle_colliders_key]):
@@ -214,7 +218,8 @@ class Entity:
                 color = colors.PINK
 
             points = collider.get_points(offs=self.get_xy())
-            new_triangle_sprites.append(triangle_sprite.update(new_points=points, new_color=color, new_depth=5))
+            new_triangle_sprites.append(triangle_sprite.update(new_points=points, new_outline=1,
+                                                               new_color=color, new_depth=5))
             yield triangle_sprite
 
         self._debug_sprites[triangle_colliders_key] = new_triangle_sprites
@@ -347,6 +352,13 @@ class SlopeBlockEntity(AbstractBlockEntity):
 
     def is_sloped(self):
         return True
+
+    def _update_main_body_debug_sprite(self, main_body_key):
+        if main_body_key not in self._debug_sprites:
+            self._debug_sprites[main_body_key] = sprites.TriangleSprite(spriteref.POLYGON_LAYER)
+        pts = self.get_points()
+        spr = self._debug_sprites[main_body_key]
+        self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=20)
 
 
 class PlayerEntity(Entity):
