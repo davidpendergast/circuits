@@ -293,5 +293,20 @@ class CollisionResolver:
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
                         c_state.append(b)
                 res[c.get_id()] = c_state
+
+        CollisionResolver._calc_slope_sensor_states(world, dyna_ents, res)
+
         return res
+
+    @staticmethod
+    def _calc_slope_sensor_states(world, dyna_ents, res):
+        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.SlopeBlockEntity))]
+        for ent in dyna_ents:
+            ent_xy = ent.get_xy()
+            for c in ent.all_colliders(sensor=True):
+                c_state = [] if c.get_id() not in res else res[c.get_id()]
+                for b in all_blocks:
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
+                        c_state.append(b)
+                res[c.get_id()] = c_state
 

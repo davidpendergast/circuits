@@ -497,10 +497,16 @@ class Utils:
                     (min_x2 <= pt[0] <= max_x2) and (min_y2 <= pt[1] <= max_y2))
 
     @staticmethod
-    def same_side_of_line(xy1, xy2, pt1, pt2):
+    def same_side_of_line(xy1, xy2, pt1, pt2) -> bool:
         cp1 = Utils.cross_prod(Utils.sub(xy2, xy1), Utils.sub(pt1, xy1))
         cp2 = Utils.cross_prod(Utils.sub(xy2, xy1), Utils.sub(pt2, xy1))
         return Utils.dot_prod(cp1, cp2) >= 0  # no idea why this works
+
+    @staticmethod
+    def triangle_area(tri):
+        v1 = Utils.sub(tri[0], tri[1])
+        v2 = Utils.sub(tri[0], tri[2])
+        return Utils.mag(Utils.cross_prod(v1, v2)) / 2
 
     @staticmethod
     def triangle_contains(tri, pt) -> bool:
@@ -511,25 +517,28 @@ class Utils:
 
     @staticmethod
     def triangles_intersect(tri1, tri2) -> bool:
+        if Utils.triangle_area(tri1) == 0 or Utils.triangle_area(tri2) == 0:
+            return False
+        
         for p in tri1:
             if Utils.triangle_contains(tri2, p):
                 return True
         for p in tri2:
             if Utils.triangle_contains(tri1, p):
                 return True
-        for i in range(0, 2):  # i'm pretty sureTM we only have to check two sides per triangle
-            for j in range(0, 2):
-                if Utils.line_segments_intersect(tri1[i], tri1[i + 1], tri2[i], tri2[i + 1]):
+        for i in range(0, 3):
+            for j in range(0, 3):
+                if Utils.line_segments_intersect(tri1[i], tri1[(i + 1) % 3], tri2[i], tri2[(i + 1) % 3]):
                     return True
         return False
 
     @staticmethod
-    def rect_intersects_triangle(rect, tri):
+    def rect_intersects_triangle(rect, tri) -> bool:
         if rect[2] <= 0 or rect[3] <= 0:
             # rect is empty
             return False
         else:
-            c1, c2, c3, c4 = (c for c in Utils.all_rect_corners(rect, inclusive=True))
+            c1, c2, c3, c4 = (c for c in Utils.all_rect_corners(rect))
             return (Utils.triangles_intersect((c1, c2, c3), tri) or
                     Utils.triangles_intersect((c4, c2, c3), tri))
 
