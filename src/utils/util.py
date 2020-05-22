@@ -152,6 +152,10 @@ class Utils:
             return Utils.get_rect_containing_points([(x1, y1), (x2, y2)])
 
     @staticmethod
+    def rects_intersect(rect1, rect2):
+        return Utils.get_rect_intersect(rect1, rect2) is not None
+
+    @staticmethod
     def get_rect_containing_points(pts, inclusive=False):
         if len(pts) == 0:
             raise ValueError("pts is empty")
@@ -262,6 +266,20 @@ class Utils:
             return p1 * p2
         else:
             return sum(i1 * i2 for (i1, i2) in zip(p1, p2))
+
+    @staticmethod
+    def cross_prod(v1, v2):
+        a1 = v1[0] if len(v1) >= 1 else 0
+        a2 = v1[1] if len(v1) >= 2 else 0
+        a3 = v1[2] if len(v1) >= 3 else 0
+
+        b1 = v2[0] if len(v2) >= 1 else 0
+        b2 = v2[1] if len(v2) >= 2 else 0
+        b3 = v2[2] if len(v2) >= 3 else 0
+
+        return (Utils.det2x2(a2, a3, b2, b3),
+                Utils.det2x2(a1, a3, b1, b3),
+                Utils.det2x2(a1, a2, b1, b2))
 
     @staticmethod
     def dist_from_point_to_line(p, l1, l2):
@@ -458,6 +476,62 @@ class Utils:
                     res.append(cur_cell)
 
         return res
+
+    @staticmethod
+    def line_segments_intersect(xy1, xy2, xy3, xy4) -> bool:
+        pt = Utils.line_line_intersection(xy1, xy2, xy3, xy4)
+        if pt is None:
+            return False
+        else:
+            min_x1 = min(xy1[0], xy2[0])
+            max_x1 = max(xy1[0], xy2[0])
+            min_y1 = min(xy1[1], xy2[1])
+            max_y1 = max(xy1[1], xy2[1])
+
+            min_x2 = min(xy3[0], xy4[0])
+            max_x2 = max(xy3[0], xy4[0])
+            min_y2 = min(xy3[1], xy4[1])
+            max_y2 = max(xy3[1], xy4[1])
+
+            return ((min_x1 <= pt[0] <= max_x1) and (min_y1 <= pt[1] <= max_y1) and
+                    (min_x2 <= pt[0] <= max_x2) and (min_y2 <= pt[1] <= max_y2))
+
+    @staticmethod
+    def same_side_of_line(xy1, xy2, pt1, pt2):
+        cp1 = Utils.cross_prod(Utils.sub(xy2, xy1), Utils.sub(pt1, xy1))
+        cp2 = Utils.cross_prod(Utils.sub(xy2, xy1), Utils.sub(pt2, xy1))
+        return Utils.dot_prod(cp1, cp2) >= 0  # no idea why this works
+
+    @staticmethod
+    def triangle_contains(tri, pt) -> bool:
+        a, b, c = tri
+        return (Utils.same_side_of_line(a, b, pt, c) and
+                Utils.same_side_of_line(a, c, pt, b) and
+                Utils.same_side_of_line(b, c, pt, a))
+
+    @staticmethod
+    def triangles_intersect(tri1, tri2) -> bool:
+        for p in tri1:
+            if Utils.triangle_contains(tri2, p):
+                return True
+        for p in tri2:
+            if Utils.triangle_contains(tri1, p):
+                return True
+        for i in range(0, 2):  # i'm pretty sureTM we only have to check two sides per triangle
+            for j in range(0, 2):
+                if Utils.line_segments_intersect(tri1[i], tri1[i + 1], tri2[i], tri2[i + 1]):
+                    return True
+        return False
+
+    @staticmethod
+    def rect_intersects_triangle(rect, tri):
+        if rect[2] <= 0 or rect[3] <= 0:
+            # rect is empty
+            return False
+        else:
+            c1, c2, c3, c4 = (c for c in Utils.all_rect_corners(rect, inclusive=True))
+            return (Utils.triangles_intersect((c1, c2, c3), tri) or
+                    Utils.triangles_intersect((c4, c2, c3), tri))
 
     @staticmethod
     def bfs(start_node, is_correct, get_neighbors,

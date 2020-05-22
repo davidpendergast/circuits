@@ -185,7 +185,7 @@ class CollisionResolver:
 
     @staticmethod
     def _solve_all_collisions(world, dyna_ents, start_positions, next_positions):
-        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.BlockEntity))]
+        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.AbstractBlockEntity))]
         for ent in dyna_ents:
             CollisionResolver._solve_pre_move_collisions(world, ent, start_positions, all_blocks)
 

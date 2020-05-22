@@ -562,9 +562,9 @@ class CollisionMasks:
     BLOCK = CollisionMask("block")
     SLOPE_BLOCK = CollisionMask("slope_block")
 
-    ACTOR = CollisionMask("actor", collides_with=("block"))
+    ACTOR = CollisionMask("actor", collides_with=("block", "slope_block"))
 
-    BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, collides_with=("block"))
+    BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, collides_with=("block", "slope_block"))
 
 
 class CollisionResolutionHint:
@@ -670,7 +670,12 @@ class TriangleCollider(PolygonCollider):
         PolygonCollider.__init__(self, points, mask, resolution_hint=resolution_hint, color=color)
 
     def is_overlapping(self, offs, other, other_offs):
-        return False  # TODO math
+        if isinstance(other, TriangleCollider):
+            return util.Utils.triangles_intersect(self.get_points(offs=offs), other.get_points(offs=other_offs))
+        elif isinstance(other, RectangleCollider):
+            return util.Utils.rect_intersects_triangle(other.get_rect(offs=other_offs), self.get_points(offs=offs))
+        else:
+            return super().is_overlapping(offs, other, other_offs)
 
 
 class RectangleCollider(PolygonCollider):
@@ -680,9 +685,11 @@ class RectangleCollider(PolygonCollider):
         PolygonCollider.__init__(self, points, mask, resolution_hint=resolution_hint, color=color)
 
     def is_overlapping(self, offs, other, other_offs):
-        if not isinstance(other, RectangleCollider):
-            return super().is_overlapping(offs, other, other_offs)
-        else:
+        if isinstance(other, RectangleCollider):
             return util.Utils.get_rect_intersect(self.get_rect(offs=offs), other.get_rect(offs=other_offs)) is not None
+        elif isinstance(other, TriangleCollider):
+            return util.Utils.rect_intersects_triangle(self.get_rect(offs=offs), other.get_points(offs=other_offs))
+        else:
+            return super().is_overlapping(offs, other, other_offs)
 
 
