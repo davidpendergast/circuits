@@ -1,10 +1,15 @@
 
 import pygame
+import os
+
+import configs as configs
 
 import src.engine.game as game
 import src.engine.layers as layers
 import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
+import src.engine.readme_writer as readme_writer
+import src.utils.util as util
 
 import src.game.worlds as worlds
 import src.game.globalstate as gs
@@ -20,6 +25,9 @@ class CircuitsGame(game.Game):
         self._world = None
 
     def initialize(self):
+        if configs.is_dev:
+            _update_readme()
+
         keybinds.get_instance().set_binding(const.MOVE_LEFT, [pygame.K_LEFT, pygame.K_a])
         keybinds.get_instance().set_binding(const.MOVE_RIGHT, [pygame.K_RIGHT, pygame.K_d])
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])
@@ -59,3 +67,25 @@ class CircuitsGame(game.Game):
         else:
             for spr in self._world.all_sprites():
                 yield spr
+
+
+def _update_readme():
+    gif_directory = "gifs"
+    gif_filenames = [f for f in os.listdir(gif_directory) if os.path.isfile(os.path.join(gif_directory, f))]
+    gif_filenames = [f for f in gif_filenames if f.endswith(".gif") and f[0].isdigit()]
+    gif_filenames.sort(key=lambda text: util.Utils.parse_leading_int(text, or_else=-1), reverse=True)
+
+    def _key_lookup(key: str):
+        n = util.Utils.parse_ending_int(key, or_else=-1)
+        if n < 0 or n >= len(gif_filenames):
+            return None
+        if key.startswith("file_"):
+            return gif_filenames[n]
+        elif key.startswith("name_"):
+            return gif_filenames[n][:-4]  # rm the ".gif" part
+        else:
+            return None
+
+    readme_writer.write_readme("README_template.txt", "README.md",
+                               key_lookup=_key_lookup,
+                               skip_line_if_value_missing=True)

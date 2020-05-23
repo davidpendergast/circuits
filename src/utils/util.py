@@ -2,7 +2,7 @@ import math
 import random
 import os
 import json
-import numbers
+import re
 import pathlib
 import sys
 import heapq
@@ -637,6 +637,21 @@ class Utils:
             key_strings = [Utils.stringify_key(k) for k in keycodes]
             return ",".join(key_strings)
 
+    @staticmethod
+    def parse_leading_int(text, or_else=-1):
+        just_the_num = re.search(r"\d+", text).group()
+        if just_the_num == "":
+            return or_else
+        else:
+            return int(just_the_num)
+
+    @staticmethod
+    def parse_ending_int(text, or_else=-1):
+        just_the_num = re.search(r"\d+$", text).group()
+        if just_the_num == "":
+            return or_else
+        else:
+            return int(just_the_num)
     @staticmethod
     def resource_path(relative_path):
         """ Get absolute path to resource, works for dev and for PyInstaller """
