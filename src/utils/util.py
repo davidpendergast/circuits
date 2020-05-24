@@ -2,7 +2,6 @@ import math
 import random
 import os
 import json
-import numbers
 import pathlib
 import sys
 import heapq
@@ -388,6 +387,8 @@ class Utils:
     def listify(obj):
         if (isinstance(obj, list)):
             return obj
+        elif (isinstance(obj, tuple)):
+            return [e for e in obj]
         else:
             return [obj]
 
@@ -519,7 +520,7 @@ class Utils:
     def triangles_intersect(tri1, tri2) -> bool:
         if Utils.triangle_area(tri1) == 0 or Utils.triangle_area(tri2) == 0:
             return False
-        
+
         for p in tri1:
             if Utils.triangle_contains(tri2, p):
                 return True

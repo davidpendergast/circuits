@@ -84,6 +84,10 @@ class World:
             new_invalids = CollisionResolver.move_dynamic_entities_and_resolve_collisions(self, group_ents)
             invalids.extend(new_invalids)
 
+        if entities.ACTOR_GROUP in phys_groups:
+            actor_ents = phys_groups[entities.ACTOR_GROUP]
+            CollisionResolver.activate_snap_sensors_if_necessary(self, actor_ents)
+
         self._sensor_states.clear()
 
         if entities.ACTOR_GROUP in phys_groups:
@@ -203,6 +207,23 @@ class CollisionResolver:
                                                                                    all_blocks)
 
     @staticmethod
+    def _shift_until_blocked(world, dyna_ent, start_xy, end_xy, all_blocks):
+        dx = end_xy[0] - start_xy[0]
+        dy = end_xy[1] - start_xy[1]
+        if dx == 0 and dy == 0:
+            return start_xy
+        steps = max(abs(dx), abs(dy))
+        best = start_xy
+        for i in range(1, steps + 1):
+            x = start_xy[0] + int((dx * i / steps))
+            y = start_xy[1] + int((dy * i / steps))
+            if len(CollisionResolver._get_blocked_solid_colliders(dyna_ent, (x, y), all_blocks)) == 0:
+                best = (x, y)
+            else:
+                break
+        return best
+
+    @staticmethod
     def _try_to_move(world, dyna_ent, start_positions, next_positions, all_blocks):
         if start_positions[dyna_ent] is None:
             next_positions[dyna_ent] = None
@@ -277,6 +298,7 @@ class CollisionResolver:
         for b in all_blocks:
             for b_collider in b.all_colliders(solid=True):
                 if collider.is_colliding_with(xy, b_collider, b.get_xy()):
+                    collider.is_colliding_with(xy, b_collider, b.get_xy())
                     return True
         return False
 
@@ -297,6 +319,31 @@ class CollisionResolver:
         CollisionResolver._calc_slope_sensor_states(world, dyna_ents, res)
 
         return res
+
+    @staticmethod
+    def activate_snap_sensors_if_necessary(world, dyna_ents):
+        # TODO - this assumes we only care about sensing blocks
+        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.AbstractBlockEntity))]
+
+        for ent in dyna_ents:
+            ent_xy = ent.get_xy()
+            should_snap_down = False
+            snap_dist = 0
+
+            for c in ent.all_colliders(sensor=True):
+                if c.get_mask() != entities.CollisionMasks.SNAP_DOWN_SENSOR:
+                    continue
+                for b in all_blocks:
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
+                        should_snap_down = True
+                        snap_dist = max(snap_dist, c.get_rect()[3])
+
+            if should_snap_down and snap_dist > 0:
+                snap_xy = (ent_xy[0], ent_xy[1] + snap_dist)
+                new_xy = CollisionResolver._shift_until_blocked(world, ent, ent_xy, snap_xy, all_blocks)
+                if new_xy != ent_xy:
+                    ent.set_y_vel(0)
+                    ent.set_y(new_xy[1])
 
     @staticmethod
     def _calc_slope_sensor_states(world, dyna_ents, res):

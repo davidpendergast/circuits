@@ -157,8 +157,10 @@ class Entity:
     def update_frame_of_reference_parent(self):
         pass
 
-    def all_colliders(self, solid=None, sensor=None):
+    def all_colliders(self, solid=None, sensor=None, enabled=True):
         for c in self._colliders:
+            if enabled is not None and enabled != c.is_enabled():
+                continue
             if solid is not None and solid != c.is_solid():
                 continue
             if sensor is not None and sensor != c.is_sensor():
@@ -187,7 +189,7 @@ class Entity:
         if rect_colliders_key not in self._debug_sprites:
             self._debug_sprites[rect_colliders_key] = []
 
-        all_rect_colliders = [c for c in self.all_colliders() if isinstance(c, RectangleCollider)]
+        all_rect_colliders = [c for c in self.all_colliders() if isinstance(c, RectangleCollider) if c.is_enabled()]
 
         util.Utils.extend_or_empty_list_to_length(self._debug_sprites[rect_colliders_key], len(all_rect_colliders),
                                                   creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
@@ -205,7 +207,7 @@ class Entity:
         if triangle_colliders_key not in self._debug_sprites:
             self._debug_sprites[triangle_colliders_key] = []
 
-        all_triangle_colliders = [c for c in self.all_colliders() if isinstance(c, TriangleCollider)]
+        all_triangle_colliders = [c for c in self.all_colliders() if isinstance(c, TriangleCollider) if c.is_enabled()]
 
         util.Utils.extend_or_empty_list_to_length(self._debug_sprites[triangle_colliders_key], len(all_triangle_colliders),
                                                   creator=lambda: sprites.TriangleOutlineSprite(spriteref.POLYGON_LAYER))
@@ -376,6 +378,7 @@ class PlayerEntity(Entity):
 
         self._gravity = 0.15  # TODO split this into max_jump_height and jump_duration
         self._jump_y_vel = 4  # TODO units
+        self._snap_down_dist = 4
 
         self._bonus_y_fric_on_let_go = 0.85
 
@@ -393,31 +396,96 @@ class PlayerEntity(Entity):
         self._wall_cling_time = 14   # how long you have to hold the direction to break the wall cling
         self._wall_cling_count = 0
 
-        w_inset = int(self.get_w() * 0.15)
+        self._air_time = 0
+        self._last_jump_time = 1000
+
+        self._jump_cooldown = 10
+
+        w_inset = int(self.get_w() * 0.15)  # 0.15
         h_inset = int(self.get_h() * 0.10)
 
         vert_env_collider = RectangleCollider([w_inset, 0, self.get_w() - (w_inset * 2), self.get_h()],
-                                              CollisionMasks.ACTOR, resolution_hint=CollisionResolutionHints.VERT_ONLY,
-                                              color=colors.WHITE)
-        horz_env_collider = RectangleCollider([0, 0, self.get_w(), self.get_h() - h_inset],
-                                              CollisionMasks.ACTOR, resolution_hint=CollisionResolutionHints.HORZ_ONLY,
+                                              CollisionMasks.ACTOR,
+                                              collides_with=CollisionMasks.BLOCK,
+                                              resolution_hint=CollisionResolutionHints.VERT_ONLY,
                                               color=colors.WHITE)
 
-        # TODO - may want the ground sensor to be as wide as the vert_env_collider
-        self.foot_sensor = RectangleCollider([0, self.get_h(), self.get_w(), 1],
-                                             CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
+        horz_env_collider = RectangleCollider([0, 0, self.get_w(), self.get_h() - h_inset],
+                                              CollisionMasks.ACTOR,
+                                              collides_with=CollisionMasks.BLOCK,
+                                              resolution_hint=CollisionResolutionHints.HORZ_ONLY,
+                                              color=colors.WHITE)
+
+        foot_sensor_rect = [0, self.get_h(), self.get_w(), 1]
+        self.foot_sensor = RectangleCollider(foot_sensor_rect,
+                                             CollisionMasks.SENSOR,
+                                             collides_with=CollisionMasks.BLOCK,
+                                             color=colors.GREEN)
 
         left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
-                                        CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
+                                        CollisionMasks.SENSOR,
+                                        collides_with=CollisionMasks.BLOCK,
+                                        color=colors.GREEN)
 
         right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
-                                         CollisionMasks.BLOCK_SENSOR, color=colors.GREEN)
+                                         CollisionMasks.SENSOR,
+                                         collides_with=CollisionMasks.BLOCK,
+                                         color=colors.GREEN)
 
         self.foot_sensor_id = self.foot_sensor.get_id()
         self.left_sensor_id = left_sensor.get_id()
         self.right_sensor_id = right_sensor.get_id()
 
-        self.set_colliders([vert_env_collider, horz_env_collider, self.foot_sensor, left_sensor, right_sensor])
+        # pulls you to the ground when you're grounded
+        snap_down_rect = [w_inset, self.get_h(), self.get_w() - w_inset * 2, self._snap_down_dist]
+        self.snap_down_sensor = RectangleCollider(snap_down_rect,
+                                                  CollisionMasks.SNAP_DOWN_SENSOR,
+                                                  collides_with=(CollisionMasks.SLOPE_BLOCK, CollisionMasks.BLOCK),
+                                                  color=colors.YELLOW)
+
+        # slope sensors
+        slope_collider_top = self.get_h() - h_inset
+        slope_collider_bot = self.get_h() - 1
+        slope_collider_left = w_inset
+        slope_collider_right = self.get_w() - w_inset
+
+        foot_slope_triangle_left = [(slope_collider_left, slope_collider_top),
+                                   (self.get_w() // 2, slope_collider_top),
+                                   (self.get_w() // 2, slope_collider_bot)]
+
+        foot_slope_triangle_right = [(slope_collider_right, slope_collider_top),
+                                    (self.get_w() // 2 + 1, slope_collider_top),
+                                    (self.get_w() // 2 + 1, slope_collider_bot)]
+
+        slope_env_collider_left = TriangleCollider(foot_slope_triangle_left,
+                                                   CollisionMasks.ACTOR,
+                                                   collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                   resolution_hint=CollisionResolutionHints.VERT_ONLY,
+                                                   color=colors.OFF_WHITE)
+
+        slope_env_collider_right = TriangleCollider(foot_slope_triangle_right,
+                                                    CollisionMasks.ACTOR,
+                                                    collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                    resolution_hint=CollisionResolutionHints.VERT_ONLY,
+                                                    color=colors.OFF_WHITE)
+
+        foot_slope_sensor_left = TriangleCollider([(p[0], p[1] + 1) for p in foot_slope_triangle_left],
+                                                  CollisionMasks.SENSOR,
+                                                  collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                  color=colors.GREEN)
+
+        foot_slope_sensor_right = TriangleCollider([(p[0], p[1] + 1) for p in foot_slope_triangle_right],
+                                                   CollisionMasks.SENSOR,
+                                                   collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                   color=colors.GREEN)
+
+        self.foot_slope_sensor_left_id = foot_slope_sensor_left.get_id()
+        self.foot_slope_sensor_right_id = foot_slope_sensor_right.get_id()
+
+        self.set_colliders([vert_env_collider, horz_env_collider, self.foot_sensor, left_sensor, right_sensor,
+                            self.snap_down_sensor,
+                            slope_env_collider_left, slope_env_collider_right,
+                            foot_slope_sensor_left, foot_slope_sensor_right])
 
     def is_dynamic(self):
         return True
@@ -434,14 +502,35 @@ class PlayerEntity(Entity):
         if self._y_vel > max_y_vel:
             self._y_vel = max_y_vel
 
+        if self.is_grounded():
+            self._air_time = 0
+        else:
+            self._air_time += 1
+
+        should_snap_down = self._last_jump_time > 3 and self._air_time <= 1
+        self.snap_down_sensor.set_enabled(should_snap_down)
+
+        self._last_jump_time += 1
+
     def is_grounded(self):
-        return len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0
+        return (len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0 or
+                len(self.get_world().get_sensor_state(self.foot_slope_sensor_left_id)) > 0 or
+                len(self.get_world().get_sensor_state(self.foot_slope_sensor_right_id)) > 0)
 
     def is_left_walled(self):
         return len(self.get_world().get_sensor_state(self.left_sensor_id)) > 0
 
     def is_right_walled(self):
         return len(self.get_world().get_sensor_state(self.right_sensor_id)) > 0
+
+    def is_on_left_slope(self):
+        return len(self.get_world().get_sensor_state(self.foot_slope_sensor_left_id)) > 0
+
+    def is_on_right_slope(self):
+        return len(self.get_world().get_sensor_state(self.foot_slope_sensor_right_id)) > 0
+
+    def is_on_flat_ground(self):
+        return len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0
 
     def is_clinging_to_wall(self):
         return not self.is_grounded() and (self.is_left_walled() or self.is_right_walled())
@@ -480,20 +569,35 @@ class PlayerEntity(Entity):
             else:
                 accel += self._air_accel
 
-            new_x_vel = self._x_vel + dx * accel
+            x_accel = dx * accel
+            y_accel = 0
+
+            # alter the angle of motion if we're on a slope
+            if self.is_on_left_slope() and not self.is_on_flat_ground() and not self.is_on_right_slope():
+                x_accel, y_accel = util.Utils.rotate((x_accel, y_accel), util.Utils.to_rads(22.5))
+            elif self.is_on_right_slope() and not self.is_on_flat_ground() and not self.is_on_left_slope():
+                x_accel, y_accel = util.Utils.rotate((x_accel, y_accel), util.Utils.to_rads(-22.5))
+
+            new_x_vel = self._x_vel + x_accel
             new_x_vel_bounded = util.Utils.bound(new_x_vel, -self._x_vel_max, self._x_vel_max)
 
             self.set_x_vel(new_x_vel_bounded)
+
+            if y_accel != 0:
+                new_y_vel = self._y_vel + y_accel
+                self.set_y_vel(new_y_vel)
         else:
             fric = self._ground_x_friction if self.is_grounded() else self._air_x_friction
             self.set_x_vel(self._x_vel * fric)
 
-        if request_jump:
+        if request_jump and self._last_jump_time >= self._jump_cooldown:
             if self.is_grounded():
                 self.set_y_vel(self._y_vel - self._jump_y_vel)
+                self._last_jump_time = 0
             else:
                 if self.is_left_walled() or self.is_right_walled():
                     self.set_y_vel(-self._wall_jump_y_vel)
+                    self._last_jump_time = 0
 
                     if self.is_left_walled():
                         self.set_x_vel(self._x_vel + self._wall_jump_x_vel)
@@ -535,11 +639,10 @@ class PlayerEntity(Entity):
 
 class CollisionMask:
 
-    def __init__(self, name, is_solid=True, is_sensor=False, collides_with=()):
+    def __init__(self, name, is_solid=True, is_sensor=False):
         self._name = name
         self._is_solid = is_solid
         self._is_sensor = is_sensor
-        self._collides_with = collides_with
 
     def get_name(self) -> str:
         return self._name
@@ -550,21 +653,17 @@ class CollisionMask:
     def is_sensor(self) -> bool:
         return self._is_sensor
 
-    def collides_with(self, mask) -> bool:
-        if mask is None:
-            return False
-        else:
-            return mask.get_name() in self._collides_with
-
 
 class CollisionMasks:
 
     BLOCK = CollisionMask("block")
     SLOPE_BLOCK = CollisionMask("slope_block")
 
-    ACTOR = CollisionMask("actor", collides_with=("block", "slope_block"))
+    ACTOR = CollisionMask("actor")
 
-    BLOCK_SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, collides_with=("block", "slope_block"))
+    SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True)
+
+    SNAP_DOWN_SENSOR = CollisionMask("snap_down_sensor", is_solid=False, is_sensor=True)
 
 
 class CollisionResolutionHint:
@@ -607,16 +706,25 @@ def _next_collider_id():
 
 class PolygonCollider:
 
-    def __init__(self, points, mask, resolution_hint=None, color=colors.RED):
+    def __init__(self, points, mask, collides_with=None, resolution_hint=None, color=colors.RED):
         self._mask = mask
+        self._collides_with = [] if collides_with is None else util.Utils.listify(collides_with)
         self._points = points
         self._resolution_hint = resolution_hint if resolution_hint is not None else CollisionResolutionHints.BOTH
 
         self._debug_color = color
         self._id = _next_collider_id()
 
+        self._is_enabled = True
+
     def get_id(self):
         return self._id
+
+    def set_enabled(self, val):
+        self._is_enabled = val
+
+    def is_enabled(self):
+        return self._is_enabled
 
     def get_mask(self):
         return self._mask
@@ -625,7 +733,7 @@ class PolygonCollider:
         return self._resolution_hint
 
     def collides_with(self, other):
-        return self.get_mask().collides_with(other.get_mask())
+        return other.get_mask() in self._collides_with
 
     def is_overlapping(self, offs, other, other_offs):
         raise NotImplementedError()  # TODO general polygon collisions
@@ -664,10 +772,10 @@ class PolygonCollider:
 
 class TriangleCollider(PolygonCollider):
 
-    def __init__(self, points, mask, resolution_hint=None, color=colors.RED):
+    def __init__(self, points, mask, collides_with=None, resolution_hint=None, color=colors.RED):
         if len(points) != 3:
             raise ValueError("must have 3 points, instead got: {}".format(points))
-        PolygonCollider.__init__(self, points, mask, resolution_hint=resolution_hint, color=color)
+        PolygonCollider.__init__(self, points, mask, collides_with=collides_with, resolution_hint=resolution_hint, color=color)
 
     def is_overlapping(self, offs, other, other_offs):
         if isinstance(other, TriangleCollider):
@@ -680,9 +788,9 @@ class TriangleCollider(PolygonCollider):
 
 class RectangleCollider(PolygonCollider):
 
-    def __init__(self, rect, mask, resolution_hint=None, color=colors.RED):
+    def __init__(self, rect, mask, collides_with=None, resolution_hint=None, color=colors.RED):
         points = [p for p in util.Utils.all_rect_corners(rect, inclusive=False)]
-        PolygonCollider.__init__(self, points, mask, resolution_hint=resolution_hint, color=color)
+        PolygonCollider.__init__(self, points, mask, collides_with=collides_with, resolution_hint=resolution_hint, color=color)
 
     def is_overlapping(self, offs, other, other_offs):
         if isinstance(other, RectangleCollider):
