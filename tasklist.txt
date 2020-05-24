@@ -1,3 +1,12 @@
 
 
- - an actual input handler
+bugs:
+ - jump height is inconsistent
+ - no collisions with horizonal slopes
+ 
+ 
+features:
+ - entities should know their AABBs 
+ - spacial chunking for objects in world
+ - use spacial chunking to improve collision resolution performance
+ - art

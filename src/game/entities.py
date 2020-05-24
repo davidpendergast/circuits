@@ -324,33 +324,42 @@ class SlopeOrientation:
         return not self.is_horz()
 
 
-class SlopeOrientations:
-    HORZ_UPWARD_LEFT = SlopeOrientation([(0, 0), (0, 1), (2, 1)])
-    HORZ_UPWARD_RIGHT = SlopeOrientation([(2, 0), (2, 1), (0, 1)])
-
-
 class SlopeBlockEntity(AbstractBlockEntity):
 
-    def __init__(self, x, y, orientation):
-        w = gs.get_instance().cell_size * (2 if orientation.is_horz() else 1)
-        h = gs.get_instance().cell_size * (1 if orientation.is_horz() else 2)
-        super().__init__(x, y, w, h)
-        self._orientation = orientation
+    """
+        up/down = side the angled part is on
+        left/right = side of the thicker part of the slope
+        w x h = total dims of the block
+    """
+    UPWARD_LEFT_2x1 = [(0, 0), (0, 1), (2, 1)]
+    UPWARD_RIGHT_2x1 = [(0, 1), (2, 0), (2, 1)]
 
+    UPWARD_LEFT_1x2 = [(0, 0), (0, 2), (1, 2)]
+    UPWARD_RIGHT_1x2 = [(1, 0), (1, 2), (0, 2)]
+
+    DOWNWARD_LEFT_2x1 = [(0, 0), (2, 0), (0, 1)]
+    DOWNWARD_RIGHT_2x1 = [(0, 0), (2, 0), (2, 1)]
+
+    DOWNWARD_LEFT_1x2 = [(0, 0), (0, 2), (1, 0)]
+    DOWNWARD_RIGHT_1x2 = [(0, 0), (1, 2), (1, 0)]
+
+    def __init__(self, x, y, triangle, triangle_scale=1):
+        scaled_triangle = [util.Utils.mult(pt, triangle_scale) for pt in triangle]
+        rect = util.Utils.get_rect_containing_points(scaled_triangle)
+        super().__init__(x, y, rect[2], rect[3])
+
+        self._points = scaled_triangle
         self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK)])
 
     def get_points(self, origin=None):
         if origin is None:
             origin = self.get_xy(raw=False)
         res = []
-        for pt in self._orientation.pts:
-            pt_x = origin[0] + pt[0] * gs.get_instance().cell_size
-            pt_y = origin[1] + pt[1] * gs.get_instance().cell_size
+        for pt in self._points:
+            pt_x = origin[0] + pt[0]
+            pt_y = origin[1] + pt[1]
             res.append((pt_x, pt_y))
         return res
-
-    def get_orientation(self):
-        return self._orientation
 
     def is_sloped(self):
         return True

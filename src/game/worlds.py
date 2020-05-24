@@ -19,7 +19,7 @@ class World:
         self._sensor_states = {}  # sensor_id -> list of entities
 
     @staticmethod
-    def new_test_world():
+    def new_test_world_old():
         res = World()
         cs = gs.get_instance().cell_size
         res.add_entity(entities.BlockEntity(cs * 4, cs * 11, cs * 15, cs * 1), next_update=False)
@@ -30,14 +30,64 @@ class World:
         res.add_entity(entities.BlockEntity(cs * 21, cs * 3, cs * 0.5, cs * 4), next_update=False)
         res.add_entity(entities.BlockEntity(cs * 21.5, cs * 3, cs * 2, cs * 2), next_update=False)
 
-        res.add_entity(entities.SlopeBlockEntity(cs * 11, cs * 10, entities.SlopeOrientations.HORZ_UPWARD_LEFT), next_update=False)
-        res.add_entity(entities.SlopeBlockEntity(cs * 7, cs * 10, entities.SlopeOrientations.HORZ_UPWARD_RIGHT), next_update=False)
+        res.add_entity(entities.SlopeBlockEntity(cs * 11, cs * 10, entities.SlopeBlockEntity.UPWARD_LEFT_2x1,
+                                                 triangle_scale=cs), next_update=False)
+        res.add_entity(entities.SlopeBlockEntity(cs * 7, cs * 10, entities.SlopeBlockEntity.UPWARD_RIGHT_2x1,
+                                                 triangle_scale=cs), next_update=False)
 
         pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs), (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
         res.add_entity(moving_block, next_update=False)
 
         res.add_entity(entities.PlayerEntity(cs * 6, cs * 5), next_update=False)
+
+        return res
+
+    @staticmethod
+    def new_test_world():
+        res = World()
+        cs = gs.get_instance().cell_size
+
+        res.add_entity(entities.PlayerEntity(cs * 12, cs * 11), next_update=False)
+
+        rects = [(0, 0, 2, 5),
+                 (0, 5, 2, 3),
+                 (0, 8, 7, 1),
+                 (0, 9, 2, 4),
+                 (0, 13, 7, 2),
+                 (7, 14, 10, 1),    # floor
+                 (4, 11, 3, 2),
+
+                 (9, 7, 2, 1),     # floating platform
+                 (17, 7, 2, 1),
+                 (14, 10, 1, 2),
+                 (19, 6, 4, 1),
+                 (15, 10, 2, 1),
+
+                 (2, 0, 4, 2),      # ciel
+                 (6, 0, 19, 3),
+                 (25, 0, 5, 4),
+
+                 (13, 7, 2, 3),
+                 (17, 14.5, 2, 0.5),
+                 (19, 11, 2, 4),
+                 (23, 10, 2, 5),
+                 (21, 14, 2, 1),
+                 (25, 7, 2, 6),
+                 (25, 13, 4, 2),
+                 (27, 12, 2, 1),
+                 (29, 4, 1, 11)
+                 ]
+
+        for r in rects:
+            res.add_entity(entities.BlockEntity(cs * r[0], cs * r[1], cs * r[2], cs * r[3]), next_update=False)
+
+        slopes = [(17, 6, entities.SlopeBlockEntity.UPWARD_RIGHT_2x1),
+                  (13, 10, entities.SlopeBlockEntity.DOWNWARD_RIGHT_1x2),
+                  (4, 2, entities.SlopeBlockEntity.DOWNWARD_RIGHT_2x1)]
+
+        for s in slopes:
+            res.add_entity(entities.SlopeBlockEntity(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
 
         return res
 
