@@ -1,7 +1,6 @@
 
 
 bugs:
- - jump height is inconsistent
  - no collisions with horizonal slopes
  
  

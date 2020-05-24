@@ -349,7 +349,11 @@ class SlopeBlockEntity(AbstractBlockEntity):
         super().__init__(x, y, rect[2], rect[3])
 
         self._points = scaled_triangle
-        self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK)])
+
+        if rect[2] <= rect[3]:
+            self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK_VERT)])
+        else:
+            self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK_HORZ)])
 
     def get_points(self, origin=None):
         if origin is None:
@@ -376,7 +380,7 @@ class PlayerEntity(Entity):
 
     def __init__(self, x, y):
         w = int(gs.get_instance().cell_size * 1)
-        h = int(gs.get_instance().cell_size * 2)
+        h = int(gs.get_instance().cell_size * 1.75)
 
         Entity.__init__(self, x, y, w, h)
 
@@ -399,8 +403,8 @@ class PlayerEntity(Entity):
 
         self._air_accel = 0.15
 
-        self._air_x_friction = 0.95
-        self._ground_x_friction = 0.6
+        self._air_x_friction = 0.85
+        self._ground_x_friction = 0.60
 
         self._wall_cling_time = 14   # how long you have to hold the direction to break the wall cling
         self._wall_cling_count = 0
@@ -449,10 +453,22 @@ class PlayerEntity(Entity):
         snap_down_rect = [w_inset, self.get_h(), self.get_w() - w_inset * 2, self._snap_down_dist]
         self.snap_down_sensor = RectangleCollider(snap_down_rect,
                                                   CollisionMasks.SNAP_DOWN_SENSOR,
-                                                  collides_with=(CollisionMasks.SLOPE_BLOCK, CollisionMasks.BLOCK),
+                                                  collides_with=(CollisionMasks.SLOPE_BLOCK_HORZ, CollisionMasks.BLOCK),
                                                   color=colors.YELLOW)
 
         # slope sensors
+        slope_collider_main_horz = RectangleCollider([w_inset // 2, 1, self.get_w() - (w_inset), self.get_h() - h_inset],
+                                                     CollisionMasks.ACTOR,
+                                                     collides_with=(CollisionMasks.SLOPE_BLOCK_VERT),
+                                                     resolution_hint=CollisionResolutionHints.HORZ_ONLY,
+                                                     color=colors.OFF_WHITE)
+
+        slope_collider_main_top = RectangleCollider([w_inset // 2, 1, self.get_w() - (w_inset), self.get_h() // 2],
+                                                    CollisionMasks.ACTOR,
+                                                    collides_with=(CollisionMasks.SLOPE_BLOCK_HORZ),
+                                                    resolution_hint=CollisionResolutionHints.VERT_ONLY,
+                                                    color=colors.OFF_WHITE)
+
         slope_collider_top = self.get_h() - h_inset
         slope_collider_bot = self.get_h() - 1
         slope_collider_left = w_inset
@@ -468,31 +484,32 @@ class PlayerEntity(Entity):
 
         slope_env_collider_left = TriangleCollider(foot_slope_triangle_left,
                                                    CollisionMasks.ACTOR,
-                                                   collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                   collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
                                                    resolution_hint=CollisionResolutionHints.VERT_ONLY,
                                                    color=colors.OFF_WHITE)
 
         slope_env_collider_right = TriangleCollider(foot_slope_triangle_right,
                                                     CollisionMasks.ACTOR,
-                                                    collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                    collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
                                                     resolution_hint=CollisionResolutionHints.VERT_ONLY,
                                                     color=colors.OFF_WHITE)
 
         foot_slope_sensor_left = TriangleCollider([(p[0], p[1] + 1) for p in foot_slope_triangle_left],
                                                   CollisionMasks.SENSOR,
-                                                  collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                  collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
                                                   color=colors.GREEN)
 
         foot_slope_sensor_right = TriangleCollider([(p[0], p[1] + 1) for p in foot_slope_triangle_right],
                                                    CollisionMasks.SENSOR,
-                                                   collides_with=CollisionMasks.SLOPE_BLOCK,
+                                                   collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
                                                    color=colors.GREEN)
 
         self.foot_slope_sensor_left_id = foot_slope_sensor_left.get_id()
         self.foot_slope_sensor_right_id = foot_slope_sensor_right.get_id()
 
-        self.set_colliders([vert_env_collider, horz_env_collider, self.foot_sensor, left_sensor, right_sensor,
-                            self.snap_down_sensor,
+        self.set_colliders([vert_env_collider, horz_env_collider,
+                            self.foot_sensor, left_sensor, right_sensor,  self.snap_down_sensor,
+                            slope_collider_main_horz, slope_collider_main_top,
                             slope_env_collider_left, slope_env_collider_right,
                             foot_slope_sensor_left, foot_slope_sensor_right])
 
@@ -505,7 +522,11 @@ class PlayerEntity(Entity):
     def update(self):
         self._handle_inputs()
 
-        self._y_vel += self._gravity
+        if self.is_grounded():
+            if self._y_vel > 0:
+                self._y_vel = 0
+        else:
+            self._y_vel += self._gravity
 
         max_y_vel = self._y_vel_max if not self.is_clinging_to_wall() else self._wall_cling_y_vel_max
         if self._y_vel > max_y_vel:
@@ -516,7 +537,7 @@ class PlayerEntity(Entity):
         else:
             self._air_time += 1
 
-        should_snap_down = self._last_jump_time > 3 and self._air_time <= 1
+        should_snap_down = self._last_jump_time > 3 and self._air_time <= 1 and self._y_vel >= 0
         self.snap_down_sensor.set_enabled(should_snap_down)
 
         self._last_jump_time += 1
@@ -666,7 +687,9 @@ class CollisionMask:
 class CollisionMasks:
 
     BLOCK = CollisionMask("block")
-    SLOPE_BLOCK = CollisionMask("slope_block")
+
+    SLOPE_BLOCK_HORZ = CollisionMask("slope_block_horz")
+    SLOPE_BLOCK_VERT = CollisionMask("slope_block_vert")
 
     ACTOR = CollisionMask("actor")
 
