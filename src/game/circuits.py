@@ -65,8 +65,8 @@ class CircuitsGame(game.Game):
         if inputs.get_instance().mouse_is_dragging(button=1):
             drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
             if drag_this_frame is not None:
-                dxy = util.Utils.sub(drag_this_frame[1], drag_this_frame[0])
-                dxy = util.Utils.negate(dxy)
+                dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
+                dxy = util.negate(dxy)
                 self._world_view.move_camera_in_world(dxy)
 
         self._world.update()
@@ -85,10 +85,10 @@ def _update_readme():
     gif_directory = "gifs"
     gif_filenames = [f for f in os.listdir(gif_directory) if os.path.isfile(os.path.join(gif_directory, f))]
     gif_filenames = [f for f in gif_filenames if f.endswith(".gif") and f[0].isdigit()]
-    gif_filenames.sort(key=lambda text: util.Utils.parse_leading_int(text, or_else=-1), reverse=True)
+    gif_filenames.sort(key=lambda text: util.parse_leading_int(text, or_else=-1), reverse=True)
 
     def _key_lookup(key: str):
-        n = util.Utils.parse_ending_int(key, or_else=-1)
+        n = util.parse_ending_int(key, or_else=-1)
         if n < 0 or n >= len(gif_filenames):
             return None
         if key.startswith("file_"):

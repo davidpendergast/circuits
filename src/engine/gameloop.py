@@ -1,6 +1,6 @@
 import pygame
 
-from src.utils.util import Utils
+import src.utils.util as util
 import src.engine.sounds as sounds
 import src.engine.window as window
 import src.engine.inputs as inputs
@@ -38,7 +38,7 @@ class _GameLoop:
         pygame.mixer.init()
         pygame.init()
 
-        window_icon = pygame.image.load(Utils.resource_path("assets/icon.png"))
+        window_icon = pygame.image.load(util.resource_path("assets/icon.png"))
         pygame.display.set_icon(window_icon)
 
         window.create_instance(window_size=configs.default_window_size, min_size=configs.minimum_window_size)
@@ -143,7 +143,7 @@ class _GameLoop:
 
                 elif py_event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
                     scr_pos = window.get_instance().window_to_screen_pos(py_event.pos)
-                    game_pos = Utils.round(Utils.mult(scr_pos, 1 / renderengine.get_instance().get_pixel_scale()))
+                    game_pos = util.round_vec(util.mult(scr_pos, 1 / renderengine.get_instance().get_pixel_scale()))
                     input_state.set_mouse_pos(game_pos)
 
                     if py_event.type == pygame.MOUSEBUTTONDOWN:

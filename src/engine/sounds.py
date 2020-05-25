@@ -1,5 +1,5 @@
 import pygame
-from src.utils.util import Utils
+import src.utils.util as util
 import traceback
 
 
@@ -14,7 +14,7 @@ RECENCY_LIMIT = 4  # if an effect was already played X ticks ago, don't play it 
 
 def set_volume(volume):
     global _MASTER_VOLUME
-    _MASTER_VOLUME = Utils.bound(volume, 0.0, 1.0)
+    _MASTER_VOLUME = util.bound(volume, 0.0, 1.0)
 
 
 def update():

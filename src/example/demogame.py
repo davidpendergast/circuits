@@ -8,7 +8,7 @@ import src.engine.inputs as inputs
 import src.engine.sprites as sprites
 import src.engine.spritesheets as spritesheets
 import src.engine.layers as layers
-from src.utils.util import Utils
+import src.utils.util as util
 
 
 class DemoSheet(spritesheets.SpriteSheet):
@@ -233,17 +233,17 @@ class DemoGame(game.Game):
             tri_angle = self.triangle_angle * 2 * 3.141529 / 360
             tri_length = self.triangle_length
 
-            p1 = Utils.add(tri_center, Utils.rotate((tri_length, 0), tri_angle))
-            p2 = Utils.add(tri_center, Utils.rotate((tri_length, 0), tri_angle + 3.141529 * 2 / 3))
-            p3 = Utils.add(tri_center, Utils.rotate((tri_length, 0), tri_angle + 3.141529 * 4 / 3))
+            p1 = util.add(tri_center, util.rotate((tri_length, 0), tri_angle))
+            p2 = util.add(tri_center, util.rotate((tri_length, 0), tri_angle + 3.141529 * 2 / 3))
+            p3 = util.add(tri_center, util.rotate((tri_length, 0), tri_angle + 3.141529 * 4 / 3))
 
             self.triangle_sprite = self.triangle_sprite.update(new_points=(p1, p2, p3))
 
-            player_dist = Utils.dist(self.entity_positions[0], tri_center)
+            player_dist = util.dist(self.entity_positions[0], tri_center)
             if player_dist > 100:
                 rot_speed = min_rot_speed
             else:
-                rot_speed = Utils.linear_interp(min_rot_speed, max_rot_speed, (100 - player_dist) / 100)
+                rot_speed = util.linear_interp(min_rot_speed, max_rot_speed, (100 - player_dist) / 100)
 
             self.triangle_angle += rot_speed
 
@@ -263,7 +263,7 @@ class DemoGame(game.Game):
         self.fps_text_sprite = self.fps_text_sprite.update(new_x=text_inset, new_y=text_inset,
                                                            new_text=fps_text)
 
-        player_to_tv_dist = Utils.dist(self.entity_positions[0], self.entity_positions[1])
+        player_to_tv_dist = util.dist(self.entity_positions[0], self.entity_positions[1])
         info_text = "There's something wrong with the TV. Maybe it's better this way." if player_to_tv_dist < 32 else None
         info_text_w = 400 - 32
         info_text_h = 48
@@ -297,8 +297,8 @@ class DemoGame(game.Game):
             for i in range(0, 4):
                 dx = cube_length / 2 * math.cos(cube_angle + i * 3.141529 / 2)
                 dy = cube_length / 2 * math.sin(cube_angle + i * 3.141529 / 2) / 2  # foreshortened in the y-axis
-                cube_btm_pts.append(Utils.add(cube_center, (dx, dy)))
-                cube_top_pts.append(Utils.add(cube_center, (dx, dy - cube_length)))
+                cube_btm_pts.append(util.add(cube_center, (dx, dy)))
+                cube_top_pts.append(util.add(cube_center, (dx, dy - cube_length)))
 
             for i in range(0, 12):
                 if i < 4:  # bottom lines
@@ -313,11 +313,11 @@ class DemoGame(game.Game):
 
                 self.cube_line_sprites[i].update(new_p1=p1, new_p2=p2, new_color=cube_color)
 
-            player_dist = Utils.dist(self.entity_positions[0], cube_center)
+            player_dist = util.dist(self.entity_positions[0], cube_center)
             if player_dist > 100:
                 rotation_speed = min_rot_speed
             else:
-                rotation_speed = Utils.linear_interp(min_rot_speed, max_rot_speed, (100 - player_dist) / 100)
+                rotation_speed = util.linear_interp(min_rot_speed, max_rot_speed, (100 - player_dist) / 100)
 
             self.cube_angle += rotation_speed
 

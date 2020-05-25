@@ -2,7 +2,8 @@ import pygame
 import os
 import threading
 import time
-from src.utils.util import Utils
+
+import src.utils.util as util
 
 
 _SILENCE_ID = "<silence>"
@@ -54,7 +55,7 @@ def set_master_volume(val):
     global _MASTER_VOLUME, CURRENT_SONG
     if val != _MASTER_VOLUME:
         print("INFO: setting master music volume to {}".format(val))
-        _MASTER_VOLUME = Utils.bound(val, 0.0, 1.0)
+        _MASTER_VOLUME = util.bound(val, 0.0, 1.0)
         pygame.mixer.music.set_volume(_MASTER_VOLUME * CURRENT_SONG.volume)
 
 
@@ -145,7 +146,7 @@ def _play_song_forcefully(song):
         else:
             print("INFO: starting song {}".format(song))
 
-        real_filename = Utils.resource_path(os.path.join("assets", "songs", song.filename))
+        real_filename = util.resource_path(os.path.join("assets", "songs", song.filename))
         pygame.mixer.music.set_volume(_MASTER_VOLUME * song.volume)
         pygame.mixer.music.load(real_filename)
         pygame.mixer.music.play(-1, 0)

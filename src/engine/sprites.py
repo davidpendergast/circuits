@@ -3,7 +3,7 @@ import src.engine.globaltimer as globaltimer
 
 import math
 
-from src.utils.util import Utils
+import src.utils.util as util
 
 
 UNIQUE_ID_CTR = 0
@@ -430,18 +430,18 @@ class LineSprite(MultiSprite):
             thickness = self.thickness()
             color = self.color()
 
-            line_vec = Utils.sub(p2, p1)
-            ortho_up = Utils.set_length(Utils.rotate(line_vec, 3.141529 / 2), thickness // 2)
-            ortho_down = Utils.set_length(Utils.rotate(line_vec, -3.141529 / 2), int(0.5 + thickness / 2))
+            line_vec = util.sub(p2, p1)
+            ortho_up = util.set_length(util.rotate(line_vec, 3.141529 / 2), thickness // 2)
+            ortho_down = util.set_length(util.rotate(line_vec, -3.141529 / 2), int(0.5 + thickness / 2))
 
             #  r1-------r2
             #  p1     - p2
             #  |  -      |
             #  r4-------r3
-            r1 = Utils.sum([p1, ortho_up])
-            r2 = Utils.sum([p1, line_vec, ortho_up])
-            r3 = Utils.sum([p1, line_vec, ortho_down])
-            r4 = Utils.sum([p1, ortho_down])
+            r1 = util.sum_vecs([p1, ortho_up])
+            r2 = util.sum_vecs([p1, line_vec, ortho_up])
+            r3 = util.sum_vecs([p1, line_vec, ortho_down])
+            r4 = util.sum_vecs([p1, ortho_down])
 
             self._triangle1 = self._triangle1.update(new_points=(r1, r2, r4), new_color=color, new_depth=self.depth())
             self._triangle2 = self._triangle2.update(new_points=(r3, r4, r2), new_color=color, new_depth=self.depth())
@@ -702,19 +702,19 @@ class TriangleOutlineSprite(MultiSprite):
             return
 
         heights = [
-            Utils.dist_from_point_to_line(self._p1, self._p2, self._p3),
-            Utils.dist_from_point_to_line(self._p2, self._p1, self._p3),
-            Utils.dist_from_point_to_line(self._p3, self._p1, self._p2)
+            util.dist_from_point_to_line(self._p1, self._p2, self._p3),
+            util.dist_from_point_to_line(self._p2, self._p1, self._p3),
+            util.dist_from_point_to_line(self._p3, self._p1, self._p2)
         ]
 
         if min(heights) <= self._outline:
             # outline fills entire triangle
-            Utils.extend_or_empty_list_to_length(self._sub_triangles, 1, creator=lambda: TriangleSprite(self.layer_id()))
+            util.extend_or_empty_list_to_length(self._sub_triangles, 1, creator=lambda: TriangleSprite(self.layer_id()))
             self._sub_triangles[0] = self._sub_triangles[0].update(new_p1=self._p1, new_p2=self._p2, new_p3=self._p3,
                                                                    new_color=self._color, new_depth=self._depth)
             return
         else:
-            Utils.extend_or_empty_list_to_length(self._sub_triangles, 6, creator=lambda: TriangleSprite(self.layer_id()))
+            util.extend_or_empty_list_to_length(self._sub_triangles, 6, creator=lambda: TriangleSprite(self.layer_id()))
             pts = [self._p1, self._p2, self._p3]
 
             for i in range(0, 3):
@@ -730,14 +730,14 @@ class TriangleOutlineSprite(MultiSprite):
                  C----cb/l2----------------B
                 """
 
-                B_to_AC = Utils.vector_from_point_to_line(B, A, C)
-                AC_to_B = Utils.sub((0, 0), B_to_AC)
-                AC_to_B_with_outline_len = Utils.set_length(AC_to_B, self._outline)
+                B_to_AC = util.vector_from_point_to_line(B, A, C)
+                AC_to_B = util.sub((0, 0), B_to_AC)
+                AC_to_B_with_outline_len = util.set_length(AC_to_B, self._outline)
 
-                l1 = Utils.add(A, AC_to_B_with_outline_len)
-                l2 = Utils.add(C, AC_to_B_with_outline_len)
-                ab = Utils.line_line_intersection(l1, l2, A, B)
-                cb = Utils.line_line_intersection(l1, l2, C, B)
+                l1 = util.add(A, AC_to_B_with_outline_len)
+                l2 = util.add(C, AC_to_B_with_outline_len)
+                ab = util.line_line_intersection(l1, l2, A, B)
+                cb = util.line_line_intersection(l1, l2, C, B)
 
                 t1 = (A, ab, C)
                 t2 = (C, ab, cb)

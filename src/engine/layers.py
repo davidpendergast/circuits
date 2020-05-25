@@ -154,8 +154,8 @@ class ImageLayer(_Layer):
                 if sprite_id in self._last_known_last_modified_ticks:
                     del self._last_known_last_modified_ticks[sprite_id]
 
-            util.Utils.remove_all_from_list_in_place(self.images, self._to_remove)
-            util.Utils.remove_all_from_list_in_place(self._to_add, self._to_remove)
+            util.remove_all_from_list_in_place(self.images, self._to_remove)
+            util.remove_all_from_list_in_place(self._to_add, self._to_remove)
             self._to_remove.clear()
 
         if len(self._to_add) > 0:

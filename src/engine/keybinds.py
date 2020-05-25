@@ -27,7 +27,7 @@ class KeyBindings:
             if action_code in self._binds:
                 del self._binds[action_code]
         else:
-            keylist = util.Utils.listify(keylist)
+            keylist = util.listify(keylist)
             self._binds[action_code] = keylist
 
     def set_global_action(self, key, name, action):
@@ -39,7 +39,7 @@ class KeyBindings:
                 raise ValueError("action \"{}\" isn't callable: {}".format(name, action))
             if key in self._global_bindings and self._global_bindings[key][0] != name:
                 print("WARN: overwriting global key action \"{}\" with \"{}\" (key={})".format(
-                    self._global_bindings[key][0], name, util.Utils.stringify_key(key)
+                    self._global_bindings[key][0], name, util.stringify_key(key)
                 ))
             self._global_bindings[key] = (name, action)
 

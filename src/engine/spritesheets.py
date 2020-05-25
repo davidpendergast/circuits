@@ -153,7 +153,7 @@ class SpriteAtlas:
             if rel_path is None:
                 loaded_images[s_id] = None
             else:
-                resource_path = util.Utils.resource_path(rel_path)
+                resource_path = util.resource_path(rel_path)
                 try:
                     loaded_images[s_id] = pygame.image.load(resource_path)
                 except Exception:
@@ -173,7 +173,7 @@ class SpriteAtlas:
             else:
                 print("WARN: sprite sheet {} has empty or invalid size: {}".format(s_id, s_size))
 
-        packed_rects, atlas_size = util.Utils.pack_rects_into_smallest_rect(all_non_empty_sizes)
+        packed_rects, atlas_size = util.pack_rects_into_smallest_rect(all_non_empty_sizes)
 
         packed_rects_set = set()
         for r in packed_rects:

@@ -317,7 +317,7 @@ class CollisionResolver:
             dy = abs(xy[1] - target_xy[1])
             return ((dx * dx + dy * dy), dx)  # closest points first, then break ties by preferring y shifts
 
-        return util.Utils.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=100)
+        return util.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=100)
 
     @staticmethod
     def _get_blocked_solid_colliders(ent, xy, all_blocks) -> typing.List[entities.PolygonCollider]:

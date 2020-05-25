@@ -35,8 +35,8 @@ class Entity:
         self._x = x
         self._y = y
 
-        w = util.Utils.assert_int(w, msg="width must be an integer: {}".format(w), error=True)
-        h = util.Utils.assert_int(h, msg="height must be an integer: {}".format(h), error=True)
+        w = util.assert_int(w, msg="width must be an integer: {}".format(w), error=True)
+        h = util.assert_int(h, msg="height must be an integer: {}".format(h), error=True)
         self._size = w, h
 
         self._x_vel = 0  # pixels per tick
@@ -191,8 +191,8 @@ class Entity:
 
         all_rect_colliders = [c for c in self.all_colliders() if isinstance(c, RectangleCollider) if c.is_enabled()]
 
-        util.Utils.extend_or_empty_list_to_length(self._debug_sprites[rect_colliders_key], len(all_rect_colliders),
-                                                  creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
+        util.extend_or_empty_list_to_length(self._debug_sprites[rect_colliders_key], len(all_rect_colliders),
+                                            creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
         for collider, rect_sprite in zip(all_rect_colliders, self._debug_sprites[rect_colliders_key]):
             color = collider.get_debug_color()
 
@@ -209,8 +209,8 @@ class Entity:
 
         all_triangle_colliders = [c for c in self.all_colliders() if isinstance(c, TriangleCollider) if c.is_enabled()]
 
-        util.Utils.extend_or_empty_list_to_length(self._debug_sprites[triangle_colliders_key], len(all_triangle_colliders),
-                                                  creator=lambda: sprites.TriangleOutlineSprite(spriteref.POLYGON_LAYER))
+        util.extend_or_empty_list_to_length(self._debug_sprites[triangle_colliders_key], len(all_triangle_colliders),
+                                            creator=lambda: sprites.TriangleOutlineSprite(spriteref.POLYGON_LAYER))
 
         new_triangle_sprites = []
         for collider, triangle_sprite in zip(all_triangle_colliders, self._debug_sprites[triangle_colliders_key]):
@@ -302,14 +302,14 @@ class MovingBlockEntity(BlockEntity):
             p2 = self._pts[(-step - 1) % len(self._pts)]
 
         prog = (tick_count % self._period) / self._period
-        pos = util.Utils.smooth_interp(p1, p2, prog)
+        pos = util.smooth_interp(p1, p2, prog)
 
         pos = int(pos[0]), int(pos[1])  # otherwise it's super jerky when the player rides it
 
         old_xy = self.get_xy(raw=True)
 
         self.set_xy(pos)
-        self.set_vel(util.Utils.sub(old_xy, pos))
+        self.set_vel(util.sub(old_xy, pos))
 
 
 class SlopeOrientation:
@@ -344,8 +344,8 @@ class SlopeBlockEntity(AbstractBlockEntity):
     DOWNWARD_RIGHT_1x2 = [(0, 0), (1, 2), (1, 0)]
 
     def __init__(self, x, y, triangle, triangle_scale=1):
-        scaled_triangle = [util.Utils.mult(pt, triangle_scale) for pt in triangle]
-        rect = util.Utils.get_rect_containing_points(scaled_triangle)
+        scaled_triangle = [util.mult(pt, triangle_scale) for pt in triangle]
+        rect = util.get_rect_containing_points(scaled_triangle)
         super().__init__(x, y, rect[2], rect[3])
 
         self._points = scaled_triangle
@@ -604,12 +604,12 @@ class PlayerEntity(Entity):
 
             # alter the angle of motion if we're on a slope
             if self.is_on_left_slope() and not self.is_on_flat_ground() and not self.is_on_right_slope():
-                x_accel, y_accel = util.Utils.rotate((x_accel, y_accel), util.Utils.to_rads(22.5))
+                x_accel, y_accel = util.rotate((x_accel, y_accel), util.to_rads(22.5))
             elif self.is_on_right_slope() and not self.is_on_flat_ground() and not self.is_on_left_slope():
-                x_accel, y_accel = util.Utils.rotate((x_accel, y_accel), util.Utils.to_rads(-22.5))
+                x_accel, y_accel = util.rotate((x_accel, y_accel), util.to_rads(-22.5))
 
             new_x_vel = self._x_vel + x_accel
-            new_x_vel_bounded = util.Utils.bound(new_x_vel, -self._x_vel_max, self._x_vel_max)
+            new_x_vel_bounded = util.bound(new_x_vel, -self._x_vel_max, self._x_vel_max)
 
             self.set_x_vel(new_x_vel_bounded)
 
@@ -653,7 +653,7 @@ class PlayerEntity(Entity):
             for block in blocks_upon:
                 for block_collider in block.all_colliders():
                     block_collider_rect = block_collider.get_rect(block.get_xy(raw=False))
-                    overlap_rect = util.Utils.get_rect_intersect(collider_rect, block_collider_rect)
+                    overlap_rect = util.get_rect_intersect(collider_rect, block_collider_rect)
                     if overlap_rect is None:
                         continue  # ??
                     elif overlap_rect[2] * overlap_rect[3] > max_overlap:
@@ -740,7 +740,7 @@ class PolygonCollider:
 
     def __init__(self, points, mask, collides_with=None, resolution_hint=None, color=colors.RED):
         self._mask = mask
-        self._collides_with = [] if collides_with is None else util.Utils.listify(collides_with)
+        self._collides_with = [] if collides_with is None else util.listify(collides_with)
         self._points = points
         self._resolution_hint = resolution_hint if resolution_hint is not None else CollisionResolutionHints.BOTH
 
@@ -787,7 +787,7 @@ class PolygonCollider:
         if len(pts) == 0:
             return [0, 0, 0, 0]
         else:
-            return util.Utils.get_rect_containing_points(pts)
+            return util.get_rect_containing_points(pts)
 
     def get_debug_color(self):
         return self._debug_color
@@ -811,9 +811,9 @@ class TriangleCollider(PolygonCollider):
 
     def is_overlapping(self, offs, other, other_offs):
         if isinstance(other, TriangleCollider):
-            return util.Utils.triangles_intersect(self.get_points(offs=offs), other.get_points(offs=other_offs))
+            return util.triangles_intersect(self.get_points(offs=offs), other.get_points(offs=other_offs))
         elif isinstance(other, RectangleCollider):
-            return util.Utils.rect_intersects_triangle(other.get_rect(offs=other_offs), self.get_points(offs=offs))
+            return util.rect_intersects_triangle(other.get_rect(offs=other_offs), self.get_points(offs=offs))
         else:
             return super().is_overlapping(offs, other, other_offs)
 
@@ -821,14 +821,14 @@ class TriangleCollider(PolygonCollider):
 class RectangleCollider(PolygonCollider):
 
     def __init__(self, rect, mask, collides_with=None, resolution_hint=None, color=colors.RED):
-        points = [p for p in util.Utils.all_rect_corners(rect, inclusive=False)]
+        points = [p for p in util.all_rect_corners(rect, inclusive=False)]
         PolygonCollider.__init__(self, points, mask, collides_with=collides_with, resolution_hint=resolution_hint, color=color)
 
     def is_overlapping(self, offs, other, other_offs):
         if isinstance(other, RectangleCollider):
-            return util.Utils.get_rect_intersect(self.get_rect(offs=offs), other.get_rect(offs=other_offs)) is not None
+            return util.get_rect_intersect(self.get_rect(offs=offs), other.get_rect(offs=other_offs)) is not None
         elif isinstance(other, TriangleCollider):
-            return util.Utils.rect_intersects_triangle(self.get_rect(offs=offs), other.get_points(offs=other_offs))
+            return util.rect_intersects_triangle(self.get_rect(offs=offs), other.get_points(offs=other_offs))
         else:
             return super().is_overlapping(offs, other, other_offs)
 
