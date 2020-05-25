@@ -15,6 +15,7 @@ import src.game.worlds as worlds
 import src.game.worldview as worldview
 import src.game.globalstate as gs
 import src.game.const as const
+import src.game.blueprints as blueprints
 
 import src.game.spriteref as spriteref
 
@@ -72,7 +73,9 @@ class CircuitsGame(game.Game):
         self._world_view.update()
 
     def _create_new_world(self):
-        self._world = worlds.World.new_test_world()
+        bp = blueprints.get_test_blueprint()
+        self._world = bp.create_world()
+
         self._world_view = worldview.WorldView(self._world)
         self._world_view.set_camera_attached_to(self._world.get_player())
 

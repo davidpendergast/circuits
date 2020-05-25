@@ -418,12 +418,16 @@ class SlopeBlockEntity(AbstractBlockEntity):
     DOWNWARD_LEFT_1x2 = [(0, 0), (0, 2), (1, 0)]
     DOWNWARD_RIGHT_1x2 = [(0, 0), (1, 2), (1, 0)]
 
-    def __init__(self, x, y, triangle, triangle_scale=1):
-        scaled_triangle = [util.mult(pt, triangle_scale) for pt in triangle]
-        rect = util.get_rect_containing_points(scaled_triangle)
-        super().__init__(x, y, w=rect[2], h=rect[3])
+    @staticmethod
+    def make_slope(x, y, triangle, triangle_scale=1):
+        scaled_triangle = [util.add((x, y), util.mult(pt, triangle_scale)) for pt in triangle]
+        return SlopeBlockEntity(scaled_triangle)
 
-        self._points = scaled_triangle
+    def __init__(self, triangle):
+        rect = util.get_rect_containing_points(triangle)
+        super().__init__(rect[0], rect[1], w=rect[2], h=rect[3])
+
+        self._points = util.shift_bounding_rect_to(triangle, pos=(0, 0))
 
         if rect[2] <= rect[3]:
             self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK_VERT)])

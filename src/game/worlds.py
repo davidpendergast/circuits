@@ -28,10 +28,12 @@ class World:
         res.add_entity(entities.BlockEntity(cs * 21, cs * 3, cs * 0.5, cs * 4), next_update=False)
         res.add_entity(entities.BlockEntity(cs * 21.5, cs * 3, cs * 2, cs * 2), next_update=False)
 
-        res.add_entity(entities.SlopeBlockEntity(cs * 11, cs * 10, entities.SlopeBlockEntity.UPWARD_LEFT_2x1,
-                                                 triangle_scale=cs), next_update=False)
-        res.add_entity(entities.SlopeBlockEntity(cs * 7, cs * 10, entities.SlopeBlockEntity.UPWARD_RIGHT_2x1,
-                                                 triangle_scale=cs), next_update=False)
+        res.add_entity(entities.SlopeBlockEntity.make_slope(cs * 11, cs * 10,
+                                                            entities.SlopeBlockEntity.UPWARD_LEFT_2x1,
+                                                            triangle_scale=cs), next_update=False)
+        res.add_entity(entities.SlopeBlockEntity.make_slope(cs * 7, cs * 10,
+                                                            entities.SlopeBlockEntity.UPWARD_RIGHT_2x1,
+                                                            triangle_scale=cs), next_update=False)
 
         pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs), (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
@@ -83,7 +85,7 @@ class World:
                   (4, 2, entities.SlopeBlockEntity.DOWNWARD_RIGHT_2x1)]
 
         for s in slopes:
-            res.add_entity(entities.SlopeBlockEntity(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
+            res.add_entity(entities.SlopeBlockEntity.make_slope(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
 
         composites = [((14, 10, 1, 2), (13, 10, entities.SlopeBlockEntity.DOWNWARD_RIGHT_1x2))]
 
@@ -95,7 +97,7 @@ class World:
                     blocks.append(entities.BlockEntity(cs * r[0], cs * r[1], cs * r[2], cs * r[3]))
                 else:
                     s = spec
-                    blocks.append(entities.SlopeBlockEntity(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
+                    blocks.append(entities.SlopeBlockEntity.make_slope(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
             res.add_entity(entities.CompositeBlockEntity(blocks))
 
         return res

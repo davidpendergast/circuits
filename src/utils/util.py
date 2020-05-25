@@ -262,6 +262,11 @@ def pack_rects_into_smallest_rect(rect_sizes):
     return res, total_bound
 
 
+def shift_bounding_rect_to(v_list, pos=(0, 0)):
+    rect = get_rect_containing_points(v_list)
+    return [(v[0] - rect[0] + pos[0], v[1] - rect[1] + pos[1]) for v in v_list]
+
+
 def dot_prod(p1, p2):
     if isinstance(p1, int) or isinstance(p1, float):
         return p1 * p2
