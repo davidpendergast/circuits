@@ -27,9 +27,16 @@ class _Layer:
         self._use_color = use_color
 
         self._offset = (0, 0)
+        self._scale = 1
 
     def get_layer_id(self):
         return self._layer_id
+
+    def set_scale(self, scale):
+        self._scale = scale
+
+    def get_scale(self):
+        return self._scale
 
     def set_offset(self, x, y):
         self._offset = (x, y)

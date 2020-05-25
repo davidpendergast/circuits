@@ -66,7 +66,7 @@ class CircuitsGame(game.Game):
             drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
             if drag_this_frame is not None:
                 dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
-                dxy = util.negate(dxy)
+                dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
                 self._world_view.move_camera_in_world(dxy)
 
         self._world.update()

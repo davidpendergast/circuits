@@ -149,6 +149,9 @@ class RenderEngine:
     def set_layer_offset(self, layer_id, offs_x, offs_y):
         self.layers[layer_id].set_offset(offs_x, offs_y)
 
+    def set_layer_scale(self, layer_id, scale):
+        self.layers[layer_id].set_scale(scale)
+
     def resize(self, w, h, px_scale=None):
         if px_scale is not None:
             self._pixel_scale = px_scale
@@ -192,7 +195,7 @@ class RenderEngine:
     def setup_shader(self):
         raise NotImplementedError()
 
-    def set_matrix_offset(self, x, y):
+    def set_matrix_offset(self, x, y, scale=1):
         raise NotImplementedError()
 
     def resize_internal(self):
@@ -321,8 +324,9 @@ class RenderEngine:
                 continue
 
             offs = layer.get_offset()
+            scale = layer.get_scale()
 
-            self.set_matrix_offset(-offs[0], -offs[1])
+            self.set_matrix_offset(-offs[0], -offs[1], scale=scale)
             
             layer.render(self)
 
@@ -336,8 +340,11 @@ class RenderEngine:
         return res
 
 
-def translation_matrix(x, y):
+def translation_matrix(x, y, scale=1):
     res = numpy.identity(4, dtype=numpy.float32)
+    if scale != 1:
+        res.itemset((0, 0), float(scale))
+        res.itemset((1, 1), float(scale))
     res.itemset((0, 3), float(x))
     res.itemset((1, 3), float(y))
     return res
@@ -464,9 +471,9 @@ class RenderEngine130(RenderEngine):
         glVertexAttrib3f(self._color_attrib_loc, 1.0, 1.0, 1.0)
         printOpenGLError()
 
-    def set_matrix_offset(self, x, y):
+    def set_matrix_offset(self, x, y, scale=1):
         self._modelview_matrix = numpy.identity(4, dtype=numpy.float32)
-        trans = translation_matrix(x, y)
+        trans = translation_matrix(x, y, scale=scale)
         numpy.matmul(self._modelview_matrix, trans, out=self._modelview_matrix, dtype=numpy.float32)
 
         glUniformMatrix4fv(self._modelview_matrix_uniform_loc, 1, GL_TRUE, self._modelview_matrix)
