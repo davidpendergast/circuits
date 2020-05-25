@@ -128,6 +128,8 @@ class _GameLoop:
             all_resize_events = []
 
             input_state = inputs.get_instance()
+            input_state.pre_update()
+
             for py_event in pygame.event.get():
                 if py_event.type == pygame.QUIT:
                     running = False

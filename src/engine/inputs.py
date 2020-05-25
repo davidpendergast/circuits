@@ -1,4 +1,5 @@
 
+import typing
 import src.engine.globaltimer as globaltimer
 
 _INSTANCE = None  # should access this via get_instance(), at the bottom of the file
@@ -16,21 +17,25 @@ def create_instance():
 class InputState:
 
     def __init__(self):
-        self._pressed_this_frame = {}  # keycode -> num times
-        self._pressed_last_frame = {}  # keycode -> num times
-        self._held_keys = {}           # keycode -> time pressed
-        self._mouse_pos = (0, 0)
-        self._mouse_moved_at_time = -1
         self._current_time = 0
+        self._pressed_this_frame = {}  # keycode -> num times
+        self._held_keys = {}           # keycode -> time pressed
+
+        self._mouse_pos_last_frame = (0, 0)
+        self._mouse_pos = (0, 0)
+
+        # to track mouse drags
+        self._mouse_down_pos = {}  # mouse code -> (x, y, tick_pressed)
+        self._end_drags_when_mouse_leaves_window = False  # configurable
     
     def set_key(self, key, held):
         if held:
-            if key not in self._pressed_last_frame:
-                self._pressed_last_frame[key] = 0
-            self._pressed_last_frame[key] += 1
+            if key not in self._pressed_this_frame:
+                self._pressed_this_frame[key] = 0
+            self._pressed_this_frame[key] += 1
 
         if held and key not in self._held_keys:
-                self._held_keys[key] = self._current_time
+            self._held_keys[key] = self._current_time
         elif not held and key in self._held_keys:
             del self._held_keys[key]
 
@@ -41,9 +46,21 @@ class InputState:
         keycode = self.to_key_code(button)
         self.set_key(keycode, down)
 
+        m_pos = self.mouse_pos() if self.mouse_in_window() else (-1, -1)
+        if down:
+            self._mouse_down_pos[keycode] = (m_pos[0], m_pos[1], self._current_time)
+        else:
+            if keycode in self._mouse_down_pos:
+                del self._mouse_down_pos[keycode]
+
     def set_mouse_pos(self, pos):
         if self._mouse_pos != pos:
-            self._mouse_moved_at_time = self._current_time
+            # update any mouse downs that also happened this frame
+            for k in self._mouse_down_pos:
+                x, y, tick = self._mouse_down_pos[k]
+                if tick == self._current_time:
+                    self._mouse_down_pos[k] = (pos[0], pos[1], tick)
+
         self._mouse_pos = pos
     
     def is_held(self, key):
@@ -74,12 +91,33 @@ class InputState:
     def mouse_was_pressed(self, button=1):
         keycode = self.to_key_code(button)
         return self.was_pressed(keycode) and self.mouse_in_window()
+
+    def mouse_drag_total(self, button=1):
+        """returns: (start_xy, current_xy) or None if not dragging."""
+        keycode = self.to_key_code(button)
+        if self.mouse_in_window() and self.mouse_is_held(button=button) and keycode in self._mouse_down_pos:
+            mouse_pos = self.mouse_pos()
+            start_x, start_y, tick = self._mouse_down_pos[keycode]
+            if start_x >= 0 and start_y >= 0 and mouse_pos != (start_x, start_y):
+                return ((start_x, start_y), mouse_pos)
+        return None
+
+    def mouse_drag_this_frame(self, button=1):
+        """returns: (last_xy, current_xy) or None if not dragging or there was no movement."""
+        if self.mouse_is_dragging(button=button):
+            last_pos = self._mouse_pos_last_frame
+            cur_pos = self._mouse_pos
+            if last_pos is not None and cur_pos is not None and last_pos != cur_pos:
+                return (last_pos, cur_pos)
+
+    def mouse_is_dragging(self, button=1):
+        return self.mouse_drag_total(button=button) is not None
         
     def mouse_pos(self):
         return self._mouse_pos
 
     def mouse_moved(self):
-        return self._mouse_moved_at_time == self._current_time - 1
+        return self._mouse_pos_last_frame != self._mouse_pos
         
     def mouse_in_window(self):
         return self._mouse_pos is not None    
@@ -108,6 +146,13 @@ class InputState:
                 if self.mouse_was_pressed(button=i):
                     return True
         return False
+
+    def pre_update(self):
+        """
+        Called *before* inputs are passed in.
+        """
+        self._mouse_pos_last_frame = self._mouse_pos
+        self._pressed_this_frame.clear()
         
     def update(self):
         """
@@ -116,9 +161,8 @@ class InputState:
         """
         self._current_time = globaltimer.tick_count()
 
-        self._pressed_this_frame.clear()
-        self._pressed_this_frame.update(self._pressed_last_frame)
-        self._pressed_last_frame.clear()
+        if self._end_drags_when_mouse_leaves_window and not self.mouse_in_window():
+            self._mouse_down_pos.clear()
 
 
 def get_instance() -> InputState:
