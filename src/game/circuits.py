@@ -12,6 +12,7 @@ import src.engine.readme_writer as readme_writer
 import src.utils.util as util
 
 import src.game.worlds as worlds
+import src.game.worldview as worldview
 import src.game.globalstate as gs
 import src.game.const as const
 
@@ -23,6 +24,7 @@ class CircuitsGame(game.Game):
     def __init__(self):
         game.Game.__init__(self)
         self._world = None
+        self._world_view = None
 
     def initialize(self):
         if configs.is_dev:
@@ -35,6 +37,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
 
         self._world = worlds.World.new_test_world()
+        self._world_view = worldview.WorldView(self._world)
 
     def get_sheets(self):
         return []
@@ -50,22 +53,31 @@ class CircuitsGame(game.Game):
     def update(self):
         if inputs.get_instance().mouse_was_pressed():  # debug
             pos = inputs.get_instance().mouse_pos()
-            camera_pos = (0, 0)
+            camera_pos = self._world_view.get_camera_pos_in_world()
             cell_size = gs.get_instance().cell_size
             print("INFO: mouse pressed at ({}, {})".format((pos[0] + camera_pos[0]) // cell_size,
                                                            (pos[1] + camera_pos[1]) // cell_size))
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
             self._world = worlds.World.new_test_world()
+            self._world_view = worldview.WorldView(self._world)
+
+        if inputs.get_instance().mouse_is_dragging(button=1):
+            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
+            if drag_this_frame is not None:
+                dxy = util.Utils.sub(drag_this_frame[1], drag_this_frame[0])
+                dxy = util.Utils.negate(dxy)
+                self._world_view.move_camera_in_world(dxy)
 
         self._world.update()
+        self._world_view.update()
 
     def all_sprites(self):
         if gs.get_instance().debug_render:
-            for spr in self._world.all_debug_sprites():
+            for spr in self._world_view.all_debug_sprites():
                 yield spr
         else:
-            for spr in self._world.all_sprites():
+            for spr in self._world_view.all_sprites():
                 yield spr
 
 

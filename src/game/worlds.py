@@ -160,16 +160,6 @@ class World:
         for e in self.all_entities(cond=lambda _e: _e.is_dynamic() and (cond is None or cond(_e))):
             yield e
 
-    def all_sprites(self):
-        for ent in self.entities:
-            for spr in ent.all_sprites():
-                yield spr
-
-    def all_debug_sprites(self):
-        for ent in self.entities:
-            for spr in ent.all_debug_sprites():
-                yield spr
-
     def get_sensor_state(self, sensor_id):
         if sensor_id not in self._sensor_states:
             return []

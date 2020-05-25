@@ -46,6 +46,10 @@ class Utils:
         return tuple(i[0] - i[1] for i in zip(v1, v2))
 
     @staticmethod
+    def negate(v):
+        return tuple(-x for x in v)
+
+    @staticmethod
     def mult(v, a):
         return tuple(a*v_i for v_i in v)
 
