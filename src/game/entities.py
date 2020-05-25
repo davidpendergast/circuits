@@ -29,15 +29,18 @@ ACTOR_GROUP = 10
 
 class Entity:
 
-    def __init__(self, x, y, w, h):
+    def __init__(self, x, y, w=None, h=None):
         self._ent_id = next_entity_id()
 
         self._x = x
         self._y = y
 
-        w = util.assert_int(w, msg="width must be an integer: {}".format(w), error=True)
-        h = util.assert_int(h, msg="height must be an integer: {}".format(h), error=True)
-        self._size = w, h
+        if w is not None and h is not None:
+            w = util.assert_int(w, msg="width must be an integer: {}".format(w), error=True)
+            h = util.assert_int(h, msg="height must be an integer: {}".format(h), error=True)
+            self._size = w, h
+        else:
+            self._size = None
 
         self._x_vel = 0  # pixels per tick
         self._y_vel = 0
@@ -126,7 +129,10 @@ class Entity:
         return self.get_size()[1]
 
     def get_size(self):
-        return self._size
+        if self._size is None:
+            raise NotImplementedError()
+        else:
+            return self._size
 
     def get_vel(self):
         return (self._x_vel, self._y_vel)
@@ -252,14 +258,11 @@ class Entity:
 
 class AbstractBlockEntity(Entity):
 
-    def __init__(self, x, y, w, h):
-        Entity.__init__(self, x, y, w, h)
+    def __init__(self, x, y, w=None, h=None):
+        Entity.__init__(self, x, y, w=w, h=h)
 
     def update(self):
         pass
-
-    def is_sloped(self):
-        return False
 
     def is_dynamic(self):
         return False
@@ -270,6 +273,9 @@ class AbstractBlockEntity(Entity):
     def all_sprites(self):
         return []
 
+    def all_blocks(self, recurse=False):
+        yield self
+
     def get_physics_group(self):
         return ENVIRONMENT_GROUP
 
@@ -278,9 +284,70 @@ class BlockEntity(AbstractBlockEntity):
     """basic rectangular block."""
 
     def __init__(self, x, y, w, h):
-        AbstractBlockEntity.__init__(self, x, y, w, h)
+        AbstractBlockEntity.__init__(self, x, y, w=w, h=h)
 
         self.set_colliders([RectangleCollider([0, 0, w, h], CollisionMasks.BLOCK)])
+
+
+class CompositeBlockEntity(AbstractBlockEntity):
+
+    def __init__(self, blocks):
+        if len(blocks) == 0:
+            raise ValueError("blocks is empty")
+
+        self._blocks = blocks
+        xy = self.get_xy(raw=False)
+        AbstractBlockEntity.__init__(self, xy[0], xy[1])
+
+    def all_blocks(self, recurse=False):
+        for b in self._blocks:
+            if recurse:
+                for sub_block in b.all_blocks(recurse=True):
+                    yield sub_block
+            else:
+                yield b
+
+    def get_xy(self, raw=False):
+        min_x = float('inf')
+        min_y = float('inf')
+        for b in self.all_blocks():
+            b_xy = b.get_xy(raw=raw)
+            min_x = min(min_x, b_xy[0])
+            min_y = min(min_y, b_xy[1])
+        return (min_x, min_y)
+
+    def get_size(self, raw=True):
+        min_x = float('inf')
+        max_x = -float('inf')
+        min_y = float('inf')
+        max_y = -float('inf')
+        for b in self.all_blocks():
+            b_xy = b.get_xy()
+            b_size = b.get_size()
+            min_x = min(min_x, b_xy[0])
+            max_x = max(max_x, b_xy[0] + b_size[0])  # XXX could have some raw / not raw issues here
+            min_y = min(min_y, b_xy[1])
+            max_y = max(max_y, b_xy[1] + b_size[1])  # XXX could have some raw / not raw issues here
+        return (max_x - min_x, max_y - min_y)
+
+    def update(self):
+        for b in self.all_blocks():
+            b.update()
+
+    def all_sprites(self):
+        for b in self.all_blocks():
+            for spr in b.all_sprites():
+                yield spr
+
+    def all_colliders(self, solid=None, sensor=None, enabled=True):
+        for b in self.all_blocks():
+            for c in b.all_colliders():
+                yield c
+
+    def all_debug_sprites(self):
+        for b in self.all_blocks():
+            for spr in b.all_debug_sprites():
+                yield spr
 
 
 class MovingBlockEntity(BlockEntity):
@@ -354,7 +421,7 @@ class SlopeBlockEntity(AbstractBlockEntity):
     def __init__(self, x, y, triangle, triangle_scale=1):
         scaled_triangle = [util.mult(pt, triangle_scale) for pt in triangle]
         rect = util.get_rect_containing_points(scaled_triangle)
-        super().__init__(x, y, rect[2], rect[3])
+        super().__init__(x, y, w=rect[2], h=rect[3])
 
         self._points = scaled_triangle
 
@@ -373,9 +440,6 @@ class SlopeBlockEntity(AbstractBlockEntity):
             res.append((pt_x, pt_y))
         return res
 
-    def is_sloped(self):
-        return True
-
     def _update_main_body_debug_sprite(self, main_body_key):
         if main_body_key not in self._debug_sprites:
             self._debug_sprites[main_body_key] = sprites.TriangleSprite(spriteref.POLYGON_LAYER)
@@ -390,7 +454,7 @@ class PlayerEntity(Entity):
         w = int(gs.get_instance().cell_size * 1)
         h = int(gs.get_instance().cell_size * 1.75)
 
-        Entity.__init__(self, x, y, w, h)
+        Entity.__init__(self, x, y, w=w, h=h)
 
         self._y_vel_max = 20 * gs.get_instance().cell_size / configs.target_fps
         self._x_vel_max = 7.2 * gs.get_instance().cell_size / configs.target_fps

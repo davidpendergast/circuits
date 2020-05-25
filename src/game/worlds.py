@@ -58,7 +58,6 @@ class World:
 
                  (9, 7, 2, 1),     # floating platform
                  (17, 7, 2, 1),
-                 (14, 10, 1, 2),
                  (19, 6, 4, 1),
                  (15, 10, 2, 1),
 
@@ -81,11 +80,23 @@ class World:
             res.add_entity(entities.BlockEntity(cs * r[0], cs * r[1], cs * r[2], cs * r[3]), next_update=False)
 
         slopes = [(17, 6, entities.SlopeBlockEntity.UPWARD_RIGHT_2x1),
-                  (13, 10, entities.SlopeBlockEntity.DOWNWARD_RIGHT_1x2),
                   (4, 2, entities.SlopeBlockEntity.DOWNWARD_RIGHT_2x1)]
 
         for s in slopes:
             res.add_entity(entities.SlopeBlockEntity(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
+
+        composites = [((14, 10, 1, 2), (13, 10, entities.SlopeBlockEntity.DOWNWARD_RIGHT_1x2))]
+
+        for comp in composites:
+            blocks = []
+            for spec in comp:
+                if len(spec) == 4:
+                    r = spec
+                    blocks.append(entities.BlockEntity(cs * r[0], cs * r[1], cs * r[2], cs * r[3]))
+                else:
+                    s = spec
+                    blocks.append(entities.SlopeBlockEntity(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
+            res.add_entity(entities.CompositeBlockEntity(blocks))
 
         return res
 
@@ -233,7 +244,7 @@ class CollisionResolver:
 
     @staticmethod
     def _solve_all_collisions(world, dyna_ents, start_positions, next_positions):
-        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.AbstractBlockEntity))]
+        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents)
         for ent in dyna_ents:
             CollisionResolver._solve_pre_move_collisions(world, ent, start_positions, all_blocks)
 
@@ -347,9 +358,31 @@ class CollisionResolver:
         return False
 
     @staticmethod
+    def get_all_relevant_blocks(world, dyna_ents, sloped_filter=None, moving_filter=None):
+        must_be_sloped = sloped_filter is True
+        must_not_be_sloped = sloped_filter is False
+
+        must_be_moving = moving_filter is True
+        must_not_be_moving = moving_filter is False
+
+        res = []
+        for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.AbstractBlockEntity)):
+            for b2 in b.all_blocks(recurse=True):
+                is_moving = isinstance(b2, entities.MovingBlockEntity)
+                if (is_moving and must_not_be_moving) or (not is_moving and must_be_moving):
+                    continue
+
+                is_sloped = isinstance(b2, entities.SlopeBlockEntity)
+                if (is_sloped and must_not_be_sloped) or (not is_sloped and must_be_sloped):
+                    continue
+
+                res.append(b2)
+        return res
+
+    @staticmethod
     def calc_sensor_states(world, dyna_ents):
         # TODO - this assumes we only care about sensing blocks
-        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.BlockEntity))]
+        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents)
         res = {}
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
@@ -367,7 +400,7 @@ class CollisionResolver:
     @staticmethod
     def activate_snap_sensors_if_necessary(world, dyna_ents):
         # TODO - this assumes we only care about sensing blocks
-        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.AbstractBlockEntity))]
+        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents)
 
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
@@ -391,7 +424,7 @@ class CollisionResolver:
 
     @staticmethod
     def _calc_slope_sensor_states(world, dyna_ents, res):
-        all_blocks = [b for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.SlopeBlockEntity))]
+        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents, sloped_filter=True)
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             for c in ent.all_colliders(sensor=True):
