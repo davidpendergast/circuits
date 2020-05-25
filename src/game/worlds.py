@@ -156,6 +156,12 @@ class World:
             if cond is None or cond(e):
                 yield e
 
+    def get_player(self):
+        for e in self.entities:
+            if isinstance(e, entities.PlayerEntity):
+                return e
+        return None
+
     def all_dynamic_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
         for e in self.all_entities(cond=lambda _e: _e.is_dynamic() and (cond is None or cond(_e))):
             yield e

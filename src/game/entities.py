@@ -59,6 +59,14 @@ class Entity:
         size = self.get_size()
         return [xy[0], xy[1], size[0], size[1]]
 
+    def get_center(self, raw=False):
+        r = self.get_rect(raw=raw)
+        pt = (r[0] + r[2] / 2, r[1] + r[3] / 2)
+        if raw:
+            return pt
+        else:
+            return (int(pt[0]), int(pt[1]))
+
     def get_xy(self, raw=False):
         if raw:
             return self._x, self._y

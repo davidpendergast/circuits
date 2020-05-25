@@ -13,6 +13,9 @@ class WorldView:
     def __init__(self, world):
         self._world = world
 
+        self._free_camera = True
+        self._camera_attached_to = None  # an Entity
+
         self._camera_xy = (0, 0)
 
         self._camera_zoom_idx = 1
@@ -27,26 +30,36 @@ class WorldView:
         if zoom_change != 0:
             self.adjust_zoom(zoom_change)
 
+        if inputs.get_instance().was_pressed(pygame.K_f):
+            self._free_camera = not self._free_camera
+            print("INFO: toggled free camera to: {}".format(self._free_camera))
+
+        if not self._free_camera and self._camera_attached_to is not None:
+            new_cam_center = self._camera_attached_to.get_center()
+            self.set_camera_center_in_world(new_cam_center)
+
         cam_x, cam_y = self.get_camera_pos_in_world()
+
         for layer_id in spriteref.all_world_layers():
             renderengine.get_instance().set_layer_scale(layer_id, self.get_zoom())
             renderengine.get_instance().set_layer_offset(layer_id,
                                                          cam_x * self.get_zoom(),
                                                          cam_y * self.get_zoom())
 
+    def set_free_camera(self, val):
+        self._free_camera = val
+
+    def set_camera_attached_to(self, ent):
+        self._camera_attached_to = ent
+
     def adjust_zoom(self, dz):
         old_center = self.get_camera_center_in_world()
-        cam_rect = self.get_camera_rect_in_world()
 
         new_zoom_idx = util.bound(int(self._camera_zoom_idx + dz), 0, len(self._zoom_levels) - 1)
         self._camera_zoom_idx = new_zoom_idx
-
-        print("\nINFO: NEW ZOOM = {}".format(self.get_zoom()))
-        print("INFO: camera_center={}, camera_rect={}".format(old_center, cam_rect))
-
         self.set_camera_center_in_world(old_center)
-        print("INFO: camera_center={}, camera_rect={}".format(self.get_camera_center_in_world(),
-                                                              self.get_camera_rect_in_world()))
+
+        print("\nINFO: set zoom to: {}".format(self.get_zoom()))
 
     def get_zoom(self):
         return self._zoom_levels[self._camera_zoom_idx]

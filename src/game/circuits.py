@@ -36,8 +36,7 @@ class CircuitsGame(game.Game):
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
 
-        self._world = worlds.World.new_test_world()
-        self._world_view = worldview.WorldView(self._world)
+        self._create_new_world()
 
     def get_sheets(self):
         return []
@@ -59,8 +58,7 @@ class CircuitsGame(game.Game):
                                                            (pos[1] + camera_pos[1]) // cell_size))
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
-            self._world = worlds.World.new_test_world()
-            self._world_view = worldview.WorldView(self._world)
+            self._create_new_world()
 
         if inputs.get_instance().mouse_is_dragging(button=1):
             drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
@@ -68,9 +66,15 @@ class CircuitsGame(game.Game):
                 dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
                 dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
                 self._world_view.move_camera_in_world(dxy)
+                self._world_view.set_free_camera(True)
 
         self._world.update()
         self._world_view.update()
+
+    def _create_new_world(self):
+        self._world = worlds.World.new_test_world()
+        self._world_view = worldview.WorldView(self._world)
+        self._world_view.set_camera_attached_to(self._world.get_player())
 
     def all_sprites(self):
         if gs.get_instance().debug_render:
