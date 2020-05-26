@@ -16,6 +16,10 @@ class World:
 
         self._sensor_states = {}  # sensor_id -> list of entities
 
+        # spacial hashing
+        self._entities_to_cells = {}  # ent -> set of cells (x, y) it's inside
+        self._cells_to_entities = {}   # (x, y) - set of entities inside
+
     @staticmethod
     def new_test_world_old():
         res = World()
@@ -109,22 +113,75 @@ class World:
             self._to_add.add(ent)
         else:
             self.entities.add(ent)
-            ent.world = self
+            ent.set_world(self)
+
+            self.rehash_entity(ent)
+
+    def rehash_entity(self, ent):
+        rect = ent.get_rect()
+
+        cells_inside = set()
+        for cell in self.all_cells_in_rect(rect):
+            cells_inside.add(cell)
+
+        old_cells = set() if not ent in self._entities_to_cells else self._entities_to_cells[ent]
+        if cells_inside == old_cells:
+            return  # no change
+
+        if ent in self._entities_to_cells:
+            for old_cell in self._entities_to_cells[ent]:
+                if old_cell not in cells_inside:
+                    if old_cell in self._cells_to_entities and ent in self._cells_to_entities[old_cell]:
+                        self._cells_to_entities[old_cell].remove(ent)
+                        if len(self._cells_to_entities[old_cell]) == 0:
+                            del self._cells_to_entities[old_cell]
+
+        self._entities_to_cells[ent] = cells_inside
+        for cell in cells_inside:
+            if cell not in self._cells_to_entities:
+                self._cells_to_entities[cell] = set()
+            self._cells_to_entities[cell].add(ent)
+
+        # for debug
+        # sorted_cells = [c for c in cells_inside]
+        # sorted_cells.sort()
+        # print("INFO: rehashed! {} is inside the cells: {}".format(ent, sorted_cells))
+
+    def _unhash(self, ent):
+        if ent in self._entities_to_cells:
+            for cell in self._entities_to_cells[ent]:
+                if cell in self._cells_to_entities and ent in self._cells_to_entities[cell]:
+                    self._cells_to_entities[cell].remove(ent)
+                    if len(self._cells_to_entities[cell]) == 0:
+                        del self._cells_to_entities[cell]
+            del self._entities_to_cells[ent]
+
+    def all_cells_in_rect(self, rect):
+        cs = gs.get_instance().cell_size
+        if rect[2] <= 0 or rect[3] <= 0:
+            return []
+        start_cell = (rect[0] // cs, rect[1] // cs)
+        end_cell = ((rect[0] + rect[2] - 1) // cs, (rect[1] + rect[3] - 1) // cs)
+        for x in range(start_cell[0], end_cell[0] + 1):
+            for y in range(start_cell[1], end_cell[1] + 1):
+                yield (x, y)
 
     def update(self):
         for ent in self._to_add:
             if ent not in self._to_remove:
                 self.entities.add(ent)
-                ent.world = self
+                ent.set_world(self)
+                self.rehash_entity(ent)
         self._to_add.clear()
 
         for ent in self._to_remove:
             if ent in self.entities:
                 self.entities.remove(ent)
-                ent.world = None
+                ent.set_world(None)
+                self._unhash(ent)
         self._to_remove.clear()
 
-        dyna_ents = [e for e in self.all_dynamic_entities()]
+        dyna_ents = [e for e in self.all_entities(cond=lambda _e: _e.is_dynamic())]
 
         phys_groups = {}
         for e in dyna_ents:
@@ -169,15 +226,31 @@ class World:
             if cond is None or cond(e):
                 yield e
 
+    def all_entities_in_cells(self, cells, cond=None):
+        res = set()
+        rejected = set()
+        for c in cells:
+            if c in self._cells_to_entities:
+                for ent in self._cells_to_entities[c]:
+                    if ent in rejected:
+                        # only want to test condition once per entity
+                        continue
+                    elif cond is not None and not cond(ent):
+                        rejected.add(ent)
+                    else:
+                        res.add(ent)
+        return res
+
+    def all_entities_in_rect(self, rect, cond=None):
+        """returns: all entities that are in the cells that rect contains"""
+        cells = [c for c in self.all_cells_in_rect(rect)]
+        return self.all_entities_in_cells(cells, cond=cond)
+
     def get_player(self):
         for e in self.entities:
             if isinstance(e, entities.PlayerEntity):
                 return e
         return None
-
-    def all_dynamic_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
-        for e in self.all_entities(cond=lambda _e: _e.is_dynamic() and (cond is None or cond(_e))):
-            yield e
 
     def get_sensor_state(self, sensor_id):
         if sensor_id not in self._sensor_states:
@@ -246,59 +319,59 @@ class CollisionResolver:
 
     @staticmethod
     def _solve_all_collisions(world, dyna_ents, start_positions, next_positions):
-        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents)
         for ent in dyna_ents:
-            CollisionResolver._solve_pre_move_collisions(world, ent, start_positions, all_blocks)
+            CollisionResolver._solve_pre_move_collisions(world, ent, start_positions)
 
         for ent in dyna_ents:
-            CollisionResolver._try_to_move(world, ent, start_positions, next_positions, all_blocks)
+            CollisionResolver._try_to_move(world, ent, start_positions, next_positions)
 
     @staticmethod
-    def _solve_pre_move_collisions(world, dyna_ent, start_positions, all_blocks):
+    def _solve_pre_move_collisions(world, dyna_ent, start_positions):
         """
         make sure we're in a valid position before we even start moving
             returns: valid (x, y) for dyna_ent
         """
-        start_positions[dyna_ent] = CollisionResolver._find_nearest_valid_position(world, dyna_ent,
-                                                                                   start_positions[dyna_ent],
-                                                                                   all_blocks)
+        start_positions[dyna_ent] = CollisionResolver._find_nearest_valid_position(world,
+                                                                                   dyna_ent,
+                                                                                   start_positions[dyna_ent])
 
     @staticmethod
-    def _shift_until_blocked(world, dyna_ent, start_xy, end_xy, all_blocks):
+    def _shift_until_blocked(world, dyna_ent, start_xy, end_xy):
         dx = end_xy[0] - start_xy[0]
         dy = end_xy[1] - start_xy[1]
         if dx == 0 and dy == 0:
             return start_xy
         steps = max(abs(dx), abs(dy))
         best = start_xy
+
         for i in range(1, steps + 1):
             x = start_xy[0] + int((dx * i / steps))
             y = start_xy[1] + int((dy * i / steps))
-            if len(CollisionResolver._get_blocked_solid_colliders(dyna_ent, (x, y), all_blocks)) == 0:
+            if len(CollisionResolver._get_blocked_solid_colliders(world, dyna_ent, (x, y))) == 0:
                 best = (x, y)
             else:
                 break
         return best
 
     @staticmethod
-    def _try_to_move(world, dyna_ent, start_positions, next_positions, all_blocks):
+    def _try_to_move(world, dyna_ent, start_positions, next_positions):
         if start_positions[dyna_ent] is None:
             next_positions[dyna_ent] = None
         elif start_positions[dyna_ent] == next_positions[dyna_ent]:
             pass  # we already know the next position is valid
         else:
             target_xy = next_positions[dyna_ent]
-            next_xy = CollisionResolver._find_nearest_valid_position(world, dyna_ent, target_xy, all_blocks)
+            next_xy = CollisionResolver._find_nearest_valid_position(world, dyna_ent, target_xy)
             next_positions[dyna_ent] = next_xy
 
     @staticmethod
-    def _find_nearest_valid_position(world, dyna_ent, target_xy, all_blocks):
+    def _find_nearest_valid_position(world, dyna_ent, target_xy):
 
         blocked_colliders_cache = {}  # xy -> list of colliders
 
         def _get_blocked_colliders(xy):
             if xy not in blocked_colliders_cache:
-                blocked_colliders_cache[xy] = CollisionResolver._get_blocked_solid_colliders(dyna_ent, xy, all_blocks)
+                blocked_colliders_cache[xy] = CollisionResolver._get_blocked_solid_colliders(world, dyna_ent, xy)
             return blocked_colliders_cache[xy]
 
         def _allow_shift_from(xy):
@@ -339,23 +412,22 @@ class CollisionResolver:
         return util.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=100)
 
     @staticmethod
-    def _get_blocked_solid_colliders(ent, xy, all_blocks) -> typing.List[entities.PolygonCollider]:
+    def _get_blocked_solid_colliders(world, ent, xy) -> typing.List[entities.PolygonCollider]:
         """
         returns: list of ent's solid colliders that are colliding with at least one block
         """
         res = []
         for collider in ent.all_colliders(solid=True):
-            if CollisionResolver._is_colliding_with_any_blocks(ent, collider, xy, all_blocks):
+            if CollisionResolver._is_colliding_with_any_blocks(world, ent, collider, xy):
                 res.append(collider)
         return res
 
     @staticmethod
-    def _is_colliding_with_any_blocks(ent, collider, xy, all_blocks) -> bool:
-        # TODO - some pre-filtering based on AABB
-        for b in all_blocks:
+    def _is_colliding_with_any_blocks(world, ent, collider, xy) -> bool:
+        collider_rect = collider.get_rect(offs=xy)
+        for b in world.all_entities_in_rect(collider_rect, cond=lambda _e: _e.is_block()):
             for b_collider in b.all_colliders(solid=True):
                 if collider.is_colliding_with(xy, b_collider, b.get_xy()):
-                    collider.is_colliding_with(xy, b_collider, b.get_xy())
                     return True
         return False
 
@@ -368,7 +440,7 @@ class CollisionResolver:
         must_not_be_moving = moving_filter is False
 
         res = []
-        for b in world.all_entities(cond=lambda _e: isinstance(_e, entities.AbstractBlockEntity)):
+        for b in world.all_entities(cond=lambda _e: _e.is_block()):
             for b2 in b.all_blocks(recurse=True):
                 is_moving = isinstance(b2, entities.MovingBlockEntity)
                 if (is_moving and must_not_be_moving) or (not is_moving and must_be_moving):
@@ -383,14 +455,13 @@ class CollisionResolver:
 
     @staticmethod
     def calc_sensor_states(world, dyna_ents):
-        # TODO - this assumes we only care about sensing blocks
-        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents)
         res = {}
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             for c in ent.all_colliders(sensor=True):
                 c_state = []
-                for b in all_blocks:
+                c_rect = c.get_rect(offs=ent_xy)
+                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):  # TODO assumes we only care about blocks
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
                         c_state.append(b)
                 res[c.get_id()] = c_state
@@ -401,9 +472,6 @@ class CollisionResolver:
 
     @staticmethod
     def activate_snap_sensors_if_necessary(world, dyna_ents):
-        # TODO - this assumes we only care about sensing blocks
-        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents)
-
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             should_snap_down = False
@@ -412,26 +480,27 @@ class CollisionResolver:
             for c in ent.all_colliders(sensor=True):
                 if c.get_mask() != entities.CollisionMasks.SNAP_DOWN_SENSOR:
                     continue
-                for b in all_blocks:
+                c_rect = c.get_rect(offs=ent_xy)
+                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
                         should_snap_down = True
                         snap_dist = max(snap_dist, c.get_rect()[3])
 
             if should_snap_down and snap_dist > 0:
                 snap_xy = (ent_xy[0], ent_xy[1] + snap_dist)
-                new_xy = CollisionResolver._shift_until_blocked(world, ent, ent_xy, snap_xy, all_blocks)
+                new_xy = CollisionResolver._shift_until_blocked(world, ent, ent_xy, snap_xy)
                 if new_xy != ent_xy:
                     ent.set_y_vel(0)
                     ent.set_y(new_xy[1])
 
     @staticmethod
     def _calc_slope_sensor_states(world, dyna_ents, res):
-        all_blocks = CollisionResolver.get_all_relevant_blocks(world, dyna_ents, sloped_filter=True)
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             for c in ent.all_colliders(sensor=True):
                 c_state = [] if c.get_id() not in res else res[c.get_id()]
-                for b in all_blocks:
+                c_rect = c.get_rect(offs=ent_xy)
+                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
                         c_state.append(b)
                 res[c.get_id()] = c_state

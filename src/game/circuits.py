@@ -11,7 +11,6 @@ import src.engine.inputs as inputs
 import src.engine.readme_writer as readme_writer
 import src.utils.util as util
 
-import src.game.worlds as worlds
 import src.game.worldview as worldview
 import src.game.globalstate as gs
 import src.game.const as const
@@ -51,12 +50,13 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19, sort_sprites=True, use_color=True)
 
     def update(self):
-        if inputs.get_instance().mouse_was_pressed():  # debug
-            pos = inputs.get_instance().mouse_pos()
-            camera_pos = self._world_view.get_camera_pos_in_world()
+        if inputs.get_instance().mouse_was_pressed() and inputs.get_instance().mouse_in_window():  # debug
+            screen_pos = inputs.get_instance().mouse_pos()
+            pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
+
             cell_size = gs.get_instance().cell_size
-            print("INFO: mouse pressed at ({}, {})".format((pos[0] + camera_pos[0]) // cell_size,
-                                                           (pos[1] + camera_pos[1]) // cell_size))
+            print("INFO: mouse pressed at ({}, {})".format(int(pos_in_world[0]) // cell_size,
+                                                           int(pos_in_world[1]) // cell_size))
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
             self._create_new_world()

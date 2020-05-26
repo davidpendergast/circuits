@@ -1,11 +1,14 @@
 
 import pygame
 
-import src.engine.renderengine as renderengine
-
-import src.game.spriteref as spriteref
 import src.utils.util as util
+import src.engine.renderengine as renderengine
 import src.engine.inputs as inputs
+import src.engine.sprites as sprites
+
+import src.game.globalstate as gs
+import src.game.spriteref as spriteref
+import src.game.colors as colors
 
 
 class WorldView:
@@ -15,6 +18,9 @@ class WorldView:
 
         self._free_camera = True
         self._camera_attached_to = None  # an Entity
+
+        self._show_grid = True
+        self._grid_line_sprites = []
 
         self._camera_xy = (0, 0)
 
@@ -34,11 +40,17 @@ class WorldView:
             self._free_camera = not self._free_camera
             print("INFO: toggled free camera to: {}".format(self._free_camera))
 
+        if inputs.get_instance().was_pressed(pygame.K_g):
+            self._show_grid = not self._show_grid
+            print("INFO: toggled grid to: {}".format(self._show_grid))
+
         if not self._free_camera and self._camera_attached_to is not None:
             new_cam_center = self._camera_attached_to.get_center()
             self.set_camera_center_in_world(new_cam_center)
 
         cam_x, cam_y = self.get_camera_pos_in_world()
+
+        self._update_grid_line_sprites()
 
         for layer_id in spriteref.all_world_layers():
             renderengine.get_instance().set_layer_scale(layer_id, self.get_zoom())
@@ -118,6 +130,30 @@ class WorldView:
 
         return int(x_pct * game_size[0]), int(y_pct * game_size[1])
 
+    def _update_grid_line_sprites(self):
+        if self._show_grid:
+            cam_rect = self.get_camera_rect_in_world()
+            cs = gs.get_instance().cell_size
+            n_x_lines = int(cam_rect[2] // cs)
+            n_y_lines = int(cam_rect[3] // cs)
+            util.extend_or_empty_list_to_length(self._grid_line_sprites, n_x_lines + n_y_lines,
+                                                creator=lambda: sprites.LineSprite(spriteref.POLYGON_LAYER))
+            for i in range(0, n_x_lines):
+                x_line_sprite = self._grid_line_sprites[i]
+                p1 = (cam_rect[0] - (cam_rect[0] % cs) + cs * (i + 1), cam_rect[1])
+                p2 = (cam_rect[0] - (cam_rect[0] % cs) + cs * (i + 1), cam_rect[1] + cam_rect[3])
+                x_line_sprite.update(new_p1=p1, new_p2=p2, new_thickness=1,
+                                     new_color=colors.VERY_DARK_GRAY, new_depth=500)
+
+            for i in range(0, n_y_lines):
+                y_line_sprite = self._grid_line_sprites[i + n_x_lines]
+                p1 = (cam_rect[0], (cam_rect[1] - (cam_rect[1] % cs) + cs * (i + 1)))
+                p2 = (cam_rect[0] + cam_rect[2], (cam_rect[1] - (cam_rect[1] % cs) + cs * (i + 1)))
+                y_line_sprite.update(new_p1=p1, new_p2=p2, new_thickness=1,
+                                     new_color=colors.VERY_DARK_GRAY, new_depth=500)
+        else:
+            self._grid_line_sprites.clear()
+
     def all_sprites(self):
         for ent in self._world.entities:
             for spr in ent.all_sprites():
@@ -127,5 +163,7 @@ class WorldView:
         for ent in self._world.entities:
             for spr in ent.all_debug_sprites():
                 yield spr
+        for spr in self._grid_line_sprites:
+            yield spr
 
 

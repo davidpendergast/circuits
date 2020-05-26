@@ -45,7 +45,7 @@ class Entity:
         self._x_vel = 0  # pixels per tick
         self._y_vel = 0
 
-        self.world = None  # world sets this when entity is added / removed
+        self._world = None  # world sets this when entity is added / removed
 
         self._debug_sprites = {}
 
@@ -55,7 +55,10 @@ class Entity:
         self._frame_of_reference_children = []
 
     def get_world(self):
-        return self.world
+        return self._world
+
+    def set_world(self, world):
+        self._world = world
 
     def get_rect(self, raw=False):
         xy = self.get_xy(raw=raw)
@@ -77,21 +80,29 @@ class Entity:
             return (int(self._x), int(self._y))
 
     def set_xy(self, xy, update_frame_of_reference=True):
+        dx = 0
+        dy = 0
+
         if xy[0] is not None:
             dx = xy[0] - self._x
             self._x = xy[0]
-
-            if update_frame_of_reference:
-                for child in self._frame_of_reference_children:
-                    child.set_x(child.get_x(raw=True) + dx, update_frame_of_reference=True)
-
         if xy[1] is not None:
             dy = xy[1] - self._y
             self._y = xy[1]
 
-            if update_frame_of_reference:
-                for child in self._frame_of_reference_children:
+        if update_frame_of_reference and (dx != 0 or dy != 0):
+            for child in self._frame_of_reference_children:
+                if dx == 0:
                     child.set_y(child.get_y(raw=True) + dy, update_frame_of_reference=True)
+                elif dy == 0:
+                    child.set_x(child.get_x(raw=True) + dx, update_frame_of_reference=True)
+                else:
+                    child.set_xy((child.get_x(raw=True) + dx, child.get_y(raw=True) + dy),
+                                 update_frame_of_reference=True)
+
+        world = self.get_world()
+        if world is not None:
+            world.rehash_entity(self)
 
     def set_x(self, x, update_frame_of_reference=True):
         self.set_xy((x, None), update_frame_of_reference=update_frame_of_reference)
@@ -243,6 +254,12 @@ class Entity:
     def get_debug_color(self):
         return colors.WHITE
 
+    def is_block(self):
+        return isinstance(self, AbstractBlockEntity)
+
+    def is_player(self):
+        return isinstance(self, PlayerEntity)
+
     def __eq__(self, other):
         if isinstance(other, Entity):
             return self._ent_id == other._ent_id
@@ -306,6 +323,14 @@ class CompositeBlockEntity(AbstractBlockEntity):
                     yield sub_block
             else:
                 yield b
+
+    def set_world(self, world):
+        super().set_world(world)
+        for b in self.all_blocks():
+            b.set_world(world)
+
+    def set_xy(self, xy, update_frame_of_reference=True):
+        raise NotImplementedError()
 
     def get_xy(self, raw=False):
         min_x = float('inf')

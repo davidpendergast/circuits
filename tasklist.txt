@@ -2,9 +2,6 @@
  
  
 features:
- - entities should know their AABBs 
- - spacial chunking for objects in world
-
  - saving / loading levels
  - edit levels
 

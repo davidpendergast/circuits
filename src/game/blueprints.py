@@ -153,12 +153,11 @@ class SlopedQuadBlockSpecType(SpecType):
                 rect = [x, y, cs, 2 * cs]
 
         rect_block = entities.BlockEntity(rect[0], rect[1], rect[2], rect[3])
+        slope_block = entities.SlopeBlockEntity(triangle)
 
-        if triangle is not None:
-            slope_block = entities.SlopeBlockEntity(triangle)
-            yield entities.CompositeBlockEntity([rect_block, slope_block])
-        else:
-            yield entities.CompositeBlockEntity([rect_block])
+        #yield entities.CompositeBlockEntity([rect_block, slope_block])
+        yield rect_block
+        yield slope_block
 
 
 class MovingBlockSpecType(SpecType):
@@ -241,15 +240,16 @@ def get_test_blueprint() -> LevelBlueprint:
     json_blob = {
         ENTITIES: [
             {TYPE_ID: "player", X: 45, Y: 35, SUBTYPE_ID: "A"},
-            {TYPE_ID: "block", X: 0, Y: 120, W: 128, H: 16},
+            {TYPE_ID: "block", X: 0, Y: 112, W: 128, H: 16},
+            {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 16},
         ]
     }
 
     quad_type = SpecTypes.SLOPE_BLOCK_QUAD
     for i in range(0, 8):
         subtype = quad_type.get_subtypes()[i]
-        x = 72 + i * 48
-        y = 200
+        x = 64 + i * 48
+        y = 192
         json_blob[ENTITIES].append({TYPE_ID: quad_type.get_id(), SUBTYPE_ID: subtype, X: x, Y: y})
 
     return LevelBlueprint(json_blob)
