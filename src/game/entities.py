@@ -452,12 +452,34 @@ class SlopeBlockEntity(AbstractBlockEntity):
         rect = util.get_rect_containing_points(triangle)
         super().__init__(rect[0], rect[1], w=rect[2], h=rect[3])
 
-        self._points = util.shift_bounding_rect_to(triangle, pos=(0, 0))
+        self._points = []
+
+        for pt in util.shift_bounding_rect_to(triangle, pos=(0, 0)):
+            x = pt[0] if pt[0] < rect[2] else pt[0] - 1  # make these behave more like rects
+            y = pt[1] if pt[1] < rect[3] else pt[1] - 1
+            self._points.append((x, y))
+
+        colliders = []
 
         if rect[2] <= rect[3]:
-            self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK_VERT)])
+            colliders.append(TriangleCollider(self._points, CollisionMasks.SLOPE_BLOCK_VERT))
         else:
-            self.set_colliders([TriangleCollider(self.get_points(origin=(0, 0)), CollisionMasks.SLOPE_BLOCK_HORZ)])
+            colliders.append(TriangleCollider(self._points, CollisionMasks.SLOPE_BLOCK_HORZ))
+
+        # add some block colliders to make the non-slope parts of the triangle act like regular walls
+        for i in range(0, len(self._points)):
+            p1 = self._points[i]
+            p2 = self._points[(i + 1) % len(self._points)]
+            if p1[0] == p2[0]:
+                y = min(p1[1], p2[1])
+                h = abs(p1[1] - p2[1])
+                colliders.append(RectangleCollider([p1[0], y, 1, h], CollisionMasks.BLOCK, color=colors.WHITE))
+            elif p1[1] == p2[1]:
+                x = min(p1[0], p2[0])
+                w = abs(p1[0] - p2[0])
+                colliders.append(RectangleCollider([x, p1[1], w, 1], CollisionMasks.BLOCK, color=colors.WHITE))
+
+        self.set_colliders(colliders)
 
     def get_points(self, origin=None):
         if origin is None:
@@ -516,7 +538,7 @@ class PlayerEntity(Entity):
         self._jump_cooldown = 10
 
         w_inset = int(self.get_w() * 0.15)  # 0.15
-        h_inset = int(self.get_h() * 0.10)
+        h_inset = int(self.get_h() * 0.1)
 
         vert_env_collider = RectangleCollider([w_inset, 0, self.get_w() - (w_inset * 2), self.get_h()],
                                               CollisionMasks.ACTOR,
@@ -714,9 +736,10 @@ class PlayerEntity(Entity):
 
             self.set_x_vel(new_x_vel_bounded)
 
-            if y_accel != 0:
-                new_y_vel = self._y_vel + y_accel
-                self.set_y_vel(new_y_vel)
+            # TODO include this, or too jank?
+            # if y_accel != 0:
+            #    new_y_vel = self._y_vel + y_accel
+            #    self.set_y_vel(new_y_vel)
         else:
             fric = self._ground_x_friction if self.is_grounded() else self._air_x_friction
             self.set_x_vel(self._x_vel * fric)

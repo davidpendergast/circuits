@@ -1,8 +1,14 @@
 
 bugs:
- - slope collisions still aren't quite right
+ - slope collisions aren't quite right
+ - you can super jump off slopes
+ - triangle colliders are a pixel "wider" than rectangles I believe
  
 features:
  - saving / loading levels
  - edit levels
+ - bonus jump if you walk off -> jump quickly?
+ - make physics deterministic (or abandon replay idea?)
+    - lets at least give it a shot
+ - other characters
 
