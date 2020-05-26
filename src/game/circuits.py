@@ -11,6 +11,7 @@ import src.engine.inputs as inputs
 import src.engine.readme_writer as readme_writer
 import src.utils.util as util
 
+import src.game.worlds as worlds
 import src.game.worldview as worldview
 import src.game.globalstate as gs
 import src.game.const as const
@@ -26,6 +27,8 @@ class CircuitsGame(game.Game):
         self._world = None
         self._world_view = None
 
+        self._cur_test_world = 0  # for debug
+
     def initialize(self):
         if configs.is_dev:
             _update_readme()
@@ -35,8 +38,9 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
+        keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
 
-        self._create_new_world()
+        self._create_new_world(world_type=self._cur_test_world)
 
     def get_sheets(self):
         return []
@@ -59,7 +63,11 @@ class CircuitsGame(game.Game):
                                                            int(pos_in_world[1]) // cell_size))
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
-            self._create_new_world()
+            self._create_new_world(world_type=self._cur_test_world)
+
+        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.NEXT_LEVEL_DEBUG)):
+            self._cur_test_world += 1
+            self._create_new_world(world_type=self._cur_test_world)
 
         if inputs.get_instance().mouse_is_dragging(button=1):
             drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
@@ -72,9 +80,19 @@ class CircuitsGame(game.Game):
         self._world.update()
         self._world_view.update()
 
-    def _create_new_world(self):
-        bp = blueprints.get_test_blueprint()
-        self._world = bp.create_world()
+    def _create_new_world(self, world_type=0):
+        types = ("moving_plat", "full_level", "floating_blocks")
+        type_to_use = types[world_type % len(types)]
+        print("INFO: activating test world: {}".format(type_to_use))
+
+        if type_to_use == types[0]:
+            self._world = worlds.World.new_test_world_old()
+        elif type_to_use == types[1]:
+            self._world = worlds.World.new_test_world()
+        elif type_to_use == types[2]:
+            self._world = blueprints.get_test_blueprint().create_world()
+        else:
+            return
 
         self._world_view = worldview.WorldView(self._world)
         self._world_view.set_camera_attached_to(self._world.get_player())

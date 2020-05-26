@@ -1,5 +1,6 @@
 
- 
+bugs:
+ - slope collisions still aren't quite right
  
 features:
  - saving / loading levels
