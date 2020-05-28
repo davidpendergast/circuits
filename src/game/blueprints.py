@@ -7,6 +7,7 @@ import src.utils.util as util
 import src.game.entities as entities
 import src.game.worlds as worlds
 import src.game.globalstate as gs
+import src.game.colors as colors
 
 
 # json keys
@@ -134,30 +135,26 @@ class SlopedQuadBlockSpecType(SpecType):
         subtype = json_blob[SUBTYPE_ID]
 
         cs = gs.get_instance().cell_size
-        rect = None
-        triangle = None
 
-        tri_pt = (x + cs * subtype[0], y + cs * subtype[1])
+        tri_pt = (cs * subtype[0], cs * subtype[1])
 
         if subtype[2] == "horizontal":
-            triangle = [tri_pt, (x, y + cs), (x + 2 * cs, y + cs)]
+            triangle = [tri_pt, (0, cs), (2 * cs, cs)]
             if subtype[1] == 0:
-                rect = [x, y + cs, 2 * cs, cs]
+                rect = [0, cs, 2 * cs, cs]
             else:
-                rect = [x, y, 2 * cs, cs]
+                rect = [0, 0, 2 * cs, cs]
         else:
-            triangle = [tri_pt, (x + cs, y), (x + cs, y + 2 * cs)]
+            triangle = [tri_pt, (cs, 0), (cs, 2 * cs)]
             if subtype[0] == 0:
-                rect = [x + cs, y, cs, 2 * cs]
+                rect = [cs, 0, cs, 2 * cs]
             else:
-                rect = [x, y, cs, 2 * cs]
+                rect = [0, 0, cs, 2 * cs]
 
-        rect_block = entities.BlockEntity(rect[0], rect[1], rect[2], rect[3])
-        slope_block = entities.SlopeBlockEntity(triangle)
+        rect_colliders = entities.BlockEntity.build_colliders_for_rect(rect)
+        tri_colliders = entities.SlopeBlockEntity.build_colliders_for_points(triangle)
 
-        #yield entities.CompositeBlockEntity([rect_block, slope_block])
-        yield rect_block
-        yield slope_block
+        yield entities.CompositeBlockEntity(x, y, rect_colliders + tri_colliders)
 
 
 class MovingBlockSpecType(SpecType):
@@ -242,6 +239,7 @@ def get_test_blueprint() -> LevelBlueprint:
             {TYPE_ID: "player", X: 45, Y: 35, SUBTYPE_ID: "A"},
             {TYPE_ID: "block", X: 0, Y: 112, W: 128, H: 16},
             {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 16},
+            {TYPE_ID: "block", X: 2*16, Y: 14.5*16, W: 25*16, H: 0.5*16}
         ]
     }
 
@@ -249,7 +247,7 @@ def get_test_blueprint() -> LevelBlueprint:
     for i in range(0, 8):
         subtype = quad_type.get_subtypes()[i]
         x = 64 + i * 48
-        y = 192
+        y = 160
         json_blob[ENTITIES].append({TYPE_ID: quad_type.get_id(), SUBTYPE_ID: subtype, X: x, Y: y})
 
     return LevelBlueprint(json_blob)

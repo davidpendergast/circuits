@@ -72,6 +72,16 @@ def rotate(v, rad):
     return (v[0]*cos - v[1]*sin, v[0]*sin + v[1]*cos)
 
 
+def angle_between(v1, v2):
+    v1_dot_v2 = dot_prod(v1, v2)
+    mag1 = mag(v1)
+    mag2 = mag(v2)
+    if mag1 == 0 or mag2 == 0:
+        return 0
+    else:
+        return v1_dot_v2 / (mag1 * mag2)
+
+
 def to_degrees(rads):
     return rads * 180 / 3.141529
 
@@ -177,6 +187,18 @@ def get_rect_containing_points(pts, inclusive=False):
             max_y += 1
 
         return [min_x, min_y, (max_x - min_x), (max_y - min_y)]
+
+
+def rect_union(rect_list):
+    all_points = []
+    for r in rect_list:
+        if r[2] > 0 and r[3] > 0:
+            all_points.append((r[0], r[1]))
+            all_points.append((r[0] + r[2], r[1] + r[3]))
+    if len(all_points) == 0:
+        return None
+    else:
+        return get_rect_containing_points(all_points, inclusive=False)
 
 
 def _new_bound_size(existing_rects, new_rect):
@@ -539,6 +561,25 @@ def triangles_intersect(tri1, tri2) -> bool:
             if line_segments_intersect(tri1[i], tri1[(i + 1) % 3], tri2[i], tri2[(i + 1) % 3]):
                 return True
     return False
+
+
+def is_triangle_degenerate(tri):
+    if len(tri) != 3:
+        return True
+    else:
+        return tri[0] == tri[1] or tri[1] == tri[2] or tri[2] == tri[0]
+
+
+def triangle_angle(tri, idx):
+    if is_triangle_degenerate(tri):
+        return 0
+    else:
+        A = tri[idx]
+        B = tri[(idx + 1) % 3]
+        C = tri[(idx + 2) % 3]
+        AB = sub(B, A)
+        AC = sub(C, A)
+        return angle_between(AB, AC)
 
 
 def rect_intersects_triangle(rect, tri) -> bool:

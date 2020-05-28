@@ -16,6 +16,7 @@ import src.game.worldview as worldview
 import src.game.globalstate as gs
 import src.game.const as const
 import src.game.blueprints as blueprints
+import src.game.debug as debug
 
 import src.game.spriteref as spriteref
 
@@ -38,7 +39,10 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
+
+        # debug commands
         keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
+        keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
 
         self._create_new_world(world_type=self._cur_test_world)
 
@@ -68,6 +72,9 @@ class CircuitsGame(game.Game):
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.NEXT_LEVEL_DEBUG)):
             self._cur_test_world += 1
             self._create_new_world(world_type=self._cur_test_world)
+
+        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
+            debug.toggle_debug_sprite_mode()
 
         if inputs.get_instance().mouse_is_dragging(button=1):
             drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)

@@ -39,7 +39,7 @@ class World:
                                                             entities.SlopeBlockEntity.UPWARD_RIGHT_2x1,
                                                             triangle_scale=cs), next_update=False)
 
-        pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs), (16 * cs, 10 * cs)]
+        pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]  #, (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
         res.add_entity(moving_block, next_update=False)
 
@@ -66,6 +66,7 @@ class World:
                  (17, 7, 2, 1),
                  (19, 6, 4, 1),
                  (15, 10, 2, 1),
+                 (14, 10, 1, 2),
 
                  (2, 0, 4, 2),      # ciel
                  (6, 0, 19, 3),
@@ -86,23 +87,11 @@ class World:
             res.add_entity(entities.BlockEntity(cs * r[0], cs * r[1], cs * r[2], cs * r[3]), next_update=False)
 
         slopes = [(17, 6, entities.SlopeBlockEntity.UPWARD_RIGHT_2x1),
-                  (4, 2, entities.SlopeBlockEntity.DOWNWARD_RIGHT_2x1)]
+                  (4, 2, entities.SlopeBlockEntity.DOWNWARD_RIGHT_2x1),
+                  (13, 10, entities.SlopeBlockEntity.DOWNWARD_RIGHT_1x2)]
 
         for s in slopes:
             res.add_entity(entities.SlopeBlockEntity.make_slope(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
-
-        composites = [((14, 10, 1, 2), (13, 10, entities.SlopeBlockEntity.DOWNWARD_RIGHT_1x2))]
-
-        for comp in composites:
-            blocks = []
-            for spec in comp:
-                if len(spec) == 4:
-                    r = spec
-                    blocks.append(entities.BlockEntity(cs * r[0], cs * r[1], cs * r[2], cs * r[3]))
-                else:
-                    s = spec
-                    blocks.append(entities.SlopeBlockEntity.make_slope(s[0] * cs, s[1] * cs, s[2], triangle_scale=cs))
-            res.add_entity(entities.CompositeBlockEntity(blocks))
 
         return res
 
@@ -361,11 +350,17 @@ class CollisionResolver:
             pass  # we already know the next position is valid
         else:
             target_xy = next_positions[dyna_ent]
-            next_xy = CollisionResolver._find_nearest_valid_position(world, dyna_ent, target_xy)
+            next_xy = CollisionResolver.\
+                _find_nearest_valid_position(world, dyna_ent, target_xy)
             next_positions[dyna_ent] = next_xy
 
     @staticmethod
-    def _find_nearest_valid_position(world, dyna_ent, target_xy):
+    def _find_nearest_valid_position(world, dyna_ent, target_xy, max_dist=10):
+
+        import src.engine.inputs as inputs
+        import pygame
+        if inputs.get_instance().is_held(pygame.K_LEFT) and target_xy != dyna_ent.get_xy():
+            print("going left")
 
         blocked_colliders_cache = {}  # xy -> list of colliders
 
@@ -393,13 +388,10 @@ class CollisionResolver:
                 return allow_horz, allow_vert
 
         def get_neighbors(xy):
-            allow_horz, allow_vert = _allow_shift_from(xy)
-            if allow_horz:
-                yield (xy[0] - 1, xy[1])
-                yield (xy[0] + 1, xy[1])
-            if allow_vert:
-                yield (xy[0], xy[1] - 1)
-                yield (xy[0], xy[1] + 1)
+            yield (xy[0] - 1, xy[1])
+            yield (xy[0] + 1, xy[1])
+            yield (xy[0], xy[1] - 1)
+            yield (xy[0], xy[1] + 1)
 
         def is_correct(xy):
             return len(_get_blocked_colliders(xy)) == 0
@@ -409,7 +401,25 @@ class CollisionResolver:
             dy = abs(xy[1] - target_xy[1])
             return ((dx * dx + dy * dy), dx)  # closest points first, then break ties by preferring y shifts
 
-        return util.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=100)
+        res = None
+
+        # if we're originally only colliding with vert-only or horz-only colliders, try to resolve
+        # collisions just using x or y shifts, respectively
+        allow_horz, allow_vert = _allow_shift_from(target_xy)
+        if allow_horz and not allow_vert:
+            res = util.bfs(target_xy, is_correct, lambda xy: [(xy[0] - 1, xy[1]), (xy[0] + 1, xy[1])],
+                           get_cost=get_cost, limit=max_dist * 2)
+
+        elif allow_vert and not allow_horz:
+            res = util.bfs(target_xy, is_correct, lambda xy: [(xy[0], xy[1] - 1), (xy[0], xy[1] + 1)],
+                           get_cost=get_cost, limit=max_dist * 2)
+
+        # if that doesn't work, try all directions
+        if res is None:
+            res = util.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=max_dist * max_dist)
+
+        return res
+
 
     @staticmethod
     def _get_blocked_solid_colliders(world, ent, xy) -> typing.List[entities.PolygonCollider]:
@@ -430,28 +440,6 @@ class CollisionResolver:
                 if collider.is_colliding_with(xy, b_collider, b.get_xy()):
                     return True
         return False
-
-    @staticmethod
-    def get_all_relevant_blocks(world, dyna_ents, sloped_filter=None, moving_filter=None):
-        must_be_sloped = sloped_filter is True
-        must_not_be_sloped = sloped_filter is False
-
-        must_be_moving = moving_filter is True
-        must_not_be_moving = moving_filter is False
-
-        res = []
-        for b in world.all_entities(cond=lambda _e: _e.is_block()):
-            for b2 in b.all_blocks(recurse=True):
-                is_moving = isinstance(b2, entities.MovingBlockEntity)
-                if (is_moving and must_not_be_moving) or (not is_moving and must_be_moving):
-                    continue
-
-                is_sloped = isinstance(b2, entities.SlopeBlockEntity)
-                if (is_sloped and must_not_be_sloped) or (not is_sloped and must_be_sloped):
-                    continue
-
-                res.append(b2)
-        return res
 
     @staticmethod
     def calc_sensor_states(world, dyna_ents):

@@ -1,4 +1,6 @@
 
+import math
+
 import src.utils.util as util
 import src.engine.sprites as sprites
 import src.engine.inputs as inputs
@@ -10,6 +12,7 @@ import src.game.spriteref as spriteref
 import src.game.colors as colors
 import src.game.globalstate as gs
 import src.game.const as const
+import src.game.debug as debug
 
 
 _ENT_ID = 0
@@ -198,23 +201,29 @@ class Entity:
     def all_sprites(self):
         return []
 
-    def _update_main_body_debug_sprite(self, main_body_key):
+    def _update_main_body_debug_sprites(self, main_body_key):
         if main_body_key not in self._debug_sprites:
             self._debug_sprites[main_body_key] = sprites.RectangleSprite(spriteref.POLYGON_LAYER)
+
         self._debug_sprites[main_body_key].update(new_rect=self.get_rect(), new_color=self.get_debug_color(),
-                                                  new_depth=20)
+                                                  new_depth=30)
 
     def all_debug_sprites(self):
         main_body_key = "main_body"
-        self._update_main_body_debug_sprite(main_body_key)
+        self._update_main_body_debug_sprites(main_body_key)
         if main_body_key in self._debug_sprites and self._debug_sprites[main_body_key] is not None:
-            yield self._debug_sprites[main_body_key]
+            body_sprites = util.listify(self._debug_sprites[main_body_key])
+            for spr in body_sprites:
+                if spr is not None:
+                    yield spr
 
         rect_colliders_key = "rect_colliders"
         if rect_colliders_key not in self._debug_sprites:
             self._debug_sprites[rect_colliders_key] = []
 
-        all_rect_colliders = [c for c in self.all_colliders() if isinstance(c, RectangleCollider) if c.is_enabled()]
+        all_colliders = [c for c in self.all_colliders() if debug.should_show_debug_sprite_with_name(c.get_name())]
+
+        all_rect_colliders = [c for c in all_colliders if isinstance(c, RectangleCollider) if c.is_enabled()]
 
         util.extend_or_empty_list_to_length(self._debug_sprites[rect_colliders_key], len(all_rect_colliders),
                                             creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
@@ -225,14 +234,15 @@ class Entity:
                 color = colors.PINK
 
             rect = collider.get_rect(offs=self.get_xy())
-            rect_sprite.update(new_rect=rect, new_color=color, new_outline=1, new_depth=5)
+            rect_sprite.update(new_rect=rect, new_color=color, new_outline=1,
+                               new_depth=collider.get_mask().get_render_depth())
             yield rect_sprite
 
         triangle_colliders_key = "triangle_colliders"
         if triangle_colliders_key not in self._debug_sprites:
             self._debug_sprites[triangle_colliders_key] = []
 
-        all_triangle_colliders = [c for c in self.all_colliders() if isinstance(c, TriangleCollider) if c.is_enabled()]
+        all_triangle_colliders = [c for c in all_colliders if isinstance(c, TriangleCollider) if c.is_enabled()]
 
         util.extend_or_empty_list_to_length(self._debug_sprites[triangle_colliders_key], len(all_triangle_colliders),
                                             creator=lambda: sprites.TriangleOutlineSprite(spriteref.POLYGON_LAYER))
@@ -245,8 +255,9 @@ class Entity:
                 color = colors.PINK
 
             points = collider.get_points(offs=self.get_xy())
+            depth = collider.get_mask().get_render_depth()
             new_triangle_sprites.append(triangle_sprite.update(new_points=points, new_outline=1,
-                                                               new_color=color, new_depth=5))
+                                                               new_color=color, new_depth=depth))
             yield triangle_sprite
 
         self._debug_sprites[triangle_colliders_key] = new_triangle_sprites
@@ -290,9 +301,6 @@ class AbstractBlockEntity(Entity):
     def all_sprites(self):
         return []
 
-    def all_blocks(self, recurse=False):
-        yield self
-
     def get_physics_group(self):
         return ENVIRONMENT_GROUP
 
@@ -300,79 +308,51 @@ class AbstractBlockEntity(Entity):
 class BlockEntity(AbstractBlockEntity):
     """basic rectangular block."""
 
+    @staticmethod
+    def build_colliders_for_rect(rect):
+        return [RectangleCollider(rect, CollisionMasks.BLOCK, color=colors.RED)]
+
     def __init__(self, x, y, w, h):
         AbstractBlockEntity.__init__(self, x, y, w=w, h=h)
-
-        self.set_colliders([RectangleCollider([0, 0, w, h], CollisionMasks.BLOCK)])
+        self.set_colliders(BlockEntity.build_colliders_for_rect([0, 0, w, h]))
 
 
 class CompositeBlockEntity(AbstractBlockEntity):
 
-    def __init__(self, blocks):
-        if len(blocks) == 0:
-            raise ValueError("blocks is empty")
+    def __init__(self, x, y, colliders):
+        AbstractBlockEntity.__init__(self, x, y)
+        self.set_colliders(colliders)
 
-        self._blocks = blocks
-        xy = self.get_xy(raw=False)
-        AbstractBlockEntity.__init__(self, xy[0], xy[1])
+    def get_size(self):
+        all_rects = [c.get_rect(offs=(0, 0)) for c in self.all_colliders()]
+        total_rect = util.rect_union(all_rects)
+        if total_rect is None:
+            return (0, 0)
+        else:
+            return (total_rect[2], total_rect[3])
 
-    def all_blocks(self, recurse=False):
-        for b in self._blocks:
-            if recurse:
-                for sub_block in b.all_blocks(recurse=True):
-                    yield sub_block
+    def _update_main_body_debug_sprites(self, main_body_key):
+        all_colliders = [c for c in self.all_colliders()]
+        if main_body_key not in self._debug_sprites:
+            self._debug_sprites[main_body_key] = []
+        util.extend_or_empty_list_to_length(self._debug_sprites[main_body_key], len(all_colliders), creator=None)
+        for i in range(0, len(all_colliders)):
+            c = all_colliders[i]
+            spr = self._debug_sprites[main_body_key][i]
+            if isinstance(c, TriangleCollider):
+                if spr is None or not isinstance(spr, sprites.TriangleSprite):
+                    spr = sprites.TriangleSprite(spriteref.POLYGON_LAYER)
+                spr = spr.update(new_points=c.get_points(offs=self.get_xy()),
+                                 new_color=self.get_debug_color(), new_depth=30)
+            elif isinstance(c, RectangleCollider):
+                if spr is None or not isinstance(spr, sprites.RectangleSprite):
+                    spr = sprites.RectangleSprite(spriteref.POLYGON_LAYER)
+                spr = spr.update(new_rect=c.get_rect(offs=self.get_xy()),
+                                 new_color=self.get_debug_color(), new_depth=30)
             else:
-                yield b
+                spr = None
 
-    def set_world(self, world):
-        super().set_world(world)
-        for b in self.all_blocks():
-            b.set_world(world)
-
-    def set_xy(self, xy, update_frame_of_reference=True):
-        raise NotImplementedError()
-
-    def get_xy(self, raw=False):
-        min_x = float('inf')
-        min_y = float('inf')
-        for b in self.all_blocks():
-            b_xy = b.get_xy(raw=raw)
-            min_x = min(min_x, b_xy[0])
-            min_y = min(min_y, b_xy[1])
-        return (min_x, min_y)
-
-    def get_size(self, raw=True):
-        min_x = float('inf')
-        max_x = -float('inf')
-        min_y = float('inf')
-        max_y = -float('inf')
-        for b in self.all_blocks():
-            b_xy = b.get_xy()
-            b_size = b.get_size()
-            min_x = min(min_x, b_xy[0])
-            max_x = max(max_x, b_xy[0] + b_size[0])  # XXX could have some raw / not raw issues here
-            min_y = min(min_y, b_xy[1])
-            max_y = max(max_y, b_xy[1] + b_size[1])  # XXX could have some raw / not raw issues here
-        return (max_x - min_x, max_y - min_y)
-
-    def update(self):
-        for b in self.all_blocks():
-            b.update()
-
-    def all_sprites(self):
-        for b in self.all_blocks():
-            for spr in b.all_sprites():
-                yield spr
-
-    def all_colliders(self, solid=None, sensor=None, enabled=True):
-        for b in self.all_blocks():
-            for c in b.all_colliders():
-                yield c
-
-    def all_debug_sprites(self):
-        for b in self.all_blocks():
-            for spr in b.all_debug_sprites():
-                yield spr
+            self._debug_sprites[main_body_key][i] = spr
 
 
 class MovingBlockEntity(BlockEntity):
@@ -448,38 +428,42 @@ class SlopeBlockEntity(AbstractBlockEntity):
         scaled_triangle = [util.add((x, y), util.mult(pt, triangle_scale)) for pt in triangle]
         return SlopeBlockEntity(scaled_triangle)
 
+    @staticmethod
+    def build_colliders_for_points(pts):
+        colliders = []
+
+        rect = util.get_rect_containing_points(pts)
+        if rect[2] <= rect[3]:
+            colliders.append(TriangleCollider(pts, CollisionMasks.SLOPE_BLOCK_VERT, color=colors.YELLOW))
+        else:
+            colliders.append(TriangleCollider(pts, CollisionMasks.SLOPE_BLOCK_HORZ, color=colors.YELLOW))
+
+        # add some block colliders to make the non-slope parts of the triangle act like regular walls
+        for i in range(0, len(pts)):
+            p1 = pts[i]
+            p2 = pts[(i + 1) % len(pts)]
+            # TODO shorten the collider a little bit if it's near an acute angle
+            if p1[0] == p2[0]:
+                y = min(p1[1], p2[1])
+                h = abs(p1[1] - p2[1])
+                x = p1[0] if p1[0] < rect[2] else p1[0] - 1
+
+                colliders.append(RectangleCollider([x, y, 1, h], CollisionMasks.BLOCK, color=colors.BLUE))
+            elif p1[1] == p2[1]:
+                x = min(p1[0], p2[0])
+                w = abs(p1[0] - p2[0])
+                y = p1[1] if p1[1] < rect[3] else p1[1] - 1
+                colliders.append(RectangleCollider([x, y, w, 1], CollisionMasks.BLOCK, color=colors.BLUE))
+
+        return colliders
+
     def __init__(self, triangle):
         rect = util.get_rect_containing_points(triangle)
         super().__init__(rect[0], rect[1], w=rect[2], h=rect[3])
 
-        self._points = []
+        self._points = [util.sub(pt, (rect[0], rect[1])) for pt in triangle]
 
-        for pt in util.shift_bounding_rect_to(triangle, pos=(0, 0)):
-            x = pt[0] if pt[0] < rect[2] else pt[0] - 1  # make these behave more like rects
-            y = pt[1] if pt[1] < rect[3] else pt[1] - 1
-            self._points.append((x, y))
-
-        colliders = []
-
-        if rect[2] <= rect[3]:
-            colliders.append(TriangleCollider(self._points, CollisionMasks.SLOPE_BLOCK_VERT))
-        else:
-            colliders.append(TriangleCollider(self._points, CollisionMasks.SLOPE_BLOCK_HORZ))
-
-        # add some block colliders to make the non-slope parts of the triangle act like regular walls
-        for i in range(0, len(self._points)):
-            p1 = self._points[i]
-            p2 = self._points[(i + 1) % len(self._points)]
-            if p1[0] == p2[0]:
-                y = min(p1[1], p2[1])
-                h = abs(p1[1] - p2[1])
-                colliders.append(RectangleCollider([p1[0], y, 1, h], CollisionMasks.BLOCK, color=colors.WHITE))
-            elif p1[1] == p2[1]:
-                x = min(p1[0], p2[0])
-                w = abs(p1[0] - p2[0])
-                colliders.append(RectangleCollider([x, p1[1], w, 1], CollisionMasks.BLOCK, color=colors.WHITE))
-
-        self.set_colliders(colliders)
+        self.set_colliders(SlopeBlockEntity.build_colliders_for_points(self._points))
 
     def get_points(self, origin=None):
         if origin is None:
@@ -491,18 +475,18 @@ class SlopeBlockEntity(AbstractBlockEntity):
             res.append((pt_x, pt_y))
         return res
 
-    def _update_main_body_debug_sprite(self, main_body_key):
+    def _update_main_body_debug_sprites(self, main_body_key):
         if main_body_key not in self._debug_sprites:
             self._debug_sprites[main_body_key] = sprites.TriangleSprite(spriteref.POLYGON_LAYER)
         pts = self.get_points()
         spr = self._debug_sprites[main_body_key]
-        self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=20)
+        self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=30)
 
 
 class PlayerEntity(Entity):
 
     def __init__(self, x, y):
-        w = int(gs.get_instance().cell_size * 1)
+        w = int(gs.get_instance().cell_size * 0.75)
         h = int(gs.get_instance().cell_size * 1.75)
 
         Entity.__init__(self, x, y, w=w, h=h)
@@ -537,36 +521,41 @@ class PlayerEntity(Entity):
 
         self._jump_cooldown = 10
 
-        w_inset = int(self.get_w() * 0.15)  # 0.15
-        h_inset = int(self.get_h() * 0.1)
+        w_inset = int(self.get_w() * 0.2)  # 0.15
+        h_inset = int(self.get_h() * 0.15)  # 0.1
 
         vert_env_collider = RectangleCollider([w_inset, 0, self.get_w() - (w_inset * 2), self.get_h()],
                                               CollisionMasks.ACTOR,
                                               collides_with=CollisionMasks.BLOCK,
                                               resolution_hint=CollisionResolutionHints.VERT_ONLY,
-                                              color=colors.WHITE)
+                                              color=colors.WHITE,
+                                              name="main_vert_rect_collider")
 
         horz_env_collider = RectangleCollider([0, 0, self.get_w(), self.get_h() - h_inset],
                                               CollisionMasks.ACTOR,
                                               collides_with=CollisionMasks.BLOCK,
                                               resolution_hint=CollisionResolutionHints.HORZ_ONLY,
-                                              color=colors.WHITE)
+                                              color=colors.WHITE,
+                                              name="main_horz_rect_collider")
 
-        foot_sensor_rect = [0, self.get_h(), self.get_w(), 1]
+        foot_sensor_rect = [w_inset, self.get_h(), self.get_w() - w_inset * 2, 1]
         self.foot_sensor = RectangleCollider(foot_sensor_rect,
                                              CollisionMasks.SENSOR,
                                              collides_with=CollisionMasks.BLOCK,
-                                             color=colors.GREEN)
+                                             color=colors.GREEN,
+                                             name="foot_rect_sensor")
 
         left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
                                         CollisionMasks.SENSOR,
                                         collides_with=CollisionMasks.BLOCK,
-                                        color=colors.GREEN)
+                                        color=colors.GREEN,
+                                        name="left_rect_sensor")
 
         right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
                                          CollisionMasks.SENSOR,
                                          collides_with=CollisionMasks.BLOCK,
-                                         color=colors.GREEN)
+                                         color=colors.GREEN,
+                                         name="right_rect_sensor")
 
         self.foot_sensor_id = self.foot_sensor.get_id()
         self.left_sensor_id = left_sensor.get_id()
@@ -577,64 +566,57 @@ class PlayerEntity(Entity):
         self.snap_down_sensor = RectangleCollider(snap_down_rect,
                                                   CollisionMasks.SNAP_DOWN_SENSOR,
                                                   collides_with=(CollisionMasks.SLOPE_BLOCK_HORZ, CollisionMasks.BLOCK),
-                                                  color=colors.YELLOW)
+                                                  color=colors.LIGHT_GRAY,
+                                                  name="snap_down_rect_and_slope_sensor")
 
-        # slope sensors
-        slope_collider_main_horz = RectangleCollider([w_inset // 2, 1, self.get_w() - (w_inset), self.get_h() - h_inset],
+        w_inset_slope = int(self.get_w() * 0.2)
+        h_inset_slope_top = int(self.get_h() * 0.1)
+        h_inset_slope_bot = int(self.get_h() * 0.1)
+
+        # slope colliders
+        slope_collider_main_horz_rect = [0, h_inset_slope_top,
+                                         self.get_w(),
+                                         self.get_h() - h_inset_slope_top - h_inset_slope_bot]
+        slope_collider_main_horz = RectangleCollider(slope_collider_main_horz_rect,
                                                      CollisionMasks.ACTOR,
                                                      collides_with=(CollisionMasks.SLOPE_BLOCK_VERT),
                                                      resolution_hint=CollisionResolutionHints.HORZ_ONLY,
-                                                     color=colors.OFF_WHITE)
+                                                     color=colors.OFF_WHITE,
+                                                     name="main_horz_slope_collider")
 
-        slope_collider_main_top = RectangleCollider([w_inset // 2, 1, self.get_w() - (w_inset), self.get_h() // 2],
+        slope_collider_main_top_rect = [w_inset_slope, 0,
+                                        self.get_w() - (2 * w_inset_slope),
+                                        self.get_h() - h_inset_slope_bot]
+        slope_collider_main_top = RectangleCollider(slope_collider_main_top_rect,
                                                     CollisionMasks.ACTOR,
                                                     collides_with=(CollisionMasks.SLOPE_BLOCK_HORZ),
                                                     resolution_hint=CollisionResolutionHints.VERT_ONLY,
-                                                    color=colors.OFF_WHITE)
+                                                    color=colors.OFF_WHITE,
+                                                    name="main_vert_top_slope_collider")
 
-        slope_collider_top = self.get_h() - h_inset
-        slope_collider_bot = self.get_h() - 1
-        slope_collider_left = w_inset
-        slope_collider_right = self.get_w() - w_inset
+        foot_slope_collider_triangle = [(w_inset_slope, self.get_h() - h_inset_slope_bot),
+                                        (self.get_w() // 2, self.get_h()),
+                                        (self.get_w() - w_inset_slope, self.get_h() - h_inset_slope_bot)]
 
-        foot_slope_triangle_left = [(slope_collider_left, slope_collider_top),
-                                   (self.get_w() // 2, slope_collider_top),
-                                   (self.get_w() // 2, slope_collider_bot)]
-
-        foot_slope_triangle_right = [(slope_collider_right, slope_collider_top),
-                                    (self.get_w() // 2 + 1, slope_collider_top),
-                                    (self.get_w() // 2 + 1, slope_collider_bot)]
-
-        slope_env_collider_left = TriangleCollider(foot_slope_triangle_left,
+        foot_slope_env_collider = TriangleCollider(foot_slope_collider_triangle,
                                                    CollisionMasks.ACTOR,
                                                    collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
                                                    resolution_hint=CollisionResolutionHints.VERT_ONLY,
-                                                   color=colors.OFF_WHITE)
+                                                   color=colors.OFF_WHITE,
+                                                   name="main_bottom_vert_slope_collider")
 
-        slope_env_collider_right = TriangleCollider(foot_slope_triangle_right,
-                                                    CollisionMasks.ACTOR,
-                                                    collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
-                                                    resolution_hint=CollisionResolutionHints.VERT_ONLY,
-                                                    color=colors.OFF_WHITE)
+        foot_slope_sensor = TriangleCollider([(p[0], p[1] + 1) for p in foot_slope_collider_triangle],
+                                             CollisionMasks.SENSOR,
+                                             collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
+                                             color=colors.GREEN,
+                                             name="bottom_slope_sensor")
 
-        foot_slope_sensor_left = TriangleCollider([(p[0], p[1] + 1) for p in foot_slope_triangle_left],
-                                                  CollisionMasks.SENSOR,
-                                                  collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
-                                                  color=colors.GREEN)
-
-        foot_slope_sensor_right = TriangleCollider([(p[0], p[1] + 1) for p in foot_slope_triangle_right],
-                                                   CollisionMasks.SENSOR,
-                                                   collides_with=CollisionMasks.SLOPE_BLOCK_HORZ,
-                                                   color=colors.GREEN)
-
-        self.foot_slope_sensor_left_id = foot_slope_sensor_left.get_id()
-        self.foot_slope_sensor_right_id = foot_slope_sensor_right.get_id()
+        self.foot_slope_sensor_id = foot_slope_sensor.get_id()
 
         self.set_colliders([vert_env_collider, horz_env_collider,
                             self.foot_sensor, left_sensor, right_sensor,  self.snap_down_sensor,
                             slope_collider_main_horz, slope_collider_main_top,
-                            slope_env_collider_left, slope_env_collider_right,
-                            foot_slope_sensor_left, foot_slope_sensor_right])
+                            foot_slope_env_collider, foot_slope_sensor])
 
     def is_dynamic(self):
         return True
@@ -666,9 +648,7 @@ class PlayerEntity(Entity):
         self._last_jump_time += 1
 
     def is_grounded(self):
-        return (len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0 or
-                len(self.get_world().get_sensor_state(self.foot_slope_sensor_left_id)) > 0 or
-                len(self.get_world().get_sensor_state(self.foot_slope_sensor_right_id)) > 0)
+        return self.is_on_flat_ground() or self.is_on_sloped_ground()
 
     def is_left_walled(self):
         return len(self.get_world().get_sensor_state(self.left_sensor_id)) > 0
@@ -676,11 +656,8 @@ class PlayerEntity(Entity):
     def is_right_walled(self):
         return len(self.get_world().get_sensor_state(self.right_sensor_id)) > 0
 
-    def is_on_left_slope(self):
-        return len(self.get_world().get_sensor_state(self.foot_slope_sensor_left_id)) > 0
-
-    def is_on_right_slope(self):
-        return len(self.get_world().get_sensor_state(self.foot_slope_sensor_right_id)) > 0
+    def is_on_sloped_ground(self):
+        return len(self.get_world().get_sensor_state(self.foot_slope_sensor_id)) > 0
 
     def is_on_flat_ground(self):
         return len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0
@@ -723,13 +700,10 @@ class PlayerEntity(Entity):
                 accel += self._air_accel
 
             x_accel = dx * accel
-            y_accel = 0
 
-            # alter the angle of motion if we're on a slope
-            if self.is_on_left_slope() and not self.is_on_flat_ground() and not self.is_on_right_slope():
-                x_accel, y_accel = util.rotate((x_accel, y_accel), util.to_rads(22.5))
-            elif self.is_on_right_slope() and not self.is_on_flat_ground() and not self.is_on_left_slope():
-                x_accel, y_accel = util.rotate((x_accel, y_accel), util.to_rads(-22.5))
+            # reduce x speed if we're on a slope
+            if self.is_on_sloped_ground() and not self.is_on_flat_ground():
+                x_accel *= math.cos(util.to_rads(22.5))
 
             new_x_vel = self._x_vel + x_accel
             new_x_vel_bounded = util.bound(new_x_vel, -self._x_vel_max, self._x_vel_max)
@@ -793,13 +767,17 @@ class PlayerEntity(Entity):
 
 class CollisionMask:
 
-    def __init__(self, name, is_solid=True, is_sensor=False):
+    def __init__(self, name, is_solid=True, is_sensor=False, render_depth=20):
         self._name = name
         self._is_solid = is_solid
         self._is_sensor = is_sensor
+        self._render_depth = render_depth
 
     def get_name(self) -> str:
         return self._name
+
+    def get_render_depth(self) -> int:
+        return self._render_depth
 
     def is_solid(self) -> bool:
         return self._is_solid
@@ -810,16 +788,16 @@ class CollisionMask:
 
 class CollisionMasks:
 
-    BLOCK = CollisionMask("block")
+    BLOCK = CollisionMask("block", render_depth=20)
 
-    SLOPE_BLOCK_HORZ = CollisionMask("slope_block_horz")
-    SLOPE_BLOCK_VERT = CollisionMask("slope_block_vert")
+    SLOPE_BLOCK_HORZ = CollisionMask("slope_block_horz", render_depth=25)
+    SLOPE_BLOCK_VERT = CollisionMask("slope_block_vert", render_depth=25)
 
-    ACTOR = CollisionMask("actor")
+    ACTOR = CollisionMask("actor", render_depth=10)
 
-    SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True)
+    SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, render_depth=10)
 
-    SNAP_DOWN_SENSOR = CollisionMask("snap_down_sensor", is_solid=False, is_sensor=True)
+    SNAP_DOWN_SENSOR = CollisionMask("snap_down_sensor", is_solid=False, is_sensor=True, render_depth=15)
 
 
 class CollisionResolutionHint:
@@ -862,11 +840,12 @@ def _next_collider_id():
 
 class PolygonCollider:
 
-    def __init__(self, points, mask, collides_with=None, resolution_hint=None, color=colors.RED):
+    def __init__(self, points, mask, collides_with=None, resolution_hint=None, color=colors.RED, name=None):
         self._mask = mask
         self._collides_with = [] if collides_with is None else util.listify(collides_with)
         self._points = points
         self._resolution_hint = resolution_hint if resolution_hint is not None else CollisionResolutionHints.BOTH
+        self._name = name
 
         self._debug_color = color
         self._id = _next_collider_id()
@@ -875,6 +854,9 @@ class PolygonCollider:
 
     def get_id(self):
         return self._id
+
+    def get_name(self):
+        return self._name
 
     def set_enabled(self, val):
         self._is_enabled = val
@@ -928,10 +910,11 @@ class PolygonCollider:
 
 class TriangleCollider(PolygonCollider):
 
-    def __init__(self, points, mask, collides_with=None, resolution_hint=None, color=colors.RED):
+    def __init__(self, points, mask, collides_with=None, resolution_hint=None, color=colors.RED, name=None):
         if len(points) != 3:
             raise ValueError("must have 3 points, instead got: {}".format(points))
-        PolygonCollider.__init__(self, points, mask, collides_with=collides_with, resolution_hint=resolution_hint, color=color)
+        PolygonCollider.__init__(self, points, mask, collides_with=collides_with, resolution_hint=resolution_hint,
+                                 color=color, name=name)
 
     def is_overlapping(self, offs, other, other_offs):
         if isinstance(other, TriangleCollider):
@@ -944,9 +927,10 @@ class TriangleCollider(PolygonCollider):
 
 class RectangleCollider(PolygonCollider):
 
-    def __init__(self, rect, mask, collides_with=None, resolution_hint=None, color=colors.RED):
+    def __init__(self, rect, mask, collides_with=None, resolution_hint=None, color=colors.RED, name=None):
         points = [p for p in util.all_rect_corners(rect, inclusive=False)]
-        PolygonCollider.__init__(self, points, mask, collides_with=collides_with, resolution_hint=resolution_hint, color=color)
+        PolygonCollider.__init__(self, points, mask, collides_with=collides_with, resolution_hint=resolution_hint,
+                                 color=color, name=name)
 
     def is_overlapping(self, offs, other, other_offs):
         if isinstance(other, RectangleCollider):
