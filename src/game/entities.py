@@ -526,11 +526,15 @@ class PlayerEntity(Entity):
         self._wall_cling_time = 14  # how long you have to hold the direction to break the wall cling
         self._wall_cling_count = 0
 
-        self._air_time = 0
-        self._last_jump_time = 1000
-        self._jump_buffer = 10       # if you press jump within X ticks of walking off a platform, you still jump
+        self._air_time = 0  # how long it's been since player was grounded
 
-        self._jump_cooldown = 10
+        self._last_jump_time = 1000          # time since last jump
+        self._last_jump_request_time = 1000  # time since jump key was pressed last
+
+        self._pre_jump_buffer = 5   # how early you can press jump and still have it fire
+        self._post_jump_buffer = 5  # if you press jump within X ticks of walking off a platform, you still jump
+
+        self._jump_cooldown = 15
 
         w_inset = int(self.get_w() * 0.2)  # 0.15
         h_inset = int(self.get_h() * 0.15)  # 0.1
@@ -648,11 +652,6 @@ class PlayerEntity(Entity):
         if self._y_vel > max_y_vel:
             self._y_vel = max_y_vel
 
-        if self.is_grounded():
-            self._air_time = 0
-        else:
-            self._air_time += 1
-
         should_snap_down = self._last_jump_time > 3 and self._air_time <= 1 and self._y_vel >= 0
         self.snap_down_sensor.set_enabled(should_snap_down)
 
@@ -682,6 +681,16 @@ class PlayerEntity(Entity):
         request_right = inputs.get_instance().is_held(keys.get_keys(const.MOVE_RIGHT))
         request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))  # TODO add some buffer
         holding_jump = inputs.get_instance().is_held(keys.get_keys(const.JUMP))
+
+        if request_jump:
+            self._last_jump_request_time = 0
+        else:
+            self._last_jump_request_time += 1
+
+        if self.is_grounded():
+            self._air_time = 0
+        else:
+            self._air_time += 1
 
         dx = 0
         if request_left:
@@ -724,9 +733,13 @@ class PlayerEntity(Entity):
             fric = self._ground_x_friction if self.is_grounded() else self._air_x_friction
             self.set_x_vel(self._x_vel * fric)
 
-        if request_jump and self._last_jump_time >= self._jump_cooldown:
+        try_to_jump = (self._last_jump_request_time <= self._pre_jump_buffer and
+                       holding_jump and
+                       self._last_jump_time >= self._jump_cooldown)
+
+        if try_to_jump:
             if self.is_grounded():
-                self.set_y_vel(self._y_vel - self._jump_y_vel)
+                self.set_y_vel(-self._jump_y_vel)
                 self._last_jump_time = 0
 
             elif self.is_left_walled() or self.is_right_walled():
@@ -737,10 +750,10 @@ class PlayerEntity(Entity):
                     if self.is_right_walled():
                         self.set_x_vel(self._x_vel - self._wall_jump_x_vel)
 
-            elif self._air_time < self._jump_buffer:
-                # if you walked off a platform and jumped too late, you get a penalty
-                jump_penalty = (1 - 0.666 * self._air_time / self._jump_buffer)
-                self.set_y_vel(self._y_vel - self._jump_y_vel * jump_penalty)
+            elif self._air_time < self._post_jump_buffer:
+                # if you jumped too late, you get a penalty
+                jump_penalty = (1 - 0.5 * self._air_time / self._post_jump_buffer)
+                self.set_y_vel(-self._jump_y_vel * jump_penalty)
                 self._last_jump_time = 0
 
         # short hopping
