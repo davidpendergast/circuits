@@ -523,11 +523,12 @@ class PlayerEntity(Entity):
         self._air_x_friction = 0.85
         self._ground_x_friction = 0.60
 
-        self._wall_cling_time = 14   # how long you have to hold the direction to break the wall cling
+        self._wall_cling_time = 14  # how long you have to hold the direction to break the wall cling
         self._wall_cling_count = 0
 
         self._air_time = 0
         self._last_jump_time = 1000
+        self._jump_buffer = 10       # if you press jump within X ticks of walking off a platform, you still jump
 
         self._jump_cooldown = 10
 
@@ -719,11 +720,6 @@ class PlayerEntity(Entity):
             new_x_vel_bounded = util.bound(new_x_vel, -self._x_vel_max, self._x_vel_max)
 
             self.set_x_vel(new_x_vel_bounded)
-
-            # TODO include this, or too jank? superjumps...
-            # if y_accel != 0:
-            #    new_y_vel = self._y_vel + y_accel
-            #    self.set_y_vel(new_y_vel)
         else:
             fric = self._ground_x_friction if self.is_grounded() else self._air_x_friction
             self.set_x_vel(self._x_vel * fric)
@@ -732,15 +728,20 @@ class PlayerEntity(Entity):
             if self.is_grounded():
                 self.set_y_vel(self._y_vel - self._jump_y_vel)
                 self._last_jump_time = 0
-            else:
-                if self.is_left_walled() or self.is_right_walled():
+
+            elif self.is_left_walled() or self.is_right_walled():
                     self.set_y_vel(-self._wall_jump_y_vel)
                     self._last_jump_time = 0
-
                     if self.is_left_walled():
                         self.set_x_vel(self._x_vel + self._wall_jump_x_vel)
                     if self.is_right_walled():
                         self.set_x_vel(self._x_vel - self._wall_jump_x_vel)
+
+            elif self._air_time < self._jump_buffer:
+                # if you walked off a platform and jumped too late, you get a penalty
+                jump_penalty = (1 - 0.666 * self._air_time / self._jump_buffer)
+                self.set_y_vel(self._y_vel - self._jump_y_vel * jump_penalty)
+                self._last_jump_time = 0
 
         # short hopping
         if self._y_vel < 0 and not holding_jump:
