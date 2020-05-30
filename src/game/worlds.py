@@ -356,12 +356,6 @@ class CollisionResolver:
 
     @staticmethod
     def _find_nearest_valid_position(world, dyna_ent, target_xy, max_dist=10):
-
-        import src.engine.inputs as inputs
-        import pygame
-        if inputs.get_instance().is_held(pygame.K_LEFT) and target_xy != dyna_ent.get_xy():
-            print("going left")
-
         blocked_colliders_cache = {}  # xy -> list of colliders
 
         def _get_blocked_colliders(xy):

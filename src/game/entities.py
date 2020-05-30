@@ -55,6 +55,8 @@ class Entity:
         self._colliders = []
 
         self._frame_of_reference_parent = None
+        self._frame_of_reference_parent_do_horz = True
+        self._frame_of_reference_parent_do_vert = True
         self._frame_of_reference_children = []
 
     def get_world(self):
@@ -95,13 +97,18 @@ class Entity:
 
         if update_frame_of_reference and (dx != 0 or dy != 0):
             for child in self._frame_of_reference_children:
-                if dx == 0:
-                    child.set_y(child.get_y(raw=True) + dy, update_frame_of_reference=True)
-                elif dy == 0:
-                    child.set_x(child.get_x(raw=True) + dx, update_frame_of_reference=True)
+                child_dx = 0 if not child._frame_of_reference_parent_do_horz else dx
+                child_dy = 0 if not child._frame_of_reference_parent_do_vert else dy
+                if child_dx == 0 and child_dy == 0:
+                    continue
                 else:
-                    child.set_xy((child.get_x(raw=True) + dx, child.get_y(raw=True) + dy),
-                                 update_frame_of_reference=True)
+                    if child_dx == 0:
+                        child.set_y(child.get_y(raw=True) + child_dy, update_frame_of_reference=True)
+                    elif child_dy == 0:
+                        child.set_x(child.get_x(raw=True) + child_dx, update_frame_of_reference=True)
+                    else:
+                        child.set_xy((child.get_x(raw=True) + child_dx, child.get_y(raw=True) + child_dy),
+                                     update_frame_of_reference=True)
 
         world = self.get_world()
         if world is not None:
@@ -120,7 +127,10 @@ class Entity:
     def get_physics_group(self):
         return UNKNOWN_GROUP
 
-    def set_frame_of_reference_parent(self, parent):
+    def set_frame_of_reference_parent(self, parent, horz=True, vert=True):
+        self._frame_of_reference_parent_do_horz = horz
+        self._frame_of_reference_parent_do_vert = vert
+
         if parent == self._frame_of_reference_parent:
             return
         if self._frame_of_reference_parent is not None:
@@ -545,21 +555,21 @@ class PlayerEntity(Entity):
                                              color=colors.GREEN,
                                              name="foot_rect_sensor")
 
-        left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
-                                        CollisionMasks.SENSOR,
-                                        collides_with=CollisionMasks.BLOCK,
-                                        color=colors.GREEN,
-                                        name="left_rect_sensor")
+        self.left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
+                                             CollisionMasks.SENSOR,
+                                             collides_with=CollisionMasks.BLOCK,
+                                             color=colors.GREEN,
+                                             name="left_rect_sensor")
 
-        right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
-                                         CollisionMasks.SENSOR,
-                                         collides_with=CollisionMasks.BLOCK,
-                                         color=colors.GREEN,
-                                         name="right_rect_sensor")
+        self.right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
+                                              CollisionMasks.SENSOR,
+                                              collides_with=CollisionMasks.BLOCK,
+                                              color=colors.GREEN,
+                                              name="right_rect_sensor")
 
         self.foot_sensor_id = self.foot_sensor.get_id()
-        self.left_sensor_id = left_sensor.get_id()
-        self.right_sensor_id = right_sensor.get_id()
+        self.left_sensor_id = self.left_sensor.get_id()
+        self.right_sensor_id = self.right_sensor.get_id()
 
         # pulls you to the ground when you're grounded
         snap_down_rect = [w_inset, self.get_h(), self.get_w() - w_inset * 2, self._snap_down_dist]
@@ -614,7 +624,7 @@ class PlayerEntity(Entity):
         self.foot_slope_sensor_id = foot_slope_sensor.get_id()
 
         self.set_colliders([vert_env_collider, horz_env_collider,
-                            self.foot_sensor, left_sensor, right_sensor,  self.snap_down_sensor,
+                            self.foot_sensor, self.left_sensor, self.right_sensor,  self.snap_down_sensor,
                             slope_collider_main_horz, slope_collider_main_top,
                             foot_slope_env_collider, foot_slope_sensor])
 
@@ -710,7 +720,7 @@ class PlayerEntity(Entity):
 
             self.set_x_vel(new_x_vel_bounded)
 
-            # TODO include this, or too jank?
+            # TODO include this, or too jank? superjumps...
             # if y_accel != 0:
             #    new_y_vel = self._y_vel + y_accel
             #    self.set_y_vel(new_y_vel)
@@ -732,23 +742,50 @@ class PlayerEntity(Entity):
                     if self.is_right_walled():
                         self.set_x_vel(self._x_vel - self._wall_jump_x_vel)
 
+        # short hopping
         if self._y_vel < 0 and not holding_jump:
-            # short hopping
             self._y_vel *= self._bonus_y_fric_on_let_go
 
     def update_frame_of_reference_parent(self):
+        # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
+        # TODO touching your toe as you're (mostly) standing on a slop
         blocks_upon = self.get_world().get_sensor_state(self.foot_sensor_id)
-        if len(blocks_upon) == 0:
-            self.set_frame_of_reference_parent(None)
-        elif len(blocks_upon) == 1:
-            self.set_frame_of_reference_parent(blocks_upon[0])
+        best_upon, _ = self._choose_best_frame_of_reference(blocks_upon, self.foot_sensor)
+        if best_upon is not None:
+            self.set_frame_of_reference_parent(best_upon)
+            return
+
+        blocks_on_left = self.get_world().get_sensor_state(self.left_sensor_id)
+        blocks_on_right = self.get_world().get_sensor_state(self.right_sensor_id)
+
+        best_on_left, left_overlap = self._choose_best_frame_of_reference(blocks_on_left, self.left_sensor)
+        best_on_right, right_overlap = self._choose_best_frame_of_reference(blocks_on_right, self.right_sensor)
+
+        if best_on_left is not None and best_on_right is not None:
+            if left_overlap <= right_overlap:
+                self.set_frame_of_reference_parent(best_on_left, vert=False)
+            else:
+                self.set_frame_of_reference_parent(best_on_right, vert=False)
+        elif best_on_left is not None:
+            self.set_frame_of_reference_parent(best_on_left, vert=False)
+        elif best_on_right is not None:
+            self.set_frame_of_reference_parent(best_on_right, vert=False)
         else:
+            self.set_frame_of_reference_parent(None)
+
+    def _choose_best_frame_of_reference(self, candidate_list, sensor):
+        if len(candidate_list) == 0:
+            return None, None
+        elif len(candidate_list) == 1:
+            return candidate_list[0]
+        else:
+            candidate_list.sort(key=lambda b: b.get_rect())  # for consistency
             # figure out which one we're on more
             xy = self.get_xy(raw=False)
-            collider_rect = self.foot_sensor.get_rect(xy)
+            collider_rect = sensor.get_rect(xy)
             max_overlap = -1
             max_overlap_block = None
-            for block in blocks_upon:
+            for block in candidate_list:
                 for block_collider in block.all_colliders():
                     block_collider_rect = block_collider.get_rect(block.get_xy(raw=False))
                     overlap_rect = util.get_rect_intersect(collider_rect, block_collider_rect)
@@ -758,8 +795,7 @@ class PlayerEntity(Entity):
                         max_overlap = overlap_rect[2] * overlap_rect[3]
                         max_overlap_block = block
 
-            if max_overlap_block is not None:
-                self.set_frame_of_reference_parent(max_overlap_block)
+            return max_overlap_block, max_overlap
 
     def get_debug_color(self):
         return colors.BLUE
