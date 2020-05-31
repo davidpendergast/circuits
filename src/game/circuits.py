@@ -47,7 +47,7 @@ class CircuitsGame(game.Game):
         self._create_new_world(world_type=self._cur_test_world)
 
     def get_sheets(self):
-        return []
+        return spriteref.initialize_sheets()
 
     def get_layers(self):
         yield layers.ImageLayer(spriteref.BLOCK_LAYER, 0, sort_sprites=True, use_color=True)
