@@ -752,6 +752,12 @@ def read_map(json_blob, key, default):
     return default  # hmmm, one day~
 
 
+def get_value_or_create_new(the_map, key, creator):
+    if key not in the_map or the_map[key] is None:
+        the_map[key] = creator()
+    return the_map[key]
+
+
 def assert_int(n, msg=None, error=True):
     if n != int(n):
         msg = "expected an integer: {}".format(n) if msg is None else msg

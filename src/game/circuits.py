@@ -50,12 +50,13 @@ class CircuitsGame(game.Game):
         return spriteref.initialize_sheets()
 
     def get_layers(self):
-        yield layers.ImageLayer(spriteref.BLOCK_LAYER, 0, sort_sprites=True, use_color=True)
-        yield layers.ImageLayer(spriteref.ENTITY_LAYER, 5, sort_sprites=True, use_color=True)
-        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 12, sort_sprites=True)
+        # TODO layer depth goes opposite to sprite depths???
+        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 0, sort_sprites=True)
+        yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5, sort_sprites=True, use_color=True)
+        yield layers.ImageLayer(spriteref.ENTITY_LAYER, 10, sort_sprites=True, use_color=True)
 
-        yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20, sort_sprites=True, use_color=True)
         yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19, sort_sprites=True, use_color=True)
+        yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20, sort_sprites=True, use_color=True)
 
     def update(self):
         if inputs.get_instance().mouse_was_pressed() and inputs.get_instance().mouse_in_window():  # debug
@@ -87,6 +88,8 @@ class CircuitsGame(game.Game):
         self._world.update()
         self._world_view.update()
 
+        gs.get_instance().update()
+
     def _create_new_world(self, world_type=0):
         types = ("moving_plat", "full_level", "floating_blocks")
         type_to_use = types[world_type % len(types)]
@@ -105,12 +108,8 @@ class CircuitsGame(game.Game):
         self._world_view.set_camera_attached_to(self._world.get_player())
 
     def all_sprites(self):
-        if gs.get_instance().debug_render:
-            for spr in self._world_view.all_debug_sprites():
-                yield spr
-        else:
-            for spr in self._world_view.all_sprites():
-                yield spr
+        for spr in self._world_view.all_sprites():
+            yield spr
 
 
 def _update_readme():

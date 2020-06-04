@@ -86,7 +86,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             3: self.player_d
         }
 
-    def get_player_sprites(self, player_num, player_state):
+    def get_player_sprites(self, player_num, player_state) -> typing.List[sprites.ImageModel]:
         if player_num not in self._player_id_to_sprite_lookup:
             raise ValueError("unrecognized player num: {}".format(player_num))
         else:
@@ -97,6 +97,13 @@ class _ObjectSheet(spritesheets.SpriteSheet):
                 return self.get_player_sprites(player_num, player_state.get_fallback())
             else:
                 return []  # no sprites exist, apparently
+
+    def get_player_sprite(self, player_num, player_state, frame) -> typing.Optional[sprites.ImageModel]:
+        sprites = self.get_player_sprites(player_num, player_state)
+        if len(sprites) == 0:
+            return None
+        else:
+            return sprites[frame % len(sprites)]
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)

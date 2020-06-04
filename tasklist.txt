@@ -1,8 +1,7 @@
 
 bugs:
- - slope collisions aren't quite right
- - you can super jump off slopes
  - triangle colliders are a pixel "wider" than rectangles I believe
+ - reduce player vibration (need higher resolution for player position / camera)
  
 features:
  - saving / loading levels

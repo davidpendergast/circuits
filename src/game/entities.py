@@ -30,6 +30,11 @@ ENVIRONMENT_GROUP = 5
 ACTOR_GROUP = 10
 
 
+# depths
+PLAYER_DEPTH = 0
+BLOCK_DEPTH = 10
+
+
 class Entity:
 
     def __init__(self, x, y, w=None, h=None):
@@ -275,6 +280,14 @@ class Entity:
     def get_debug_color(self):
         return colors.WHITE
 
+    def get_color(self):
+        """return: the tint applied to this entity's sprites"""
+        return colors.WHITE
+
+    def dir_facing(self):
+        """return: -1 or 1"""
+        return 1
+
     def is_block(self):
         return isinstance(self, AbstractBlockEntity)
 
@@ -309,7 +322,8 @@ class AbstractBlockEntity(Entity):
         return colors.DARK_GRAY
 
     def all_sprites(self):
-        return []
+        for spr in self.all_debug_sprites():
+            yield spr
 
     def get_physics_group(self):
         return ENVIRONMENT_GROUP
@@ -495,14 +509,19 @@ class SlopeBlockEntity(AbstractBlockEntity):
 
 class PlayerEntity(Entity):
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, player_type=0):
         w = int(gs.get_instance().cell_size * 0.75)
         h = int(gs.get_instance().cell_size * 1.75)
 
         Entity.__init__(self, x, y, w=w, h=h)
 
+        self._player_type = player_type
+
+        self._sprites = {}  # id -> Sprite
+        self._dir_facing = 1
+
         self._y_vel_max = 20 * gs.get_instance().cell_size / configs.target_fps
-        self._x_vel_max = 7.2 * gs.get_instance().cell_size / configs.target_fps
+        self._x_vel_max = 7.5 * gs.get_instance().cell_size / configs.target_fps
 
         self._wall_cling_y_vel_max = 4 * gs.get_instance().cell_size / configs.target_fps
 
@@ -657,6 +676,13 @@ class PlayerEntity(Entity):
 
         self._last_jump_time += 1
 
+        if self.get_x_vel() < -0.1:
+            self._dir_facing = -1
+        elif self.get_x_vel() > 0.1:
+            self._dir_facing = 1
+
+        self._update_sprites()
+
     def is_grounded(self):
         return self.is_on_flat_ground() or self.is_on_sloped_ground()
 
@@ -675,11 +701,26 @@ class PlayerEntity(Entity):
     def is_clinging_to_wall(self):
         return not self.is_grounded() and (self.is_left_walled() or self.is_right_walled())
 
+    def is_moving(self):
+        return abs(self.get_x_vel()) > 0.1
+
+    def is_crouching(self):
+        return False
+
+    def dir_facing(self):
+        if self.is_clinging_to_wall():
+            if self.is_left_walled() and self.is_right_walled():
+                return -self._dir_facing  # i promise this makes sense
+            else:
+                return 1 if self.is_left_walled() else -1
+        else:
+            return self._dir_facing
+
     def _handle_inputs(self):
         keys = keybinds.get_instance()
         request_left = inputs.get_instance().is_held(keys.get_keys(const.MOVE_LEFT))
         request_right = inputs.get_instance().is_held(keys.get_keys(const.MOVE_RIGHT))
-        request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))  # TODO add some buffer
+        request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))
         holding_jump = inputs.get_instance().is_held(keys.get_keys(const.JUMP))
 
         if request_jump:
@@ -813,6 +854,65 @@ class PlayerEntity(Entity):
 
     def get_debug_color(self):
         return colors.BLUE
+
+    def get_player_state(self):
+        """returns: (state, anim_rate)"""
+        if self.is_grounded():
+            if self.is_moving():
+                if not self.is_crouching():
+                    return spriteref.PlayerStates.WALKING, 4
+                else:
+                    return spriteref.PlayerStates.CROUCH_WALKING, 8
+            else:
+                if not self.is_crouching():
+                    return spriteref.PlayerStates.IDLE, 8
+                else:
+                    return spriteref.PlayerStates.CROUCH_IDLE, 8
+
+        elif not self.is_left_walled() and not self.is_right_walled():
+            return spriteref.PlayerStates.AIRBORNE, 8
+
+        else:
+            return spriteref.PlayerStates.WALLSLIDE, 8
+
+    def _get_current_img(self):
+        spr, anim_rate = self.get_player_state()
+        return spriteref.object_sheet().get_player_sprite(self._player_type, spr,
+                                                          gs.get_instance().anim_tick() // anim_rate)
+
+    def _update_sprites(self):
+        body_id = "body"
+        cur_img = self._get_current_img()
+        if cur_img is not None:
+            if body_id not in self._sprites or self._sprites[body_id] is None:
+                self._sprites[body_id] = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER)
+        else:
+            self._sprites[body_id] = None
+
+        body_spr = self._sprites[body_id]
+        if body_spr is not None:
+            rect = self.get_rect()
+
+            if not self.is_clinging_to_wall():
+                spr_x = rect[0] + rect[2] // 2 - cur_img.width() // 2
+            elif self.dir_facing() < 0:
+                spr_x = rect[0] + rect[2] - cur_img.width()  # anchor right
+            else:
+                spr_x = rect[0]  # anchor left
+
+            spr_y = rect[1] + rect[3] - cur_img.height()
+
+            self._sprites[body_id] = body_spr.update(new_model=cur_img,
+                                                     new_x=spr_x,
+                                                     new_y=spr_y,
+                                                     new_depth=PLAYER_DEPTH,
+                                                     new_xflip=self.dir_facing() < 0,
+                                                     new_color=self.get_color())
+
+    def all_sprites(self):
+        for spr_id in self._sprites:
+            if self._sprites[spr_id] is not None:
+                yield self._sprites[spr_id]
 
 
 class CollisionMask:
