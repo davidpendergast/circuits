@@ -22,8 +22,6 @@ class WorldView:
         self._show_grid = True
         self._grid_line_sprites = []
 
-        self._show_debug_sprites = False
-
         self._camera_xy = (0, 0)
 
         self._camera_zoom_idx = 1
@@ -47,11 +45,12 @@ class WorldView:
             print("INFO: toggled grid to: {}".format(self._show_grid))
 
         if inputs.get_instance().was_pressed(pygame.K_h):
-            self._show_debug_sprites = not self._show_debug_sprites
-            print("INFO: toggled debug sprites to: {}".format(self._show_debug_sprites))
+            gs.get_instance().debug_render = not gs.get_instance().debug_render
+            print("INFO: toggled debug sprites to: {}".format(gs.get_instance().debug_render))
 
         if not self._free_camera and self._camera_attached_to is not None:
-            new_cam_center = self._camera_attached_to.get_center()
+            rect = self._camera_attached_to.get_render_rect()
+            new_cam_center = (rect[0] + rect[2] / 2, rect[1] + rect[3] / 2)
             self.set_camera_center_in_world(new_cam_center)
 
         cam_x, cam_y = self.get_camera_pos_in_world()
@@ -162,7 +161,7 @@ class WorldView:
 
     def all_sprites(self):
         for ent in self._world.entities:
-            if self._show_debug_sprites:
+            if gs.get_instance().debug_render:
                 for spr in ent.all_debug_sprites():
                     yield spr
             else:

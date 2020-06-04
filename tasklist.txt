@@ -1,7 +1,8 @@
 
 bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
- - reduce player vibration (need higher resolution for player position / camera)
+ - camera lags behind player a frame (I think)
+ - animations can "flicker" in certain situations
  
 features:
  - saving / loading levels

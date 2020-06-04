@@ -579,13 +579,15 @@ class PlayerEntity(Entity):
                                              color=colors.GREEN,
                                              name="foot_rect_sensor")
 
-        self.left_sensor = RectangleCollider([-1, h_inset, 1, self.get_h() - (h_inset * 2)],
+        wall_sensor_y = self.get_h() // 2
+        wall_sensor_h = self.get_h() // 2 - h_inset
+        self.left_sensor = RectangleCollider([-1, wall_sensor_y, 1, wall_sensor_h],
                                              CollisionMasks.SENSOR,
                                              collides_with=CollisionMasks.BLOCK,
                                              color=colors.GREEN,
                                              name="left_rect_sensor")
 
-        self.right_sensor = RectangleCollider([self.get_w(), h_inset, 1, self.get_h() - (h_inset * 2)],
+        self.right_sensor = RectangleCollider([self.get_w(), wall_sensor_y, 1, wall_sensor_h],
                                               CollisionMasks.SENSOR,
                                               collides_with=CollisionMasks.BLOCK,
                                               color=colors.GREEN,
@@ -880,6 +882,15 @@ class PlayerEntity(Entity):
         return spriteref.object_sheet().get_player_sprite(self._player_type, spr,
                                                           gs.get_instance().anim_tick() // anim_rate)
 
+    def get_render_rect(self):
+        if gs.get_instance().debug_render:
+            return self.get_rect()
+        else:
+            rect = self.get_rect(raw=True)
+            rect_x = rect[0] if not self.is_left_walled() and not self.is_right_walled() else int(rect[0])
+            rect_y = rect[1] if not self.is_grounded() else int(rect[1])
+            return [rect_x, rect_y, rect[2], rect[3]]
+
     def _update_sprites(self):
         body_id = "body"
         cur_img = self._get_current_img()
@@ -891,7 +902,7 @@ class PlayerEntity(Entity):
 
         body_spr = self._sprites[body_id]
         if body_spr is not None:
-            rect = self.get_rect()
+            rect = self.get_render_rect()
 
             if not self.is_clinging_to_wall():
                 spr_x = rect[0] + rect[2] // 2 - cur_img.width() // 2
