@@ -522,6 +522,7 @@ class PlayerEntity(Entity):
 
         self._y_vel_max = 20 * gs.get_instance().cell_size / configs.target_fps
         self._x_vel_max = 7.5 * gs.get_instance().cell_size / configs.target_fps
+        self._x_vel_max_crouching = self._x_vel_max / 2
 
         self._wall_cling_y_vel_max = 4 * gs.get_instance().cell_size / configs.target_fps
 
@@ -554,6 +555,8 @@ class PlayerEntity(Entity):
         self._post_jump_buffer = 5  # if you press jump within X ticks of walking off a platform, you still jump
 
         self._jump_cooldown = 15
+
+        self._holding_crouch = False
 
         w_inset = int(self.get_w() * 0.2)  # 0.15
         h_inset = int(self.get_h() * 0.15)  # 0.1
@@ -707,7 +710,8 @@ class PlayerEntity(Entity):
         return abs(self.get_x_vel()) > 0.1
 
     def is_crouching(self):
-        return False
+        # TODO crouch jumps? forced to crouch?
+        return self.is_grounded() and self._holding_crouch
 
     def dir_facing(self):
         if self.is_clinging_to_wall():
@@ -724,6 +728,7 @@ class PlayerEntity(Entity):
         request_right = inputs.get_instance().is_held(keys.get_keys(const.MOVE_RIGHT))
         request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))
         holding_jump = inputs.get_instance().is_held(keys.get_keys(const.JUMP))
+        self._holding_crouch = inputs.get_instance().is_held(keys.get_keys(const.CROUCH))
 
         if request_jump:
             self._last_jump_request_time = 0
@@ -768,8 +773,8 @@ class PlayerEntity(Entity):
             if self.is_on_sloped_ground() and not self.is_on_flat_ground():
                 x_accel *= math.cos(util.to_rads(22.5))
 
-            new_x_vel = self._x_vel + x_accel
-            new_x_vel_bounded = util.bound(new_x_vel, -self._x_vel_max, self._x_vel_max)
+            x_vel_max = self._x_vel_max if not self.is_crouching() else self._x_vel_max_crouching
+            new_x_vel_bounded = util.bound(self._x_vel + x_accel, -x_vel_max, x_vel_max)
 
             self.set_x_vel(new_x_vel_bounded)
         else:
@@ -859,10 +864,10 @@ class PlayerEntity(Entity):
 
     def get_player_state(self):
         """returns: (state, anim_rate)"""
-        if self.is_grounded():
+        if self.is_grounded() and self.get_y_vel() > -0.1:
             if self.is_moving():
                 if not self.is_crouching():
-                    return spriteref.PlayerStates.WALKING, 4
+                    return spriteref.PlayerStates.WALKING, 1
                 else:
                     return spriteref.PlayerStates.CROUCH_WALKING, 8
             else:

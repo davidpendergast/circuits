@@ -113,7 +113,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         # self.player_a[PlayerStates.CROUCH_WALKING] = # TODO
         self.player_a[PlayerStates.WALLSLIDE] = [_img(64 + i * 16, 0, 16, 32, offs=start_pos) for i in range(0, 2)]
         self.player_a[PlayerStates.AIRBORNE] = [_img(32 + i * 16, 0, 16, 32, offs=start_pos) for i in range(0, 2)]
-        # self.player_a[PlayerStates.WALKING] = # TODO
+        self.player_a[PlayerStates.WALKING] = [_img(128 + i * 16, 0, 16, 32, offs=start_pos) for i in range(0, 8)]
 
         self.player_b[PlayerStates.IDLE] = [_img(0 + i * 16, 48, 16, 16, offs=start_pos) for i in range(0, 2)]
 

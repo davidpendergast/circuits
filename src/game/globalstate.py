@@ -4,7 +4,7 @@ import src.engine.globaltimer as globaltimer
 class GlobalState:
 
     def __init__(self):
-        self.debug_render = True        # draw collision boxes
+        self.debug_render = False        # draw collision boxes
 
         self.cell_size = 16             # affects collisions
         self.subpixel_resolution = 10   # affects movement

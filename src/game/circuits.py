@@ -37,6 +37,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.MOVE_LEFT, [pygame.K_LEFT, pygame.K_a])
         keybinds.get_instance().set_binding(const.MOVE_RIGHT, [pygame.K_RIGHT, pygame.K_d])
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])
+        keybinds.get_instance().set_binding(const.CROUCH, [pygame.K_DOWN, pygame.K_s])
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
 

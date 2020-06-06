@@ -1,10 +1,13 @@
 
 bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
+ - should snap to vertical slopes too
  - camera lags behind player a frame (I think)
  - animations can "flicker" in certain situations
+    - fixed the main offender "rising idle animation"
  
 features:
+ - crouching should maybe(?) prevent walk-offs (like minecraft)
  - saving / loading levels
  - edit levels
  - bonus jump if you walk off -> jump quickly?
