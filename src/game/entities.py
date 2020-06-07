@@ -507,12 +507,102 @@ class SlopeBlockEntity(AbstractBlockEntity):
         self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=30)
 
 
+class PlayerType:
+
+    def __init__(self, name, id_num, size=(0.75, 1.75),
+                 move_speed=7.5, jump_height=3, jump_duration=20,
+                 can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False):
+        self._name = name
+        self._id = id_num
+        self._size = size
+
+        self._move_speed = move_speed
+        self._jump_height = jump_height
+        self._jump_duration = jump_duration
+        self._gravity = None  # TODO
+
+        self._can_walljump = can_walljump
+        self._can_fly = can_fly
+        self._can_crouch = can_crouch
+        self._can_grab = can_grab
+        self._can_be_grabbed = can_be_grabbed
+
+    def get_id(self):
+        return self._id
+
+    def get_name(self):
+        return self._name
+
+    def can_walljump(self):
+        return self._can_walljump
+
+    def can_fly(self):
+        return self._can_fly
+
+    def can_crouch(self):
+        return self._can_crouch
+
+    def can_grab(self):
+        return self._can_grab
+
+    def can_be_grabbed(self):
+        return self._can_be_grabbed
+
+    def get_size(self):
+        """returns: size of player in cells"""
+        return self._size
+
+    def get_jump_height(self):
+        """returns: maximum jump height in cells"""
+        return self._jump_height
+
+    def get_jump_duration(self):
+        """returns: jump duration in ticks"""
+        return self._jump_duration
+
+    def get_move_speed(self):
+        """returns: maximum x velocity in cells per second"""
+        return self._move_speed
+
+    def get_player_img(self, player_state, frame=0):
+        return spriteref.object_sheet().get_player_sprite(self._id, player_state, frame)
+
+    def __eq__(self, other):
+        if isinstance(other, PlayerType):
+            return self._id == other._id
+        else:
+            return None
+
+    def __hash__(self):
+        return hash(self._id)
+
+
+class PlayerTypes:
+
+    FAST = PlayerType("A", const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True)
+    SMALL = PlayerType("B", const.PLAYER_SMALL, size=(0.75, 0.75), can_be_grabbed=True)
+    HEAVY = PlayerType("C", const.PLAYER_HEAVY, size=(1.5, 1.75), can_grab=True)
+    FLYING = PlayerType("D", const.PLAYER_FLYING, size=(0.75, 1.75), can_fly=True, can_grab=True)
+
+    _ALL_TYPES = [FAST, SMALL, HEAVY, FLYING]
+
+    @staticmethod
+    def all_types():
+        return PlayerTypes._ALL_TYPES
+
+    @staticmethod
+    def get_type(ident):
+        for ptype in PlayerTypes._ALL_TYPES:
+            if ident == ptype.get_id():
+                return ptype
+        return None
+
+
 class PlayerEntity(Entity):
 
-    def __init__(self, x, y, player_type=0):
-        w = int(gs.get_instance().cell_size * 0.75)
-        h = int(gs.get_instance().cell_size * 1.75)
-
+    def __init__(self, x, y, player_type):
+        w = int(gs.get_instance().cell_size * player_type.get_size()[0])
+        h = int(gs.get_instance().cell_size * player_type.get_size()[1])
         Entity.__init__(self, x, y, w=w, h=h)
 
         self._player_type = player_type
@@ -658,6 +748,9 @@ class PlayerEntity(Entity):
                             slope_collider_main_horz, slope_collider_main_top,
                             foot_slope_env_collider, foot_slope_sensor])
 
+    def get_player_type(self):
+        return self._player_type
+
     def is_dynamic(self):
         return True
 
@@ -717,7 +810,7 @@ class PlayerEntity(Entity):
     def dir_facing(self):
         if self.is_clinging_to_wall():
             if self.is_left_walled() and self.is_right_walled():
-                return -self._dir_facing  # i promise this makes sense
+                return -self._dir_facing  # i promise this makes sense TODO does it?
             else:
                 return 1 if self.is_left_walled() else -1
         else:
@@ -729,7 +822,9 @@ class PlayerEntity(Entity):
         request_right = inputs.get_instance().is_held(keys.get_keys(const.MOVE_RIGHT))
         request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))
         holding_jump = inputs.get_instance().is_held(keys.get_keys(const.JUMP))
-        self._holding_crouch = inputs.get_instance().is_held(keys.get_keys(const.CROUCH))
+
+        holding_crouch = inputs.get_instance().is_held(keys.get_keys(const.CROUCH))
+        self._holding_crouch = self.get_player_type().can_crouch() and holding_crouch
 
         if request_jump:
             self._last_jump_request_time = 0
@@ -890,9 +985,8 @@ class PlayerEntity(Entity):
             return spriteref.PlayerStates.WALLSLIDE, 8
 
     def _get_current_img(self):
-        spr, anim_rate = self.get_player_state()
-        return spriteref.object_sheet().get_player_sprite(self._player_type, spr,
-                                                          gs.get_instance().anim_tick() // anim_rate)
+        state, anim_rate = self.get_player_state()
+        return self._player_type.get_player_img(state, frame=gs.get_instance().anim_tick() // anim_rate)
 
     def get_render_rect(self):
         if gs.get_instance().debug_render:
@@ -936,6 +1030,9 @@ class PlayerEntity(Entity):
         for spr_id in self._sprites:
             if self._sprites[spr_id] is not None:
                 yield self._sprites[spr_id]
+
+    def __repr__(self):
+        return "{}({}, {})".format(type(self).__name__, self.get_player_type().get_id(), self.get_rect())
 
 
 class CollisionMask:

@@ -1,10 +1,14 @@
 
 import typing
 
+import configs
 import src.utils.util as util
+import src.game.const as const
 
 import src.game.globalstate as gs
 import src.game.entities as entities
+import src.engine.keybinds as keybinds
+import src.engine.inputs as inputs
 
 
 class World:
@@ -39,11 +43,13 @@ class World:
                                                             entities.SlopeBlockEntity.UPWARD_RIGHT_2x1,
                                                             triangle_scale=cs), next_update=False)
 
-        pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]  #, (16 * cs, 10 * cs)]
+        pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]
         moving_block = entities.MovingBlockEntity(cs * 2, cs * 1, pts)
         res.add_entity(moving_block, next_update=False)
 
-        res.add_entity(entities.PlayerEntity(cs * 6, cs * 5), next_update=False)
+        player_type = entities.PlayerTypes.FAST if gs.get_instance().player_type_override is None else gs.get_instance().player_type_override
+        player = entities.PlayerEntity(cs * 6, cs * 5, player_type=player_type)
+        res.add_entity(player, next_update=False)
 
         return res
 
@@ -52,7 +58,10 @@ class World:
         res = World()
         cs = gs.get_instance().cell_size
 
-        res.add_entity(entities.PlayerEntity(cs * 12, cs * 11), next_update=False)
+        player_type = entities.PlayerTypes.FAST if gs.get_instance().player_type_override is None else gs.get_instance().player_type_override
+        player = entities.PlayerEntity(cs * 12, cs * 11, player_type=player_type)
+
+        res.add_entity(player, next_update=False)
 
         rects = [(0, 0, 2, 5),
                  (0, 5, 2, 3),
@@ -96,15 +105,24 @@ class World:
         return res
 
     def add_entity(self, ent, next_update=True):
-        if ent is None or ent in self.entities or ent in self._to_add:
+        if ent is None or ent in self.entities:
             raise ValueError("can't add entity, either because it's None or it's already in world: {}".format(ent))
         elif next_update:
             self._to_add.add(ent)
         else:
             self.entities.add(ent)
+            self.rehash_entity(ent)
             ent.set_world(self)
 
-            self.rehash_entity(ent)
+    def remove_entity(self, ent, next_update=True):
+        if ent is None:
+            return
+        elif next_update:
+            self._to_remove.add(ent)
+        else:
+            self.entities.remove(ent)
+            self._unhash(ent)
+            ent.set_world(None)
 
     def rehash_entity(self, ent):
         rect = ent.get_rect()
@@ -155,19 +173,44 @@ class World:
             for y in range(start_cell[1], end_cell[1] + 1):
                 yield (x, y)
 
+    def _do_debug_player_type_toggle(self):
+        cur_player = self.get_player()
+        if cur_player is None:
+            return
+        else:
+            ptype = cur_player.get_player_type()
+            all_types = [t for t in entities.PlayerTypes.all_types()]
+            if ptype in all_types:
+                idx = all_types.index(ptype)
+                next_type = all_types[(idx + 1) % len(all_types)]
+            else:
+                next_type = all_types[0]
+
+            gs.get_instance().player_type_override = next_type  # new levels will get this player type too
+
+            cur_x, cur_y = cur_player.get_xy()
+            new_player = entities.PlayerEntity(cur_x, cur_y, next_type)
+            new_player.set_y(cur_y + cur_player.get_h() - new_player.get_h())  # keep feet position the same
+
+            self.remove_entity(cur_player)
+            self.add_entity(new_player)
+
+    def handle_debug_commands(self):
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_PLAYER_TYPE)):
+            self._do_debug_player_type_toggle()
+
     def update(self):
+        if configs.is_dev:
+            self.handle_debug_commands()
+
         for ent in self._to_add:
             if ent not in self._to_remove:
-                self.entities.add(ent)
-                ent.set_world(self)
-                self.rehash_entity(ent)
+                self.add_entity(ent, next_update=False)
         self._to_add.clear()
 
         for ent in self._to_remove:
             if ent in self.entities:
-                self.entities.remove(ent)
-                ent.set_world(None)
-                self._unhash(ent)
+                self.remove_entity(ent, next_update=False)
         self._to_remove.clear()
 
         dyna_ents = [e for e in self.all_entities(cond=lambda _e: _e.is_dynamic())]

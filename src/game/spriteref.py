@@ -2,6 +2,8 @@ import typing
 import src.engine.spritesheets as spritesheets
 import src.engine.sprites as sprites
 
+import src.game.const as const
+
 BLOCK_LAYER = "block_layer"
 ENTITY_LAYER = "entity_layer"
 POLYGON_LAYER = "polygon_layer"
@@ -80,30 +82,30 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         }
 
         self._player_id_to_sprite_lookup = {
-            0: self.player_a,
-            1: self.player_b,
-            2: self.player_c,
-            3: self.player_d
+            const.PLAYER_FAST: self.player_a,
+            const.PLAYER_SMALL: self.player_b,
+            const.PLAYER_HEAVY: self.player_c,
+            const.PLAYER_FLYING: self.player_d
         }
 
-    def get_player_sprites(self, player_num, player_state) -> typing.List[sprites.ImageModel]:
-        if player_num not in self._player_id_to_sprite_lookup:
-            raise ValueError("unrecognized player num: {}".format(player_num))
+    def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
+        if player_id not in self._player_id_to_sprite_lookup:
+            raise ValueError("unrecognized player id: {}".format(player_id))
         else:
-            lookup = self._player_id_to_sprite_lookup[player_num]
+            lookup = self._player_id_to_sprite_lookup[player_id]
             if player_state in lookup and len(lookup[player_state]) > 0:
                 return lookup[player_state]
             elif player_state.get_fallback() is not None:
-                return self.get_player_sprites(player_num, player_state.get_fallback())
+                return self.get_player_sprites(player_id, player_state.get_fallback())
             else:
                 return []  # no sprites exist, apparently
 
-    def get_player_sprite(self, player_num, player_state, frame) -> typing.Optional[sprites.ImageModel]:
-        sprites = self.get_player_sprites(player_num, player_state)
-        if len(sprites) == 0:
+    def get_player_sprite(self, player_id, player_state, frame) -> typing.Optional[sprites.ImageModel]:
+        spr_list = self.get_player_sprites(player_id, player_state)
+        if len(spr_list) == 0:
             return None
         else:
-            return sprites[frame % len(sprites)]
+            return spr_list[frame % len(spr_list)]
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
@@ -117,7 +119,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
 
         self.player_b[PlayerStates.IDLE] = [_img(0 + i * 16, 48, 16, 16, offs=start_pos) for i in range(0, 2)]
 
-        self.player_c[PlayerStates.IDLE] = [_img(0 + i * 16, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
+        self.player_c[PlayerStates.IDLE] = [_img(0 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
 
         self.player_d[PlayerStates.IDLE] = [_img(0 + i * 16, 96, 16, 32, offs=start_pos) for i in range(0, 2)]
         self.player_d[PlayerStates.AIRBORNE] = [_img(32 + i * 16, 96, 16, 32, offs=start_pos) for i in range(0, 6)]

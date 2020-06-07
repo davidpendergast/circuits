@@ -8,6 +8,7 @@ import src.game.entities as entities
 import src.game.worlds as worlds
 import src.game.globalstate as gs
 import src.game.colors as colors
+import src.game.const as const
 
 
 # json keys
@@ -178,14 +179,19 @@ class PlayerSpecType(SpecType):
         SpecType.__init__(self, "player", required_keys=(X, Y, SUBTYPE_ID))
 
     def get_subtypes(self):
-        return ["A", "B", "C", "D"]
+        return [const.PLAYER_FAST, const.PLAYER_SMALL, const.PLAYER_HEAVY, const.PLAYER_FLYING]
 
     def build_entities(self, json_blob):
         x = json_blob[X]
         y = json_blob[Y]
-        player_type = json_blob[SUBTYPE_ID]  # TODO
 
-        yield entities.PlayerEntity(x, y)
+        if gs.get_instance().player_type_override is None:
+            player_type_id = json_blob[SUBTYPE_ID]
+            player_type = entities.PlayerTypes.get_type(player_type_id)
+        else:
+            player_type = gs.get_instance().player_type_override
+
+        yield entities.PlayerEntity(x, y, player_type=player_type)
 
 
 class SpecTypes:
@@ -236,7 +242,7 @@ class LevelBlueprint:
 def get_test_blueprint() -> LevelBlueprint:
     json_blob = {
         ENTITIES: [
-            {TYPE_ID: "player", X: 45, Y: 35, SUBTYPE_ID: "A"},
+            {TYPE_ID: "player", X: 45, Y: 35, SUBTYPE_ID: const.PLAYER_FAST},
             {TYPE_ID: "block", X: 0, Y: 112, W: 128, H: 16},
             {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 16},
             {TYPE_ID: "block", X: 2*16, Y: 14.5*16, W: 25*16, H: 0.5*16}

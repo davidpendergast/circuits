@@ -5,6 +5,7 @@ class GlobalState:
 
     def __init__(self):
         self.debug_render = False        # draw collision boxes
+        self.player_type_override = None
 
         self.cell_size = 16             # affects collisions
         self.subpixel_resolution = 10   # affects movement

@@ -652,7 +652,7 @@ def bfs(start_node, is_correct, get_neighbors,
         return path
 
 
-def add_to_list_and_return(val, the_list):
+def add_to_list(val, the_list):
     the_list.append(val)
     return val
 
