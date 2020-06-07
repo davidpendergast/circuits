@@ -20,6 +20,8 @@ import src.game.debug as debug
 
 import src.game.spriteref as spriteref
 
+import pygame
+
 
 class CircuitsGame(game.Game):
 
