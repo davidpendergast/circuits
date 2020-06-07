@@ -543,10 +543,11 @@ class PlayerEntity(Entity):
         self._air_x_friction = 0.85
         self._ground_x_friction = 0.60
 
-        self._wall_cling_time = 14  # how long you have to hold the direction to break the wall cling
-        self._wall_cling_count = 0
+        self._wall_cling_release_threshold = 14  # how long you have to hold the direction to break the wall cling
+        self._wall_cling_release_time = 0
 
-        self._air_time = 0  # how long it's been since player was grounded
+        self._air_time = 0          # how long it's been since player was grounded
+        self._wall_cling_time = 0   # how long you've been sliding
 
         self._last_jump_time = 1000          # time since last jump
         self._last_jump_request_time = 1000  # time since jump key was pressed last
@@ -740,6 +741,11 @@ class PlayerEntity(Entity):
         else:
             self._air_time += 1
 
+        if self.is_clinging_to_wall():
+            self._wall_cling_time += 1
+        else:
+            self._wall_cling_time = 0
+
         dx = 0
         if request_left:
             dx -= 1
@@ -749,14 +755,14 @@ class PlayerEntity(Entity):
         # wall cling stuff
         if not self.is_grounded() and (self.is_left_walled() or self.is_left_walled()):
             if (dx == 1 and self.is_left_walled()) or (dx == -1 and self.is_right_walled()):
-                if self._wall_cling_count < self._wall_cling_time:
+                if self._wall_cling_release_time < self._wall_cling_release_threshold:
                     dx = 0
-                self._wall_cling_count += 1
+                self._wall_cling_release_time += 1
             else:
                 dx = 0
-                self._wall_cling_count = 0
+                self._wall_cling_release_time = 0
         else:
-            self._wall_cling_count = 0
+            self._wall_cling_release_time = 0
 
         if dx != 0:
             accel = 0
@@ -793,10 +799,11 @@ class PlayerEntity(Entity):
             elif self.is_left_walled() or self.is_right_walled():
                     self.set_y_vel(-self._wall_jump_y_vel)
                     self._last_jump_time = 0
+                    # TODO some way to cancel the x_vel on a wall jump?
                     if self.is_left_walled():
-                        self.set_x_vel(self._x_vel + self._wall_jump_x_vel)
+                        self.set_x_vel(self._wall_jump_x_vel)
                     if self.is_right_walled():
-                        self.set_x_vel(self._x_vel - self._wall_jump_x_vel)
+                        self.set_x_vel(-self._wall_jump_x_vel)
 
             elif self._air_time < self._post_jump_buffer:
                 # if you jumped too late, you get a penalty
@@ -864,7 +871,7 @@ class PlayerEntity(Entity):
 
     def get_player_state(self):
         """returns: (state, anim_rate)"""
-        if self.is_grounded() and self.get_y_vel() > -0.1:
+        if self.is_grounded() and (self._last_jump_time <= 1 or self.get_y_vel() > -0.1):
             if self.is_moving():
                 if not self.is_crouching():
                     return spriteref.PlayerStates.WALKING, 1
