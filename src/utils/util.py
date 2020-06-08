@@ -780,6 +780,44 @@ def parabola_height(vertex_y, x):
     return (a * x * x) + (b * x)
 
 
+class JumpInfo:
+
+    def __init__(self, H, T, g, vel):
+        self.H = H
+        self.T = T
+        self.g = g
+        self.vel = vel
+
+    def __repr__(self):
+        return "JumpInfo(H={}, T={}, g={}, vel={})".format(self.H, self.T, self.g, self.vel)
+
+
+def calc_missing_jump_info(H=None, T=None, g=None, vel=None) -> JumpInfo:
+    # fundamental equations:
+    #   g * T + vel = 0
+    #   H = (g / 4) * T ** 2 + vel / 2 * T
+
+    if H is not None and H < 0:
+        raise ValueError("H cannot be negative: {}".format(H))
+    if g is not None and g >= 0:
+        raise ValueError("g must be negative: {}".format(g))
+
+    # TODO - currently only works for known H, T or known H, g
+    # TODO - turns out it's not so trivial to (perfectly) solve a system of non-linear equations
+    if H is not None and T is not None:
+        a = -4 * H / (T * T)
+        vel = -a * T
+        g = a * 2
+    elif H is not None and g is not None:
+        a = g / 2
+        T = math.sqrt(-4 * H / a)
+        vel = -a * T
+    else:
+        raise NotImplementedError("currently only works for known H, T or known H, g")
+
+    return JumpInfo(H, T, g, vel)
+
+
 def get_shake_points(strength, duration, falloff=3, freq=6):
     """
     int strength: max pixel offset of shake

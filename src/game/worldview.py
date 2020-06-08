@@ -16,8 +16,7 @@ class WorldView:
     def __init__(self, world):
         self._world = world
 
-        self._free_camera = True
-        self._camera_attached_to = None  # an Entity
+        self._free_camera = True  # if false, camera follows player
 
         self._show_grid = True
         self._grid_line_sprites = []
@@ -48,10 +47,12 @@ class WorldView:
             gs.get_instance().debug_render = not gs.get_instance().debug_render
             print("INFO: toggled debug sprites to: {}".format(gs.get_instance().debug_render))
 
-        if not self._free_camera and self._camera_attached_to is not None:
-            rect = self._camera_attached_to.get_render_rect()
-            new_cam_center = (rect[0] + rect[2] / 2, rect[1] + rect[3] / 2)
-            self.set_camera_center_in_world(new_cam_center)
+        if not self._free_camera:
+            player = self._world.get_player()
+            if player is not None:
+                rect = player.get_render_rect()
+                new_cam_center = (rect[0] + rect[2] / 2, rect[1] + rect[3] / 2)
+                self.set_camera_center_in_world(new_cam_center)
 
         cam_x, cam_y = self.get_camera_pos_in_world()
 
@@ -65,9 +66,6 @@ class WorldView:
 
     def set_free_camera(self, val):
         self._free_camera = val
-
-    def set_camera_attached_to(self, ent):
-        self._camera_attached_to = ent
 
     def adjust_zoom(self, dz):
         old_center = self.get_camera_center_in_world()

@@ -30,6 +30,7 @@ class _GameLoop:
         self._game = game
         self._clock = pygame.time.Clock()
         self._requested_fullscreen_toggle_this_tick = False
+        self._slo_mo_timer = 0
 
         print("INFO: pygame version: " + pygame.version.ver)
         print("INFO: initializing sounds...")
@@ -215,6 +216,13 @@ class _GameLoop:
                 if globaltimer.get_fps() < 0.9 * configs.target_fps and configs.is_dev and not slo_mo_mode:
                     print("WARN: fps drop: {} ({} sprites)".format(round(globaltimer.get_fps() * 10) / 10.0,
                                                                    renderengine.get_instance().count_sprites()))
+
+            if slo_mo_mode:
+                self._slo_mo_timer += 1
+            elif self._slo_mo_timer > 0:
+                # useful for timing things in the game
+                print("INFO: slow-mo mode ended after {} tick(s)".format(self._slo_mo_timer))
+                self._slo_mo_timer = 0
 
         print("INFO: quitting game")
         pygame.quit()

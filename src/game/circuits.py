@@ -109,7 +109,6 @@ class CircuitsGame(game.Game):
             return
 
         self._world_view = worldview.WorldView(self._world)
-        self._world_view.set_camera_attached_to(self._world.get_player())
 
     def all_sprites(self):
         for spr in self._world_view.all_sprites():

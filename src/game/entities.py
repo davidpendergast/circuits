@@ -506,20 +506,26 @@ class SlopeBlockEntity(AbstractBlockEntity):
         spr = self._debug_sprites[main_body_key]
         self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=30)
 
+DEFAULT_GRAVITY = -0.15 / 16
 
 class PlayerType:
 
+
     def __init__(self, name, id_num, size=(0.75, 1.75),
-                 move_speed=7.5, jump_height=3, jump_duration=20,
+                 move_speed=7.5,
+                 jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
                  can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False):
         self._name = name
         self._id = id_num
         self._size = size
 
         self._move_speed = move_speed
-        self._jump_height = jump_height
-        self._jump_duration = jump_duration
-        self._gravity = None  # TODO
+
+        jump_info = util.calc_missing_jump_info(H=jump_height, T=jump_duration, g=gravity)
+        self._jump_height = jump_info.H
+        self._jump_gravity = jump_info.g
+        self._jump_duration = jump_info.T
+        self._jump_vel = jump_info.vel
 
         self._can_walljump = can_walljump
         self._can_fly = can_fly
@@ -560,6 +566,10 @@ class PlayerType:
         """returns: jump duration in ticks"""
         return self._jump_duration
 
+    def get_jump_info(self):
+        """returns: jump info in cells and ticks"""
+        return util.JumpInfo(self._jump_height, self._jump_duration, self._jump_gravity, self._jump_vel)
+
     def get_move_speed(self):
         """returns: maximum x velocity in cells per second"""
         return self._move_speed
@@ -579,10 +589,14 @@ class PlayerType:
 
 class PlayerTypes:
 
-    FAST = PlayerType("A", const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True)
-    SMALL = PlayerType("B", const.PLAYER_SMALL, size=(0.75, 0.75), can_be_grabbed=True)
-    HEAVY = PlayerType("C", const.PLAYER_HEAVY, size=(1.5, 1.75), can_grab=True)
-    FLYING = PlayerType("D", const.PLAYER_FLYING, size=(0.75, 1.75), can_fly=True, can_grab=True)
+    FAST = PlayerType("A", const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
+                      move_speed=7.5, jump_height=3.2)
+    SMALL = PlayerType("B", const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True,
+                       move_speed=5.5, jump_height=2.1)
+    HEAVY = PlayerType("C", const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
+                       move_speed=4, jump_height=3.2)
+    FLYING = PlayerType("D", const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True,
+                        move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2)
 
     _ALL_TYPES = [FAST, SMALL, HEAVY, FLYING]
 
@@ -600,9 +614,10 @@ class PlayerTypes:
 
 class PlayerEntity(Entity):
 
-    def __init__(self, x, y, player_type):
-        w = int(gs.get_instance().cell_size * player_type.get_size()[0])
-        h = int(gs.get_instance().cell_size * player_type.get_size()[1])
+    def __init__(self, x, y, player_type: PlayerType):
+        cs = gs.get_instance().cell_size
+        w = int(cs * player_type.get_size()[0])
+        h = int(cs * player_type.get_size()[1])
         Entity.__init__(self, x, y, w=w, h=h)
 
         self._player_type = player_type
@@ -610,14 +625,17 @@ class PlayerEntity(Entity):
         self._sprites = {}  # id -> Sprite
         self._dir_facing = 1
 
-        self._y_vel_max = 20 * gs.get_instance().cell_size / configs.target_fps
-        self._x_vel_max = 7.5 * gs.get_instance().cell_size / configs.target_fps
+        self._y_vel_max = 20 * cs / configs.target_fps
+        self._x_vel_max = player_type.get_move_speed() * cs / configs.target_fps
         self._x_vel_max_crouching = self._x_vel_max / 2
 
-        self._wall_cling_y_vel_max = 4 * gs.get_instance().cell_size / configs.target_fps
+        self._wall_cling_y_vel_max = 4 * cs / configs.target_fps
 
-        self._gravity = 0.15  # TODO split this into max_jump_height and jump_duration
-        self._jump_y_vel = 4  # TODO units
+        jump_info = player_type.get_jump_info()
+
+        self._gravity = -cs * jump_info.g
+        self._jump_y_vel = -cs * jump_info.vel
+
         self._snap_down_dist = 4
 
         self._bonus_y_fric_on_let_go = 0.85
@@ -798,7 +816,10 @@ class PlayerEntity(Entity):
         return len(self.get_world().get_sensor_state(self.foot_sensor_id)) > 0
 
     def is_clinging_to_wall(self):
-        return not self.is_grounded() and (self.is_left_walled() or self.is_right_walled())
+        if self.get_player_type().can_walljump():
+            return not self.is_grounded() and (self.is_left_walled() or self.is_right_walled())
+        else:
+            return False
 
     def is_moving(self):
         return abs(self.get_x_vel()) > 0.1
@@ -847,8 +868,7 @@ class PlayerEntity(Entity):
         if request_right:
             dx += 1
 
-        # wall cling stuff
-        if not self.is_grounded() and (self.is_left_walled() or self.is_left_walled()):
+        if self.is_clinging_to_wall():
             if (dx == 1 and self.is_left_walled()) or (dx == -1 and self.is_right_walled()):
                 if self._wall_cling_release_time < self._wall_cling_release_threshold:
                     dx = 0
@@ -888,11 +908,11 @@ class PlayerEntity(Entity):
 
         if try_to_jump:
             if self.is_grounded():
-                self.set_y_vel(-self._jump_y_vel)
+                self.set_y_vel(self._jump_y_vel)
                 self._last_jump_time = 0
 
-            elif self.is_left_walled() or self.is_right_walled():
-                    self.set_y_vel(-self._wall_jump_y_vel)
+            elif self.is_clinging_to_wall():
+                    self.set_y_vel(self._wall_jump_y_vel)
                     self._last_jump_time = 0
                     # TODO some way to cancel the x_vel on a wall jump?
                     if self.is_left_walled():
@@ -903,7 +923,7 @@ class PlayerEntity(Entity):
             elif self._air_time < self._post_jump_buffer:
                 # if you jumped too late, you get a penalty
                 jump_penalty = (1 - 0.5 * self._air_time / self._post_jump_buffer)
-                self.set_y_vel(-self._jump_y_vel * jump_penalty)
+                self.set_y_vel(self._jump_y_vel * jump_penalty)
                 self._last_jump_time = 0
 
         # short hopping
@@ -978,7 +998,7 @@ class PlayerEntity(Entity):
                 else:
                     return spriteref.PlayerStates.CROUCH_IDLE, 8
 
-        elif not self.is_left_walled() and not self.is_right_walled():
+        elif (not self.is_left_walled() and not self.is_right_walled()) or not self.get_player_type().can_walljump():
             return spriteref.PlayerStates.AIRBORNE, 8
 
         else:
