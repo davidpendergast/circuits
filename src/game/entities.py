@@ -591,7 +591,7 @@ class PlayerTypes:
 
     FAST = PlayerType("A", const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
                       move_speed=7.5, jump_height=3.2)
-    SMALL = PlayerType("B", const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True,
+    SMALL = PlayerType("B", const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
                        move_speed=5.5, jump_height=2.1)
     HEAVY = PlayerType("C", const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
                        move_speed=4, jump_height=3.2)
@@ -991,7 +991,7 @@ class PlayerEntity(Entity):
                 if not self.is_crouching():
                     return spriteref.PlayerStates.WALKING, 1
                 else:
-                    return spriteref.PlayerStates.CROUCH_WALKING, 8
+                    return spriteref.PlayerStates.CROUCH_WALKING, 2
             else:
                 if not self.is_crouching():
                     return spriteref.PlayerStates.IDLE, 8
