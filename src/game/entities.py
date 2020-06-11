@@ -1,5 +1,6 @@
 
 import math
+import traceback
 
 import src.utils.util as util
 import src.engine.sprites as sprites
@@ -506,15 +507,17 @@ class SlopeBlockEntity(AbstractBlockEntity):
         spr = self._debug_sprites[main_body_key]
         self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=30)
 
+
 DEFAULT_GRAVITY = -0.15 / 16
 
-class PlayerType:
 
+class PlayerType:
 
     def __init__(self, name, id_num, size=(0.75, 1.75),
                  move_speed=7.5,
                  jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
-                 can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False):
+                 can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
+                 anim_rate_overrides=None):
         self._name = name
         self._id = id_num
         self._size = size
@@ -532,6 +535,18 @@ class PlayerType:
         self._can_crouch = can_crouch
         self._can_grab = can_grab
         self._can_be_grabbed = can_be_grabbed
+
+        self._anim_rates = {
+            spriteref.PlayerStates.WALKING: 1,
+            spriteref.PlayerStates.CROUCH_WALKING: 2,
+            spriteref.PlayerStates.IDLE: 8,
+            spriteref.PlayerStates.CROUCH_IDLE: 8,
+            spriteref.PlayerStates.AIRBORNE: 8,
+            spriteref.PlayerStates.WALLSLIDE: 8
+        }
+
+        if anim_rate_overrides is not None:
+            self._anim_rates.update(anim_rate_overrides)
 
     def get_id(self):
         return self._id
@@ -574,6 +589,21 @@ class PlayerType:
         """returns: maximum x velocity in cells per second"""
         return self._move_speed
 
+    def get_anim_rate(self, player_state, player_ent):
+        if player_state in self._anim_rates:
+            rate = self._anim_rates[player_state]
+            if isinstance(rate, int) or isinstance(rate, float):
+                return int(rate)
+            else:
+                try:
+                    # should be a lambda: Entity -> int
+                    return rate(player_ent)
+                except Exception:
+                    print("{} failed to calculate animation rate for {}, {}".format(self, player_state, player_ent))
+                    traceback.print_exc()
+        else:
+            return 1  # very fast because something is very wrong
+
     def get_player_img(self, player_state, frame=0):
         return spriteref.object_sheet().get_player_sprite(self._id, player_state, frame)
 
@@ -596,7 +626,10 @@ class PlayerTypes:
     HEAVY = PlayerType("C", const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
                        move_speed=4, jump_height=3.2)
     FLYING = PlayerType("D", const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True,
-                        move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2)
+                        move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2,
+                        anim_rate_overrides={
+                            spriteref.PlayerStates.AIRBORNE: lambda _ent: 2 if _ent.get_y_vel() < 0 else 4
+                        })
 
     _ALL_TYPES = [FAST, SMALL, HEAVY, FLYING]
 
@@ -635,6 +668,7 @@ class PlayerEntity(Entity):
 
         self._gravity = -cs * jump_info.g
         self._jump_y_vel = -cs * jump_info.vel
+        self._fly_y_vel = -cs * jump_info.vel * 0.666  # TODO this value is kinda arbitrary
 
         self._snap_down_dist = 4
 
@@ -920,6 +954,11 @@ class PlayerEntity(Entity):
                     if self.is_right_walled():
                         self.set_x_vel(-self._wall_jump_x_vel)
 
+            elif self.get_player_type().can_fly():
+                if self._fly_y_vel < self.get_y_vel():
+                    self.set_y_vel(self._fly_y_vel)
+                    self._last_jump_time = 0
+
             elif self._air_time < self._post_jump_buffer:
                 # if you jumped too late, you get a penalty
                 jump_penalty = (1 - 0.5 * self._air_time / self._post_jump_buffer)
@@ -989,23 +1028,24 @@ class PlayerEntity(Entity):
         if self.is_grounded() and (self._last_jump_time <= 1 or self.get_y_vel() > -0.1):
             if self.is_moving():
                 if not self.is_crouching():
-                    return spriteref.PlayerStates.WALKING, 1
+                    return spriteref.PlayerStates.WALKING
                 else:
-                    return spriteref.PlayerStates.CROUCH_WALKING, 2
+                    return spriteref.PlayerStates.CROUCH_WALKING
             else:
                 if not self.is_crouching():
-                    return spriteref.PlayerStates.IDLE, 8
+                    return spriteref.PlayerStates.IDLE
                 else:
-                    return spriteref.PlayerStates.CROUCH_IDLE, 8
+                    return spriteref.PlayerStates.CROUCH_IDLE
 
         elif (not self.is_left_walled() and not self.is_right_walled()) or not self.get_player_type().can_walljump():
-            return spriteref.PlayerStates.AIRBORNE, 8
+            return spriteref.PlayerStates.AIRBORNE
 
         else:
-            return spriteref.PlayerStates.WALLSLIDE, 8
+            return spriteref.PlayerStates.WALLSLIDE
 
     def _get_current_img(self):
-        state, anim_rate = self.get_player_state()
+        state = self.get_player_state()
+        anim_rate = self.get_player_type().get_anim_rate(state, self)
         return self._player_type.get_player_img(state, frame=gs.get_instance().anim_tick() // anim_rate)
 
     def get_render_rect(self):
