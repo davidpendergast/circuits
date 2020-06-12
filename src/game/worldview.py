@@ -74,8 +74,6 @@ class WorldView:
         self._camera_zoom_idx = new_zoom_idx
         self.set_camera_center_in_world(old_center)
 
-        print("\nINFO: set zoom to: {}".format(self.get_zoom()))
-
     def get_zoom(self):
         return self._zoom_levels[self._camera_zoom_idx]
 

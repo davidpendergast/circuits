@@ -517,7 +517,7 @@ class PlayerType:
                  move_speed=7.5,
                  jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
                  can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
-                 anim_rate_overrides=None):
+                 anim_rate_overrides=None, should_ever_xflip=True):
         self._name = name
         self._id = id_num
         self._size = size
@@ -535,6 +535,8 @@ class PlayerType:
         self._can_crouch = can_crouch
         self._can_grab = can_grab
         self._can_be_grabbed = can_be_grabbed
+
+        self._should_ever_xflip = should_ever_xflip
 
         self._anim_rates = {
             spriteref.PlayerStates.WALKING: 1,
@@ -604,6 +606,9 @@ class PlayerType:
         else:
             return 1  # very fast because something is very wrong
 
+    def should_ever_xflip(self):
+        return self._should_ever_xflip
+
     def get_player_img(self, player_state, frame=0):
         return spriteref.object_sheet().get_player_sprite(self._id, player_state, frame)
 
@@ -625,10 +630,13 @@ class PlayerTypes:
                        move_speed=5.5, jump_height=2.1)
     HEAVY = PlayerType("C", const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
                        move_speed=4, jump_height=3.2)
-    FLYING = PlayerType("D", const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True,
+    FLYING = PlayerType("D", const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True, can_crouch=True,
                         move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2,
+                        should_ever_xflip=False,
                         anim_rate_overrides={
-                            spriteref.PlayerStates.AIRBORNE: lambda _ent: 2 if _ent.get_y_vel() < 0 else 4
+                            spriteref.PlayerStates.AIRBORNE: lambda _ent: 1 if _ent.get_y_vel() < 0 else 1,
+                            spriteref.PlayerStates.WALKING: 2,
+                            spriteref.PlayerStates.IDLE: 4
                         })
 
     _ALL_TYPES = [FAST, SMALL, HEAVY, FLYING]
@@ -657,6 +665,7 @@ class PlayerEntity(Entity):
 
         self._sprites = {}  # id -> Sprite
         self._dir_facing = 1
+        self._anim_frame_offset = 0
 
         self._y_vel_max = 20 * cs / configs.target_fps
         self._x_vel_max = player_type.get_move_speed() * cs / configs.target_fps
@@ -948,7 +957,7 @@ class PlayerEntity(Entity):
             elif self.is_clinging_to_wall():
                     self.set_y_vel(self._wall_jump_y_vel)
                     self._last_jump_time = 0
-                    # TODO some way to cancel the x_vel on a wall jump?
+                    # TODO add some way to cancel the x_vel on a wall jump?
                     if self.is_left_walled():
                         self.set_x_vel(self._wall_jump_x_vel)
                     if self.is_right_walled():
@@ -1046,6 +1055,7 @@ class PlayerEntity(Entity):
     def _get_current_img(self):
         state = self.get_player_state()
         anim_rate = self.get_player_type().get_anim_rate(state, self)
+
         return self._player_type.get_player_img(state, frame=gs.get_instance().anim_tick() // anim_rate)
 
     def get_render_rect(self):
@@ -1079,11 +1089,13 @@ class PlayerEntity(Entity):
 
             spr_y = rect[1] + rect[3] - cur_img.height()
 
+            can_xflip = self.get_player_type().should_ever_xflip()
+
             self._sprites[body_id] = body_spr.update(new_model=cur_img,
                                                      new_x=spr_x,
                                                      new_y=spr_y,
                                                      new_depth=PLAYER_DEPTH,
-                                                     new_xflip=self.dir_facing() < 0,
+                                                     new_xflip=can_xflip and self.dir_facing() < 0,
                                                      new_color=self.get_color())
 
     def all_sprites(self):
