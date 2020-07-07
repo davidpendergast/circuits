@@ -3,8 +3,6 @@ bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
  - should snap to vertical slopes too
  - camera lags behind player a frame (I think)
- - animations can "flicker" in certain situations
-    - fixed the main offender "rising idle animation"
  
 features:
  - crouching should maybe(?) prevent walk-offs (like minecraft)
@@ -13,5 +11,53 @@ features:
  - bonus jump if you walk off -> jump quickly?
  - make physics deterministic (or abandon replay idea?)
     - lets at least give it a shot
- - other characters
+    
+issues:
+ - the pastel colors don't really fit with the monochrome ship asthetics
+    - could be OK? if the inside of the ship is more colorful
+    
+    
+vertical slice: 
+ - title screen 
+    - logo, still image, options for [start, continue, controls, editor]
+ - overworld
+    - can select levels in a grid connected by paths, with branches and stuff
+    - some kind of spaceship graphics
+    - design basically ripped from baba (where all my good ideas come from)
+    - should be extremely modular
+ - in levels 
+    - platforming phyiscs
+    - play alongside your "ghosts"
+    - mixture of longer, traditional single-robot platforming challenges
+        and multi-robot coordination puzzles
+ - level editor
+    - save / load levels as json
+    - create / move / modify objects in the game
+    - toggle between play mode and edit mode
+    ui:
+      - creation sidepanel
+        - select objects to create from grid
+      - metadata sidepanel
+        - edit level name, etc. (json text editor)
+      - modification sidepanel
+        - edit json attributes selected object (in world)
+ - credits
+    (to make it a complete game~)
+ 
+
+puzzle archetypes:
+    - resource exchanges (delivering something to a future ghost)
+    - path alteration (changing the behavior of a past ghost by altering the environment)
+        - ghost objectification (picking up another ghost, using to acomplish something else entirely)
+        - ghost nullification (stopping another ghost from doing something)
+    - option-selects (using route that will have different outcomes depending on the actions of a future ghost)
+    - traditional platforming challenges (running, jumping, and climbing trees)
+    - resource allocation (should I use this now, or leave it for a future ghost)
+        - should i prevent a past ghost from using a resource
+    - coordination (need to act in-sync with a past ghost)
+ 
+    
+    
+    
+    
 
