@@ -151,8 +151,12 @@ class _BlockSheet(spritesheets.SpriteSheet):
         self.quad_blocks = []
 
     def get_block_sprite(self, size, art_id):
+        if art_id == 0:
+            # should use the empty sprite
+            return None
+
         if size in self.blocks and len(self.blocks[size]) > 0:
-            return self.blocks[size][art_id % len(self.blocks[size])]
+            return self.blocks[size][(art_id - 1) % len(self.blocks[size])]
         else:
             return None
 

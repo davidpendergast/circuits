@@ -89,7 +89,8 @@ class SpecType:
 class BlockSpecType(SpecType):
 
     def __init__(self):
-        SpecType.__init__(self, "block", required_keys=(X, Y, W, H))
+        SpecType.__init__(self, "block", required_keys=(X, Y, W, H),
+                          optional_keys={ART_ID: -1, COLOR_ID: 0})
 
     def build_entities(self, json_blob):
         x = json_blob[X]
@@ -97,7 +98,10 @@ class BlockSpecType(SpecType):
         w = json_blob[W]
         h = json_blob[H]
 
-        yield entities.BlockEntity(x, y, w, h)
+        art_id = json_blob[ART_ID]
+        color_id = json_blob[COLOR_ID]
+
+        yield entities.BlockEntity(x, y, w, h, art_id=art_id, color_id=color_id)
 
 
 class SlopedQuadBlockSpecType(SpecType):
@@ -128,32 +132,41 @@ class SlopedQuadBlockSpecType(SpecType):
                           optional_keys={ART_ID: -1, COLOR_ID: 0})
 
     def get_subtypes(self):
-        return [key for key in SlopedQuadBlockSpecType._SUBTYPE_TO_SPRITE_INFO_MAP]
+        return SlopedQuadBlockSpecType.ALL_SUBTYPES
 
-    # x, y position of point, orientation of slope
-    # ->
-    # rotation, xflip
+    # (x pos of point, y pos of point, orientation of slope)
+    HORZ_0_0 = (0, 0, "horizontal")
+    HORZ_2_0 = (2, 0, "horizontal")
+    HORZ_0_2 = (0, 2, "horizontal")
+    HORZ_2_2 = (2, 2, "horizontal")
 
+    VERT_0_0 = (0, 0, "vertical")
+    VERT_2_0 = (2, 0, "vertical")
+    VERT_0_2 = (0, 2, "vertical")
+    VERT_2_2 = (2, 2, "vertical")
+
+    ALL_SUBTYPES = [HORZ_0_0, HORZ_2_0, HORZ_0_2, HORZ_2_2,
+                    VERT_0_0, VERT_2_0, VERT_0_2, VERT_2_2]
+
+    # subtype -> (rotation, xflip)
     _SUBTYPE_TO_SPRITE_INFO_MAP = {
-        (0, 0, "horizontal"): (0, True),
-        (2, 0, "horizontal"): (0, False),  # the 'default' art
-        (0, 2, "horizontal"): (2, False),
-        (2, 2, "horizontal"): (2, True),
-        (0, 0, "vertical"): (3, False),
-        (2, 0, "vertical"): (1, True),
-        (0, 2, "vertical"): (3, True),
-        (2, 2, "vertical"): (1, False)
+        HORZ_0_0: (0, True),
+        HORZ_2_0: (0, False),  # the 'default' art
+        HORZ_0_2: (2, False),
+        HORZ_2_2: (2, True),
+        VERT_0_0: (3, False),
+        VERT_2_0: (1, True),
+        VERT_0_2: (3, True),
+        VERT_2_2: (1, False)
     }
 
     def _get_sprite_info(self, json_blob):
         art_id = json_blob[ART_ID]
         if art_id < 0:
             art_id = int(random.random() * 100)
-        color_id = json_blob[COLOR_ID]
         rot, xflip = SlopedQuadBlockSpecType._SUBTYPE_TO_SPRITE_INFO_MAP[json_blob[SUBTYPE_ID]]
 
-        return entities.CompositeBlockEntity.BlockSpriteInfo(spriteref.block_sheet().get_quad_block_sprite(art_id),
-                                                             color=spriteref.get_color(color_id),
+        return entities.CompositeBlockEntity.BlockSpriteInfo(lambda: spriteref.block_sheet().get_quad_block_sprite(art_id),
                                                              rotation=rot, xflip=xflip)
 
     def build_entities(self, json_blob):
@@ -182,13 +195,16 @@ class SlopedQuadBlockSpecType(SpecType):
         rect_colliders = entities.BlockEntity.build_colliders_for_rect(rect)
         tri_colliders = entities.SlopeBlockEntity.build_colliders_for_points(triangle)
 
-        yield entities.CompositeBlockEntity(x, y, rect_colliders + tri_colliders, [self._get_sprite_info(json_blob)])
+        yield entities.CompositeBlockEntity(x, y, rect_colliders + tri_colliders,
+                                            [self._get_sprite_info(json_blob)],
+                                            color_id=json_blob[COLOR_ID])
 
 
 class MovingBlockSpecType(SpecType):
 
     def __init__(self):
-        SpecType.__init__(self, "moving_block", required_keys=(POINTS, W, H, DURATION, LOOP))
+        SpecType.__init__(self, "moving_block", required_keys=(POINTS, W, H, DURATION, LOOP),
+                          optional_keys={ART_ID: -1, COLOR_ID: 0})
 
     def build_entities(self, json_blob):
         points = json_blob[POINTS]
@@ -197,7 +213,10 @@ class MovingBlockSpecType(SpecType):
         duration = json_blob[DURATION]
         loop = json_blob[LOOP]
 
-        yield entities.MovingBlockEntity(w, h, points, period=duration, loop=loop)
+        art_id = json_blob[ART_ID]
+        color_id = json_blob[COLOR_ID]
+
+        yield entities.MovingBlockEntity(w, h, points, period=duration, loop=loop, art_id=art_id, color_id=color_id)
 
 
 class PlayerSpecType(SpecType):
@@ -266,7 +285,82 @@ class LevelBlueprint:
         return world
 
 
-def get_test_blueprint() -> LevelBlueprint:
+def get_test_blueprint_0() -> LevelBlueprint:
+    cs = gs.get_instance().cell_size
+    json_blob = {
+        ENTITIES: [
+            {TYPE_ID: "player", X: cs * 6, Y: cs * 5, SUBTYPE_ID: const.PLAYER_FAST},
+
+            {TYPE_ID: "block", X: cs * 4, Y: cs * 11, W: cs * 3, H: cs * 1},
+            {TYPE_ID: "block", X: cs * 13, Y: cs * 11, W: cs * 6, H: cs * 1},
+            {TYPE_ID: "block", X: cs * 9, Y: cs * 10, W: cs * 2, H: cs * 2},
+            {TYPE_ID: "block", X: cs * 5, Y: cs * 7, W: cs * 0.5, H: cs * 4},
+            {TYPE_ID: "block", X: cs * 0, Y: cs * 7, W: cs * 5, H: cs * 1},
+
+            {TYPE_ID: "block", X: cs * 21, Y: cs * 3, W: cs * 0.5, H: cs * 4},
+            {TYPE_ID: "block", X: cs * 21.5, Y: cs * 3, W: cs * 2, H: cs * 2},
+
+            {TYPE_ID: "sloped_2x2_block", SUBTYPE_ID: SlopedQuadBlockSpecType.HORZ_0_0, X: cs * 11, Y: cs * 10},
+            {TYPE_ID: "sloped_2x2_block", SUBTYPE_ID: SlopedQuadBlockSpecType.HORZ_2_0, X: cs * 7, Y: cs * 10},
+        ]
+    }
+
+    pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]
+    json_blob[ENTITIES].append({TYPE_ID: "moving_block", POINTS: pts, W: cs * 2, H: cs * 1, DURATION: 90, LOOP: True})
+
+    return LevelBlueprint(json_blob)
+
+
+def get_test_blueprint_1() -> LevelBlueprint:
+    cs = gs.get_instance().cell_size
+    json_blob = {
+        ENTITIES: [
+            {TYPE_ID: "player", X: cs * 12, Y: cs * 11, SUBTYPE_ID: const.PLAYER_FAST},
+        ]
+    }
+
+    rects = [
+        (0, 0, 2, 5),
+        (0, 5, 2, 3),
+        (0, 8, 7, 1),
+        (0, 9, 2, 4),
+        (0, 13, 7, 2),
+        (7, 14, 10, 1),  # floor
+        (4, 11, 3, 2),
+
+        (9, 7, 2, 1),  # floating platform
+        (17, 7, 2, 1),
+        (19, 6, 4, 1),
+        (15, 10, 2, 1),
+        (14, 10, 1, 2),
+
+        (2, 0, 4, 1),  # ciel
+        (2, 1, 2, 1),
+        (6, 0, 19, 3),
+        (25, 0, 5, 4),
+
+        (13, 7, 2, 3),
+        (17, 14.5, 2, 0.5),
+        (19, 11, 2, 4),
+        (23, 10, 2, 5),
+        (21, 14, 2, 1),
+        (25, 7, 2, 6),
+        (25, 13, 4, 2),
+        (27, 12, 2, 1),
+        (29, 4, 1, 11)
+    ]
+
+    for r in rects:
+        json_blob[ENTITIES].append({TYPE_ID: "block", X: cs * r[0], Y: cs * r[1], W: cs * r[2], H: cs * r[3]})
+
+    json_blob[ENTITIES].append({TYPE_ID: "sloped_2x2_block", SUBTYPE_ID: SlopedQuadBlockSpecType.HORZ_2_0, X: cs * 17, Y: cs * 6})
+    json_blob[ENTITIES].append({TYPE_ID: "sloped_2x2_block", SUBTYPE_ID: SlopedQuadBlockSpecType.HORZ_2_2, X: cs * 4, Y: cs * 1})
+    json_blob[ENTITIES].append({TYPE_ID: "sloped_2x2_block", SUBTYPE_ID: SlopedQuadBlockSpecType.VERT_0_0, X: cs * 13, Y: cs * 10})
+
+    return LevelBlueprint(json_blob)
+
+
+def get_test_blueprint_2() -> LevelBlueprint:
     json_blob = {
         ENTITIES: [
             {TYPE_ID: "player", X: 45, Y: 35, SUBTYPE_ID: const.PLAYER_FAST},
@@ -284,6 +378,4 @@ def get_test_blueprint() -> LevelBlueprint:
         json_blob[ENTITIES].append({TYPE_ID: quad_type.get_id(), SUBTYPE_ID: subtype, X: x, Y: y})
 
     return LevelBlueprint(json_blob)
-
-
 

@@ -100,11 +100,11 @@ class CircuitsGame(game.Game):
         print("INFO: activating test world: {}".format(type_to_use))
 
         if type_to_use == types[0]:
-            self._world = worlds.World.new_test_world_old()
+            self._world = blueprints.get_test_blueprint_0().create_world()
         elif type_to_use == types[1]:
-            self._world = worlds.World.new_test_world()
+            self._world = blueprints.get_test_blueprint_1().create_world()
         elif type_to_use == types[2]:
-            self._world = blueprints.get_test_blueprint().create_world()
+            self._world = blueprints.get_test_blueprint_2().create_world()
         else:
             return
 

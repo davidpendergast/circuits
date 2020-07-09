@@ -323,6 +323,12 @@ class AbstractBlockEntity(Entity):
     def get_debug_color(self):
         return colors.PERFECT_DARK_GRAY
 
+    def get_color_id(self):
+        return 0
+
+    def get_color(self):
+        return spriteref.get_color(self.get_color_id())
+
     def all_sprites(self):
         for spr in self.all_debug_sprites():
             yield spr
@@ -338,15 +344,20 @@ class BlockEntity(AbstractBlockEntity):
     def build_colliders_for_rect(rect):
         return [RectangleCollider(rect, CollisionMasks.BLOCK, color=colors.PERFECT_RED)]
 
-    def __init__(self, x, y, w, h, art_id=-1):
+    def __init__(self, x, y, w, h, art_id=0, color_id=0):
         AbstractBlockEntity.__init__(self, x, y, w=w, h=h)
         self.set_colliders(BlockEntity.build_colliders_for_rect([0, 0, w, h]))
+
         self._art_id = art_id if art_id >= 0 else int(random.random() * 100)
+        self._color_id = color_id if color_id >= 0 else int(random.random() * 5)
 
         self._sprite = None
 
     def update(self):
         self._update_sprites()
+
+    def get_color_id(self):
+        return self._color_id
 
     def _update_sprites(self):
         img = None
@@ -368,7 +379,8 @@ class BlockEntity(AbstractBlockEntity):
             if self._sprite is None or not isinstance(self._sprite, sprites.BorderBoxSprite):
                 self._sprite = sprites.BorderBoxSprite(spriteref.BLOCK_LAYER, inner_rect,
                                                        all_borders=spriteref.block_sheet().border_sprites)
-            self._sprite = self._sprite.update(new_rect=inner_rect, new_scale=scale, new_color=self.get_color())
+            self._sprite = self._sprite.update(new_rect=inner_rect, new_scale=scale,
+                                               new_color=self.get_color(), new_bg_color=self.get_color())
 
     def all_sprites(self):
         if self._sprite is not None:
@@ -381,20 +393,24 @@ class BlockEntity(AbstractBlockEntity):
 class CompositeBlockEntity(AbstractBlockEntity):
 
     class BlockSpriteInfo:
-        def __init__(self, model=None, xy_offs=(0, 0), color=colors.WHITE, rotation=0, scale=1, xflip=False):
-            self.model = model
+        def __init__(self, model_provider=lambda: None, xy_offs=(0, 0), rotation=0, scale=1, xflip=False):
+            self.model_provider = model_provider
             self.xy_offs = xy_offs
-            self.color = color
             self.rotation = rotation
             self.xflip = xflip
             self.scale = scale
 
-    def __init__(self, x, y, colliders, sprite_infos):
+    def __init__(self, x, y, colliders, sprite_infos, color_id=0):
         AbstractBlockEntity.__init__(self, x, y)
         self.set_colliders(colliders)
         self._sprite_infos = sprite_infos
 
+        self._color_id = color_id if color_id >= 0 else int(random.random() * 5)
+
         self._sprites = []
+
+    def get_color_id(self):
+        return self._color_id
 
     def get_size(self):
         all_rects = [c.get_rect(offs=(0, 0)) for c in self.all_colliders()]
@@ -413,8 +429,10 @@ class CompositeBlockEntity(AbstractBlockEntity):
 
             x = self.get_x()
             y = self.get_y()
-            self._sprites[i] = spr.update(new_model=info.model, new_x=x + info.xy_offs[0], new_y=y + info.xy_offs[1],
-                                          new_scale=info.scale, new_xflip=info.xflip, new_color=info.color,
+            self._sprites[i] = spr.update(new_model=info.model_provider(),
+                                          new_x=x + info.xy_offs[0], new_y=y + info.xy_offs[1],
+                                          new_scale=info.scale, new_xflip=info.xflip,
+                                          new_color=self.get_color(),
                                           new_rotation=info.rotation)
 
     def update(self):
@@ -455,8 +473,8 @@ class CompositeBlockEntity(AbstractBlockEntity):
 
 class MovingBlockEntity(BlockEntity):
 
-    def __init__(self, w, h, pts, period=90, loop=True):
-        BlockEntity.__init__(self, pts[0][0], pts[0][1], w, h)
+    def __init__(self, w, h, pts, period=90, loop=True, art_id=0, color_id=0):
+        BlockEntity.__init__(self, pts[0][0], pts[0][1], w, h, art_id=art_id, color_id=color_id)
         self._pts = pts
         self._period = period
         self._loop = loop
