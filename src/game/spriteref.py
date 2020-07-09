@@ -24,9 +24,9 @@ def _img(x, y, w, h, offs=(0, 0)):
 
 def get_color(color_id):
     if color_id == 0:
-        return colors.OFF_WHITE
+        return colors.WHITE
     else:
-        return colors.RED
+        return colors.PERFECT_RED
 
 
 class PlayerState:

@@ -144,14 +144,14 @@ class WorldView:
                 p1 = (cam_rect[0] - (cam_rect[0] % cs) + cs * (i + 1), cam_rect[1])
                 p2 = (cam_rect[0] - (cam_rect[0] % cs) + cs * (i + 1), cam_rect[1] + cam_rect[3])
                 x_line_sprite.update(new_p1=p1, new_p2=p2, new_thickness=1,
-                                     new_color=colors.VERY_DARK_GRAY, new_depth=500)
+                                     new_color=colors.PERFECT_VERY_DARK_GRAY, new_depth=500)
 
             for i in range(0, n_y_lines):
                 y_line_sprite = self._grid_line_sprites[i + n_x_lines]
                 p1 = (cam_rect[0], (cam_rect[1] - (cam_rect[1] % cs) + cs * (i + 1)))
                 p2 = (cam_rect[0] + cam_rect[2], (cam_rect[1] - (cam_rect[1] % cs) + cs * (i + 1)))
                 y_line_sprite.update(new_p1=p1, new_p2=p2, new_thickness=1,
-                                     new_color=colors.VERY_DARK_GRAY, new_depth=500)
+                                     new_color=colors.PERFECT_VERY_DARK_GRAY, new_depth=500)
         else:
             self._grid_line_sprites.clear()
 
