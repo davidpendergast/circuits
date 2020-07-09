@@ -1,13 +1,14 @@
 
 import typing
 import traceback
+import random
 
 import src.utils.util as util
 
 import src.game.entities as entities
 import src.game.worlds as worlds
 import src.game.globalstate as gs
-import src.game.colors as colors
+import src.game.spriteref as spriteref
 import src.game.const as const
 
 
@@ -24,6 +25,9 @@ POINTS = "points"       # list of (int, int)
 PT_1 = "pt_1"           # (int, int)
 PT_2 = "pt_2"           # (int, int)
 PT_3 = "pt_3"           # (int, int)
+
+ART_ID = "art_id"       # int
+COLOR_ID = "color_id"   # int
 
 LOOP = "loop"           # bool
 DURATION = "duration"   # int
@@ -69,7 +73,12 @@ class SpecType:
         raise NotImplementedError()
 
     def build(self, json_blob, world) -> None:
-        for ent in self.build_entities(json_blob):
+        blob_copy = json_blob.copy()
+        for key in self.optional_keys:
+            if key not in blob_copy:
+                blob_copy[key] = self.optional_keys[key]
+
+        for ent in self.build_entities(blob_copy):
             if ent is not None:
                 world.add_entity(ent, next_update=False)
 
@@ -115,19 +124,37 @@ class SlopedQuadBlockSpecType(SpecType):
     """
 
     def __init__(self):
-        SpecType.__init__(self, "sloped_2x2_block", required_keys=(X, Y, SUBTYPE_ID))
+        SpecType.__init__(self, "sloped_2x2_block", required_keys=(X, Y, SUBTYPE_ID),
+                          optional_keys={ART_ID: -1, COLOR_ID: 0})
 
     def get_subtypes(self):
-        return [
-            (0, 0, "horizontal"),     # x, y position of point, orientation of slope
-            (2, 0, "horizontal"),
-            (0, 2, "horizontal"),
-            (2, 2, "horizontal"),
-            (0, 0, "vertical"),
-            (2, 0, "vertical"),
-            (0, 2, "vertical"),
-            (2, 2, "vertical")
-        ]
+        return [key for key in SlopedQuadBlockSpecType._SUBTYPE_TO_SPRITE_INFO_MAP]
+
+    # x, y position of point, orientation of slope
+    # ->
+    # rotation, xflip
+
+    _SUBTYPE_TO_SPRITE_INFO_MAP = {
+        (0, 0, "horizontal"): (0, True),
+        (2, 0, "horizontal"): (0, False),  # the 'default' art
+        (0, 2, "horizontal"): (2, False),
+        (2, 2, "horizontal"): (2, True),
+        (0, 0, "vertical"): (3, False),
+        (2, 0, "vertical"): (1, True),
+        (0, 2, "vertical"): (3, True),
+        (2, 2, "vertical"): (1, False)
+    }
+
+    def _get_sprite_info(self, json_blob):
+        art_id = json_blob[ART_ID]
+        if art_id < 0:
+            art_id = int(random.random() * 100)
+        color_id = json_blob[COLOR_ID]
+        rot, xflip = SlopedQuadBlockSpecType._SUBTYPE_TO_SPRITE_INFO_MAP[json_blob[SUBTYPE_ID]]
+
+        return entities.CompositeBlockEntity.BlockSpriteInfo(spriteref.block_sheet().get_quad_block_sprite(art_id),
+                                                             color=spriteref.get_color(color_id),
+                                                             rotation=rot, xflip=xflip)
 
     def build_entities(self, json_blob):
         x = json_blob[X]
@@ -155,7 +182,7 @@ class SlopedQuadBlockSpecType(SpecType):
         rect_colliders = entities.BlockEntity.build_colliders_for_rect(rect)
         tri_colliders = entities.SlopeBlockEntity.build_colliders_for_points(triangle)
 
-        yield entities.CompositeBlockEntity(x, y, rect_colliders + tri_colliders)
+        yield entities.CompositeBlockEntity(x, y, rect_colliders + tri_colliders, [self._get_sprite_info(json_blob)])
 
 
 class MovingBlockSpecType(SpecType):

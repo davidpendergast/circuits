@@ -3,6 +3,7 @@ import src.engine.spritesheets as spritesheets
 import src.engine.sprites as sprites
 
 import src.game.const as const
+import src.game.colors as colors
 
 BLOCK_LAYER = "block_layer"
 ENTITY_LAYER = "entity_layer"
@@ -19,6 +20,13 @@ def all_world_layers():
 
 def _img(x, y, w, h, offs=(0, 0)):
     return sprites.ImageModel(x, y, w, h, offset=offs)
+
+
+def get_color(color_id):
+    if color_id == 0:
+        return colors.OFF_WHITE
+    else:
+        return colors.RED
 
 
 class PlayerState:
@@ -148,6 +156,12 @@ class _BlockSheet(spritesheets.SpriteSheet):
         else:
             return None
 
+    def get_quad_block_sprite(self, art_id):
+        if len(self.quad_blocks) > 0:
+            return self.quad_blocks[art_id % len(self.quad_blocks)]
+        else:
+            return None
+
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
         self.plain_1x1 = _img(0, 0, 16, 16, offs=start_pos)
@@ -180,7 +194,7 @@ class _BlockSheet(spritesheets.SpriteSheet):
         self.blocks[(2, 2)] = _make_blocks((2, 2), 0, 96, n=1, offs=start_pos)
         self.blocks[(3, 2)] = _make_blocks((3, 2), 0, 128, n=1, offs=start_pos)
 
-        self.quad_blocks = _make_blocks((2, 2), 0, 160, n=2, offs=start_pos)
+        self.quad_blocks = _make_blocks((2, 2), 0, 160, n=3, offs=start_pos)
 
         # print("INFO: created blocks={}".format(self.blocks))
 

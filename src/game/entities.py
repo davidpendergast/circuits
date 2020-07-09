@@ -380,10 +380,21 @@ class BlockEntity(AbstractBlockEntity):
 
 class CompositeBlockEntity(AbstractBlockEntity):
 
-    def __init__(self, x, y, colliders, sprite=None):
+    class BlockSpriteInfo:
+        def __init__(self, model=None, xy_offs=(0, 0), color=colors.OFF_WHITE, rotation=0, scale=1, xflip=False):
+            self.model = model
+            self.xy_offs = xy_offs
+            self.color = color
+            self.rotation = rotation
+            self.xflip = xflip
+            self.scale = scale
+
+    def __init__(self, x, y, colliders, sprite_infos):
         AbstractBlockEntity.__init__(self, x, y)
         self.set_colliders(colliders)
-        self._sprite = sprite
+        self._sprite_infos = sprite_infos
+
+        self._sprites = []
 
     def get_size(self):
         all_rects = [c.get_rect(offs=(0, 0)) for c in self.all_colliders()]
@@ -392,6 +403,31 @@ class CompositeBlockEntity(AbstractBlockEntity):
             return (0, 0)
         else:
             return (total_rect[2], total_rect[3])
+
+    def _update_sprites(self):
+        util.extend_or_empty_list_to_length(self._sprites, len(self._sprite_infos),
+                                            creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
+        for i in range(0, len(self._sprite_infos)):
+            info = self._sprite_infos[i]
+            spr = self._sprites[i]
+
+            x = self.get_x()
+            y = self.get_y()
+            self._sprites[i] = spr.update(new_model=info.model, new_x=x + info.xy_offs[0], new_y=y + info.xy_offs[1],
+                                          new_scale=info.scale, new_xflip=info.xflip, new_color=info.color,
+                                          new_rotation=info.rotation)
+
+    def update(self):
+        super().update()
+        self._update_sprites()
+
+    def all_sprites(self):
+        if len(self._sprites) > 0:
+            for spr in self._sprites:
+                yield spr
+        else:
+            for spr in super().all_sprites():
+                yield spr
 
     def _update_main_body_debug_sprites(self, main_body_key):
         all_colliders = [c for c in self.all_colliders()]
