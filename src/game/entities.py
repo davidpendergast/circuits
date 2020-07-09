@@ -1,5 +1,6 @@
 
 import math
+import random
 import traceback
 
 import src.utils.util as util
@@ -337,16 +338,50 @@ class BlockEntity(AbstractBlockEntity):
     def build_colliders_for_rect(rect):
         return [RectangleCollider(rect, CollisionMasks.BLOCK, color=colors.RED)]
 
-    def __init__(self, x, y, w, h):
+    def __init__(self, x, y, w, h, art_id=-1):
         AbstractBlockEntity.__init__(self, x, y, w=w, h=h)
         self.set_colliders(BlockEntity.build_colliders_for_rect([0, 0, w, h]))
+        self._art_id = art_id if art_id >= 0 else int(random.random() * 100)
+
+        self._sprites = []
+
+    def update(self):
+        self._update_sprites()
+
+    def _update_sprites(self):
+        img = None
+        if self._art_id is not None:
+            x_size = self.get_w() / gs.get_instance().cell_size
+            y_size = self.get_h() / gs.get_instance().cell_size
+            img = spriteref.block_sheet().get_block_sprite((x_size, y_size), self._art_id)
+
+        if img is not None:
+            # single sprite block
+            util.extend_or_empty_list_to_length(self._sprites, 1,
+                                                creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
+            ratio = (self.get_w() / img.width(), self.get_h() / img.height())
+            self._sprites[0] = self._sprites[0].update(new_model=img, new_x=self.get_x(), new_y=self.get_y(),
+                                                       new_scale=1, new_depth=0, new_color=self.get_color(),
+                                                       new_ratio=ratio)
+        else:
+            # TODO - custom sized block
+            self._sprites.clear()
+
+    def all_sprites(self):
+        if len(self._sprites) > 0:
+            for spr in self._sprites:
+                yield spr
+        else:
+            for spr in super().all_debug_sprites():
+                yield spr
 
 
 class CompositeBlockEntity(AbstractBlockEntity):
 
-    def __init__(self, x, y, colliders):
+    def __init__(self, x, y, colliders, sprite=None):
         AbstractBlockEntity.__init__(self, x, y)
         self.set_colliders(colliders)
+        self._sprite = sprite
 
     def get_size(self):
         all_rects = [c.get_rect(offs=(0, 0)) for c in self.all_colliders()]

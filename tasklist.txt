@@ -6,11 +6,13 @@ bugs:
  
 features:
  - crouching should maybe(?) prevent walk-offs (like minecraft)
+    - nah
  - saving / loading levels
  - edit levels
- - bonus jump if you walk off -> jump quickly?
  - make physics deterministic (or abandon replay idea?)
+    - (abandon replay idea? - cmon)
     - lets at least give it a shot
+ - joypad support
     
 issues:
  - the pastel colors don't really fit with the monochrome ship asthetics
@@ -51,7 +53,7 @@ puzzle archetypes:
         - ghost objectification (picking up another ghost, using to acomplish something else entirely)
         - ghost nullification (stopping another ghost from doing something)
     - option-selects (using route that will have different outcomes depending on the actions of a future ghost)
-    - traditional platforming challenges (running, jumping, and climbing trees)
+    - traditional platforming challenges (running, jumping, climbing trees)
     - resource allocation (should I use this now, or leave it for a future ghost)
         - should i prevent a past ghost from using a resource
     - coordination (need to act in-sync with a past ghost)

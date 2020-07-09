@@ -160,9 +160,11 @@ class _BlockSheet(spritesheets.SpriteSheet):
 
         self.blocks[(1, 2)] = _make_blocks((1, 2), 0, 64, n=2, offs=start_pos)
         self.blocks[(2, 2)] = _make_blocks((2, 2), 0, 96, n=1, offs=start_pos)
-        self.blocks[(3, 2)] = _make_blocks((2, 3), 0, 128, n=1, offs=start_pos)
+        self.blocks[(3, 2)] = _make_blocks((3, 2), 0, 128, n=1, offs=start_pos)
 
         self.quad_blocks = _make_blocks((2, 2), 0, 160, n=2, offs=start_pos)
+
+        # print("INFO: created blocks={}".format(self.blocks))
 
 
 # global sheet instances
@@ -171,7 +173,7 @@ _BLOCKS = None
 
 
 def object_sheet() -> _ObjectSheet:
-    return OBJECTS
+    return _OBJECTS
 
 
 def block_sheet() -> _BlockSheet:
@@ -179,8 +181,8 @@ def block_sheet() -> _BlockSheet:
 
 
 def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
-    global OBJECTS, BLOCKS
-    OBJECTS = _ObjectSheet()
-    BLOCKS = _BlockSheet()
+    global _OBJECTS, _BLOCKS
+    _OBJECTS = _ObjectSheet()
+    _BLOCKS = _BlockSheet()
 
-    return [OBJECTS, BLOCKS]
+    return [_OBJECTS, _BLOCKS]
