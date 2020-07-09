@@ -118,11 +118,11 @@ def rand_vec(length=1):
     return [length*math.cos(angle), length*math.sin(angle)]
 
 
-def rect_expand(rect, left_expand=0, right_expand=0, up_expand=0, down_expand=0):
-    return [rect[0] - left_expand,
-            rect[1] - up_expand,
-            rect[2] + (left_expand + right_expand),
-            rect[3] + (up_expand + down_expand)]
+def rect_expand(rect, all_expand=0, left_expand=0, right_expand=0, up_expand=0, down_expand=0):
+    return [rect[0] - left_expand - all_expand,
+            rect[1] - up_expand - all_expand,
+            rect[2] + (left_expand + right_expand + 2 * all_expand),
+            rect[3] + (up_expand + down_expand + 2 * all_expand)]
 
 
 def rect_contains(rect, v):

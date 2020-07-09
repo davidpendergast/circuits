@@ -343,7 +343,7 @@ class BlockEntity(AbstractBlockEntity):
         self.set_colliders(BlockEntity.build_colliders_for_rect([0, 0, w, h]))
         self._art_id = art_id if art_id >= 0 else int(random.random() * 100)
 
-        self._sprites = []
+        self._sprite = None
 
     def update(self):
         self._update_sprites()
@@ -356,21 +356,23 @@ class BlockEntity(AbstractBlockEntity):
             img = spriteref.block_sheet().get_block_sprite((x_size, y_size), self._art_id)
 
         if img is not None:
-            # single sprite block
-            util.extend_or_empty_list_to_length(self._sprites, 1,
-                                                creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
+            if self._sprite is None or not isinstance(self._sprite, sprites.ImageSprite):
+                self._sprite = sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER)
             ratio = (self.get_w() / img.width(), self.get_h() / img.height())
-            self._sprites[0] = self._sprites[0].update(new_model=img, new_x=self.get_x(), new_y=self.get_y(),
-                                                       new_scale=1, new_depth=0, new_color=self.get_color(),
-                                                       new_ratio=ratio)
+            self._sprite = self._sprite.update(new_model=img, new_x=self.get_x(), new_y=self.get_y(),
+                                               new_scale=1, new_depth=0, new_color=self.get_color(),
+                                               new_ratio=ratio)
         else:
-            # TODO - custom sized block
-            self._sprites.clear()
+            scale = 1
+            inner_rect = util.rect_expand(self.get_rect(), all_expand=-spriteref.block_sheet().border_inset * scale)
+            if self._sprite is None or not isinstance(self._sprite, sprites.BorderBoxSprite):
+                self._sprite = sprites.BorderBoxSprite(spriteref.BLOCK_LAYER, inner_rect,
+                                                       all_borders=spriteref.block_sheet().border_sprites)
+            self._sprite = self._sprite.update(new_rect=inner_rect, new_scale=scale, new_color=self.get_color())
 
     def all_sprites(self):
-        if len(self._sprites) > 0:
-            for spr in self._sprites:
-                yield spr
+        if self._sprite is not None:
+            yield self._sprite
         else:
             for spr in super().all_debug_sprites():
                 yield spr
@@ -450,6 +452,8 @@ class MovingBlockEntity(BlockEntity):
 
         self.set_xy(pos)
         self.set_vel(util.sub(old_xy, pos))
+
+        super().update()
 
 
 class SlopeOrientation:

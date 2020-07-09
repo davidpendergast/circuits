@@ -136,6 +136,9 @@ class _BlockSheet(spritesheets.SpriteSheet):
     def __init__(self):
         spritesheets.SpriteSheet.__init__(self, "blocks", "assets/blocks.png")
         self.plain_1x1 = None
+        self.border_sprites = []
+        self.border_inset = 2
+
         self.blocks = {}        # (w, h) -> list of imgs
         self.quad_blocks = []
 
@@ -148,6 +151,21 @@ class _BlockSheet(spritesheets.SpriteSheet):
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
         self.plain_1x1 = _img(0, 0, 16, 16, offs=start_pos)
+
+        inset = self.border_inset
+        self.border_sprites = [
+            _img(0, 0, inset, inset, offs=start_pos),               # top left
+            _img(inset, 0, 16 - inset * 2, inset, offs=start_pos),  # top
+            _img(16 - inset, 0, inset, inset, offs=start_pos),  # top right
+
+            _img(0, inset, inset, 16 - inset * 2, offs=start_pos),               # left
+            _img(inset, inset, 16 - inset * 2, 16 - inset * 2, offs=start_pos),  # center
+            _img(16 - inset, inset, inset, 16 - inset * 2, offs=start_pos),  # right
+
+            _img(0, 16 - inset, inset, inset, offs=start_pos),               # bottom left
+            _img(inset, 16 - inset, 16 - inset * 2, inset, offs=start_pos),  # bottom
+            _img(16 - inset, 16 - inset, inset, inset, offs=start_pos),  # bottom right
+        ]
 
         def _make_blocks(size, x, y, n=1, offs=(0, 0)):
             return [_img(x + i * 16 * size[0], y, 16 * size[0], 16 * size[1], offs=offs) for i in range(0, n)]
