@@ -363,7 +363,7 @@ def get_test_blueprint_1() -> LevelBlueprint:
 def get_test_blueprint_2() -> LevelBlueprint:
     json_blob = {
         ENTITIES: [
-            {TYPE_ID: "player", X: 45, Y: 35, SUBTYPE_ID: const.PLAYER_FAST},
+            {TYPE_ID: "player", X: 3*16, Y: 2*16, SUBTYPE_ID: const.PLAYER_FAST},
             {TYPE_ID: "block", X: 0, Y: 112, W: 128, H: 16},
             {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 16},
             {TYPE_ID: "block", X: 2*16, Y: 14.5*16, W: 25*16, H: 0.5*16}

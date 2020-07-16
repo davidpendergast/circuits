@@ -95,12 +95,17 @@ class Entity:
         dx = 0
         dy = 0
 
+        old_x = self._x
+        old_y = self._y
+
         if xy[0] is not None:
-            dx = xy[0] - self._x
             self._x = xy[0]
         if xy[1] is not None:
-            dy = xy[1] - self._y
             self._y = xy[1]
+
+        # for the purpose of moving FOR children, we only care about visible motion
+        dx = int(self._x) - int(old_x)
+        dy = int(self._y) - int(old_y)
 
         if update_frame_of_reference and (dx != 0 or dy != 0):
             for child in self._frame_of_reference_children:
@@ -197,6 +202,9 @@ class Entity:
         return [next_xy[0], next_xy[1], size[0], size[1]]
 
     def update(self):
+        pass
+
+    def update_sprites(self):
         pass
 
     def update_frame_of_reference_parent(self):
@@ -354,12 +362,12 @@ class BlockEntity(AbstractBlockEntity):
         self._sprite = None
 
     def update(self):
-        self._update_sprites()
+        pass
 
     def get_color_id(self):
         return self._color_id
 
-    def _update_sprites(self):
+    def update_sprites(self):
         img = None
         if self._art_id is not None:
             x_size = self.get_w() / gs.get_instance().cell_size
@@ -420,7 +428,7 @@ class CompositeBlockEntity(AbstractBlockEntity):
         else:
             return (total_rect[2], total_rect[3])
 
-    def _update_sprites(self):
+    def update_sprites(self):
         util.extend_or_empty_list_to_length(self._sprites, len(self._sprite_infos),
                                             creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
         for i in range(0, len(self._sprite_infos)):
@@ -434,10 +442,6 @@ class CompositeBlockEntity(AbstractBlockEntity):
                                           new_scale=info.scale, new_xflip=info.xflip,
                                           new_color=self.get_color(),
                                           new_rotation=info.rotation)
-
-    def update(self):
-        super().update()
-        self._update_sprites()
 
     def all_sprites(self):
         if len(self._sprites) > 0:
@@ -748,11 +752,12 @@ class PlayerTypes:
 
 class PlayerEntity(Entity):
 
-    def __init__(self, x, y, player_type: PlayerType):
+    def __init__(self, x, y, player_type: PlayerType, align_to_cells=True):
         cs = gs.get_instance().cell_size
         w = int(cs * player_type.get_size()[0])
         h = int(cs * player_type.get_size()[1])
-        Entity.__init__(self, x, y, w=w, h=h)
+
+        Entity.__init__(self, 0, 0, w=w, h=h)
 
         self._player_type = player_type
 
@@ -902,6 +907,16 @@ class PlayerEntity(Entity):
                             slope_collider_main_horz, slope_collider_main_top,
                             foot_slope_env_collider, foot_slope_sensor])
 
+        if align_to_cells:
+            cell_w = math.ceil(w / cs)
+            cell_h = math.ceil(h / cs)
+
+            aligned_x = int(x + (cs * cell_w - w) / 2)  # center the player across the cells it overlaps
+            aligned_y = int(y - (cs * (cell_h - 1)) + (cs * cell_h - h))  # ground the player in the y-cell
+            self.set_xy((aligned_x, aligned_y))
+        else:
+            self.set_xy((x, y))
+
     def get_player_type(self):
         return self._player_type
 
@@ -933,8 +948,6 @@ class PlayerEntity(Entity):
             self._dir_facing = -1
         elif self.get_x_vel() > 0.1:
             self._dir_facing = 1
-
-        self._update_sprites()
 
     def is_grounded(self):
         return self.is_on_flat_ground() or self.is_on_sloped_ground()
@@ -1151,16 +1164,7 @@ class PlayerEntity(Entity):
 
         return self._player_type.get_player_img(state, frame=gs.get_instance().anim_tick() // anim_rate)
 
-    def get_render_rect(self):
-        if gs.get_instance().debug_render:
-            return self.get_rect()
-        else:
-            rect = self.get_rect(raw=True)
-            rect_x = rect[0] if not self.is_left_walled() and not self.is_right_walled() else int(rect[0])
-            rect_y = rect[1] if not self.is_grounded() else int(rect[1])
-            return [rect_x, rect_y, rect[2], rect[3]]
-
-    def _update_sprites(self):
+    def update_sprites(self):
         body_id = "body"
         cur_img = self._get_current_img()
         if cur_img is not None:
@@ -1171,7 +1175,7 @@ class PlayerEntity(Entity):
 
         body_spr = self._sprites[body_id]
         if body_spr is not None:
-            rect = self.get_render_rect()
+            rect = self.get_rect()
 
             if not self.is_clinging_to_wall():
                 spr_x = rect[0] + rect[2] // 2 - cur_img.width() // 2

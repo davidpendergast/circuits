@@ -50,8 +50,9 @@ class WorldView:
         if not self._free_camera:
             player = self._world.get_player()
             if player is not None:
-                rect = player.get_render_rect()
-                new_cam_center = (rect[0] + rect[2] / 2, rect[1] + rect[3] / 2)
+                rect = player.get_rect()
+                new_cam_center = (rect[0] + rect[2] // 2, rect[1] + rect[3] // 2)
+
                 self.set_camera_center_in_world(new_cam_center)
 
         cam_x, cam_y = self.get_camera_pos_in_world()
