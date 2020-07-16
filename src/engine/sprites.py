@@ -1044,7 +1044,7 @@ class BorderBoxSprite(MultiSprite):
         y_ratio = self._rect[3] / model.height()
 
         return sprite.update(new_model=model, new_x=sprite_x, new_y=self._rect[1], new_scale=1, new_depth=self._depth,
-                             new_ratio=(self._scale, y_ratio))
+                             new_ratio=(self._scale, y_ratio), new_color=self._color)
 
     def _anchor_horz_side_to(self, model, anchor_y_side, sprite, y_pos):
         if model is None and sprite is None:
@@ -1059,7 +1059,7 @@ class BorderBoxSprite(MultiSprite):
         x_ratio = self._rect[2] / model.width()
 
         return sprite.update(new_model=model, new_x=self._rect[0], new_y=sprite_y, new_scale=1, new_depth=self._depth,
-                             new_ratio=(x_ratio, self._scale))
+                             new_ratio=(x_ratio, self._scale), new_color=self._color)
 
     def _build_sprites(self):
         x1 = self._rect[0]

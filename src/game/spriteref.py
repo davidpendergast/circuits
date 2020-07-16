@@ -24,7 +24,7 @@ def _img(x, y, w, h, offs=(0, 0)):
 
 def get_color(color_id):
     if color_id == 0:
-        return colors.WHITE
+        return colors.GREEN
     else:
         return colors.PERFECT_RED
 
