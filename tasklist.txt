@@ -4,18 +4,18 @@ bugs:
  - should snap to vertical slopes too
  
 features:
- - crouching should maybe(?) prevent walk-offs (like minecraft)
-    - nah
  - saving / loading levels
  - edit levels
  - make physics deterministic (or abandon replay idea?)
     - (abandon replay idea? - cmon)
     - lets at least give it a shot
  - joypad support
+ - main menu?
     
 issues:
  - the pastel colors don't really fit with the monochrome ship asthetics
     - could be OK? if the inside of the ship is more colorful
+ - maybe ditch (or modify) the monocrome ship image
     
     
 vertical slice: 

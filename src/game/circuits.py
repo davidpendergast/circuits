@@ -95,7 +95,7 @@ class CircuitsGame(game.Game):
         gs.get_instance().update()
 
     def _create_new_world(self, world_type=0):
-        types = ("moving_plat", "full_level", "floating_blocks")
+        types = ("moving_plat", "full_level", "floating_blocks", "start_and_end")
         type_to_use = types[world_type % len(types)]
         print("INFO: activating test world: {}".format(type_to_use))
 
@@ -105,6 +105,8 @@ class CircuitsGame(game.Game):
             self._world = blueprints.get_test_blueprint_1().create_world()
         elif type_to_use == types[2]:
             self._world = blueprints.get_test_blueprint_2().create_world()
+        elif type_to_use == types[3]:
+            self._world = blueprints.get_test_blueprint_3().create_world()
         else:
             return
 

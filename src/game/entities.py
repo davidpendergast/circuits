@@ -367,12 +367,16 @@ class BlockEntity(AbstractBlockEntity):
     def get_color_id(self):
         return self._color_id
 
-    def update_sprites(self):
-        img = None
+    def get_main_model(self):
         if self._art_id is not None:
             x_size = self.get_w() / gs.get_instance().cell_size
             y_size = self.get_h() / gs.get_instance().cell_size
-            img = spriteref.block_sheet().get_block_sprite((x_size, y_size), self._art_id)
+            return spriteref.block_sheet().get_block_sprite((x_size, y_size), self._art_id)
+        else:
+            return None
+
+    def update_sprites(self):
+        img = self.get_main_model()
 
         if img is not None:
             if self._sprite is None or not isinstance(self._sprite, sprites.ImageSprite):
@@ -514,7 +518,63 @@ class MovingBlockEntity(BlockEntity):
         super().update()
 
 
+class StartBlock(BlockEntity):
+
+    def __init__(self, x, y, w, h, player_type, facing_dir=1, color_id=-1):
+        cs = gs.get_instance().cell_size
+        if w != cs and w != cs * 2:
+            raise ValueError("illegal width for start block: {}".format(w))
+        if h != cs:
+            raise ValueError("illegal height for start block: {}".format(h))
+
+        self._player_type = player_type
+        self._facing_dir = 1 if facing_dir >= 0 else -1
+
+        if color_id < 0:
+            color_id = player_type.get_color_id()
+
+        BlockEntity.__init__(self, x, y, w, h, color_id=color_id)
+
+    def get_player_type(self):
+        return self._player_type
+
+    def get_facing_dir(self):
+        return self._facing_dir
+
+    def get_main_model(self):
+        cs = gs.get_instance().cell_size
+        size = (self.get_w() // cs, self.get_h() // cs)
+        return spriteref.block_sheet().get_start_block_sprite(size, self.get_player_type().get_id())
+
+
+class EndBlock(BlockEntity):
+
+    def __init__(self, x, y, w, h, player_type, color_id=-1):
+        # TODO unique geometry
+        cs = gs.get_instance().cell_size
+        if w != cs * 2:
+            raise ValueError("illegal width for start block: {}".format(w))
+        if h != cs:
+            raise ValueError("illegal height for start block: {}".format(h))
+
+        self._player_type = player_type
+
+        if color_id < 0:
+            color_id = spriteref.get_color(player_type.get_color_id())
+
+        BlockEntity.__init__(self, x, y, cs, cs, color_id=color_id)
+
+    def get_player_type(self):
+        return self._player_type
+
+    def get_main_model(self):
+        cs = gs.get_instance().cell_size
+        size = (self.get_w() // cs, self.get_h() // cs)
+        return spriteref.block_sheet().get_end_block_sprite(size, self.get_player_type().get_id())
+
+
 class SlopeOrientation:
+
     def __init__(self, pts):
         self.pts = pts
 
@@ -610,12 +670,13 @@ DEFAULT_GRAVITY = -0.15 / 16
 
 class PlayerType:
 
-    def __init__(self, name, id_num, size=(0.75, 1.75),
+    def __init__(self, name, color_id, id_num, size=(0.75, 1.75),
                  move_speed=7.5,
                  jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
                  can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
                  anim_rate_overrides=None, should_ever_xflip=True):
         self._name = name
+        self._color_id = color_id
         self._id = id_num
         self._size = size
 
@@ -649,6 +710,9 @@ class PlayerType:
 
     def get_id(self):
         return self._id
+
+    def get_color_id(self):
+        return self._color_id
 
     def get_name(self):
         return self._name
@@ -721,13 +785,13 @@ class PlayerType:
 
 class PlayerTypes:
 
-    FAST = PlayerType("A", const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
+    FAST = PlayerType("A", 1, const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
                       move_speed=7.5, jump_height=3.2)
-    SMALL = PlayerType("B", const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
+    SMALL = PlayerType("B", 2, const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
                        move_speed=5.5, jump_height=2.1)
-    HEAVY = PlayerType("C", const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
+    HEAVY = PlayerType("C", 3, const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
                        move_speed=4, jump_height=3.2)
-    FLYING = PlayerType("D", const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True, can_crouch=True,
+    FLYING = PlayerType("D", 4, const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True, can_crouch=True,
                         move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2,
                         should_ever_xflip=False,
                         anim_rate_overrides={

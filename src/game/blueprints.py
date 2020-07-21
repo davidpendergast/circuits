@@ -32,6 +32,9 @@ COLOR_ID = "color_id"   # int
 LOOP = "loop"           # bool
 DURATION = "duration"   # int
 
+X_DIR = "x_dir"         # int: -1, 0, or 1
+Y_DIR = "y_dir"         # int: -1, 0, or 1
+
 
 _ALL_SPEC_TYPES = {}
 
@@ -200,6 +203,29 @@ class SlopedQuadBlockSpecType(SpecType):
                                             color_id=json_blob[COLOR_ID])
 
 
+class StartBlockSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "start_block", required_keys=(SUBTYPE_ID, X, Y, W, H, X_DIR),
+                          optional_keys={COLOR_ID: -1})
+
+    def get_subtypes(self):
+        return const.ALL_PLAYER_IDS
+
+    def build_entities(self, json_blob):
+        subtype = json_blob[SUBTYPE_ID]
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        facing_dir = json_blob[X_DIR]
+        color_id = json_blob[COLOR_ID]
+
+        player_type = entities.PlayerTypes.get_type(subtype)
+        yield entities.StartBlock(x, y, w, h, player_type,
+                                  facing_dir=facing_dir, color_id=color_id)
+
+
 class MovingBlockSpecType(SpecType):
 
     def __init__(self):
@@ -246,6 +272,7 @@ class SpecTypes:
     MOVING_BLOCK = MovingBlockSpecType()
     SLOPE_BLOCK_QUAD = SlopedQuadBlockSpecType()
     PLAYER = PlayerSpecType()
+    START_BLOCK = StartBlockSpecType()
 
     @staticmethod
     def get(type_id) -> SpecType:
@@ -376,6 +403,21 @@ def get_test_blueprint_2() -> LevelBlueprint:
         x = 64 + i * 48
         y = 160
         json_blob[ENTITIES].append({TYPE_ID: quad_type.get_id(), SUBTYPE_ID: subtype, X: x, Y: y})
+
+    return LevelBlueprint(json_blob)
+
+
+def get_test_blueprint_3() -> LevelBlueprint:
+    json_blob = {
+        ENTITIES: [
+            {TYPE_ID: "player", X: 3 * 16, Y: 2 * 16, SUBTYPE_ID: const.PLAYER_FAST},
+            {TYPE_ID: "block", X: 0, Y: 112, W: 128, H: 16},
+            {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 16},
+            {TYPE_ID: "block", X: 2 * 16, Y: 14.5 * 16, W: 25 * 16, H: 0.5 * 16},
+            {TYPE_ID: "start_block", SUBTYPE_ID: const.PLAYER_FAST, X: 4 * 16, Y: 11 * 16, W: 16, H: 16, X_DIR: 1},
+            {TYPE_ID: "start_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 14 * 16, Y: 10 * 16, W: 16 * 2, H: 16, X_DIR: 1}
+        ]
+    }
 
     return LevelBlueprint(json_blob)
 

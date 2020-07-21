@@ -18,4 +18,6 @@ PLAYER_SMALL = "player_small"
 PLAYER_HEAVY = "player_heavy"
 PLAYER_FLYING = "player_flying"
 
+ALL_PLAYER_IDS = [PLAYER_FAST, PLAYER_SMALL, PLAYER_HEAVY, PLAYER_FLYING]
+
 

@@ -22,9 +22,17 @@ def _img(x, y, w, h, offs=(0, 0)):
     return sprites.ImageModel(x, y, w, h, offset=offs)
 
 
-def get_color(color_id):
+def get_color(color_id, dark=False):
     if color_id == 0:
-        return colors.GREEN
+        return colors.WHITE if not dark else colors.DARK_GRAY
+    elif color_id == 1:
+        return colors.BLUE if not dark else colors.DARK_BLUE
+    elif color_id == 2:
+        return colors.TAN if not dark else colors.DARK_TAN
+    elif color_id == 3:
+        return colors.GREEN if not dark else colors.DARK_GREEN
+    elif color_id == 4:
+        return colors.PURPLE if not dark else colors.DARK_PURPLE
     else:
         return colors.PERFECT_RED
 
@@ -150,6 +158,9 @@ class _BlockSheet(spritesheets.SpriteSheet):
         self.blocks = {}        # (w, h) -> list of imgs
         self.quad_blocks = []
 
+        self.start_blocks = {}  # (w, h, player_id) -> img
+        self.end_blocks = {}    # (w, h, player_id) -> img
+
     def get_block_sprite(self, size, art_id):
         if art_id == 0:
             # should use the empty sprite
@@ -166,6 +177,20 @@ class _BlockSheet(spritesheets.SpriteSheet):
         else:
             return None
 
+    def get_start_block_sprite(self, size, player_id):
+        key = (size[0], size[1], player_id)
+        if key in self.start_blocks:
+            return self.start_blocks[key]
+        else:
+            return None
+
+    def get_end_block_sprite(self, size, player_id):
+        key = (size[0], size[1], player_id)
+        if key in self.end_blocks:
+            return self.end_blocks[key]
+        else:
+            return None
+
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
         self.plain_1x1 = _img(0, 0, 16, 16, offs=start_pos)
@@ -174,15 +199,15 @@ class _BlockSheet(spritesheets.SpriteSheet):
         self.border_sprites = [
             _img(0, 0, inset, inset, offs=start_pos),               # top left
             _img(inset, 0, 16 - inset * 2, inset, offs=start_pos),  # top
-            _img(16 - inset, 0, inset, inset, offs=start_pos),  # top right
+            _img(16 - inset, 0, inset, inset, offs=start_pos),      # top right
 
             _img(0, inset, inset, 16 - inset * 2, offs=start_pos),               # left
             _img(inset, inset, 16 - inset * 2, 16 - inset * 2, offs=start_pos),  # center
-            _img(16 - inset, inset, inset, 16 - inset * 2, offs=start_pos),  # right
+            _img(16 - inset, inset, inset, 16 - inset * 2, offs=start_pos),      # right
 
             _img(0, 16 - inset, inset, inset, offs=start_pos),               # bottom left
             _img(inset, 16 - inset, 16 - inset * 2, inset, offs=start_pos),  # bottom
-            _img(16 - inset, 16 - inset, inset, inset, offs=start_pos),  # bottom right
+            _img(16 - inset, 16 - inset, inset, inset, offs=start_pos),      # bottom right
         ]
 
         def _make_blocks(size, x, y, n=1, offs=(0, 0)):
@@ -200,7 +225,13 @@ class _BlockSheet(spritesheets.SpriteSheet):
 
         self.quad_blocks = _make_blocks((2, 2), 0, 160, n=3, offs=start_pos)
 
-        # print("INFO: created blocks={}".format(self.blocks))
+        player_ids = const.ALL_PLAYER_IDS
+        for start_block, player_id in zip(_make_blocks((1, 1), 0, 432, n=4, offs=start_pos), player_ids):
+            self.start_blocks[(1, 1, player_id)] = start_block
+        for start_block, player_id in zip(_make_blocks((2, 1), 0, 448, n=4, offs=start_pos), player_ids):
+            self.start_blocks[(2, 1, player_id)] = start_block
+        for end_block, player_id in zip(_make_blocks((2, 1), 0, 416, n=4, offs=start_pos), player_ids):
+            self.end_blocks[(2, 1, player_id)] = end_block
 
 
 # global sheet instances
