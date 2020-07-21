@@ -560,9 +560,9 @@ class EndBlock(BlockEntity):
         self._player_type = player_type
 
         if color_id < 0:
-            color_id = spriteref.get_color(player_type.get_color_id())
+            color_id = player_type.get_color_id()
 
-        BlockEntity.__init__(self, x, y, cs, cs, color_id=color_id)
+        BlockEntity.__init__(self, x, y, w, h, color_id=color_id)
 
     def get_player_type(self):
         return self._player_type

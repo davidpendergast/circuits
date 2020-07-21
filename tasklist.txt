@@ -2,6 +2,7 @@
 bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
  - should snap to vertical slopes too
+ - glitchy animation when you run into a wall to the right
  
 features:
  - saving / loading levels

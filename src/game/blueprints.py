@@ -222,8 +222,28 @@ class StartBlockSpecType(SpecType):
         color_id = json_blob[COLOR_ID]
 
         player_type = entities.PlayerTypes.get_type(subtype)
-        yield entities.StartBlock(x, y, w, h, player_type,
-                                  facing_dir=facing_dir, color_id=color_id)
+        yield entities.StartBlock(x, y, w, h, player_type, facing_dir=facing_dir, color_id=color_id)
+
+
+class EndBlockSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "end_block", required_keys=(SUBTYPE_ID, X, Y, W, H),
+                          optional_keys={COLOR_ID: -1})
+
+    def get_subtypes(self):
+        return const.ALL_PLAYER_IDS
+
+    def build_entities(self, json_blob):
+        subtype = json_blob[SUBTYPE_ID]
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        color_id = json_blob[COLOR_ID]
+
+        player_type = entities.PlayerTypes.get_type(subtype)
+        yield entities.EndBlock(x, y, w, h, player_type, color_id=color_id)
 
 
 class MovingBlockSpecType(SpecType):
@@ -273,6 +293,7 @@ class SpecTypes:
     SLOPE_BLOCK_QUAD = SlopedQuadBlockSpecType()
     PLAYER = PlayerSpecType()
     START_BLOCK = StartBlockSpecType()
+    END_BLOCK = EndBlockSpecType()
 
     @staticmethod
     def get(type_id) -> SpecType:
@@ -411,11 +432,20 @@ def get_test_blueprint_3() -> LevelBlueprint:
     json_blob = {
         ENTITIES: [
             {TYPE_ID: "player", X: 3 * 16, Y: 2 * 16, SUBTYPE_ID: const.PLAYER_FAST},
-            {TYPE_ID: "block", X: 0, Y: 112, W: 128, H: 16},
-            {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 16},
-            {TYPE_ID: "block", X: 2 * 16, Y: 14.5 * 16, W: 25 * 16, H: 0.5 * 16},
+            {TYPE_ID: "block", X: 3 * 16, Y: 7 * 16, W: 4 * 16, H: 16},
+            {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 8 * 16},
+            {TYPE_ID: "block", X: 10 * 16, Y: 8 * 16, W: 2 * 16, H: 16},
+            {TYPE_ID: "block", X: 4 * 16, Y: 14 * 16, W: 18 * 16, H: 16},
+            {TYPE_ID: "block", X: 12 * 16, Y: 12 * 16, W: 2 * 16, H: 2 * 16},
+            {TYPE_ID: "block", X: 4 * 16, Y: 12 * 16, W: 1 * 16, H: 2 * 16},
             {TYPE_ID: "start_block", SUBTYPE_ID: const.PLAYER_FAST, X: 4 * 16, Y: 11 * 16, W: 16, H: 16, X_DIR: 1},
-            {TYPE_ID: "start_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 14 * 16, Y: 10 * 16, W: 16 * 2, H: 16, X_DIR: 1}
+            {TYPE_ID: "start_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 14 * 16, Y: 10 * 16, W: 16 * 2, H: 16, X_DIR: 1},
+            {TYPE_ID: "block", X: 14 * 16, Y: 11 * 16, W: 2 * 16, H: 3 * 16},
+            {TYPE_ID: "end_block", SUBTYPE_ID: const.PLAYER_FAST, X: 22 * 16, Y: 12 * 16, W: 16 * 2, H: 16},
+            {TYPE_ID: "block", X: 22 * 16, Y: 13 * 16, W: 2 * 16, H: 2 * 16},
+            {TYPE_ID: "block", X: 18 * 16, Y: 6 * 16, W: 2 * 16, H: 8 * 16},
+            {TYPE_ID: "end_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 16, Y: 7 * 16, W: 16 * 2, H: 16},
+            {TYPE_ID: "block", X: 0, Y: 8 * 16, W: 4 * 16, H: 7 * 16}
         ]
     }
 
