@@ -1,0 +1,52 @@
+
+### Sound Credits: ###
+
+boat_docking.wav
+http://soundbible.com/650-Boat-Docking.html
+License: Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/)
+Recorded by Mike Koenig 
+
+drilling.wav
+http://soundbible.com/1108-Drilling.html
+License: Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/)
+Recorded by Mike Koenig 
+
+blast.wav
+http://soundbible.com/538-Blast.html
+License: Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/)
+Recorded by Mike Koenig 
+
+velcro_rip.wav
+http://soundbible.com/408-Velcro-Rip.html
+License: Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/)
+Recorded by Mike Koenig 
+
+scary_ambiance.wav
+http://soundbible.com/1756-Scary-Ambiance.html
+License: Attribution 3.0
+Recorded by Mike Koenig 
+
+crazy_brain.wav
+http://soundbible.com/1713-Crazy-Brain.html
+License: Attribution 3.0
+Recorded by Mike Koenig 
+
+boat_sound.wav
+http://soundbible.com/890-Boat.html
+License: Public Domain
+Recorded by nps.gov 
+
+text_message_alert_1.wav, text_message_alert_2.wav, text_message_alert_3.wav
+http://soundbible.com/2156-Text-Message-Alert-3.html
+License: Attribution 3.0
+Recorded by Daniel Simion 
+
+tractor_digging.wav
+http://soundbible.com/2134-Tractor-Digging.html
+License: Attribution 3.0
+Recorded by Daniel Simon 
+
+cave_in.wav
+http://soundbible.com/905-Cave-In-Sound.html
+License: Sampling Plus 1.0 (https://creativecommons.org/licenses/sampling+/1.0/)
+Recorded by Juskiddink

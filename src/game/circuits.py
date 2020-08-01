@@ -9,14 +9,15 @@ import src.engine.layers as layers
 import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
 import src.engine.readme_writer as readme_writer
+import src.engine.scenes as scenes
 import src.utils.util as util
 
-import src.game.worlds as worlds
 import src.game.worldview as worldview
 import src.game.globalstate as gs
 import src.game.const as const
 import src.game.blueprints as blueprints
 import src.game.debug as debug
+import src.game.menus as menus
 
 import src.game.spriteref as spriteref
 
@@ -27,10 +28,7 @@ class CircuitsGame(game.Game):
 
     def __init__(self):
         game.Game.__init__(self)
-        self._world = None
-        self._world_view = None
-
-        self._cur_test_world = 0  # for debug
+        self.scene_manager = None
 
     def initialize(self):
         if configs.is_dev:
@@ -48,7 +46,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
 
-        self._create_new_world(world_type=self._cur_test_world)
+        self.scene_manager = scenes.SceneManager(menus.DebugGameScene())
 
     def get_sheets(self):
         return spriteref.initialize_sheets()
@@ -63,57 +61,11 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20, sort_sprites=True, use_color=True)
 
     def update(self):
-        if inputs.get_instance().mouse_was_pressed() and inputs.get_instance().mouse_in_window():  # debug
-            screen_pos = inputs.get_instance().mouse_pos()
-            pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
-
-            cell_size = gs.get_instance().cell_size
-            print("INFO: mouse pressed at ({}, {})".format(int(pos_in_world[0]) // cell_size,
-                                                           int(pos_in_world[1]) // cell_size))
-
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
-            self._create_new_world(world_type=self._cur_test_world)
-
-        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.NEXT_LEVEL_DEBUG)):
-            self._cur_test_world += 1
-            self._create_new_world(world_type=self._cur_test_world)
-
-        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
-            debug.toggle_debug_sprite_mode()
-
-        if inputs.get_instance().mouse_is_dragging(button=1):
-            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
-            if drag_this_frame is not None:
-                dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
-                dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
-                self._world_view.move_camera_in_world(dxy)
-                self._world_view.set_free_camera(True)
-
-        self._world.update()
-        self._world_view.update()
-
+        self.scene_manager.update()
         gs.get_instance().update()
 
-    def _create_new_world(self, world_type=0):
-        types = ("moving_plat", "full_level", "floating_blocks", "start_and_end")
-        type_to_use = types[world_type % len(types)]
-        print("INFO: activating test world: {}".format(type_to_use))
-
-        if type_to_use == types[0]:
-            self._world = blueprints.get_test_blueprint_0().create_world()
-        elif type_to_use == types[1]:
-            self._world = blueprints.get_test_blueprint_1().create_world()
-        elif type_to_use == types[2]:
-            self._world = blueprints.get_test_blueprint_2().create_world()
-        elif type_to_use == types[3]:
-            self._world = blueprints.get_test_blueprint_3().create_world()
-        else:
-            return
-
-        self._world_view = worldview.WorldView(self._world)
-
     def all_sprites(self):
-        for spr in self._world_view.all_sprites():
+        for spr in self.scene_manager.all_sprites():
             yield spr
 
 
