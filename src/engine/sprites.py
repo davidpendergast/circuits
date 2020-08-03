@@ -72,6 +72,9 @@ class TriangleSprite(_Sprite):
         self._color = color
         self._depth = depth
 
+    def all_sprites_nullable(self):
+        yield self
+
     def points(self):
         return (self.p1(), self.p2(), self.p3())
 
@@ -155,6 +158,9 @@ class ImageSprite(_Sprite):
         self._rotation = rotation
         self._color = color
         self._ratio = ratio
+
+    def all_sprites_nullable(self):
+        yield self
             
     def update(self, new_model=None, new_x=None, new_y=None, new_scale=None, new_depth=None,
                new_xflip=None, new_color=None, new_rotation=None, new_ratio=None):
@@ -784,7 +790,7 @@ class TextSprite(MultiSprite):
     def get_rect(self):
         return self._bounding_rect
 
-    def get_size(self):
+    def size(self):
         return self._bounding_rect[2], self._bounding_rect[3]
 
     def _build_character_sprites(self):

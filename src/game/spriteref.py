@@ -1,6 +1,7 @@
 import typing
 import src.engine.spritesheets as spritesheets
 import src.engine.sprites as sprites
+import src.utils.util as util
 
 import src.game.const as const
 import src.game.colors as colors
@@ -104,6 +105,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             const.PLAYER_FLYING: self.player_d
         }
 
+        self.title_img = None
+
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
         if player_id not in self._player_id_to_sprite_lookup:
             raise ValueError("unrecognized player id: {}".format(player_id))
@@ -145,6 +148,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_d[PlayerStates.WALKING] = [_img(0 + i * 16, 128, 16, 32, offs=start_pos) for i in range(0, 8)]
         self.player_d[PlayerStates.CROUCH_IDLE] = [_img(0 + i * 16, 176, 16, 16, offs=start_pos) for i in range(0, 2)]
         self.player_d[PlayerStates.AIRBORNE] = [_img(32 + i * 16, 160, 16, 32, offs=start_pos) for i in range(0, 6)]
+
+        self.title_img = _img(0, 224, 80, 40, offs=start_pos)
 
 
 class _BlockSheet(spritesheets.SpriteSheet):
@@ -234,9 +239,22 @@ class _BlockSheet(spritesheets.SpriteSheet):
             self.end_blocks[(2, 1, player_id)] = end_block
 
 
+class CutsceneTypes:
+    ALL_TYPES = []
+
+    SUN = util.add_to_list("assets/cutscenes/sun.png", ALL_TYPES)
+    BARREN = util.add_to_list("assets/cutscenes/barren.png", ALL_TYPES)
+    SHIP = util.add_to_list("assets/cutscenes/ship.png", ALL_TYPES)
+    SPLIT = util.add_to_list("assets/cutscenes/split.png", ALL_TYPES)
+    SUN_CLOSEUP = util.add_to_list("assets/cutscenes/sun_closeup.png", ALL_TYPES)
+    TRANSPORT = util.add_to_list("assets/cutscenes/transport.png", ALL_TYPES)
+
+
 # global sheet instances
 _OBJECTS = None
 _BLOCKS = None
+
+_CUTSCENES = {}  # sheet_id -> Sheet
 
 
 def object_sheet() -> _ObjectSheet:
@@ -247,9 +265,24 @@ def block_sheet() -> _BlockSheet:
     return _BLOCKS
 
 
+def cutscene_image(sheet_type) -> sprites.ImageModel:
+    if sheet_type in _CUTSCENES and _CUTSCENES[sheet_type] is not None:
+        return _CUTSCENES[sheet_type].get_img()
+
+
 def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
-    global _OBJECTS, _BLOCKS
+    global _OBJECTS, _BLOCKS, _CUTSCENES
     _OBJECTS = _ObjectSheet()
     _BLOCKS = _BlockSheet()
 
-    return [_OBJECTS, _BLOCKS]
+    all_sheets = [_OBJECTS, _BLOCKS]
+
+    for sheet_id in CutsceneTypes.ALL_TYPES:
+        cutscene_sheet = spritesheets.SingleImageSheet(sheet_id)
+        _CUTSCENES[sheet_id] = cutscene_sheet
+
+        all_sheets.append(cutscene_sheet)
+
+    return all_sheets
+
+

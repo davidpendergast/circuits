@@ -1,3 +1,4 @@
+import configs
 
 
 class Scene:
@@ -5,7 +6,7 @@ class Scene:
     def __init__(self):
         self._manager = None  # SceneManager, gets set by SceneManager when the scene is active
 
-    def get_manager(self):
+    def get_manager(self) -> 'SceneManager':
         return self._manager
 
     def all_sprites(self):
@@ -20,12 +21,16 @@ class Scene:
     def about_to_become_inactive(self):
         pass
 
+    def get_clear_color(self):
+        return configs.clear_color
+
 
 class SceneManager:
 
     def __init__(self, cur_scene):
         if cur_scene is None:
             raise ValueError("current scene can't be None")
+        cur_scene._manager = self
         self._active_scene = cur_scene
 
         self._next_scene = None
@@ -35,8 +40,11 @@ class SceneManager:
         self._next_scene = scene
         self._next_scene_delay = delay
 
-    def get_active_scene(self):
+    def get_active_scene(self) -> Scene:
         return self._active_scene
+
+    def get_clear_color(self):
+        return self.get_active_scene().get_clear_color()
 
     def all_sprites(self):
         for spr in self.get_active_scene().all_sprites():
@@ -57,3 +65,4 @@ class SceneManager:
                 self._next_scene_delay -= 1
 
         self._active_scene.update()
+

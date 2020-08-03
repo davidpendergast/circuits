@@ -6,6 +6,11 @@ MOVE_RIGHT = "move_right"
 JUMP = "jump"
 CROUCH = "crouch"
 
+MENU_UP = "menu_up"
+MENU_DOWN = "menu_down"
+MENU_ACCEPT = "menu_accept"
+MENU_CANCEL = "menu_cancel"
+
 RESET = "reset"
 
 NEXT_LEVEL_DEBUG = "next"

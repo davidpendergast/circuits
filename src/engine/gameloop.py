@@ -200,7 +200,7 @@ class _GameLoop:
                 if spr is not None:
                     renderengine.get_instance().update(spr)
 
-            renderengine.get_instance().set_clear_color(configs.clear_color)
+            renderengine.get_instance().set_clear_color(self._game.get_clear_color())
             renderengine.get_instance().render_layers()
 
             pygame.display.flip()

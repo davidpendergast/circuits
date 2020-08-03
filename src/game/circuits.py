@@ -12,11 +12,8 @@ import src.engine.readme_writer as readme_writer
 import src.engine.scenes as scenes
 import src.utils.util as util
 
-import src.game.worldview as worldview
 import src.game.globalstate as gs
 import src.game.const as const
-import src.game.blueprints as blueprints
-import src.game.debug as debug
 import src.game.menus as menus
 
 import src.game.spriteref as spriteref
@@ -39,6 +36,11 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])
         keybinds.get_instance().set_binding(const.CROUCH, [pygame.K_DOWN, pygame.K_s])
 
+        keybinds.get_instance().set_binding(const.MENU_UP, [pygame.K_UP, pygame.K_w])
+        keybinds.get_instance().set_binding(const.MENU_DOWN, [pygame.K_DOWN, pygame.K_s])
+        keybinds.get_instance().set_binding(const.MENU_ACCEPT, [pygame.K_RETURN])
+        keybinds.get_instance().set_binding(const.MENU_CANCEL, [pygame.K_ESCAPE])
+
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
 
         # debug commands
@@ -46,7 +48,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
 
-        self.scene_manager = scenes.SceneManager(menus.DebugGameScene())
+        self.scene_manager = scenes.SceneManager(menus.MainMenuScene("Harvest the Sun"))
 
     def get_sheets(self):
         return spriteref.initialize_sheets()
@@ -63,6 +65,9 @@ class CircuitsGame(game.Game):
     def update(self):
         self.scene_manager.update()
         gs.get_instance().update()
+
+    def get_clear_color(self):
+        return self.scene_manager.get_clear_color()
 
     def all_sprites(self):
         for spr in self.scene_manager.all_sprites():

@@ -1,3 +1,4 @@
+import configs
 
 
 class Game:
@@ -21,3 +22,6 @@ class Game:
 
     def all_sprites(self):
         raise NotImplementedError()
+
+    def get_clear_color(self):
+        return configs.clear_color

@@ -74,11 +74,6 @@ def create_instance():
         raise ValueError("There is already a RenderEngine initialized.")
 
 
-def get_instance():
-    """after init is called, returns the RenderEngine singleton."""
-    return _SINGLETON
-
-
 def _get_best_render_engine(glsl_version):
     major_vers = 1
     minor_vers = 0
@@ -175,7 +170,7 @@ class RenderEngine:
 
     def set_clear_color(self, color):
         """
-            params: tuple of ints (r, g, b) each between 0 and 1.0
+            params: tuple of floats (r, g, b) each between 0 and 1.0
         """
         r, g, b = color
         glClearColor(r, g, b, 0.0)
@@ -338,6 +333,11 @@ class RenderEngine:
         for layer in self.layers.values():
             res += layer.get_num_sprites()
         return res
+
+
+def get_instance() -> RenderEngine:
+    """after init is called, returns the RenderEngine singleton."""
+    return _SINGLETON
 
 
 def translation_matrix(x, y, scale=1):

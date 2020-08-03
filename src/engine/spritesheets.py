@@ -106,6 +106,24 @@ class WhiteSquare(SpriteSheet):
         self.white_box = sprites.ImageModel(0, 0, w, h, offset=start_pos)
 
 
+class SingleImageSheet(SpriteSheet):
+
+    def __init__(self, filepath):
+        SpriteSheet.__init__(self, filepath, filepath)
+        self._img = None
+
+    def get_size(self, img_size):
+        return img_size
+
+    def get_img(self):
+        return self._img
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+
+        self._img = sprites.ImageModel(0, 0, sheet.get_width(), sheet.get_height(), offset=start_pos)
+
+
 _SINGLETON = None
 
 

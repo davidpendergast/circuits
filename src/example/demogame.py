@@ -253,7 +253,7 @@ class DemoGame(game.Game):
         if self.title_text_sprite is None:
             self.title_text_sprite = sprites.TextSprite(DemoGame.UI_FG_LAYER, 0, text_inset, title_text)
 
-        title_text_width = self.title_text_sprite.get_size()[0]
+        title_text_width = self.title_text_sprite.size()[0]
         title_text_x = renderengine.get_instance().get_game_size()[0] - title_text_width - text_inset
         self.title_text_sprite = self.title_text_sprite.update(new_x=title_text_x)
 
