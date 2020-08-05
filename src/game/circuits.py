@@ -48,7 +48,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
 
-        self.scene_manager = scenes.SceneManager(menus.MainMenuScene("Harvest the Sun"))
+        self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
 
     def get_sheets(self):
         return spriteref.initialize_sheets()

@@ -248,6 +248,7 @@ class CutsceneTypes:
     SPLIT = util.add_to_list("assets/cutscenes/split.png", ALL_TYPES)
     SUN_CLOSEUP = util.add_to_list("assets/cutscenes/sun_closeup.png", ALL_TYPES)
     TRANSPORT = util.add_to_list("assets/cutscenes/transport.png", ALL_TYPES)
+    DIG = util.add_to_list("assets/cutscenes/dig.png", ALL_TYPES)
 
 
 # global sheet instances

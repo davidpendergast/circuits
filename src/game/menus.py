@@ -18,13 +18,13 @@ import src.game.colors as colors
 
 class MainMenuScene(scenes.Scene):
 
-    def __init__(self, title):
+    def __init__(self):
         scenes.Scene.__init__(self)
-        self._title = title
         self._title_element = SpriteElement()
 
         self._options_list = OptionsList()
         self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(DebugGameScene()))
+        self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
         self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(DebugGameScene()))
         self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(DebugGameScene()))
         self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(DebugGameScene()))
@@ -55,6 +55,117 @@ class MainMenuScene(scenes.Scene):
             yield spr
         for spr in self._options_list.all_sprites_from_self_and_kids():
             yield spr
+
+
+class CutsceneScene(scenes.Scene):
+
+    def __init__(self):
+        scenes.Scene.__init__(self)
+        self._text_sprite = None
+        self._text_bg_sprite = None
+
+        self._bg_sprite = None
+
+        self.tick_count = 0
+
+    def update(self):
+        self.update_sprites()
+        self.handle_inputs()
+        self.tick_count += 1
+
+    def get_text(self) -> sprites.TextBuilder:
+        raise NotImplementedError()
+
+    def get_bg_image(self) -> sprites.ImageModel:
+        raise NotImplementedError()
+
+    def get_next_scene(self) -> scenes.Scene:
+        raise NotImplementedError()
+
+    def get_bg_image_scale(self) -> int:
+        return 1
+
+    def handle_inputs(self):
+        if self.tick_count > 5 and inputs.get_instance().was_anything_pressed():
+            self.get_manager().set_next_scene(self.get_next_scene())
+
+    def update_sprites(self):
+        bg_img = self.get_bg_image()
+        if bg_img is None:
+            self._bg_sprite = None
+        else:
+            if self._bg_sprite is None:
+                self._bg_sprite = sprites.ImageSprite(bg_img, 0, 0, spriteref.UI_BG_LAYER)
+
+            game_size = renderengine.get_instance().get_game_size()
+            bg_x = game_size[0] // 2 - self._bg_sprite.width() // 2
+            bg_y = 0
+            bg_scale = self.get_bg_image_scale()
+
+            self._bg_sprite = self._bg_sprite.update(new_model=bg_img, new_x=bg_x, new_y=bg_y, new_scale=bg_scale)
+
+        cur_text = self.get_text()
+        if cur_text is None:
+            self._text_sprite = None
+            self._text_bg_sprite = None
+        else:
+            if self._text_sprite is None:
+                self._text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, cur_text)
+            if self._text_bg_sprite is None:
+                self._text_bg_sprite = sprites.ImageSprite(spriteref.UI_BG_LAYER, 0, 0, spriteref.UI_BG_LAYER)
+
+            # TODO text
+
+    def all_sprites(self):
+        yield self._bg_sprite
+        yield self._text_bg_sprite
+        if self._text_sprite is not None:
+            for spr in self._text_sprite:
+                yield spr
+
+
+class IntroCutsceneScene(CutsceneScene):
+
+    _PAGES = [
+        (spriteref.CutsceneTypes.SUN, "The sun."),
+        (spriteref.CutsceneTypes.SUN_CLOSEUP, "Close up."),
+        (spriteref.CutsceneTypes.SHIP, "Ship."),
+        (spriteref.CutsceneTypes.DIG, "Resources."),
+        (spriteref.CutsceneTypes.BARREN, "Exhausted"),
+        (spriteref.CutsceneTypes.TRANSPORT, "Transport"),
+        (spriteref.CutsceneTypes.SPLIT, "Done")
+    ]
+
+    def __init__(self, page=0, next_scene_provider=None):
+        CutsceneScene.__init__(self)
+        if page < 0 or page >= len(IntroCutsceneScene._PAGES):
+            raise ValueError("page out of bounds: {}".format(page))
+        self.page = page
+        self.next_scene_provider = next_scene_provider
+
+    def get_text(self) -> sprites.TextBuilder:
+        text = IntroCutsceneScene._PAGES[self.page][1]
+        if text is None:
+            return None
+        else:
+            res = sprites.TextBuilder()
+            res.add(text, color=colors.WHITE)
+
+    def get_bg_image(self) -> sprites.ImageModel:
+        img_type = IntroCutsceneScene._PAGES[self.page][0]
+        if img_type is not None:
+            return spriteref.cutscene_image(img_type)
+        else:
+            return None
+
+    def get_next_scene(self) -> scenes.Scene:
+        if self.page < len(IntroCutsceneScene._PAGES) - 1:
+            return IntroCutsceneScene(self.page + 1, next_scene_provider=self.next_scene_provider)
+        elif self.next_scene_provider is not None:
+            return self.next_scene_provider()
+        else:
+            return MainMenuScene()
+
 
 
 _ELEMENT_UID_COUNT = 0
