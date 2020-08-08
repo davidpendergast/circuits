@@ -859,10 +859,15 @@ def neighbors(x, y, and_diags=False, dist=1):
     yield (x - dist, y)
     yield (x, y - dist)
     if and_diags:
-        yield (x + dist, y + dist)
-        yield (x - dist, y + dist)
-        yield (x + dist, y - dist)
-        yield (x - dist, y - dist)
+        for n in diag_neighbors(x, y, dist=dist):
+            yield n
+
+
+def diag_neighbors(x, y, dist=1):
+    yield (x + dist, y + dist)
+    yield (x - dist, y + dist)
+    yield (x + dist, y - dist)
+    yield (x - dist, y - dist)
 
 
 def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False):
