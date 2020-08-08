@@ -167,7 +167,6 @@ class IntroCutsceneScene(CutsceneScene):
             return MainMenuScene()
 
 
-
 _ELEMENT_UID_COUNT = 0
 
 
