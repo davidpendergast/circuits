@@ -1,0 +1,26 @@
+{
+"name": "Baby Steps",
+"ref_id": "test_1", 
+"author": "Ghast",
+"data_stride": 2,
+"data":[
+    ". 1 . . . . . . ",
+    ". | . . . . . . ",
+    ". 2 4 ~ ~ 5 6 . ",
+    ". | . . . 7 8 . ",
+    ". 3 . . . | . . ",
+    ". . . . . | . . ",
+    ". . . * ~ 9 . . ",
+    ". . . 10. . . . "
+],
+"lvl_1": "test_lvl_0",
+"lvl_2": "test_lvl_0",
+"lvl_3": "test_lvl_0",
+"lvl_4": "test_lvl_0",
+"lvl_5": "test_lvl_0",
+"lvl_6": "test_lvl_0",
+"lvl_7": "test_lvl_0",
+"lvl_8": "test_lvl_0",
+"lvl_9": "test_lvl_0",
+"lvl_10": "test_lvl_0"
+}

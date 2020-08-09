@@ -6,6 +6,7 @@ import re
 import pathlib
 import sys
 import heapq
+import typing
 
 
 def bound(val, lower, upper):
@@ -715,7 +716,7 @@ def resource_path(relative_path):
 
 
 def load_json_from_path(filepath):
-    with open(filepath) as f:
+    with open(filepath, "r") as f:
         data = json.load(f)
         return data
 

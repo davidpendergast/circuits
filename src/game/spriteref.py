@@ -239,6 +239,56 @@ class _BlockSheet(spritesheets.SpriteSheet):
             self.end_blocks[(2, 1, player_id)] = end_block
 
 
+class _OverworldSheet(spritesheets.SpriteSheet):
+
+    def __init__(self):
+        spritesheets.SpriteSheet.__init__(self, "overworld", "assets/overworld.png")
+
+        # [0, 1, 2,
+        #  3, 4, 5,
+        #  6, 7, 8]
+        self.level_icon_empty_pieces = []
+        self.level_icon_full_pieces = []
+        self.level_icon_empty_gray_pieces = []
+        self.level_icon_full_gray_pieces = []
+
+        self.connectors = {}  # (north: bool, east: bool, south: bool, west: bool) -> ImageModel
+
+    def _make_pieces(self, rect, start_pos=(0, 0)):
+        corner_size = 9
+        inner_size = 5
+        res = []
+        y = 0
+        for yi in range(0, 3):
+            x = 0
+            y_size = corner_size if yi != 1 else inner_size
+            for xi in range(0, 3):
+                x_size = corner_size if xi != 1 else inner_size
+                res.append(_img(rect[0] + x, rect[1] + y, x_size, y_size, offs=start_pos))
+                x += x_size
+            y += y_size
+        return res
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+
+        self.level_icon_empty_pieces = self._make_pieces([0, 0, 24, 24], start_pos=start_pos)
+        self.level_icon_full_pieces = self._make_pieces([24, 0, 24, 24], start_pos=start_pos)
+        self.level_icon_empty_gray_pieces = self._make_pieces([0, 24, 24, 24], start_pos=start_pos)
+        self.level_icon_full_gray_pieces = self._make_pieces([24, 24, 24, 24], start_pos=start_pos)
+
+        self.connectors[(True, False, True, False)] = _img(48, 0, 24, 24, offs=start_pos)
+        self.connectors[(False, True, False, True)] = _img(72, 0, 24, 24, offs=start_pos)
+        self.connectors[(True, False, False, True)] = _img(96, 0, 24, 24, offs=start_pos)
+        self.connectors[(True, True, False, False)] = _img(120, 0, 24, 24, offs=start_pos)
+        self.connectors[(False, True, True, False)] = _img(144, 0, 24, 24, offs=start_pos)
+        self.connectors[(False, False, True, True)] = _img(168, 0, 24, 24, offs=start_pos)
+
+
+
+
+
+
 class CutsceneTypes:
     ALL_TYPES = []
 
@@ -254,6 +304,7 @@ class CutsceneTypes:
 # global sheet instances
 _OBJECTS = None
 _BLOCKS = None
+_OVERWORLD = None
 
 _CUTSCENES = {}  # sheet_id -> Sheet
 
@@ -266,15 +317,20 @@ def block_sheet() -> _BlockSheet:
     return _BLOCKS
 
 
+def overworld_sheet() -> _OverworldSheet:
+    return _OVERWORLD
+
+
 def cutscene_image(sheet_type) -> sprites.ImageModel:
     if sheet_type in _CUTSCENES and _CUTSCENES[sheet_type] is not None:
         return _CUTSCENES[sheet_type].get_img()
 
 
 def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
-    global _OBJECTS, _BLOCKS, _CUTSCENES
+    global _OBJECTS, _BLOCKS, _OVERWORLD, _CUTSCENES
     _OBJECTS = _ObjectSheet()
     _BLOCKS = _BlockSheet()
+    _OVERWORLD = _OverworldSheet()
 
     all_sheets = [_OBJECTS, _BLOCKS]
 
