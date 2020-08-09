@@ -37,6 +37,9 @@ class OverworldGrid:
             OverworldGrid.OverworldNode.__init__(self)
             self.n = n
 
+        def __repr__(self):
+            return str(self.n)
+
     class ConnectionNode(OverworldNode):
         VERT = "|"
         HORZ = "~"
@@ -57,6 +60,9 @@ class OverworldGrid:
             OverworldGrid.OverworldNode.__init__(self)
             self.con_type = con_type
 
+        def __repr__(self):
+            return self.con_type
+
         def allows_connection(self, n=False, e=False, w=False, s=False):
             if self.con_type == OverworldGrid.ConnectionNode.FREE:
                 return True
@@ -68,28 +74,26 @@ class OverworldGrid:
                 raise ValueError("unhandled connection type: {}".format(self.con_type))
 
     def __init__(self, w, h):
-        self.grid = []
-        for _ in range(0, h):
-            self.grid.append([None] * w)
+        self.grid = util.Grid(w, h)
 
     def size(self):
-        return (len(self.grid[0]), len(self.grid))
+        return self.grid.size()
 
     def is_valid(self, xy):
         w, h = self.size()
         return 0 <= xy[0] < w and 0 <= xy[1] < h
 
     def get_node(self, xy):
-        if self.is_valid(xy):
-            return self.grid[xy[0]][xy[1]]
+        if self.grid.is_valid(xy):
+            return self.grid.get(xy)
         else:
             return None
 
     def set_node(self, xy, val):
-        if not self.is_valid(xy):
-            raise ValueError("grid cell is out of bounds for size={}: {}".format(self.size(), xy))
-        else:
-            self.grid[xy[1]][xy[0]] = val
+        self.grid.set(xy, val, expand_if_needed=True)
+
+    def __repr__(self):
+        return self.grid.to_string()
 
 
 class OverworldBlueprint:
@@ -133,7 +137,8 @@ class OverworldBlueprint:
             for x in range(0, grid_w):
                 for y in range(0, grid_h):
                     node = parsed_grid[y][x]
-                    grid.set_node((x, y), node)
+                    if node is not None:
+                        grid.set_node((x, y), node)
                     if node is not None and isinstance(node, OverworldGrid.LevelNode):
                         levels[node.n] = util.read_string(json_blob, "lvl_{}".format(node.n), default=None)
 
@@ -149,6 +154,15 @@ class OverworldBlueprint:
         self.author = author
         self.grid = grid
         self.levels = level_lookup
+
+    def __repr__(self):
+        return "\n".join([
+            "OverworldBlueprint: {}".format(self.ref_id),
+            "  name={}".format(self.name),
+            "  author={}".format(self.author),
+            "  grid=\n{}".format(self.grid),
+            "  levels={}".format(self.levels)
+        ])
 
 
 class OverworldState:

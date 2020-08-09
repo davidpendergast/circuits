@@ -912,6 +912,92 @@ def python_version_string():
     return "{}.{}.{}".format(major, minor, patch)
 
 
+class Grid:
+
+    def __init__(self, width, height, missing_val=None):
+        self._size = (width, height)
+        self._missing_val = missing_val
+
+        self.grid = []  # stored as [x_idx][y_idx]
+        for _ in range(0, width):
+            self.grid.append([missing_val] * height)
+
+    def resize(self, width, height):
+        new_grid = []
+        for _ in range(0, width):
+            new_grid.append([self._missing_val] * height)
+
+        for x in range(0, self._size[0]):
+            for y in range(0, self._size[1]):
+                if x < width and y < height:
+                    # TODO break
+                    new_grid[x][y] = self.grid[x][y]
+
+        self._size = (width, height)
+        self.grid = new_grid
+        return self
+
+    def size(self):
+        return self._size
+
+    def width(self):
+        return self.size()[0]
+
+    def height(self):
+        return self.size()[1]
+
+    def is_valid(self, xy):
+        return 0 <= xy[0] < self.width() and 0 <= xy[1] < self.height()
+
+    def get(self, xy):
+        if self.is_valid(xy):
+            return self.grid[xy[0]][xy[1]]
+        else:
+            raise ValueError("index out of range for grid size {}: {}".format(self.size(), xy))
+
+    def set(self, xy, val, expand_if_needed=False):
+        if self.is_valid(xy):
+            self.grid[xy[0]][xy[1]] = val
+        elif expand_if_needed and xy[0] >= 0 and xy[1] >= 0:
+            new_w = max(self.width(), xy[0] + 1)
+            new_h = max(self.height(), xy[1] + 1)
+            self.resize(new_w, new_h)
+            self.set(xy, val, expand_if_needed=False)  # shouldn't need to expand again
+        else:
+            raise ValueError("index out of range for grid size {}: {}".format(self.size(), xy))
+
+    def indices(self):
+        for y in range(0, self.height()):
+            for x in range(0, self.width()):
+                yield (x, y)
+
+    def values(self, ignore_missing=True):
+        for xy in self.indices():
+            val = self.get(xy)
+            if not ignore_missing or val != self._missing_val:
+                yield val
+
+    def to_string(self, to_str=str, delim=", ", spacer=" ", newline_char="\n"):
+        all_values = []
+        max_len = 0
+        for v in self.values(ignore_missing=False):
+            as_str = to_str(v) + delim
+            max_len = max(max_len, len(as_str))
+            all_values.append(as_str)
+
+        formatted = []
+        for i in range(0, len(all_values)):
+            val = all_values[i]
+            if i % self.width() < self.width() - 1:
+                if len(val) < max_len:
+                    val = val + (spacer * (max_len - len(val)))
+            elif (i // self.width()) % self.height() < self.height() - 1:
+                val = val + newline_char
+            formatted.append(val)
+
+        return "".join(formatted)
+
+
 def string_checksum(the_string, m=982451653):
     res = 0
     for c in the_string:
