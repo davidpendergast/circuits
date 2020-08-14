@@ -43,10 +43,12 @@ class CircuitsGame(game.Game):
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
 
+
         # debug commands
         keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
+        keybinds.get_instance().set_binding(const.SAVE_LEVEL_DEBUG, [pygame.K_F2])
 
         self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
 

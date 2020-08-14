@@ -13,7 +13,7 @@ import src.engine.inputs as inputs
 
 class World:
 
-    def __init__(self):
+    def __init__(self, bp=None):
         self.entities = set()    # set of entities in world
         self._to_add = set()     # set of new entities to add next frame
         self._to_remove = set()  # set of entities to remove next frame
@@ -23,6 +23,8 @@ class World:
         # spacial hashing
         self._entities_to_cells = {}  # ent -> set of cells (x, y) it's inside
         self._cells_to_entities = {}   # (x, y) - set of entities inside
+
+        self._orig_blueprint = bp
 
     def add_entity(self, ent, next_update=True):
         if ent is None or ent in self.entities:
@@ -118,6 +120,9 @@ class World:
     def handle_debug_commands(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_PLAYER_TYPE)):
             self._do_debug_player_type_toggle()
+
+    def get_blueprint(self):
+        return self._orig_blueprint
 
     def update(self):
         if configs.is_dev:

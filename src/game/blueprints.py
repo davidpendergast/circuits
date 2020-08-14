@@ -308,7 +308,9 @@ class SpecTypes:
             yield _ALL_SPEC_TYPES[type_id]
 
 
-ENTITIES = "entities"  # list of entity data blobs
+ENTITIES = "entities"   # list of entity data blobs
+NAME = "name"           # name of level
+LEVEL_ID = "level_id"      # identifier for level
 
 
 class LevelBlueprint:
@@ -316,8 +318,14 @@ class LevelBlueprint:
     def __init__(self, json_blob):
         self.json_blob = json_blob
 
+    def name(self):
+        return util.read_string(self.json_blob, NAME, "???")
+
+    def level_id(self):
+        return util.read_string(self.json_blob, LEVEL_ID, "???")
+
     def create_world(self) -> worlds.World:
-        world = worlds.World()
+        world = worlds.World(bp=self)
 
         entity_blobs = util.read_safely(self.json_blob, ENTITIES, [])
         for blob in entity_blobs:
@@ -333,9 +341,31 @@ class LevelBlueprint:
         return world
 
 
+def load_level_from_file(filepath) -> LevelBlueprint:
+    try:
+        json_blob = util.load_json_from_path(filepath)
+        return LevelBlueprint(json_blob)
+
+    except Exception:
+        traceback.print_exc()
+        return None
+
+
+def write_level_to_file(level, filepath):
+    try:
+        util.save_json_to_path(level.json_blob, filepath)
+        return True
+
+    except Exception:
+        traceback.print_exc()
+        return False
+
+
 def get_test_blueprint_0() -> LevelBlueprint:
     cs = gs.get_instance().cell_size
     json_blob = {
+        NAME: "Platform of Fate",
+        LEVEL_ID: "_gay",
         ENTITIES: [
             {TYPE_ID: "player", X: cs * 6, Y: cs * 5, SUBTYPE_ID: const.PLAYER_FAST},
 
@@ -362,6 +392,8 @@ def get_test_blueprint_0() -> LevelBlueprint:
 def get_test_blueprint_1() -> LevelBlueprint:
     cs = gs.get_instance().cell_size
     json_blob = {
+        NAME: "Mockup 1",
+        LEVEL_ID: "_mockup_1",
         ENTITIES: [
             {TYPE_ID: "player", X: cs * 12, Y: cs * 11, SUBTYPE_ID: const.PLAYER_FAST},
         ]
@@ -410,6 +442,8 @@ def get_test_blueprint_1() -> LevelBlueprint:
 
 def get_test_blueprint_2() -> LevelBlueprint:
     json_blob = {
+        LEVEL_ID: "_all_quads",
+        NAME: "Quad City",
         ENTITIES: [
             {TYPE_ID: "player", X: 3*16, Y: 2*16, SUBTYPE_ID: const.PLAYER_FAST},
             {TYPE_ID: "block", X: 0, Y: 112, W: 128, H: 16},

@@ -997,6 +997,9 @@ class Grid:
 
         return "".join(formatted)
 
+    def __repr__(self):
+        return self.to_string()
+
 
 def string_checksum(the_string, m=982451653):
     res = 0

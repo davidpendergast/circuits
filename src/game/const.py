@@ -16,6 +16,7 @@ RESET = "reset"
 NEXT_LEVEL_DEBUG = "next"
 TOGGLE_SPRITE_MODE_DEBUG = "toggle_sprite_mode"
 TOGGLE_PLAYER_TYPE = "toggle_player_type"
+SAVE_LEVEL_DEBUG = "save_level_debug"
 
 # player ids
 PLAYER_FAST = "player_fast"

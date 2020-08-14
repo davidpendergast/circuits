@@ -167,14 +167,24 @@ class OverworldBlueprint:
 
 class OverworldState:
 
-    def __init__(self):
-        pass
+    def __init__(self, blueprint: OverworldBlueprint):
+        self.blueprint = blueprint
+        self.level_blueprints = {}  # level_num -> level_blueprint
+
+    def _load_bp(self):
+        for level_num in self.blueprint.levels:
+            level_path = self.blueprint.levels[level_num]
+            loaded_level = blueprints.load_level_from_file(level_path)
+            if loaded_level is not None:
+                self.level_blueprints[level_num] = loaded_level
+                print("INFO: loaded level {}: {} ({})".format(level_num, loaded_level.level_id(), loaded_level.name()))
 
 
 class OverworldScene(scenes.Scene):
 
-    def __init__(self):
-        pass
+    def __init__(self, blueprint):
+        scenes.Scene.__init__(self)
+        self.state = OverworldState(blueprint)
 
 
 if __name__ == "__main__":

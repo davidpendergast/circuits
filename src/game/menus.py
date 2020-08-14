@@ -14,6 +14,7 @@ import src.game.debug as debug
 import src.utils.util as util
 import src.game.spriteref as spriteref
 import src.game.colors as colors
+import src.game.overworld as overworld
 
 
 class MainMenuScene(scenes.Scene):
@@ -25,7 +26,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list = OptionsList()
         self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(DebugGameScene()))
         self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
-        self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(DebugGameScene()))
+        self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene()))
         self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(DebugGameScene()))
         self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(DebugGameScene()))
 
@@ -412,6 +413,14 @@ class DebugGameScene(scenes.Scene):
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.NEXT_LEVEL_DEBUG)):
             self._cur_test_world += 1
             self._create_new_world(world_type=self._cur_test_world)
+
+        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_LEVEL_DEBUG)):
+            if self._world is not None:
+                bp = self._world.get_blueprint()
+                if bp is not None:
+                    filepath = "testing/saved_level.json"
+                    print("INFO: saving level to {}".format(filepath))
+                    blueprints.write_level_to_file(bp, filepath)
 
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
             debug.toggle_debug_sprite_mode()
