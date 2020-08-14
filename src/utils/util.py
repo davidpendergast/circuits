@@ -721,20 +721,69 @@ def load_json_from_path(filepath):
         return data
 
 
-def save_json_to_path(json_blob, filepath):
+def save_json_to_path(json_blob, filepath, make_pretty=True):
     try:
-        json.dumps(json_blob, indent=4, sort_keys=True)
+        json_string = json.dumps(json_blob, indent=4, sort_keys=True)
     except (ValueError, TypeError) as e:
         print("ERROR: tried to save invalid json to file: {}".format(filepath))
         print("ERROR: json_blob: {}".format(json_blob))
         raise e
 
+    if make_pretty:
+        json_string = make_json_pretty(json_string)
+
     directory = os.path.dirname(filepath)
-    if not os.path.exists(directory):
+    if directory != "" and not os.path.exists(directory):
         os.makedirs(directory)
 
     with open(filepath, 'w') as outfile:
-        json.dump(json_blob, outfile, indent=4, sort_keys=True)
+        outfile.write(json_string)
+
+
+_paren_dict = {"(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{", "<": ">", ">": "<"}
+
+
+def opposite_paren(paren_char):
+    if paren_char in _paren_dict:
+        return _paren_dict[paren_char]
+    else:
+        return paren_char
+
+
+def make_json_pretty(json_string, _rm_newlines=True):
+    """removes newlines between elements of innermost lists."""
+
+    def find_close_paren(string, index, open='(', closed=')'):
+        balance = 0
+        for i in range(index, len(string)):
+            if string[i] == open:
+                balance += 1
+            elif string[i] == closed:
+                balance -= 1
+            if balance == 0:
+                return i
+        raise ValueError("Unbalanced parenthesis in " + string)
+
+    m = re.search('[({[]', json_string)
+    if m is None:
+        if _rm_newlines:
+            # json_string has no inner collection, so remove all internal newlines
+            res = re.sub("\s*,\s*", ", ", json_string)
+
+            # remove leading and trailing whitespace
+            res = re.sub("^\s*", "", res)
+            res = re.sub("\s*$", "", res)
+        else:
+            res = json_string
+    else:
+        # TODO treat small lists like non-lists
+        i = m.start(0)
+        j = find_close_paren(json_string, i, json_string[i], opposite_paren(json_string[i]))
+        substring = make_json_pretty(json_string[i + 1:j], True)
+
+        res = json_string[:i + 1] + substring + make_json_pretty(json_string[j:], False)
+
+    return res
 
 
 def read_int(json_blob, key, default):
