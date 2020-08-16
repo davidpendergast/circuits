@@ -2,6 +2,7 @@
 import typing
 import traceback
 import random
+import os
 
 import src.utils.util as util
 
@@ -347,8 +348,26 @@ def load_level_from_file(filepath) -> LevelBlueprint:
         return LevelBlueprint(json_blob)
 
     except Exception:
+        print("ERROR: failed to load level: {}".format(filepath))
         traceback.print_exc()
         return None
+
+
+def load_all_levels_from_dir(path):
+    res = {}  # level_id -> LevelBlueprint
+    try:
+        for file in os.listdir(path):
+            if file.endswith(".json"):
+                filepath = os.path.join(path, file)
+                level = load_level_from_file(filepath)
+                if level is not None:
+                    res[level.level_id()] = level
+                    print("INFO: loaded level \"{}\" from file: {}".format(level.level_id(), filepath))
+    except Exception:
+        print("ERROR: unexpected error while reading levels from: {}".format(path))
+        traceback.print_exc()
+
+    return res
 
 
 def write_level_to_file(level, filepath):

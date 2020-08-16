@@ -1,6 +1,7 @@
 
 import math
 import traceback
+import os
 
 import src.engine.scenes as scenes
 import src.game.blueprints as blueprints
@@ -99,9 +100,9 @@ class OverworldGrid:
 class OverworldBlueprint:
 
     @staticmethod
-    def load_from_file(filepath):
+    def load_from_dir(path):
         try:
-            json_blob = util.load_json_from_path(filepath)
+            json_blob = util.load_json_from_path(os.path.join(path, "_spec.json"))
 
             name = util.read_string(json_blob, "name", "Unnamed World")
             ident = str(json_blob["ref_id"])
@@ -145,8 +146,9 @@ class OverworldBlueprint:
             return OverworldBlueprint(ident, name, author, grid, levels)
 
         except Exception as e:
-            print("ERROR: failed to load overworld \"{}\"".format(filepath))
+            print("ERROR: failed to load overworld \"{}\"".format(path))
             traceback.print_exc()
+
 
     def __init__(self, ref_id, name, author, grid, level_lookup):
         self.name = name
@@ -167,26 +169,35 @@ class OverworldBlueprint:
 
 class OverworldState:
 
-    def __init__(self, blueprint: OverworldBlueprint):
+    def __init__(self, blueprint: OverworldBlueprint, level_blueprints):
+        """level_blueprints level_id -> level_blueprint"""
         self.blueprint = blueprint
-        self.level_blueprints = {}  # level_num -> level_blueprint
-
-    def _load_bp(self):
-        for level_num in self.blueprint.levels:
-            level_path = self.blueprint.levels[level_num]
-            loaded_level = blueprints.load_level_from_file(level_path)
-            if loaded_level is not None:
-                self.level_blueprints[level_num] = loaded_level
-                print("INFO: loaded level {}: {} ({})".format(level_num, loaded_level.level_id(), loaded_level.name()))
+        self.level_blueprints = level_blueprints
 
 
 class OverworldScene(scenes.Scene):
 
-    def __init__(self, blueprint):
+    def __init__(self, path):
         scenes.Scene.__init__(self)
-        self.state = OverworldState(blueprint)
+        blueprint = OverworldBlueprint.load_from_dir(path)
+        levels = blueprints.load_all_levels_from_dir(os.path.join(path, "levels"))
+
+        self.state = OverworldState(blueprint, levels)
+
+    def all_sprites(self):
+        return []
+
+    def update(self):
+        self.handle_inputs()
+        self.update_sprites()
+
+    def handle_inputs(self):
+        pass
+
+    def update_sprites(self):
+        pass
 
 
 if __name__ == "__main__":
-    blueprint = OverworldBlueprint.load_from_file("overworlds/test_overworld.json")
+    blueprint = OverworldBlueprint.load_from_dir("overworlds/test_overworld")
     print(blueprint)

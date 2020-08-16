@@ -26,7 +26,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list = OptionsList()
         self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(DebugGameScene()))
         self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
-        self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene()))
+        self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(DebugGameScene()))
         self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(DebugGameScene()))
 
