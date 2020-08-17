@@ -332,7 +332,7 @@ def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
     _BLOCKS = _BlockSheet()
     _OVERWORLD = _OverworldSheet()
 
-    all_sheets = [_OBJECTS, _BLOCKS]
+    all_sheets = [_OBJECTS, _BLOCKS, _OVERWORLD]
 
     for sheet_id in CutsceneTypes.ALL_TYPES:
         cutscene_sheet = spritesheets.SingleImageSheet(sheet_id)

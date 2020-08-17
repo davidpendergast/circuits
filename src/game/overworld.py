@@ -15,6 +15,7 @@ import src.game.const as const
 import configs as configs
 import src.game.debug as debug
 import src.utils.util as util
+import src.game.ui as ui
 import src.game.spriteref as spriteref
 import src.game.colors as colors
 
@@ -169,10 +170,165 @@ class OverworldBlueprint:
 
 class OverworldState:
 
-    def __init__(self, blueprint: OverworldBlueprint, level_blueprints):
+    def __init__(self, world_blueprint: OverworldBlueprint, level_blueprints):
         """level_blueprints level_id -> level_blueprint"""
-        self.blueprint = blueprint
+        self.world_blueprint = world_blueprint
         self.level_blueprints = level_blueprints
+
+        self.selected_cell = None
+
+        self.completed_levels = {}  # level_id -> completion time (in ticks)
+
+    def get_grid(self) -> OverworldGrid:
+        return self.world_blueprint.grid
+
+    def get_level_blueprint(self, level_id) -> blueprints.LevelBlueprint:
+        if level_id in self.level_blueprints:
+            return self.level_blueprints[level_id]
+        else:
+            return None
+
+    def get_level_id_for_num(self, n) -> str:
+        if n in self.world_blueprint.levels:
+            return self.world_blueprint.levels[n]
+        else:
+            return None
+
+    def is_complete(self, level_id):
+        return level_id in self.completed_levels
+
+    def is_selected(self, level_id):
+        # TODO this assumes that level ids will are unique between different cells
+        if self.selected_cell is None:
+            return False
+        else:
+            node = self.world_blueprint.grid.get(self.selected_cell)
+            if node is not None and isinstance(node, LevelNodeElement):
+                return node.level_id == level_id
+            return False
+
+    def is_unlocked(self, level_id):
+        # TODO
+        return True
+
+    def get_completion_time(self, level_id):
+        if level_id in self.completed_levels:
+            return self.completed_levels[level_id]
+        else:
+            return None
+
+    def set_completed(self, level_id, time):
+        cur_time = self.get_completion_time(level_id)
+        if cur_time is None or cur_time > time:
+            self.completed_levels[level_id] = time
+
+
+class LevelNodeElement(ui.UiElement):
+
+    def __init__(self, level_id, level_num, overworld_state):
+        ui.UiElement.__init__(self)
+        self.level_id = level_id
+        self.level_num = level_num
+        self.state = overworld_state
+
+        self.icon_sprites = [None] * 9
+
+        self.number_sprite = None
+
+    def _get_icon_img_and_color_at(self, idx, selected, completed, unlocked, players_in_level):
+        corners = {
+            0: const.PLAYER_FAST,
+            2: const.PLAYER_SMALL,
+            6: const.PLAYER_HEAVY,
+            8: const.PLAYER_FLYING
+        }
+        if unlocked:
+            full_sprites = spriteref.overworld_sheet().level_icon_full_pieces
+            empty_sprites = spriteref.overworld_sheet().level_icon_empty_pieces
+        else:
+            full_sprites = spriteref.overworld_sheet().level_icon_full_gray_pieces
+            empty_sprites = spriteref.overworld_sheet().level_icon_empty_gray_pieces
+
+        color = colors.PERFECT_RED if selected else colors.PERFECT_WHITE
+
+        if idx in corners:
+            player_type = corners[idx]
+            if player_type in players_in_level:
+                return full_sprites[idx], colors.PERFECT_WHITE
+            else:
+                return empty_sprites[idx], color
+        else:
+            return empty_sprites[idx], color
+
+    def _get_text_color(self, selected, completed, unlocked):
+        if not unlocked:
+            return colors.DARK_GRAY
+        else:
+            return colors.WHITE
+
+    def update(self):
+        completed = self.state.is_complete(self.level_id)
+        selected = self.state.is_selected(self.level_id)
+        unlocked = self.state.is_unlocked(self.level_id)
+        level_bp = self.state.get_level_blueprint(self.level_id)
+        players = level_bp.get_player_types() if level_bp is not None else []
+
+        xy = self.get_xy(absolute=True)
+        i_x = 0
+        i_y = 0
+        for i in range(0, len(self.icon_sprites)):
+            if i % 3 == 0:
+                i_x = 0
+            if self.icon_sprites[i] is None:
+                self.icon_sprites[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, scale=1, depth=5)
+            model, color = self._get_icon_img_and_color_at(i, selected, completed, unlocked, players)
+
+            self.icon_sprites[i] = self.icon_sprites[i].update(new_model=model, new_x=xy[0] + i_x, new_y=xy[1] + i_y,
+                                                            new_color=color)
+            i_x += self.icon_sprites[i].width()
+            if i % 3 == 2:
+                i_y += self.icon_sprites[i].height()
+
+        #if self.number_sprite is None:
+        #    self.number_sprite = sprites.TextSprite(spr)
+
+    def all_sprites(self):
+        for spr in self.icon_sprites:
+            if spr is not None:
+                yield spr
+
+    def get_size(self):
+        return (24, 24)
+
+
+class OverworldGridElement(ui.UiElement):
+
+    def __init__(self, state: OverworldState):
+        ui.UiElement.__init__(self)
+        self.state = state
+        self.level_nodes = {}        # xy -> LevelNodeElement
+        self.connector_sprites = {}  # xy -> ImageSprite
+
+    def update(self):
+        for xy in self.state.get_grid().grid.indices(ignore_missing=True):
+            node = self.state.get_grid().get_node(xy)
+            if isinstance(node, OverworldGrid.LevelNode):
+                if xy not in self.level_nodes:
+                    level_id = self.state.get_level_id_for_num(node.n)
+                    self.level_nodes[xy] = LevelNodeElement(level_id, node.n, self.state)
+                    self.add_child(self.level_nodes[xy])
+                ele = self.level_nodes[xy]
+                ele.set_xy((xy[0] * 24, xy[1] * 24))
+                ele.update()
+            elif isinstance(node, OverworldGrid.ConnectionNode):
+                pass
+
+    def all_sprites(self):
+        return []
+
+    def get_size(self):
+        grid_dims = self.state.get_grid().size()
+        return (24 * grid_dims[0], 24 * grid_dims[1])
 
 
 class OverworldScene(scenes.Scene):
@@ -184,17 +340,21 @@ class OverworldScene(scenes.Scene):
 
         self.state = OverworldState(blueprint, levels)
 
+        self.bg_sprite = None
+
+        self.grid_ui_element = OverworldGridElement(self.state)
+        self.info_panel_element = None
+
     def all_sprites(self):
-        return []
+        for spr in self.grid_ui_element.all_sprites_from_self_and_kids():
+            yield spr
 
     def update(self):
         self.handle_inputs()
-        self.update_sprites()
+
+        self.grid_ui_element.update_self_and_kids()
 
     def handle_inputs(self):
-        pass
-
-    def update_sprites(self):
         pass
 
 

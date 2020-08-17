@@ -1015,10 +1015,12 @@ class Grid:
         else:
             raise ValueError("index out of range for grid size {}: {}".format(self.size(), xy))
 
-    def indices(self):
+    def indices(self, ignore_missing=False):
         for y in range(0, self.height()):
             for x in range(0, self.width()):
-                yield (x, y)
+                xy = (x, y)
+                if not ignore_missing or self.get(xy) != self._missing_val:
+                    yield xy
 
     def values(self, ignore_missing=True):
         for xy in self.indices():

@@ -274,13 +274,17 @@ class PlayerSpecType(SpecType):
     def get_subtypes(self):
         return [const.PLAYER_FAST, const.PLAYER_SMALL, const.PLAYER_HEAVY, const.PLAYER_FLYING]
 
+    @staticmethod
+    def get_player_type(json_blob):
+        player_type_id = json_blob[SUBTYPE_ID]
+        return entities.PlayerTypes.get_type(player_type_id)
+
     def build_entities(self, json_blob):
         x = json_blob[X]
         y = json_blob[Y]
 
         if gs.get_instance().player_type_override is None:
-            player_type_id = json_blob[SUBTYPE_ID]
-            player_type = entities.PlayerTypes.get_type(player_type_id)
+            player_type = PlayerSpecType.get_player_type(json_blob)
         else:
             player_type = gs.get_instance().player_type_override
 
@@ -319,22 +323,50 @@ class LevelBlueprint:
     def __init__(self, json_blob):
         self.json_blob = json_blob
 
+        self._cached_entities = None  # list of (blob, spec)
+
     def name(self):
         return util.read_string(self.json_blob, NAME, "???")
 
     def level_id(self):
         return util.read_string(self.json_blob, LEVEL_ID, "???")
 
+    def _recache_entity_specs(self, force=False):
+        if force or self._cached_entities is None:
+            self._cached_entities = []
+            entity_blobs = util.read_safely(self.json_blob, ENTITIES, [])
+            for blob in entity_blobs:
+                try:
+                    type_id = blob[TYPE_ID]
+                    spec_type = SpecTypes.get(type_id)
+                    spec_type.check_if_valid(blob)
+                    self._cached_entities.append((blob, spec_type))
+                except Exception:
+                    print("ERROR: level \"{}\" failed to build blob: {}".format(self.level_id(), blob))
+                    traceback.print_exc()
+
+    def all_entities(self):
+        """yields (blob, spec)"""
+        self._recache_entity_specs(force=False)
+        for blob_and_spec in self._cached_entities:
+            yield blob_and_spec
+
+    def get_player_types(self):
+        res = []
+        for blob, spec in self.all_entities():
+            if isinstance(spec, PlayerSpecType):
+                player_type = PlayerSpecType.get_player_type(blob)
+                if player_type is not None:
+                    res.append(player_type)
+        return res
+
     def create_world(self) -> worlds.World:
         world = worlds.World(bp=self)
 
-        entity_blobs = util.read_safely(self.json_blob, ENTITIES, [])
-        for blob in entity_blobs:
+        self._recache_entity_specs(force=True)
+        for (blob, spec) in self.all_entities():
             try:
-                type_id = blob[TYPE_ID]
-                spec_type = SpecTypes.get(type_id)
-                spec_type.check_if_valid(blob)
-                spec_type.build(blob, world)
+                spec.build(blob, world)
             except Exception:
                 print("ERROR: failed to build blob: {}".format(blob))
                 traceback.print_exc()
