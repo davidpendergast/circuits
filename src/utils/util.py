@@ -18,6 +18,10 @@ def bound(val, lower, upper):
         return val
 
 
+def signum(val):
+    return (val > 0) - (val < 0)
+
+
 def next_power_of_2(val):
     return 1 if val <= 0 else 2 ** math.ceil(math.log2(val))
 
@@ -81,6 +85,11 @@ def angle_between(v1, v2):
         return 0
     else:
         return v1_dot_v2 / (mag1 * mag2)
+
+
+def cardinal_direction_between(from_xy, to_xy):
+    """example: (0, 0) to (5, -6) would give (1, -1)"""
+    return tuple(signum(v) for v in sub(to_xy, from_xy))
 
 
 def to_degrees(rads):

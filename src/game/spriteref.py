@@ -254,6 +254,13 @@ class _OverworldSheet(spritesheets.SpriteSheet):
 
         self.connectors = {}  # (north: bool, east: bool, south: bool, west: bool) -> ImageModel
 
+    def get_connection_sprite(self, n=False, e=False, s=False, w=False):
+        connections = (n, e, s, w)
+        if connections in self.connectors:
+            return self.connectors[connections]
+        else:
+            return None
+
     def _make_pieces(self, rect, start_pos=(0, 0)):
         corner_size = 9
         inner_size = 5

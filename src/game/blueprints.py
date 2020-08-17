@@ -64,7 +64,11 @@ class SpecType:
                 if key == SUBTYPE_ID:
                     subtype = blob[SUBTYPE_ID]
                     if subtype not in self.get_subtypes():
-                        raise ValueError("unknown subtype: {}".format(subtype))
+                        works_as_list = isinstance(subtype, tuple) and list(subtype) in self.get_subtypes()
+                        works_as_tuple = isinstance(subtype, list) and tuple(subtype) in self.get_subtypes()
+
+                        if not works_as_list and not works_as_tuple:
+                            raise ValueError("unknown subtype: {}".format(subtype))
         return True
 
     def get_id(self):

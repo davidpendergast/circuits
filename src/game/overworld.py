@@ -18,6 +18,7 @@ import src.utils.util as util
 import src.game.ui as ui
 import src.game.spriteref as spriteref
 import src.game.colors as colors
+import src.game.entities as entities
 
 
 class OverworldGrid:
@@ -33,6 +34,12 @@ class OverworldGrid:
         def set_enabled(self, val):
             self._enabled = val
 
+        def is_level(self):
+            return False
+
+        def is_connector(self):
+            return False
+
     class LevelNode(OverworldNode):
 
         def __init__(self, n):
@@ -41,6 +48,9 @@ class OverworldGrid:
 
         def __repr__(self):
             return str(self.n)
+
+        def is_level(self):
+            return True
 
     class ConnectionNode(OverworldNode):
         VERT = "|"
@@ -65,7 +75,12 @@ class OverworldGrid:
         def __repr__(self):
             return self.con_type
 
-        def allows_connection(self, n=False, e=False, w=False, s=False):
+        def allows_connection(self, n=False, e=False, w=False, s=False, direction=None):
+            if direction is not None:
+                n = n or direction[1] < 0
+                e = e or direction[0] > 0
+                w = w or direction[0] < 0
+                s = s or direction[1] > 0
             if self.con_type == OverworldGrid.ConnectionNode.FREE:
                 return True
             elif self.con_type == OverworldGrid.ConnectionNode.VERT:
@@ -74,6 +89,9 @@ class OverworldGrid:
                 return not n and not s
             else:
                 raise ValueError("unhandled connection type: {}".format(self.con_type))
+
+        def is_connector(self):
+            return True
 
     def __init__(self, w, h):
         self.grid = util.Grid(w, h)
@@ -85,14 +103,50 @@ class OverworldGrid:
         w, h = self.size()
         return 0 <= xy[0] < w and 0 <= xy[1] < h
 
-    def get_node(self, xy):
+    def get_node(self, xy) -> 'OverworldGrid.OverworldNode':
         if self.grid.is_valid(xy):
             return self.grid.get(xy)
         else:
             return None
 
+    def is_empty_at(self, xy):
+        return self.get_node(xy) is None
+
     def set_node(self, xy, val):
         self.grid.set(xy, val, expand_if_needed=True)
+
+    def is_connected(self, xy1, xy2):
+        if self.is_empty_at(xy1) or self.is_empty_at(xy2):
+            return False
+        elif util.dist_manhattan(xy1, xy2) != 1:
+            return False
+        else:
+            n1 = self.get_node(xy1)
+            n2 = self.get_node(xy2)
+            dir_between = util.cardinal_direction_between(xy1, xy2)
+            if isinstance(n1, OverworldGrid.ConnectionNode) and not n1.allows_connection(direction=dir_between):
+                return False
+            elif isinstance(n2, OverworldGrid.ConnectionNode) and not n2.allows_connection(direction=util.negate(dir_between)):
+                return False
+            else:
+                return True
+
+    def get_connected_directions(self, xy):
+        """returns (north: bool, east: bool, south: bool, west: bool)"""
+        if self.is_empty_at(xy):
+            return (False, False, False, False)
+        else:
+            n_xy = (xy[0], xy[1] - 1)
+            e_xy = (xy[0] + 1, xy[1])
+            s_xy = (xy[0], xy[1] + 1)
+            w_xy = (xy[0] - 1, xy[1])
+            neighbors = [n_xy, e_xy, s_xy, w_xy]
+            return tuple(self.is_connected(xy, n) for n in neighbors)
+
+    def all_connected_neighbors(self, xy):
+        for n in util.neighbors(xy[0], xy[1]):
+            if self.is_connected(xy, n):
+                yield n
 
     def __repr__(self):
         return self.grid.to_string()
@@ -194,20 +248,26 @@ class OverworldState:
         else:
             return None
 
+    def get_level_id_at(self, xy):
+        if self.get_grid().is_empty_at(xy):
+            return None
+        else:
+            node = self.get_grid().get_node(xy)
+            if isinstance(node, OverworldGrid.LevelNode):
+                return self.get_level_id_for_num(node.n)
+            else:
+                return None
+
     def is_complete(self, level_id):
         return level_id in self.completed_levels
 
-    def is_selected(self, level_id):
-        # TODO this assumes that level ids will are unique between different cells
+    def is_selected_at(self, xy):
         if self.selected_cell is None:
             return False
         else:
-            node = self.world_blueprint.grid.get(self.selected_cell)
-            if node is not None and isinstance(node, LevelNodeElement):
-                return node.level_id == level_id
-            return False
+            return xy == self.selected_cell
 
-    def is_unlocked(self, level_id):
+    def is_unlocked_at(self, xy):
         # TODO
         return True
 
@@ -225,8 +285,9 @@ class OverworldState:
 
 class LevelNodeElement(ui.UiElement):
 
-    def __init__(self, level_id, level_num, overworld_state):
+    def __init__(self, xy, level_id, level_num, overworld_state):
         ui.UiElement.__init__(self)
+        self.grid_xy = xy
         self.level_id = level_id
         self.level_num = level_num
         self.state = overworld_state
@@ -252,7 +313,7 @@ class LevelNodeElement(ui.UiElement):
         color = colors.PERFECT_RED if selected else colors.PERFECT_WHITE
 
         if idx in corners:
-            player_type = corners[idx]
+            player_type = entities.PlayerTypes.get_type(corners[idx])
             if player_type in players_in_level:
                 return full_sprites[idx], colors.PERFECT_WHITE
             else:
@@ -267,10 +328,11 @@ class LevelNodeElement(ui.UiElement):
             return colors.WHITE
 
     def update(self):
-        completed = self.state.is_complete(self.level_id)
-        selected = self.state.is_selected(self.level_id)
-        unlocked = self.state.is_unlocked(self.level_id)
+        selected = self.state.is_selected_at(self.grid_xy)
+        unlocked = self.state.is_unlocked_at(self.grid_xy)
+
         level_bp = self.state.get_level_blueprint(self.level_id)
+        completed = self.state.is_complete(self.level_id)
         players = level_bp.get_player_types() if level_bp is not None else []
 
         xy = self.get_xy(absolute=True)
@@ -284,7 +346,7 @@ class LevelNodeElement(ui.UiElement):
             model, color = self._get_icon_img_and_color_at(i, selected, completed, unlocked, players)
 
             self.icon_sprites[i] = self.icon_sprites[i].update(new_model=model, new_x=xy[0] + i_x, new_y=xy[1] + i_y,
-                                                            new_color=color)
+                                                               new_color=color)
             i_x += self.icon_sprites[i].width()
             if i % 3 == 2:
                 i_y += self.icon_sprites[i].height()
@@ -309,22 +371,35 @@ class OverworldGridElement(ui.UiElement):
         self.level_nodes = {}        # xy -> LevelNodeElement
         self.connector_sprites = {}  # xy -> ImageSprite
 
+        self.locked_color = colors.DARK_GRAY
+        self.unlocked_color = colors.WHITE
+
     def update(self):
         for xy in self.state.get_grid().grid.indices(ignore_missing=True):
             node = self.state.get_grid().get_node(xy)
             if isinstance(node, OverworldGrid.LevelNode):
                 if xy not in self.level_nodes:
                     level_id = self.state.get_level_id_for_num(node.n)
-                    self.level_nodes[xy] = LevelNodeElement(level_id, node.n, self.state)
+                    self.level_nodes[xy] = LevelNodeElement(xy, level_id, node.n, self.state)
                     self.add_child(self.level_nodes[xy])
                 ele = self.level_nodes[xy]
                 ele.set_xy((xy[0] * 24, xy[1] * 24))
                 ele.update()
             elif isinstance(node, OverworldGrid.ConnectionNode):
-                pass
+                if xy not in self.connector_sprites:
+                    self.connector_sprites[xy] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, depth=5)
+                connections = self.state.get_grid().get_connected_directions(xy)
+                spr = spriteref.overworld_sheet().get_connection_sprite(n=connections[0], e=connections[1],
+                                                                        s=connections[2], w=connections[3])
+                color = self.unlocked_color if self.state.is_unlocked_at(xy) else self.locked_color
+                x = self.get_xy(absolute=True)[0] + xy[0] * 24
+                y = self.get_xy(absolute=True)[1] + xy[1] * 24
+                self.connector_sprites[xy] = self.connector_sprites[xy].update(new_model=spr, new_color=color,
+                                                                               new_x=x, new_y=y)
 
     def all_sprites(self):
-        return []
+        for xy in self.connector_sprites:
+            yield self.connector_sprites[xy]
 
     def get_size(self):
         grid_dims = self.state.get_grid().size()
@@ -351,6 +426,10 @@ class OverworldScene(scenes.Scene):
 
     def update(self):
         self.handle_inputs()
+
+        screen_size = renderengine.get_instance().get_game_size()
+        grid_size = self.grid_ui_element.get_size()
+        self.grid_ui_element.set_xy((16, screen_size[1] // 2 - grid_size[1] // 2))
 
         self.grid_ui_element.update_self_and_kids()
 
