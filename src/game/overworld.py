@@ -2,6 +2,8 @@
 import math
 import traceback
 import os
+import random
+import re
 
 import src.engine.scenes as scenes
 import src.game.blueprints as blueprints
@@ -38,6 +40,9 @@ class OverworldGrid:
             return False
 
         def is_connector(self):
+            return False
+
+        def is_endpoint(self):
             return False
 
     class LevelNode(OverworldNode):
@@ -91,6 +96,56 @@ class OverworldGrid:
                 raise ValueError("unhandled connection type: {}".format(self.con_type))
 
         def is_connector(self):
+            return True
+
+    class ExitNode(OverworldNode):
+
+        @staticmethod
+        def get_exit_id_from_text(text) -> int:
+            if bool(re.match("e[0-9]+", text)):
+                return int(text[1:])
+            else:
+                return None
+
+        @staticmethod
+        def is_valid_exit_text(text) -> bool:
+            return OverworldGrid.ExitNode.get_exit_id_from_text(text) is not None
+
+        def __init__(self, exit_id):
+            OverworldGrid.OverworldNode.__init__(self)
+            self._exit_id = exit_id
+
+        def is_exit(self):
+            return True
+
+        def is_endpoint(self):
+            return True
+
+        def get_exit_id(self):
+            return self._exit_id
+
+    class GameStartNode(OverworldNode):
+
+        @staticmethod
+        def is_valid_game_start_node(text) -> bool:
+            return text == "s"
+
+        def is_endpoint(self):
+            return True
+
+        def is_start(self):
+            return True
+
+    class GameEndNode(OverworldNode):
+
+        @staticmethod
+        def is_valid_game_end_text(text) -> bool:
+            return text == "f"
+
+        def is_endpoint(self):
+            return True
+
+        def is_end(self):
             return True
 
     def __init__(self, w, h):
@@ -171,7 +226,7 @@ class OverworldBlueprint:
                 parsed = []
                 for i in range(0, int(math.ceil(len(line) / data_stride))):
                     start = i * data_stride
-                    end = min(len(line) - 1, (i + 1) * data_stride)
+                    end = min(len(line), (i + 1) * data_stride)
                     node_text = line[start:end]
                     node_text = node_text.strip()  # rm whitespace
 
@@ -179,8 +234,15 @@ class OverworldBlueprint:
                         parsed.append(OverworldGrid.LevelNode(int(node_text)))
                     elif OverworldGrid.ConnectionNode.is_valid_con_type(node_text):
                         parsed.append(OverworldGrid.ConnectionNode(node_text))
+                    elif OverworldGrid.ExitNode.is_valid_exit_text(node_text):
+                        parsed.append(OverworldGrid.ExitNode(node_text))
+                    elif OverworldGrid.GameStartNode.is_valid_game_start_node(node_text):
+                        parsed.append(OverworldGrid.GameStartNode())
+                    elif OverworldGrid.GameEndNode.is_valid_game_end_text(node_text):
+                        parsed.append(OverworldGrid.GameEndNode())
                     else:
-                        # empty space, hopefully
+                        if bool(re.match(".*[a-zA-Z0-9]+.*", node_text)):
+                            print("WARN: unrecognized token in overworld spec: {}".format(node_text))
                         parsed.append(None)
                 parsed_grid.append(parsed)
 
@@ -203,7 +265,6 @@ class OverworldBlueprint:
         except Exception as e:
             print("ERROR: failed to load overworld \"{}\"".format(path))
             traceback.print_exc()
-
 
     def __init__(self, ref_id, name, author, grid, level_lookup):
         self.name = name
@@ -296,6 +357,8 @@ class LevelNodeElement(ui.UiElement):
 
         self.number_sprite = None
 
+        self._cached_player_types = None
+
     def _get_icon_img_and_color_at(self, idx, selected, completed, unlocked, players_in_level):
         corners = {
             0: const.PLAYER_FAST,
@@ -327,13 +390,21 @@ class LevelNodeElement(ui.UiElement):
         else:
             return colors.WHITE
 
+    def get_player_types(self):
+        if self._cached_player_types is None:
+            level_bp = self.state.get_level_blueprint(self.level_id)
+            self._cached_player_types = level_bp.get_player_types() if level_bp is not None else []
+
+            # TODO rm, debug
+            self._cached_player_types = random.choices([t for t in entities.PlayerTypes.all_types()], k=3)
+        return self._cached_player_types
+
     def update(self):
         selected = self.state.is_selected_at(self.grid_xy)
         unlocked = self.state.is_unlocked_at(self.grid_xy)
 
-        level_bp = self.state.get_level_blueprint(self.level_id)
         completed = self.state.is_complete(self.level_id)
-        players = level_bp.get_player_types() if level_bp is not None else []
+        players = self.get_player_types()
 
         xy = self.get_xy(absolute=True)
         i_x = 0
@@ -351,13 +422,22 @@ class LevelNodeElement(ui.UiElement):
             if i % 3 == 2:
                 i_y += self.icon_sprites[i].height()
 
-        #if self.number_sprite is None:
-        #    self.number_sprite = sprites.TextSprite(spr)
+        if self.number_sprite is None:
+            self.number_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, str(self.level_num), x_kerning=0)
+
+        size = self.get_size()
+        t_xy = (xy[0] + size[0] // 2 - self.number_sprite.size()[0] // 2,
+                xy[1] + size[1] // 2 - self.number_sprite.size()[1] // 2)
+        t_color = self._get_text_color(selected, completed, unlocked)
+        self.number_sprite = self.number_sprite.update(new_x=t_xy[0], new_y=t_xy[1],
+                                                       new_color=t_color, new_depth=0, new_scale=1)
 
     def all_sprites(self):
         for spr in self.icon_sprites:
             if spr is not None:
                 yield spr
+        for spr in self.number_sprite.all_sprites():
+            yield spr
 
     def get_size(self):
         return (24, 24)
@@ -385,7 +465,7 @@ class OverworldGridElement(ui.UiElement):
                 ele = self.level_nodes[xy]
                 ele.set_xy((xy[0] * 24, xy[1] * 24))
                 ele.update()
-            elif isinstance(node, OverworldGrid.ConnectionNode):
+            elif node.is_connector() or node.is_endpoint():
                 if xy not in self.connector_sprites:
                     self.connector_sprites[xy] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, depth=5)
                 connections = self.state.get_grid().get_connected_directions(xy)

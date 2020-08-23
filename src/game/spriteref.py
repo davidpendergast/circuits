@@ -255,6 +255,7 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.connectors = {}  # (north: bool, east: bool, south: bool, west: bool) -> ImageModel
 
     def get_connection_sprite(self, n=False, e=False, s=False, w=False):
+        # TODO gray sprites?
         connections = (n, e, s, w)
         if connections in self.connectors:
             return self.connectors[connections]
@@ -291,9 +292,14 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.connectors[(False, True, True, False)] = _img(144, 0, 24, 24, offs=start_pos)
         self.connectors[(False, False, True, True)] = _img(168, 0, 24, 24, offs=start_pos)
 
+        # fade-out connectors
+        self.connectors[(True, False, False, False)] = _img(48, 48, 24, 24, offs=start_pos)
+        self.connectors[(False, True, False, False)] = _img(72, 48, 24, 24, offs=start_pos)
+        self.connectors[(False, False, True, False)] = _img(96, 48, 24, 24, offs=start_pos)
+        self.connectors[(False, False, False, True)] = _img(120, 48, 24, 24, offs=start_pos)
 
-
-
+        self.fade_connector = _img(192, 0, 24, 24, offs=start_pos)
+        self.fade_connector_gray = _img(192, 24, 24, 24, offs=start_pos)
 
 
 class CutsceneTypes:
