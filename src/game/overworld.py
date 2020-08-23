@@ -4,6 +4,7 @@ import traceback
 import os
 import random
 import re
+from collections import deque
 
 import src.engine.scenes as scenes
 import src.game.blueprints as blueprints
@@ -27,14 +28,21 @@ class OverworldGrid:
 
     class OverworldNode:
 
-        def __init__(self):
+        def __init__(self, xy):
             self._enabled = True
+            self._xy = xy
+
+        def get_xy(self):
+            return self._xy
 
         def is_enabled(self):
             return self._enabled
 
         def set_enabled(self, val):
             self._enabled = val
+
+        def is_selectable(self):
+            return True
 
         def is_level(self):
             return False
@@ -47,12 +55,15 @@ class OverworldGrid:
 
     class LevelNode(OverworldNode):
 
-        def __init__(self, n):
-            OverworldGrid.OverworldNode.__init__(self)
+        def __init__(self, xy, n):
+            OverworldGrid.OverworldNode.__init__(self, xy)
             self.n = n
 
         def __repr__(self):
             return str(self.n)
+
+        def get_level_num(self):
+            return self.n
 
         def is_level(self):
             return True
@@ -73,12 +84,15 @@ class OverworldGrid:
             else:
                 return False
 
-        def __init__(self, con_type):
-            OverworldGrid.OverworldNode.__init__(self)
+        def __init__(self, xy, con_type):
+            OverworldGrid.OverworldNode.__init__(self, xy)
             self.con_type = con_type
 
         def __repr__(self):
             return self.con_type
+
+        def is_selectable(self):
+            return False
 
         def allows_connection(self, n=False, e=False, w=False, s=False, direction=None):
             if direction is not None:
@@ -111,8 +125,8 @@ class OverworldGrid:
         def is_valid_exit_text(text) -> bool:
             return OverworldGrid.ExitNode.get_exit_id_from_text(text) is not None
 
-        def __init__(self, exit_id):
-            OverworldGrid.OverworldNode.__init__(self)
+        def __init__(self, xy, exit_id):
+            OverworldGrid.OverworldNode.__init__(self, xy)
             self._exit_id = exit_id
 
         def is_exit(self):
@@ -135,6 +149,9 @@ class OverworldGrid:
 
         def is_start(self):
             return True
+
+        def is_selectable(self):
+            return False
 
     class GameEndNode(OverworldNode):
 
@@ -203,6 +220,69 @@ class OverworldGrid:
             if self.is_connected(xy, n):
                 yield n
 
+    def all_nodes(self, cond=lambda n: True):
+        for node in self.grid.values(ignore_missing=True):
+            if cond(node):
+                yield node
+
+    def search_for_node(self, cond) -> 'OverworldGrid.OverworldNode':
+        for n in self.all_nodes(cond):
+            return n
+        return None
+
+    def get_game_start_node_if_present(self):
+        return self.search_for_node(lambda n: n.is_start())
+
+    def get_game_end_node_if_present(self):
+        return self.search_for_node(lambda n: n.is_end())
+
+    def get_all_exit_nodes(self):
+        return [e for e in self.all_nodes(cond=lambda n: e.is_exit())]
+
+    def get_exit_node(self, exit_id):
+        return self.search_for_node(lambda n: n.is_exit() and n.get_exit_id() == exit_id)
+
+    def get_all_level_nodes(self):
+        res = [l for l in self.all_nodes(cond=lambda n: n.is_level())]
+        res.sort(key=lambda l: l.get_level_num())
+        return res
+
+    def get_closest_selectable_connected_node(self, xy, cond=lambda n: True):
+        for n in self.bf_traverse(xy, enabled_only=False):
+            if n.is_selectable() and cond(n):
+                return n
+        return None
+
+    def bf_traverse(self, start_xy, enabled_only=False):
+
+        def _allow(xy):
+            if not self.grid.is_valid(xy):
+                return False
+            else:
+                n = self.get_node(xy)
+                if n is None or enabled_only and not n.is_enabled():
+                    return False
+                else:
+                    return True
+
+        if not _allow(start_xy):
+            pass
+        else:
+            q = deque()
+            q.append(start_xy)
+
+            seen = set()
+            seen.add(start_xy)
+
+            while len(q) > 0:
+                cur_xy = q.pop()
+                yield self.get_node(cur_xy)
+
+                for n in util.neighbors(cur_xy[0], cur_xy[1]):
+                    if _allow(n) and n not in seen:
+                        seen.add(n)
+                        q.append(n)
+
     def __repr__(self):
         return self.grid.to_string()
 
@@ -222,6 +302,7 @@ class OverworldBlueprint:
             raw_grid = json_blob["data"]
 
             parsed_grid = []
+            y = 0
             for line in raw_grid:
                 parsed = []
                 for i in range(0, int(math.ceil(len(line) / data_stride))):
@@ -230,21 +311,24 @@ class OverworldBlueprint:
                     node_text = line[start:end]
                     node_text = node_text.strip()  # rm whitespace
 
+                    xy = (i, y)
+
                     if node_text.isnumeric():
-                        parsed.append(OverworldGrid.LevelNode(int(node_text)))
+                        parsed.append(OverworldGrid.LevelNode(xy, int(node_text)))
                     elif OverworldGrid.ConnectionNode.is_valid_con_type(node_text):
-                        parsed.append(OverworldGrid.ConnectionNode(node_text))
+                        parsed.append(OverworldGrid.ConnectionNode(xy, node_text))
                     elif OverworldGrid.ExitNode.is_valid_exit_text(node_text):
-                        parsed.append(OverworldGrid.ExitNode(node_text))
+                        parsed.append(OverworldGrid.ExitNode(xy, node_text))
                     elif OverworldGrid.GameStartNode.is_valid_game_start_node(node_text):
-                        parsed.append(OverworldGrid.GameStartNode())
+                        parsed.append(OverworldGrid.GameStartNode(xy))
                     elif OverworldGrid.GameEndNode.is_valid_game_end_text(node_text):
-                        parsed.append(OverworldGrid.GameEndNode())
+                        parsed.append(OverworldGrid.GameEndNode(xy))
                     else:
                         if bool(re.match(".*[a-zA-Z0-9]+.*", node_text)):
                             print("WARN: unrecognized token in overworld spec: {}".format(node_text))
                         parsed.append(None)
                 parsed_grid.append(parsed)
+                y += 1
 
             grid_w = len(parsed_grid[0])
             grid_h = len(parsed_grid)
@@ -285,14 +369,17 @@ class OverworldBlueprint:
 
 class OverworldState:
 
-    def __init__(self, world_blueprint: OverworldBlueprint, level_blueprints):
+    def __init__(self, world_blueprint: OverworldBlueprint, level_blueprints, came_from=None):
         """level_blueprints level_id -> level_blueprint"""
         self.world_blueprint = world_blueprint
         self.level_blueprints = level_blueprints
 
-        self.selected_cell = None
-
         self.completed_levels = {}  # level_id -> completion time (in ticks)
+
+        self.update_nodes()
+
+        self.selected_cell = self._find_initial_selection(came_from)
+        print("selected node: {}".format(self.selected_cell))
 
     def get_grid(self) -> OverworldGrid:
         return self.world_blueprint.grid
@@ -342,6 +429,33 @@ class OverworldState:
         cur_time = self.get_completion_time(level_id)
         if cur_time is None or cur_time > time:
             self.completed_levels[level_id] = time
+
+    def update_nodes(self):
+        # TODO set nodes to locked / unlocked
+        pass
+
+    def _find_initial_selection(self, came_from_exit_id):
+        entry_node = None
+        if came_from_exit_id is not None:
+            entry_node = self.get_grid().get_exit_node(came_from_exit_id)
+            if entry_node is None:
+                print("WARN: couldn't find exit node with id: {}".format(came_from_exit_id))
+        if entry_node is None:
+            entry_node = self.get_grid().get_game_start_node_if_present()
+
+        if entry_node is None:
+            level_nodes = self.get_grid().get_all_level_nodes()
+            if len(level_nodes) > 0:
+                return level_nodes[0].get_xy()  # just select the first level
+            else:
+                print("WARN: grid has no levels...?")
+                return None
+        else:
+            res = self.get_grid().get_closest_selectable_connected_node(entry_node.get_xy(),
+                                                                        cond=lambda n: n.is_level())
+            if res is not None:
+                return res.get_xy()
+        return None
 
 
 class LevelNodeElement(ui.UiElement):

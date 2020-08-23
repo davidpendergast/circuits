@@ -1007,6 +1007,12 @@ class Grid:
     def is_valid(self, xy):
         return 0 <= xy[0] < self.width() and 0 <= xy[1] < self.height()
 
+    def is_empty(self, xy):
+        if not self.is_valid(xy):
+            return True
+        else:
+            return self.get(xy) == self._missing_val
+
     def get(self, xy):
         if self.is_valid(xy):
             return self.grid[xy[0]][xy[1]]
