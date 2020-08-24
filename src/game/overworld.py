@@ -687,7 +687,8 @@ class OverworldScene(scenes.Scene):
                 new_node = self.state.get_grid().get_connected_node_in_dir(orig_node.get_xy(), (dx, dy),
                                                                            selectable_only=True, enabled_only=True)
                 if new_node is not None:
-                    # TODO if it's an exit node, do exit sequence
+                    # TODO if it's an exit node, do exit sequence?
+                    # TODO or maybe it would be better to show some info about where it goes?
                     self.state.set_selected_node(new_node)
                 else:
                     # TODO play sound
@@ -697,9 +698,19 @@ class OverworldScene(scenes.Scene):
                 new_node = self.state.find_initial_selection()
                 self.state.set_selected_node(new_node)
 
-        if inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
             n = self.state.get_selected_node()
-        elif inputs.get_instance().was_pressed(const.MENU_CANCEL):
+            if n is not None and n.is_enabled():
+                if isinstance(n, OverworldGrid.LevelNode):
+                    level_id = self.state.get_level_id_for_num(n.get_level_num())
+                    level_bp = self.state.get_level_blueprint(level_id)
+                    if level_bp is not None:
+                        import src.game.menus as menus
+                        self.get_manager().set_next_scene(menus.DebugGameScene(world_type=level_bp))
+                else:
+                    # TODO activating other node types?
+                    pass
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
             import src.game.menus as menus
             self.get_manager().set_next_scene(menus.MainMenuScene())
 
