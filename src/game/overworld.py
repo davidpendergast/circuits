@@ -253,14 +253,41 @@ class OverworldGrid:
                 return n
         return None
 
-    def bf_traverse(self, start_xy, enabled_only=False):
+    def get_connected_node_in_dir(self, xy, direction, selectable_only=True, enabled_only=True) -> 'OverworldGrid.OverworldNode':
+        start_node = self.get_node(xy)
+        if start_node is None:
+            return None
+        else:
+            n, e, s, w = self.get_connected_directions(xy)
+            to_search = []
+            if direction[1] < 0 and n:
+                to_search.append(((xy[0], xy[1] - 1)))
+            elif direction[1] > 0 and s:
+                to_search.append(((xy[0], xy[1] + 1)))
+            if direction[0] < 0 and w:
+                to_search.append(((xy[0] - 1, xy[1])))
+            elif direction[0] > 0 and e:
+                to_search.append(((xy[0] + 1, xy[1])))
+
+            for start_xy in to_search:
+                for candidate in self.bf_traverse(start_xy, ignore=(xy,),
+                                                  enabled_only=enabled_only, selectable_only=False):
+                    if not selectable_only or candidate.is_selectable():
+                        return candidate
+            return None
+
+    def bf_traverse(self, start_xy, ignore=(), enabled_only=False, selectable_only=False):
 
         def _allow(xy):
             if not self.grid.is_valid(xy):
                 return False
             else:
                 n = self.get_node(xy)
-                if n is None or enabled_only and not n.is_enabled():
+                if n is None:
+                    return False
+                elif enabled_only and not n.is_enabled():
+                    return False
+                elif selectable_only and not n.is_selectable():
                     return False
                 else:
                     return True
@@ -272,6 +299,7 @@ class OverworldGrid:
             q.append(start_xy)
 
             seen = set()
+            seen.update(ignore)
             seen.add(start_xy)
 
             while len(q) > 0:
@@ -378,8 +406,7 @@ class OverworldState:
 
         self.update_nodes()
 
-        self.selected_cell = self._find_initial_selection(came_from)
-        print("selected node: {}".format(self.selected_cell))
+        self.selected_cell = self.find_initial_selection(came_from_exit_id=came_from)
 
     def get_grid(self) -> OverworldGrid:
         return self.world_blueprint.grid
@@ -415,6 +442,18 @@ class OverworldState:
         else:
             return xy == self.selected_cell
 
+    def get_selected_node(self) -> OverworldGrid.OverworldNode:
+        if self.selected_cell is not None:
+            return self.get_grid().get_node(self.selected_cell)
+        else:
+            return None
+
+    def set_selected_node(self, node):
+        if node is None:
+            self.selected_cell = None
+        else:
+            self.selected_cell = node.get_xy()
+
     def is_unlocked_at(self, xy):
         # TODO
         return True
@@ -434,7 +473,7 @@ class OverworldState:
         # TODO set nodes to locked / unlocked
         pass
 
-    def _find_initial_selection(self, came_from_exit_id):
+    def find_initial_selection(self, came_from_exit_id=None):
         entry_node = None
         if came_from_exit_id is not None:
             entry_node = self.get_grid().get_exit_node(came_from_exit_id)
@@ -628,7 +667,41 @@ class OverworldScene(scenes.Scene):
         self.grid_ui_element.update_self_and_kids()
 
     def handle_inputs(self):
-        pass
+        dx = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_LEFT)):
+            dx -= 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_RIGHT)):
+            dx += 1
+
+        dy = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_UP)):
+            dy -= 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
+            dy += 1
+
+        # TODO tab and shift-tab to jump to the next or prev level
+
+        if dx != 0 or dy != 0:
+            orig_node = self.state.get_selected_node()
+            if orig_node is not None:
+                new_node = self.state.get_grid().get_connected_node_in_dir(orig_node.get_xy(), (dx, dy),
+                                                                           selectable_only=True, enabled_only=True)
+                if new_node is not None:
+                    # TODO if it's an exit node, do exit sequence
+                    self.state.set_selected_node(new_node)
+                else:
+                    # TODO play sound
+                    pass
+            else:
+                # this shouldn't really happen but ehh..
+                new_node = self.state.find_initial_selection()
+                self.state.set_selected_node(new_node)
+
+        if inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+            n = self.state.get_selected_node()
+        elif inputs.get_instance().was_pressed(const.MENU_CANCEL):
+            import src.game.menus as menus
+            self.get_manager().set_next_scene(menus.MainMenuScene())
 
 
 if __name__ == "__main__":

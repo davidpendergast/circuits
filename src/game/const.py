@@ -8,6 +8,8 @@ CROUCH = "crouch"
 
 MENU_UP = "menu_up"
 MENU_DOWN = "menu_down"
+MENU_RIGHT = "menu_right"
+MENU_LEFT = "menu_left"
 MENU_ACCEPT = "menu_accept"
 MENU_CANCEL = "menu_cancel"
 

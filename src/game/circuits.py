@@ -38,11 +38,12 @@ class CircuitsGame(game.Game):
 
         keybinds.get_instance().set_binding(const.MENU_UP, [pygame.K_UP, pygame.K_w])
         keybinds.get_instance().set_binding(const.MENU_DOWN, [pygame.K_DOWN, pygame.K_s])
+        keybinds.get_instance().set_binding(const.MENU_LEFT, [pygame.K_LEFT, pygame.K_a])
+        keybinds.get_instance().set_binding(const.MENU_RIGHT, [pygame.K_RIGHT, pygame.K_d])
         keybinds.get_instance().set_binding(const.MENU_ACCEPT, [pygame.K_RETURN])
         keybinds.get_instance().set_binding(const.MENU_CANCEL, [pygame.K_ESCAPE])
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
-
 
         # debug commands
         keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
