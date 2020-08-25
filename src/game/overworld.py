@@ -372,18 +372,52 @@ class OverworldBlueprint:
                     if node is not None and isinstance(node, OverworldGrid.LevelNode):
                         levels[node.n] = util.read_string(json_blob, "lvl_{}".format(node.n), default=None)
 
-            return OverworldBlueprint(ident, name, author, grid, levels)
+            bg_triangles = [[] for _ in range(0, 9)]
+            if "bg_triangles" in json_blob:
+                def get_triangles(tri_list):
+                    res = []
+                    for tup in tri_list:
+                        p1 = (int(tup[0][0]), int(tup[0][1]))
+                        p2 = (int(tup[1][0]), int(tup[1][1]))
+                        p3 = (int(tup[2][0]), int(tup[2][1]))
+                        color = tup[3]
+                        if isinstance(color, str):
+                            if color == "light_gray":
+                                color = colors.LIGHT_GRAY
+                            elif color == "dark_gray":
+                                color = colors.DARK_GRAY
+                            else:
+                                print("WARN: Unrecognized color: {}".format(color))
+                                color = colors.WHITE
+                        else:
+                            color = colors.to_float(int(color[0]), int(color[1]), int(color[2]))
+                        res.append((p1, p2, p3, color))
+                    return res
+
+                tri_keys = ["top_left", "top", "top_right", "left", "center", "right", "bottom_left", "bottom", "bottom_right"]
+                try:
+                    for i in range(0, 9):
+                        if tri_keys[i] in json_blob["bg_triangles"]:
+                            bg_triangles[i].extend(get_triangles(json_blob["bg_triangles"][tri_keys[i]]))
+
+                except Exception as e:
+                    print("ERROR: failed to load bg_triangles")
+                    traceback.print_exc()
+
+            return OverworldBlueprint(ident, name, author, grid, levels, bg_triangles)
 
         except Exception as e:
             print("ERROR: failed to load overworld \"{}\"".format(path))
             traceback.print_exc()
+            return None
 
-    def __init__(self, ref_id, name, author, grid, level_lookup):
+    def __init__(self, ref_id, name, author, grid, level_lookup, bg_triangles):
         self.name = name
         self.ref_id = ref_id
         self.author = author
         self.grid = grid
         self.levels = level_lookup
+        self.bg_triangles = bg_triangles
 
     def __repr__(self):
         return "\n".join([
@@ -648,7 +682,7 @@ class OverworldScene(scenes.Scene):
 
         self.state = OverworldState(blueprint, levels)
 
-        self.bg_sprite = None
+        self.bg_triangle_sprites = [[] for _ in range(0, 9)]
 
         self.grid_ui_element = OverworldGridElement(self.state)
         self.info_panel_element = None
@@ -656,15 +690,20 @@ class OverworldScene(scenes.Scene):
     def all_sprites(self):
         for spr in self.grid_ui_element.all_sprites_from_self_and_kids():
             yield spr
+        for l in self.bg_triangle_sprites:
+            for spr in l:
+                yield spr
 
     def update(self):
         self.handle_inputs()
 
         screen_size = renderengine.get_instance().get_game_size()
         grid_size = self.grid_ui_element.get_size()
-        self.grid_ui_element.set_xy((16, screen_size[1] // 2 - grid_size[1] // 2))
+        self.grid_ui_element.set_xy((48, screen_size[1] // 2 - grid_size[1] // 2))
 
         self.grid_ui_element.update_self_and_kids()
+
+        self._update_bg_triangles()
 
     def handle_inputs(self):
         dx = 0
@@ -713,6 +752,30 @@ class OverworldScene(scenes.Scene):
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
             import src.game.menus as menus
             self.get_manager().set_next_scene(menus.MainMenuScene())
+
+    def _update_bg_triangles(self):
+        size = renderengine.get_instance().get_game_size()
+        # TODO shrink to make room for info panel
+
+        anchors = [
+            (0, 0), (size[0] // 2, 0), (size[0], 0), (0, size[1] // 2),
+            (size[0] // 2, size[1] // 2), (size[0], size[1] // 2),
+            (0, size[1]), (size[0] // 2, size[1]), (size[0], size[1])
+        ]
+
+        for i in range(0, 9):
+            bp_tri_list = self.state.world_blueprint.bg_triangles[i]
+            util.extend_or_empty_list_to_length(self.bg_triangle_sprites[i], len(bp_tri_list),
+                                                lambda: sprites.TriangleSprite(spriteref.POLYGON_LAYER))
+            for j in range(0, len(bp_tri_list)):
+                p1 = util.add(anchors[i], bp_tri_list[j][0])
+                p2 = util.add(anchors[i], bp_tri_list[j][1])
+                p3 = util.add(anchors[i], bp_tri_list[j][2])
+                #p1 = (0, 0)
+                #p2 = (100, 0)
+                #p3 = (0, 300)
+                color = bp_tri_list[j][3]
+                self.bg_triangle_sprites[i][j] = self.bg_triangle_sprites[i][j].update(new_p1=p1, new_p2=p2, new_p3=p3, new_color=color, new_depth=j)
 
 
 if __name__ == "__main__":

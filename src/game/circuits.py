@@ -58,7 +58,9 @@ class CircuitsGame(game.Game):
 
     def get_layers(self):
         # TODO layer depth goes opposite to sprite depths???
-        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 0, sort_sprites=True)
+        yield layers.PolygonLayer(spriteref.POLYGON_UI_LAYER, 0, sort_sprites=True)
+        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 3, sort_sprites=True)
+
         yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5, sort_sprites=True, use_color=True)
         yield layers.ImageLayer(spriteref.ENTITY_LAYER, 10, sort_sprites=True, use_color=True)
 
