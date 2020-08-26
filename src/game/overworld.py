@@ -14,6 +14,7 @@ import src.engine.keybinds as keybinds
 import src.engine.sprites as sprites
 import src.game.globalstate as gs
 import src.engine.renderengine as renderengine
+import src.engine.spritesheets as spritesheets
 import src.game.const as const
 import configs as configs
 import src.game.debug as debug
@@ -673,6 +674,63 @@ class OverworldGridElement(ui.UiElement):
         return (24 * grid_dims[0], 24 * grid_dims[1])
 
 
+class LevelPreviewElement(ui.UiElement):
+
+    def __init__(self):
+        ui.UiElement.__init__(self)
+        self._size = (184, 91)
+
+    def set_size(self, size):
+        self._size = size
+
+    def update(self):
+        pass
+
+    def get_size(self):
+        return self._size
+
+
+class OverworldInfoPanelElement(ui.UiElement):
+
+    def __init__(self, state):
+        ui.UiElement.__init__(self)
+        self.state = state
+
+        self.title_text_sprite = None
+        self.description_text_sprite = None
+
+        self.bg_border_sprite = None
+
+        self.level_preview_panel_element = self.add_child(LevelPreviewElement())
+        self.options_element = self.add_child(ui.OptionsList())
+
+    def update(self):
+        rect = self.get_rect(absolute=True)
+
+        border_to_use = spriteref.overworld_sheet().border_double_thin
+        if self.bg_border_sprite is None:
+            self.bg_border_sprite = sprites.BorderBoxSprite(spriteref.UI_BG_LAYER, rect, all_borders=border_to_use)
+        border_thickness = border_to_use[0].size()
+        inner_rect = util.rect_expand(rect, left_expand=-border_thickness[0], right_expand=-border_thickness[0],
+                                      up_expand=-border_thickness[1], down_expand=-border_thickness[1])
+        self.bg_border_sprite.update(new_rect=inner_rect, new_depth=10,
+                                     new_color=colors.WHITE, new_bg_color=colors.PERFECT_BLACK)
+
+    def all_sprites(self):
+        if self.bg_border_sprite is not None:
+            for spr in self.bg_border_sprite.all_sprites():
+                yield spr
+        if self.title_text_sprite is not None:
+            for spr in self.title_text_sprite.all_sprites():
+                yield spr
+        if self.description_text_sprite is not None:
+            for spr in self.description_text_sprite.all_sprites():
+                yield spr
+
+    def get_size(self):
+        return (192, renderengine.get_instance().get_game_size()[1])
+
+
 class OverworldScene(scenes.Scene):
 
     def __init__(self, path):
@@ -685,10 +743,12 @@ class OverworldScene(scenes.Scene):
         self.bg_triangle_sprites = [[] for _ in range(0, 9)]
 
         self.grid_ui_element = OverworldGridElement(self.state)
-        self.info_panel_element = None
+        self.info_panel_element = OverworldInfoPanelElement(self.state)
 
     def all_sprites(self):
         for spr in self.grid_ui_element.all_sprites_from_self_and_kids():
+            yield spr
+        for spr in self.info_panel_element.all_sprites_from_self_and_kids():
             yield spr
         for l in self.bg_triangle_sprites:
             for spr in l:
@@ -702,6 +762,10 @@ class OverworldScene(scenes.Scene):
         self.grid_ui_element.set_xy((48, screen_size[1] // 2 - grid_size[1] // 2))
 
         self.grid_ui_element.update_self_and_kids()
+
+        info_xy = (screen_size[0] - self.info_panel_element.get_size()[0], 0)
+        self.info_panel_element.set_xy(info_xy)
+        self.info_panel_element.update_self_and_kids()
 
         self._update_bg_triangles()
 
@@ -755,7 +819,7 @@ class OverworldScene(scenes.Scene):
 
     def _update_bg_triangles(self):
         size = renderengine.get_instance().get_game_size()
-        # TODO shrink to make room for info panel
+        size = (size[0] - self.info_panel_element.get_size()[0], size[1])
 
         anchors = [
             (0, 0), (size[0] // 2, 0), (size[0], 0), (0, size[1] // 2),
@@ -771,9 +835,7 @@ class OverworldScene(scenes.Scene):
                 p1 = util.add(anchors[i], bp_tri_list[j][0])
                 p2 = util.add(anchors[i], bp_tri_list[j][1])
                 p3 = util.add(anchors[i], bp_tri_list[j][2])
-                #p1 = (0, 0)
-                #p2 = (100, 0)
-                #p3 = (0, 300)
+
                 color = bp_tri_list[j][3]
                 self.bg_triangle_sprites[i][j] = self.bg_triangle_sprites[i][j].update(new_p1=p1, new_p2=p2, new_p3=p3, new_color=color, new_depth=j)
 

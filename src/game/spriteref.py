@@ -255,6 +255,11 @@ class _OverworldSheet(spritesheets.SpriteSheet):
 
         self.connectors = {}  # (north: bool, east: bool, south: bool, west: bool) -> ImageModel
 
+        self.border_thin = []
+        self.border_thick = []
+        self.border_double_thin = []
+        self.border_double_thick = []
+
     def get_connection_sprite(self, n=False, e=False, s=False, w=False):
         # TODO gray sprites?
         connections = (n, e, s, w)
@@ -263,7 +268,7 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         else:
             return None
 
-    def _make_pieces(self, rect, start_pos=(0, 0)):
+    def _make_pieces(self, rect, offs=(0, 0)):
         corner_size = 9
         inner_size = 5
         res = []
@@ -273,18 +278,45 @@ class _OverworldSheet(spritesheets.SpriteSheet):
             y_size = corner_size if yi != 1 else inner_size
             for xi in range(0, 3):
                 x_size = corner_size if xi != 1 else inner_size
-                res.append(_img(rect[0] + x, rect[1] + y, x_size, y_size, offs=start_pos))
+                res.append(_img(rect[0] + x, rect[1] + y, x_size, y_size, offs=offs))
                 x += x_size
             y += y_size
+        return res
+
+    def _make_borders(self, rect, thickness, offs=(0, 0)):
+        res = []
+        for y_idx in range(0, 3):
+            if y_idx == 0:
+                y = 0
+                h = thickness
+            elif y_idx == 1:
+                y = thickness
+                h = rect[3] - thickness * 2
+            else:
+                y = rect[3] - thickness
+                h = thickness
+
+            for x_idx in range(0, 3):
+                if x_idx == 0:
+                    x = 0
+                    w = thickness
+                elif x_idx == 1:
+                    x = thickness
+                    w = rect[2] - thickness * 2
+                else:
+                    x = rect[2] - thickness
+                    w = thickness
+
+                res.append(sprites.ImageModel(rect[0] + x, rect[1] + y, w, h, offset=offs))
         return res
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
 
-        self.level_icon_empty_pieces = self._make_pieces([0, 0, 24, 24], start_pos=start_pos)
-        self.level_icon_full_pieces = self._make_pieces([24, 0, 24, 24], start_pos=start_pos)
-        self.level_icon_empty_gray_pieces = self._make_pieces([0, 24, 24, 24], start_pos=start_pos)
-        self.level_icon_full_gray_pieces = self._make_pieces([24, 24, 24, 24], start_pos=start_pos)
+        self.level_icon_empty_pieces = self._make_pieces([0, 0, 24, 24], offs=start_pos)
+        self.level_icon_full_pieces = self._make_pieces([24, 0, 24, 24], offs=start_pos)
+        self.level_icon_empty_gray_pieces = self._make_pieces([0, 24, 24, 24], offs=start_pos)
+        self.level_icon_full_gray_pieces = self._make_pieces([24, 24, 24, 24], offs=start_pos)
 
         self.connectors[(True, False, True, False)] = _img(48, 0, 24, 24, offs=start_pos)
         self.connectors[(False, True, False, True)] = _img(72, 0, 24, 24, offs=start_pos)
@@ -299,8 +331,12 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.connectors[(False, False, True, False)] = _img(96, 48, 24, 24, offs=start_pos)
         self.connectors[(False, False, False, True)] = _img(120, 48, 24, 24, offs=start_pos)
 
-        self.fade_connector = _img(192, 0, 24, 24, offs=start_pos)
-        self.fade_connector_gray = _img(192, 24, 24, 24, offs=start_pos)
+        # borders
+        self.border_thin = self._make_borders([0, 72, 24, 24], 4, offs=start_pos)
+        self.border_thick = self._make_borders([0, 96, 24, 24], 4, offs=start_pos)
+
+        self.border_double_thin = self._make_borders([24, 72, 24, 24], 5, offs=start_pos)
+        self.border_double_thick = self._make_borders([24, 96, 24, 24], 6, offs=start_pos)
 
 
 class CutsceneTypes:

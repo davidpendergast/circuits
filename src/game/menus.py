@@ -22,9 +22,9 @@ class MainMenuScene(scenes.Scene):
 
     def __init__(self):
         scenes.Scene.__init__(self)
-        self._title_element = SpriteElement()
+        self._title_element = ui.SpriteElement()
 
-        self._options_list = OptionsList()
+        self._options_list = ui.OptionsList()
         self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(DebugGameScene()))
         self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
         self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene("overworlds/test_overworld")))
@@ -167,97 +167,6 @@ class IntroCutsceneScene(CutsceneScene):
             return self.next_scene_provider()
         else:
             return MainMenuScene()
-
-
-class OptionsList(ui.ElementGroup):
-
-    def __init__(self):
-        ui.ElementGroup.__init__(self)
-        self.selected_idx = 0
-        self.options = []  # list of (UiElement: element, str: text, lambda: do_action, lambda: is_enabled)
-        self.y_spacing = 4
-
-    def add_option(self, text, do_action, is_enabled=lambda: True):
-        element = SpriteElement()
-        self.options.append((element, text, do_action, is_enabled))
-        self.add_child(element)
-
-    def update(self):
-
-        # TODO - is this the place we should be doing this?
-        # TODO - it's fine for now I think
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_UP)):
-            self.selected_idx = (self.selected_idx - 1) % len(self.options)
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
-            self.selected_idx = (self.selected_idx + 1) % len(self.options)
-
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
-            if 0 <= self.selected_idx < len(self.options):
-                action = self.options[self.selected_idx][2]
-                try:
-                    action()
-                except Exception as e:
-                    print("ERROR: failed to activate option: {}".format(self.options[1]))
-                    traceback.print_exc()
-
-        y = 0
-        for i in range(0, len(self.options)):
-            element, text, do_action, is_enabled = self.options[i]
-
-            if not is_enabled():
-                element.set_color(colors.DARK_GRAY)
-            elif i == self.selected_idx:
-                element.set_color(colors.PERFECT_RED)
-            else:
-                element.set_color(colors.PERFECT_WHITE)
-
-            text_spr = element.get_sprite()
-            if text_spr is None:
-                text_spr = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, text)
-                element.set_sprite(text_spr)
-
-            element.set_xy((0, y))
-            y += element.get_size()[1] + self.y_spacing
-
-
-class SpriteElement(ui.UiElement):
-
-    def __init__(self, sprite=None):
-        ui.UiElement.__init__(self)
-        self.sprite = None
-        self.color = colors.PERFECT_WHITE
-        self.set_sprite(sprite)
-
-    def set_sprite(self, sprite):
-        if sprite is None:
-            self.sprite = None
-        else:
-            # XXX only supports sprites that can handle `update(new_x=int, new_y=int)`
-            if not isinstance(sprite, sprites.ImageSprite) and not isinstance(sprite, sprites.TextSprite):
-                raise ValueError("unsupported sprite type: {}".format(type(sprite).__name__))
-            self.sprite = sprite
-
-    def get_sprite(self):
-        return self.sprite
-
-    def set_color(self, color):
-        self.color = color if color is not None else colors.PERFECT_WHITE
-
-    def update(self):
-        abs_xy = self.get_xy(absolute=True)
-        if self.sprite is not None:
-            self.sprite = self.sprite.update(new_x=abs_xy[0], new_y=abs_xy[1], new_color=self.color)
-
-    def all_sprites(self):
-        if self.sprite is not None:
-            for spr in self.sprite.all_sprites():
-                yield spr
-
-    def get_size(self):
-        if self.sprite is not None:
-            return self.sprite.size()
-        else:
-            return (0, 0)
 
 
 class DebugGameScene(scenes.Scene):
