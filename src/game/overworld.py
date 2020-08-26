@@ -822,8 +822,8 @@ class OverworldScene(scenes.Scene):
         size = (size[0] - self.info_panel_element.get_size()[0], size[1])
 
         anchors = [
-            (0, 0), (size[0] // 2, 0), (size[0], 0), (0, size[1] // 2),
-            (size[0] // 2, size[1] // 2), (size[0], size[1] // 2),
+            (0, 0), (size[0] // 2, 0), (size[0], 0),
+            (0, size[1] // 2), (size[0] // 2, size[1] // 2), (size[0], size[1] // 2),
             (0, size[1]), (size[0] // 2, size[1]), (size[0], size[1])
         ]
 
@@ -837,7 +837,8 @@ class OverworldScene(scenes.Scene):
                 p3 = util.add(anchors[i], bp_tri_list[j][2])
 
                 color = bp_tri_list[j][3]
-                self.bg_triangle_sprites[i][j] = self.bg_triangle_sprites[i][j].update(new_p1=p1, new_p2=p2, new_p3=p3, new_color=color, new_depth=j)
+                self.bg_triangle_sprites[i][j] = self.bg_triangle_sprites[i][j].update(new_p1=p1, new_p2=p2, new_p3=p3,
+                                                                                       new_color=color, new_depth=j)
 
 
 if __name__ == "__main__":
