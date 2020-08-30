@@ -468,6 +468,10 @@ class OverworldState:
             else:
                 return None
 
+    def get_world_num(self):
+        # TODO put this in the spec file
+        return 1
+
     def is_complete(self, level_id):
         return level_id in self.completed_levels
 
@@ -482,6 +486,17 @@ class OverworldState:
             return self.get_grid().get_node(self.selected_cell)
         else:
             return None
+
+    def get_selected_level(self) -> tuple:
+        """returns: (level_num, level_blueprint)"""
+        selected_node = self.get_selected_node()
+        if selected_node is not None and isinstance(selected_node, OverworldGrid.LevelNode):
+            level_num = selected_node.get_level_num()
+            level_id = self.get_level_id_for_num(level_num)
+            level_bp = self.get_level_blueprint(level_id)
+            return (level_num, level_bp)
+        else:
+            return (None, None)
 
     def set_selected_node(self, node):
         if node is None:
@@ -678,16 +693,32 @@ class LevelPreviewElement(ui.UiElement):
 
     def __init__(self):
         ui.UiElement.__init__(self)
-        self._size = (184, 91)
+        self._size = (188, 92)
+
+        self.bg_border_sprite = None
 
     def set_size(self, size):
         self._size = size
 
     def update(self):
-        pass
+        rect = self.get_rect(absolute=True)
+
+        border_to_use = spriteref.overworld_sheet().border_thin
+        if self.bg_border_sprite is None:
+            self.bg_border_sprite = sprites.BorderBoxSprite(spriteref.UI_BG_LAYER, rect, all_borders=border_to_use)
+        border_thickness = border_to_use[0].size()
+        inner_rect = util.rect_expand(rect, left_expand=-border_thickness[0], right_expand=-border_thickness[0],
+                                      up_expand=-border_thickness[1], down_expand=-border_thickness[1])
+        self.bg_border_sprite.update(new_rect=inner_rect, new_depth=5,
+                                     new_color=colors.WHITE, new_bg_color=colors.PERFECT_BLACK)
 
     def get_size(self):
         return self._size
+
+    def all_sprites(self):
+        if self.bg_border_sprite is not None:
+            for spr in self.bg_border_sprite.all_sprites():
+                yield spr
 
 
 class OverworldInfoPanelElement(ui.UiElement):
@@ -704,6 +735,14 @@ class OverworldInfoPanelElement(ui.UiElement):
         self.level_preview_panel_element = self.add_child(LevelPreviewElement())
         self.options_element = self.add_child(ui.OptionsList())
 
+    def get_title_text(self):
+        level_num, level_bp = self.state.get_selected_level()
+        if level_num is not None and level_bp is not None:
+            world_num = self.state.get_world_num()
+            return "{}-{} {}".format(world_num, level_num, level_bp.name())
+        else:
+            return None
+
     def update(self):
         rect = self.get_rect(absolute=True)
 
@@ -715,6 +754,18 @@ class OverworldInfoPanelElement(ui.UiElement):
                                       up_expand=-border_thickness[1], down_expand=-border_thickness[1])
         self.bg_border_sprite.update(new_rect=inner_rect, new_depth=10,
                                      new_color=colors.WHITE, new_bg_color=colors.PERFECT_BLACK)
+
+        title_text = self.get_title_text()
+        if title_text is None:
+            self.title_text_sprite = None
+        else:
+            if self.title_text_sprite is None:
+                self.title_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, title_text, color=colors.WHITE)
+            xy = (6, 7)
+            self.title_text_sprite.update(new_x=rect[0] + xy[0], new_y=rect[1] + xy[1], new_text=title_text)
+
+        self.level_preview_panel_element.set_xy((2, 24))
+        self.level_preview_panel_element.set_size((rect[2] - 4, 90))
 
     def all_sprites(self):
         if self.bg_border_sprite is not None:
