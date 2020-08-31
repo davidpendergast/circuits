@@ -107,6 +107,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         }
 
         self.title_img = None
+        self.title_img_small = None
 
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
         if player_id not in self._player_id_to_sprite_lookup:
@@ -150,7 +151,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_d[PlayerStates.CROUCH_IDLE] = [_img(0 + i * 16, 176, 16, 16, offs=start_pos) for i in range(0, 2)]
         self.player_d[PlayerStates.AIRBORNE] = [_img(32 + i * 16, 160, 16, 32, offs=start_pos) for i in range(0, 6)]
 
-        self.title_img = _img(0, 224, 80, 40, offs=start_pos)
+        self.title_img = _img(0, 272, 160, 80, offs=start_pos)
+        self.title_img_small = _img(0, 224, 80, 40, offs=start_pos)
 
 
 class _BlockSheet(spritesheets.SpriteSheet):

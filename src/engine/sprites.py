@@ -794,7 +794,7 @@ class TextSprite(MultiSprite):
         return self._bounding_rect[2], self._bounding_rect[3]
 
     def _build_character_sprites(self):
-        a_character = self._font_lookup.get_char("a")
+        a_character = self._font_lookup.get_char("o")
         char_size = a_character.size()
 
         # we're going to reuse these if possible

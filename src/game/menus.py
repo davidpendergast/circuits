@@ -41,7 +41,7 @@ class MainMenuScene(scenes.Scene):
         total_size = renderengine.get_instance().get_game_size()
 
         if self._title_element.get_sprite() is None:
-            text_sprite = sprites.ImageSprite(spriteref.object_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=4)
+            text_sprite = sprites.ImageSprite(spriteref.object_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=2)
             self._title_element.set_sprite(text_sprite)
 
         title_x = total_size[0] // 2 - self._title_element.get_size()[0] // 2

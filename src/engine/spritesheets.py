@@ -44,9 +44,6 @@ class FontCharacterSpriteLookup:
         """returns: an ImageSprite for the character c, or None if one isn't defined."""
         return None
 
-    def get_x_kerning(self, c1, c2):
-        return 1
-
 
 class FontSheet(SpriteSheet, FontCharacterSpriteLookup):
 
@@ -82,13 +79,12 @@ class FontSheet(SpriteSheet, FontCharacterSpriteLookup):
             return None
 
 
-class DefaultFont(FontSheet):
+class DefaultFontMono(FontSheet):
 
-    SHEET_ID = "default_font"
+    SHEET_ID = "default_font_mono"
 
-    def __init__(self):
-        # TODO add non-mono version
-        FontSheet.__init__(self, DefaultFont.SHEET_ID, "assets/font.png")
+    def __init__(self, font_id=None):
+        FontSheet.__init__(self, DefaultFontMono.SHEET_ID if font_id is None else font_id, "assets/font.png")
 
         self.set_swap_chars({
             "→": chr(16),
@@ -97,8 +93,8 @@ class DefaultFont(FontSheet):
             "↓": chr(25)
         })
 
-    def get_x_kerning(self, c1, c2):
-        return 0
+    def xform_char_rect(self, r, sheet):
+        return r
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
@@ -111,7 +107,27 @@ class DefaultFont(FontSheet):
         for y in range(0, 8):
             for x in range(0, 32):
                 c = chr(y * 32 + x)
-                self.set_char(c, sprites.ImageModel(x * char_w, y * char_h, char_w, char_h, offset=start_pos))
+                rect = [x * char_w, y * char_h, char_w, char_h]
+                rect = self.xform_char_rect(rect, sheet)
+                if rect is None or rect[2] == 0:
+                    self.set_char(c, None)
+                else:
+                    self.set_char(c, sprites.ImageModel(rect[0], rect[1], rect[2], rect[3], offset=start_pos))
+
+
+class DefaultFont(DefaultFontMono):
+
+    SHEET_ID = "default_font"
+
+    def __init__(self):
+        DefaultFontMono.__init__(self, DefaultFont.SHEET_ID)
+
+    def xform_char_rect(self, rect, sheet):
+        r = artutils.find_bounding_rect(rect, sheet, keep_vert=True)
+        if r is not None and r[2] > 0:
+            return util.rect_expand(r, right_expand=1)
+        else:
+            return None
 
 
 class DefaultFontSmall(FontSheet):
@@ -120,9 +136,6 @@ class DefaultFontSmall(FontSheet):
 
     def __init__(self):
         FontSheet.__init__(self, DefaultFontSmall.SHEET_ID, "assets/font_small.png")
-
-    def get_x_kerning(self, c1, c2):
-        return 1
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
@@ -141,6 +154,7 @@ class DefaultFontSmall(FontSheet):
                 if true_rect[2] == 0:
                     self.set_char(c, None)
                 else:
+                    true_rect = util.rect_expand(true_rect, right_expand=1)
                     img = sprites.ImageModel(true_rect[0], true_rect[1], true_rect[2], true_rect[3], offset=start_pos)
                     self.set_char(c, img)
 
@@ -207,7 +221,9 @@ class SpriteAtlas:
 
         # some "built-in" sheets
         self.add_sheet(DefaultFont())
+        self.add_sheet(DefaultFontMono())
         self.add_sheet(DefaultFontSmall())
+
         self.add_sheet(WhiteSquare())
 
     def add_sheet(self, sheet):
