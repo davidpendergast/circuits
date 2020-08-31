@@ -317,9 +317,10 @@ class SpecTypes:
             yield _ALL_SPEC_TYPES[type_id]
 
 
-ENTITIES = "entities"   # list of entity data blobs
-NAME = "name"           # name of level
-LEVEL_ID = "level_id"      # identifier for level
+ENTITIES = "entities"           # list of entity data blobs
+NAME = "name"                   # name of level
+LEVEL_ID = "level_id"           # identifier for level
+DESCRIPTION = "description"     # level flavor text
 
 
 class LevelBlueprint:
@@ -334,6 +335,9 @@ class LevelBlueprint:
 
     def level_id(self):
         return util.read_string(self.json_blob, LEVEL_ID, "???")
+
+    def description(self):
+        return util.read_string(self.json_blob, DESCRIPTION, "???")
 
     def _recache_entity_specs(self, force=False):
         if force or self._cached_entities is None:

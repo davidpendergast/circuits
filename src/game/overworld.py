@@ -743,6 +743,13 @@ class OverworldInfoPanelElement(ui.UiElement):
         else:
             return None
 
+    def get_description_text(self):
+        level_num, level_bp = self.state.get_selected_level()
+        if level_bp is not None:
+            return level_bp.description()
+        else:
+            return None
+
     def update(self):
         rect = self.get_rect(absolute=True)
 
@@ -755,17 +762,34 @@ class OverworldInfoPanelElement(ui.UiElement):
         self.bg_border_sprite.update(new_rect=inner_rect, new_depth=10,
                                      new_color=colors.WHITE, new_bg_color=colors.PERFECT_BLACK)
 
+        y_pos = rect[1] + 7
+
         title_text = self.get_title_text()
         if title_text is None:
             self.title_text_sprite = None
         else:
             if self.title_text_sprite is None:
                 self.title_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, title_text, color=colors.WHITE)
-            xy = (6, 7)
+            xy = (6, y_pos)
             self.title_text_sprite.update(new_x=rect[0] + xy[0], new_y=rect[1] + xy[1], new_text=title_text)
+            y_pos += self.title_text_sprite.size()[1]
 
-        self.level_preview_panel_element.set_xy((2, 24))
+        self.level_preview_panel_element.set_xy((2, y_pos))
         self.level_preview_panel_element.set_size((rect[2] - 4, 90))
+        y_pos += self.level_preview_panel_element.get_size()[1]
+
+        desc_text = self.get_description_text()
+        if desc_text is None:
+            self.description_text_sprite = None
+        else:
+            font = spritesheets.get_instance().get_sheet(spritesheets.DefaultFontSmall.SHEET_ID)
+            if self.description_text_sprite is None:
+                self.description_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "test test test",
+                                                                  color=colors.WHITE, font_lookup=font, x_kerning=1)
+            wrapped_text_lines = sprites.TextSprite.wrap_text_to_fit(desc_text, rect[2] - 12, font_lookup=font, x_kerning=1)
+            wrapped_text = "\n".join(wrapped_text_lines)
+            self.description_text_sprite.update(new_x=rect[0] + 6, new_y=y_pos, new_text=wrapped_text)
+            y_pos += self.description_text_sprite.size()[1]
 
     def all_sprites(self):
         if self.bg_border_sprite is not None:

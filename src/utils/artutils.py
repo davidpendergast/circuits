@@ -172,6 +172,62 @@ def lighter(color, pcnt=0.2):
     return tuple(res)
 
 
+def is_transparent(color):
+    if len(color) < 4:
+        return False
+    else:
+        return color[2] == 0
+
+
+def find_bounding_rect(search_rect, sheet, keep_horz=False, keep_vert=False):
+    if keep_horz and keep_vert:
+        return search_rect
+
+    min_x = None
+    min_y = None
+    max_x = None
+    max_y = None
+
+    if keep_horz:
+        min_x = search_rect[0]
+        max_x = search_rect[0] + search_rect[2] - 1
+
+    if keep_vert:
+        min_y = search_rect[1]
+        max_y = search_rect[1] + search_rect[3] - 1
+
+    sheet_size = sheet.get_size()
+    sheet.lock()
+    for x in range(search_rect[0], search_rect[0] + search_rect[2]):
+        for y in range(search_rect[1], search_rect[1] + search_rect[3]):
+            if 0 <= x < sheet_size[0] and 0 <= y < sheet_size[1]:
+                color = sheet.get_at((x, y))
+                if not is_transparent(color):
+                    if min_x is None:
+                        min_x = x
+                        max_x = x
+                    else:
+                        min_x = min(x, min_x)
+                        max_x = max(x, max_x)
+
+                    if min_y is None:
+                        min_y = y
+                        max_y = y
+                    else:
+                        min_y = min(y, min_y)
+                        max_y = max(y, max_y)
+    sheet.unlock()
+
+    if min_x is None and min_y is None:
+        return [search_rect[0], search_rect[1], 0, 0]
+    elif min_x is None:
+        return [search_rect[0], min_y, 0, max_y - min_y + 1]
+    elif min_y is None:
+        return [min_x, search_rect[1], max_x - min_x + 1, 0]
+    else:
+        return [min_x, min_y, max_x - min_x + 1, max_y - min_y + 1]
+
+
 if __name__ == "__main__":
     test_img = pygame.image.load("planning/mockup_5.png")
     output_img_path = "planning/mockup_5_mazified.png"
