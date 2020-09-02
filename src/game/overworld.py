@@ -730,6 +730,9 @@ class OverworldInfoPanelElement(ui.UiElement):
         self.title_text_sprite = None
         self.description_text_sprite = None
 
+        self.play_text_sprite = None
+        self.time_text_sprite = None
+
         self.bg_border_sprite = None
 
         self.level_preview_panel_element = self.add_child(LevelPreviewElement())
@@ -742,6 +745,18 @@ class OverworldInfoPanelElement(ui.UiElement):
             return "{}-{} {}".format(world_num, level_num, level_bp.name())
         else:
             return None
+
+    def can_play_selected_level(self) -> bool:
+        n = self.state.get_selected_node()
+        if n is not None and isinstance(n, OverworldGrid.LevelNode):
+            if n.is_selectable():
+                return True
+        return False
+
+    def get_selected_level_time(self) -> sprites.TextBuilder:
+        res = sprites.TextBuilder()
+        res.add("--:--.--", color=colors.LIGHT_GRAY)
+        return res
 
     def get_description_text(self):
         level_num, level_bp = self.state.get_selected_level()
@@ -791,6 +806,30 @@ class OverworldInfoPanelElement(ui.UiElement):
             self.description_text_sprite.update(new_x=rect[0] + 6, new_y=y_pos, new_text=wrapped_text)
             y_pos += self.description_text_sprite.size()[1]
 
+        play_text = sprites.TextBuilder()
+        if self.can_play_selected_level():
+            play_text.add("Play", color=colors.PERFECT_RED)
+        else:
+            play_text.add("Locked", color=colors.DARK_GRAY)
+
+        # TODO this looks pretty bad...
+        if self.play_text_sprite is None:
+            self.play_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, play_text.text,
+                                                       color_lookup=play_text.colors, scale=1)
+        self.play_text_sprite.update(new_text=play_text.text, new_color_lookup=play_text.colors)
+        #play_text_x = rect[0] + rect[2] // 2 - self.play_text_sprite.size()[0] // 2
+        play_text_x = rect[0] + border_thickness[0] * 2
+        play_text_y = rect[1] + rect[3] - border_thickness[1] * 2 - self.play_text_sprite.size()[1]
+        self.play_text_sprite.update(new_x=play_text_x, new_y=play_text_y)
+
+        level_time = self.get_selected_level_time()
+        if self.time_text_sprite is None:
+            self.time_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc")
+        self.time_text_sprite.update(new_text=level_time.text, new_color_lookup=level_time.colors)
+        time_text_x = rect[0] + rect[2] - border_thickness[0] * 2 - self.time_text_sprite.size()[0]
+        time_text_y = rect[1] + rect[3] - border_thickness[1] * 2 - self.time_text_sprite.size()[1]
+        self.time_text_sprite.update(new_x=time_text_x, new_y=time_text_y)
+
     def all_sprites(self):
         if self.bg_border_sprite is not None:
             for spr in self.bg_border_sprite.all_sprites():
@@ -800,6 +839,12 @@ class OverworldInfoPanelElement(ui.UiElement):
                 yield spr
         if self.description_text_sprite is not None:
             for spr in self.description_text_sprite.all_sprites():
+                yield spr
+        if self.play_text_sprite is not None:
+            for spr in self.play_text_sprite.all_sprites():
+                yield spr
+        if self.time_text_sprite is not None:
+            for spr in self.time_text_sprite.all_sprites():
                 yield spr
 
     def get_size(self):

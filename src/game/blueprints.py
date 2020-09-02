@@ -172,7 +172,7 @@ class SlopedQuadBlockSpecType(SpecType):
         art_id = json_blob[ART_ID]
         if art_id < 0:
             art_id = int(random.random() * 100)
-        rot, xflip = SlopedQuadBlockSpecType._SUBTYPE_TO_SPRITE_INFO_MAP[json_blob[SUBTYPE_ID]]
+        rot, xflip = SlopedQuadBlockSpecType._SUBTYPE_TO_SPRITE_INFO_MAP[tuple(json_blob[SUBTYPE_ID])]
 
         return entities.CompositeBlockEntity.BlockSpriteInfo(lambda: spriteref.block_sheet().get_quad_block_sprite(art_id),
                                                              rotation=rot, xflip=xflip)
