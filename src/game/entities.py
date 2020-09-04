@@ -413,6 +413,11 @@ class CompositeBlockEntity(AbstractBlockEntity):
             self.scale = scale
 
     def __init__(self, x, y, colliders, sprite_infos, color_id=0):
+        """
+        colliders: list of colliders in block
+        sprite_infos: list of sprites in block
+        color_id: block color
+        """
         AbstractBlockEntity.__init__(self, x, y)
         self.set_colliders(colliders)
         self._sprite_infos = sprite_infos
@@ -547,7 +552,7 @@ class StartBlock(BlockEntity):
         return spriteref.block_sheet().get_start_block_sprite(size, self.get_player_type().get_id())
 
 
-class EndBlock(BlockEntity):
+class EndBlock(CompositeBlockEntity):
 
     def __init__(self, x, y, w, h, player_type, color_id=-1):
         # TODO unique geometry
@@ -562,7 +567,17 @@ class EndBlock(BlockEntity):
         if color_id < 0:
             color_id = player_type.get_color_id()
 
-        BlockEntity.__init__(self, x, y, w, h, color_id=color_id)
+        colliders = []
+        colliders.extend(BlockEntity.build_colliders_for_rect([2, 3, 28, 13]))  # center
+        colliders.extend(BlockEntity.build_colliders_for_rect([0, 0, 2, 16]))   # left
+        colliders.extend(BlockEntity.build_colliders_for_rect([30, 0, 2, 16]))  # right
+
+
+        sprite_infos = []
+        sprite_infos.append(CompositeBlockEntity.BlockSpriteInfo(model_provider=lambda: self.get_main_model(),
+                                                                 xy_offs=(0, 0)))
+
+        CompositeBlockEntity.__init__(self, x, y, colliders, sprite_infos, color_id=color_id)
 
     def get_player_type(self):
         return self._player_type
