@@ -3,6 +3,8 @@ import math
 import random
 import traceback
 
+import src as src  # for typing~
+
 import src.utils.util as util
 import src.engine.sprites as sprites
 import src.engine.inputs as inputs
@@ -66,11 +68,14 @@ class Entity:
         self._frame_of_reference_parent_do_vert = True
         self._frame_of_reference_children = []
 
-    def get_world(self):
+    def get_world(self) -> 'src.game.worlds.World':
         return self._world
 
     def set_world(self, world):
         self._world = world
+
+    def about_to_remove_from_world(self):
+        pass
 
     def get_rect(self, raw=False):
         xy = self.get_xy(raw=raw)
@@ -304,6 +309,9 @@ class Entity:
     def is_player(self):
         return isinstance(self, PlayerEntity)
 
+    def is_actor(self):
+        return self.is_player()
+
     def __eq__(self, other):
         if isinstance(other, Entity):
             return self._ent_id == other._ent_id
@@ -400,6 +408,27 @@ class BlockEntity(AbstractBlockEntity):
         else:
             for spr in super().all_debug_sprites():
                 yield spr
+
+
+class SensorEntity(Entity):
+
+    def __init__(self, rect, sensor, parent=None):
+        self.parent = parent
+        Entity.__init__(self, 0, 0, w=rect[2], h=rect[3])
+
+        if self.parent is not None:
+            self.set_xy((self.parent.get_x() + rect[0], self.parent.get_y() + rect[1]))
+            self.set_frame_of_reference_parent(self.parent)
+        else:
+            self.set_xy((rect[0], rect[1]))
+
+        self.set_colliders([sensor])
+
+    def is_dynamic(self):
+        return True
+
+    def get_physics_group(self):
+        return ACTOR_GROUP
 
 
 class CompositeBlockEntity(AbstractBlockEntity):
@@ -555,7 +584,6 @@ class StartBlock(BlockEntity):
 class EndBlock(CompositeBlockEntity):
 
     def __init__(self, x, y, w, h, player_type, color_id=-1):
-        # TODO unique geometry
         cs = gs.get_instance().cell_size
         if w != cs * 2:
             raise ValueError("illegal width for start block: {}".format(w))
@@ -567,17 +595,58 @@ class EndBlock(CompositeBlockEntity):
         if color_id < 0:
             color_id = player_type.get_color_id()
 
+        dip_h = 3
+
         colliders = []
-        colliders.extend(BlockEntity.build_colliders_for_rect([2, 3, 28, 13]))  # center
+        colliders.extend(BlockEntity.build_colliders_for_rect([2, dip_h, 28, 16 - dip_h]))  # center
         colliders.extend(BlockEntity.build_colliders_for_rect([0, 0, 2, 16]))   # left
         colliders.extend(BlockEntity.build_colliders_for_rect([30, 0, 2, 16]))  # right
 
+        self._is_satisfied = False
 
-        sprite_infos = []
-        sprite_infos.append(CompositeBlockEntity.BlockSpriteInfo(model_provider=lambda: self.get_main_model(),
-                                                                 xy_offs=(0, 0)))
+        sprite_infos = [CompositeBlockEntity.BlockSpriteInfo(model_provider=lambda: self.get_main_model(),
+                                                             xy_offs=(0, 0))]
 
         CompositeBlockEntity.__init__(self, x, y, colliders, sprite_infos, color_id=color_id)
+
+        # this is what it uses to detect the player (normally blocks can't have sensors)
+        level_end_collider = RectangleCollider([0, 0, 28, 10], CollisionMasks.SENSOR,
+                                               collides_with=CollisionMasks.ACTOR,
+                                               name="level_end_{}".format(self._player_type))
+        self._level_end_sensor_id = level_end_collider.get_id()
+        self._player_stationary_in_sensor_count = 0
+        self._player_stationary_in_sensor_limit = 10
+        self._sensor_ent = SensorEntity([2, 0, 28, dip_h + 2], level_end_collider, parent=self)
+
+    def set_world(self, world):
+        super().set_world(world)
+        if world is not None:
+            world.add_entity(self._sensor_ent)
+
+    def about_to_remove_from_world(self):
+        super().about_to_remove_from_world()
+        self.get_world().remove_entity(self._sensor_ent)
+
+    def update(self):
+        actors_in_sensor = self.get_world().get_sensor_state(self._level_end_sensor_id)
+        found_one = False
+        for a in actors_in_sensor:
+            if isinstance(a, PlayerEntity) and a.get_player_type() == self._player_type:
+                # TODO velocity relative to block?
+                if util.mag(a.get_vel()) < 2:
+                    self._player_stationary_in_sensor_count += 1
+                    found_one = True
+        if not found_one:
+            self._player_stationary_in_sensor_count = 0
+
+        was_satisfied = self._is_satisfied
+        self._is_satisfied = self._player_stationary_in_sensor_count >= self._player_stationary_in_sensor_limit
+
+        if not was_satisfied and self._is_satisfied:
+            print("INFO: satisfied end block for player: {}".format(self.get_player_type()))
+
+    def is_satisfied(self):
+        return self._is_satisfied
 
     def get_player_type(self):
         return self._player_type
@@ -586,6 +655,9 @@ class EndBlock(CompositeBlockEntity):
         cs = gs.get_instance().cell_size
         size = (self.get_w() // cs, self.get_h() // cs)
         return spriteref.block_sheet().get_end_block_sprite(size, self.get_player_type().get_id())
+
+    def __repr__(self):
+        return type(self).__name__ + "({}, {})".format(self.get_rect(), self.get_player_type())
 
 
 class SlopeOrientation:
@@ -796,6 +868,9 @@ class PlayerType:
 
     def __hash__(self):
         return hash(self._id)
+
+    def __repr__(self):
+        return self.get_name()
 
 
 class PlayerTypes:
@@ -1388,8 +1463,23 @@ class PolygonCollider:
     def get_resolution_hint(self):
         return self._resolution_hint
 
-    def collides_with(self, other):
-        return other.get_mask() in self._collides_with
+    def collides_with(self, other: 'PolygonCollider'):
+        return self.collides_with_mask(other.get_mask())
+
+    def collides_with_mask(self, mask: CollisionMask):
+        return mask in self._collides_with
+
+    def collides_with_masks(self, masks, any=True):
+        any_failed = False
+        for mask in masks:
+            if self.collides_with_mask(mask):
+                if any:
+                    return True
+            else:
+                any_failed = True
+                if not any:
+                    return False
+        return not any_failed
 
     def is_overlapping(self, offs, other, other_offs):
         raise NotImplementedError()  # TODO general polygon collisions

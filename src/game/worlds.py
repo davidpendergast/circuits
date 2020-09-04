@@ -42,6 +42,7 @@ class World:
         elif next_update:
             self._to_remove.add(ent)
         else:
+            ent.about_to_remove_from_world()
             self.entities.remove(ent)
             self._unhash(ent)
             ent.set_world(None)
@@ -201,18 +202,18 @@ class World:
                         res.add(ent)
         return res
 
-    def all_entities_in_rect(self, rect, cond=None):
+    def all_entities_in_rect(self, rect, cond=None) -> typing.Iterable[entities.Entity]:
         """returns: all entities that are in the cells that rect contains"""
         cells = [c for c in self.all_cells_in_rect(rect)]
         return self.all_entities_in_cells(cells, cond=cond)
 
-    def get_player(self):
+    def get_player(self) -> entities.PlayerEntity:
         for e in self.entities:
             if isinstance(e, entities.PlayerEntity):
                 return e
         return None
 
-    def get_sensor_state(self, sensor_id):
+    def get_sensor_state(self, sensor_id) -> typing.Iterable[entities.Entity]:
         if sensor_id not in self._sensor_states:
             return []
         else:
@@ -414,9 +415,14 @@ class CollisionResolver:
             for c in ent.all_colliders(sensor=True):
                 c_state = []
                 c_rect = c.get_rect(offs=ent_xy)
-                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):  # TODO assumes we only care about blocks
-                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
+                cares_about_blocks = c.collides_with_masks((entities.CollisionMasks.BLOCK,
+                                                            entities.CollisionMasks.SLOPE_BLOCK_HORZ,
+                                                            entities.CollisionMasks.SLOPE_BLOCK_VERT), any=True)
+                cares_about_actors = c.collides_with_mask(entities.CollisionMasks.ACTOR)
+                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: (cares_about_blocks and _e.is_block()) or (cares_about_actors and _e.is_actor())):
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders()):
                         c_state.append(b)
+
                 res[c.get_id()] = c_state
 
         CollisionResolver._calc_slope_sensor_states(world, dyna_ents, res)
