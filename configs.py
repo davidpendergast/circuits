@@ -1,7 +1,7 @@
 
 import os.path
 
-name_of_game = "Circuits"
+name_of_game = "Harvest the Sun"
 version = "1.0.0"
 
 

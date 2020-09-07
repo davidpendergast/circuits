@@ -11,6 +11,7 @@ import src.game.worlds as worlds
 import src.game.globalstate as gs
 import src.game.spriteref as spriteref
 import src.game.const as const
+import src.game.playertypes as playertypes
 
 
 # json keys
@@ -217,8 +218,10 @@ class StartBlockSpecType(SpecType):
     def get_subtypes(self):
         return const.ALL_PLAYER_IDS
 
+    def get_player_type(self, json_blob):
+        return playertypes.PlayerTypes.get_type(json_blob[SUBTYPE_ID])
+
     def build_entities(self, json_blob):
-        subtype = json_blob[SUBTYPE_ID]
         x = json_blob[X]
         y = json_blob[Y]
         w = json_blob[W]
@@ -226,7 +229,7 @@ class StartBlockSpecType(SpecType):
         facing_dir = json_blob[X_DIR]
         color_id = json_blob[COLOR_ID]
 
-        player_type = entities.PlayerTypes.get_type(subtype)
+        player_type = self.get_player_type(json_blob)
         yield entities.StartBlock(x, y, w, h, player_type, facing_dir=facing_dir, color_id=color_id)
 
 
@@ -247,7 +250,7 @@ class EndBlockSpecType(SpecType):
         h = json_blob[H]
         color_id = json_blob[COLOR_ID]
 
-        player_type = entities.PlayerTypes.get_type(subtype)
+        player_type = playertypes.PlayerTypes.get_type(subtype)
         yield entities.EndBlock(x, y, w, h, player_type, color_id=color_id)
 
 
@@ -281,7 +284,7 @@ class PlayerSpecType(SpecType):
     @staticmethod
     def get_player_type(json_blob):
         player_type_id = json_blob[SUBTYPE_ID]
-        return entities.PlayerTypes.get_type(player_type_id)
+        return playertypes.PlayerTypes.get_type(player_type_id)
 
     def build_entities(self, json_blob):
         x = json_blob[X]
@@ -319,6 +322,8 @@ class SpecTypes:
 
 ENTITIES = "entities"           # list of entity data blobs
 NAME = "name"                   # name of level
+PLAYERS = "characters"          # characters in the level
+TIME_LIMIT = "time_limit"       # time limit for level
 LEVEL_ID = "level_id"           # identifier for level
 DESCRIPTION = "description"     # level flavor text
 
@@ -338,6 +343,10 @@ class LevelBlueprint:
 
     def description(self):
         return util.read_string(self.json_blob, DESCRIPTION, "???")
+
+    def time_limit(self):
+        """returns: level's time limit in ticks"""
+        return 60 * 60
 
     def _recache_entity_specs(self, force=False):
         if force or self._cached_entities is None:
@@ -361,11 +370,20 @@ class LevelBlueprint:
 
     def get_player_types(self):
         res = []
-        for blob, spec in self.all_entities():
-            if isinstance(spec, PlayerSpecType):
-                player_type = PlayerSpecType.get_player_type(blob)
-                if player_type is not None:
-                    res.append(player_type)
+        if PLAYERS in self.json_blob:
+            for player_id in self.json_blob[PLAYERS]:
+                res.append(playertypes.PlayerTypes.get_type(player_id))
+        else:
+            for blob, spec in self.all_entities():
+                if isinstance(spec, StartBlockSpecType):
+                    res.append(spec.get_player_type(blob))
+        if len(res) == 0:
+            # just for test levels, really
+            for blob, spec in self.all_entities():
+                if isinstance(spec, PlayerSpecType):
+                    player_type = PlayerSpecType.get_player_type(blob)
+                    if player_type is not None:
+                        res.append(player_type)
         return res
 
     def create_world(self) -> worlds.World:
@@ -380,6 +398,9 @@ class LevelBlueprint:
                 traceback.print_exc()
 
         return world
+
+    def __repr__(self):
+        return "{}:{}".format(type(self).__name__, self.name())
 
 
 def load_level_from_file(filepath) -> LevelBlueprint:
@@ -523,6 +544,8 @@ def get_test_blueprint_2() -> LevelBlueprint:
 
 def get_test_blueprint_3() -> LevelBlueprint:
     json_blob = {
+        NAME: "Level Start and End Test",
+        PLAYERS: [const.PLAYER_FAST, const.PLAYER_SMALL],
         ENTITIES: [
             {TYPE_ID: "player", X: 3 * 16, Y: 2 * 16, SUBTYPE_ID: const.PLAYER_FAST},
             {TYPE_ID: "block", X: 3 * 16, Y: 7 * 16, W: 4 * 16, H: 16},

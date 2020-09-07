@@ -1,7 +1,6 @@
 
 import math
 import random
-import traceback
 
 import src as src  # for typing~
 
@@ -13,6 +12,7 @@ import src.engine.globaltimer as globaltimer
 import configs as configs
 
 import src.game.spriteref as spriteref
+import src.game.playertypes as playertypes
 import src.game.colors as colors
 import src.game.globalstate as gs
 import src.game.const as const
@@ -752,161 +752,9 @@ class SlopeBlockEntity(AbstractBlockEntity):
         self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=30)
 
 
-DEFAULT_GRAVITY = -0.15 / 16
-
-
-class PlayerType:
-
-    def __init__(self, name, color_id, id_num, size=(0.75, 1.75),
-                 move_speed=7.5,
-                 jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
-                 can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
-                 anim_rate_overrides=None, should_ever_xflip=True):
-        self._name = name
-        self._color_id = color_id
-        self._id = id_num
-        self._size = size
-
-        self._move_speed = move_speed
-
-        jump_info = util.calc_missing_jump_info(H=jump_height, T=jump_duration, g=gravity)
-        self._jump_height = jump_info.H
-        self._jump_gravity = jump_info.g
-        self._jump_duration = jump_info.T
-        self._jump_vel = jump_info.vel
-
-        self._can_walljump = can_walljump
-        self._can_fly = can_fly
-        self._can_crouch = can_crouch
-        self._can_grab = can_grab
-        self._can_be_grabbed = can_be_grabbed
-
-        self._should_ever_xflip = should_ever_xflip
-
-        self._anim_rates = {
-            spriteref.PlayerStates.WALKING: 1,
-            spriteref.PlayerStates.CROUCH_WALKING: 2,
-            spriteref.PlayerStates.IDLE: 8,
-            spriteref.PlayerStates.CROUCH_IDLE: 8,
-            spriteref.PlayerStates.AIRBORNE: 8,
-            spriteref.PlayerStates.WALLSLIDE: 8
-        }
-
-        if anim_rate_overrides is not None:
-            self._anim_rates.update(anim_rate_overrides)
-
-    def get_id(self):
-        return self._id
-
-    def get_color_id(self):
-        return self._color_id
-
-    def get_name(self):
-        return self._name
-
-    def can_walljump(self):
-        return self._can_walljump
-
-    def can_fly(self):
-        return self._can_fly
-
-    def can_crouch(self):
-        return self._can_crouch
-
-    def can_grab(self):
-        return self._can_grab
-
-    def can_be_grabbed(self):
-        return self._can_be_grabbed
-
-    def get_size(self):
-        """returns: size of player in cells"""
-        return self._size
-
-    def get_jump_height(self):
-        """returns: maximum jump height in cells"""
-        return self._jump_height
-
-    def get_jump_duration(self):
-        """returns: jump duration in ticks"""
-        return self._jump_duration
-
-    def get_jump_info(self):
-        """returns: jump info in cells and ticks"""
-        return util.JumpInfo(self._jump_height, self._jump_duration, self._jump_gravity, self._jump_vel)
-
-    def get_move_speed(self):
-        """returns: maximum x velocity in cells per second"""
-        return self._move_speed
-
-    def get_anim_rate(self, player_state, player_ent):
-        if player_state in self._anim_rates:
-            rate = self._anim_rates[player_state]
-            if isinstance(rate, int) or isinstance(rate, float):
-                return int(rate)
-            else:
-                try:
-                    # should be a lambda: Entity -> int
-                    return rate(player_ent)
-                except Exception:
-                    print("{} failed to calculate animation rate for {}, {}".format(self, player_state, player_ent))
-                    traceback.print_exc()
-        else:
-            return 1  # very fast because something is very wrong
-
-    def should_ever_xflip(self):
-        return self._should_ever_xflip
-
-    def get_player_img(self, player_state, frame=0):
-        return spriteref.object_sheet().get_player_sprite(self._id, player_state, frame)
-
-    def __eq__(self, other):
-        if isinstance(other, PlayerType):
-            return self._id == other._id
-        else:
-            return None
-
-    def __hash__(self):
-        return hash(self._id)
-
-    def __repr__(self):
-        return self.get_name()
-
-
-class PlayerTypes:
-
-    FAST = PlayerType("A", 1, const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
-                      move_speed=7.5, jump_height=3.2)
-    SMALL = PlayerType("B", 2, const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
-                       move_speed=5.5, jump_height=2.1)
-    HEAVY = PlayerType("C", 3, const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
-                       move_speed=4, jump_height=3.2)
-    FLYING = PlayerType("D", 4, const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True, can_crouch=True,
-                        move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2,
-                        should_ever_xflip=False,
-                        anim_rate_overrides={
-                            spriteref.PlayerStates.AIRBORNE: lambda _ent: 1 if _ent.get_y_vel() < 0 else 1,
-                            spriteref.PlayerStates.WALKING: 2,
-                            spriteref.PlayerStates.IDLE: 4
-                        })
-
-    _ALL_TYPES = [FAST, SMALL, HEAVY, FLYING]
-
-    @staticmethod
-    def all_types():
-        return PlayerTypes._ALL_TYPES
-
-    @staticmethod
-    def get_type(ident):
-        for ptype in PlayerTypes._ALL_TYPES:
-            if ident == ptype.get_id():
-                return ptype
-        return None
-
-
 class PlayerEntity(Entity):
 
-    def __init__(self, x, y, player_type: PlayerType, align_to_cells=True):
+    def __init__(self, x, y, player_type: playertypes.PlayerType, align_to_cells=True):
         cs = gs.get_instance().cell_size
         w = int(cs * player_type.get_size()[0])
         h = int(cs * player_type.get_size()[1])

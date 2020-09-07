@@ -22,7 +22,7 @@ import src.utils.util as util
 import src.game.ui as ui
 import src.game.spriteref as spriteref
 import src.game.colors as colors
-import src.game.entities as entities
+import src.game.playertypes as playertypes
 
 
 class OverworldGrid:
@@ -564,10 +564,10 @@ class LevelNodeElement(ui.UiElement):
 
     def _get_icon_img_and_color_at(self, idx, selected, completed, unlocked, players_in_level):
         corners = {
-            0: const.PLAYER_FAST,
-            2: const.PLAYER_SMALL,
-            6: const.PLAYER_HEAVY,
-            8: const.PLAYER_FLYING
+            0: playertypes.PlayerTypes.FAST,
+            2: playertypes.PlayerTypes.SMALL,
+            6: playertypes.PlayerTypes.HEAVY,
+            8: playertypes.PlayerTypes.FLYING
         }
         if unlocked:
             full_sprites = spriteref.overworld_sheet().level_icon_full_pieces
@@ -579,7 +579,7 @@ class LevelNodeElement(ui.UiElement):
         color = colors.PERFECT_RED if selected else colors.PERFECT_WHITE
 
         if idx in corners:
-            player_type = entities.PlayerTypes.get_type(corners[idx])
+            player_type = playertypes.PlayerTypes.get_type(corners[idx])
             if player_type in players_in_level:
                 return full_sprites[idx], colors.PERFECT_WHITE
             else:
@@ -599,7 +599,7 @@ class LevelNodeElement(ui.UiElement):
             self._cached_player_types = level_bp.get_player_types() if level_bp is not None else []
 
             # TODO rm, debug
-            self._cached_player_types = random.choices([t for t in entities.PlayerTypes.all_types()], k=3)
+            self._cached_player_types = random.choices([t for t in playertypes.PlayerTypes.all_types()], k=3)
         return self._cached_player_types
 
     def update(self):

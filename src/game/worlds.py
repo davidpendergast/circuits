@@ -9,6 +9,7 @@ import src.game.globalstate as gs
 import src.game.entities as entities
 import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
+import src.game.playertypes as playertypes
 
 
 class World:
@@ -102,7 +103,7 @@ class World:
             return
         else:
             ptype = cur_player.get_player_type()
-            all_types = [t for t in entities.PlayerTypes.all_types()]
+            all_types = [t for t in playertypes.PlayerTypes.all_types()]
             if ptype in all_types:
                 idx = all_types.index(ptype)
                 next_type = all_types[(idx + 1) % len(all_types)]

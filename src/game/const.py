@@ -1,4 +1,4 @@
-
+import src.game.colors as colors
 
 # action codes
 MOVE_LEFT = "move_left"
@@ -26,6 +26,21 @@ PLAYER_SMALL = "player_small"
 PLAYER_HEAVY = "player_heavy"
 PLAYER_FLYING = "player_flying"
 
+
 ALL_PLAYER_IDS = [PLAYER_FAST, PLAYER_SMALL, PLAYER_HEAVY, PLAYER_FLYING]
 
+
+_PLAYER_COLOR_MAP = {
+    PLAYER_FAST: (colors.BLUE, colors.DARK_BLUE),
+    PLAYER_SMALL: (colors.TAN, colors.DARK_TAN),
+    PLAYER_HEAVY: (colors.GREEN, colors.DARK_GREEN),
+    PLAYER_FLYING: (colors.PURPLE, colors.DARK_PURPLE)
+}
+
+
+def get_player_color(player_type, dark=False):
+    if player_type in _PLAYER_COLOR_MAP:
+        return _PLAYER_COLOR_MAP[player_type][1 if dark else 0]
+    else:
+        return colors.WHITE
 

@@ -25,7 +25,7 @@ class MainMenuScene(scenes.Scene):
         self._title_element = ui.SpriteElement()
 
         self._options_list = ui.OptionsList()
-        self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(DebugGameScene()))
+        self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(RealGameScene(blueprints.get_test_blueprint_3())))
         self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
         self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(DebugGameScene()))
@@ -41,7 +41,7 @@ class MainMenuScene(scenes.Scene):
         total_size = renderengine.get_instance().get_game_size()
 
         if self._title_element.get_sprite() is None:
-            text_sprite = sprites.ImageSprite(spriteref.object_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=2)
+            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=2)
             self._title_element.set_sprite(text_sprite)
 
         title_x = total_size[0] // 2 - self._title_element.get_size()[0] // 2
@@ -169,15 +169,193 @@ class IntroCutsceneScene(CutsceneScene):
             return MainMenuScene()
 
 
-class DebugGameScene(scenes.Scene):
+class _BaseGameScene(scenes.Scene):
+
+    def __init__(self, bp=None):
+        scenes.Scene.__init__(self)
+
+        self._world = None
+        self._world_view = None
+
+        self.setup_new_world(bp)
+
+    def setup_new_world(self, bp):
+        if bp is None:
+            self._world = None
+            self._world_view = None
+        else:
+            print("INFO: activating blueprint: {}".format(bp.name()))
+            self._world = bp.create_world()
+            self._world_view = worldview.WorldView(self._world)
+
+    def update(self):
+        if self._world is not None:
+            self._world.update()
+        if self._world_view is not None:
+            self._world_view.update()
+
+    def all_sprites(self):
+        if self._world_view is not None:
+            for spr in self._world_view.all_sprites():
+                yield spr
+        else:
+            return []
+
+
+class _GameState:
+
+    def __init__(self, bp):
+        self.bp = bp
+
+        self._players_in_level = bp.get_player_types()
+        self._currently_satisfied = [False] * len(self._players_in_level)
+
+        self._total_ticks = bp.time_limit()
+        self._time_elapsed = 0
+
+        self._active_player_idx = 0
+
+    def get_player_type(self, player_idx):
+        return self._players_in_level[player_idx]
+
+    def num_players(self):
+        return len(self._players_in_level)
+
+    def get_ticks_remaining(self):
+        return self._total_ticks - self._time_elapsed
+
+    def get_active_player_idx(self):
+        return self._active_player_idx
+
+    def is_satisfied(self, player_idx):
+        return self._currently_satisfied[player_idx]
+
+    def set_satisfied(self, player_idx, val):
+        self._currently_satisfied[player_idx] = val
+
+    def update(self):
+        self._time_elapsed += 1
+
+
+class TopPanelUi(ui.UiElement):
+
+    def __init__(self, state: _GameState):
+        ui.UiElement.__init__(self)
+        self._state = state
+        self.bg_sprite = None
+        self.clock_text_sprite = None
+        self.character_panel_sprites = []
+        self.character_panel_animation_sprites = []
+
+    def update(self):
+        rect = self.get_rect(absolute=True)
+        if self.bg_sprite is None:
+            self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
+        self.bg_sprite = self.bg_sprite.update(new_model=spriteref.ui_sheet().top_panel_bg,
+                                               new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
+
+        player_types = [self._state.get_player_type(i) for i in range(0, self._state.num_players())]
+        util.extend_or_empty_list_to_length(self.character_panel_sprites, len(player_types),
+                                            creator=lambda: sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER))
+        for i in range(0, len(player_types)):
+            model = spriteref.ui_sheet().get_character_card_sprite(player_types[i], i == 0)
+            is_active = i == self._state.get_active_player_idx()
+            color = const.get_player_color(player_types[i].get_id(), dark=not is_active)
+            self.character_panel_sprites[i] = self.character_panel_sprites[i].update(new_x=rect[0] - 7 + 40 * i,
+                                                                                     new_y=rect[1],
+                                                                                     new_model=model,
+                                                                                     new_color=color)
+
+    def get_size(self):
+        return (288, 32)
+
+    def all_sprites(self):
+        yield self.bg_sprite
+        yield self.clock_text_sprite
+        for spr in self.character_panel_sprites:
+            yield spr
+        for spr in self.character_panel_animation_sprites:
+            yield spr
+
+
+class ProgressBarUi(ui.UiElement):
+
+    def __init__(self, state):
+        ui.UiElement.__init__(self)
+        self._state = state
+        self.bg_sprite = None
+
+        self.bar_end_sprite = None
+        self.bar_middle_sprite = None
+        self.bar_particle_sprite = None
+
+    def update(self):
+        rect = self.get_rect(absolute=True)
+        if self.bg_sprite is None:
+            self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
+        self.bg_sprite = self.bg_sprite.update(new_model=spriteref.ui_sheet().top_panel_progress_bar_bg,
+                                               new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
+
+    def get_size(self):
+        return (288, 10)
+
+    def all_sprites(self):
+        yield self.bg_sprite
+        yield self.bar_end_sprite
+        yield self.bar_middle_sprite
+        yield self.bar_particle_sprite
+
+
+class RealGameScene(_BaseGameScene):
+
+    def __init__(self, bp):
+        _BaseGameScene.__init__(self, bp=bp)
+        self._state = _GameState(bp)
+
+        self._top_panel_ui = None
+        self._progress_bar_ui = None
+
+    def update(self):
+        super().update()
+        self._state.update()
+
+        self._update_ui()
+
+    def _update_ui(self):
+        y = 0
+        if self._top_panel_ui is None:
+            self._top_panel_ui = TopPanelUi(self._state)
+        top_panel_size = self._top_panel_ui.get_size()
+        display_size = renderengine.get_instance().get_game_size()
+        self._top_panel_ui.set_xy((display_size[0] // 2 - top_panel_size[0] // 2, y))
+        self._top_panel_ui.update()
+        y += top_panel_size[1]
+
+        if self._progress_bar_ui is None:
+            self._progress_bar_ui = ProgressBarUi(self._state)
+        prog_bar_size = self._progress_bar_ui.get_size()
+        self._progress_bar_ui.set_xy((display_size[0] // 2 - prog_bar_size[0] // 2, y))
+        self._progress_bar_ui.update()
+
+    def all_sprites(self):
+        for spr in super().all_sprites():
+            yield spr
+        if self._top_panel_ui is not None:
+            for spr in self._top_panel_ui.all_sprites():
+                yield spr
+        if self._progress_bar_ui is not None:
+            for spr in self._progress_bar_ui.all_sprites():
+                yield spr
+
+
+class DebugGameScene(_BaseGameScene):
+    # TODO this will become the level editor I think
 
     def __init__(self, world_type=0):
         """
         world_type: an int or level blueprint
         """
-        scenes.Scene.__init__(self)
-        self._world = None
-        self._world_view = None
+        _BaseGameScene.__init__(self)
 
         self._cur_test_world = world_type
         self._create_new_world(world_type=world_type)
@@ -222,23 +400,12 @@ class DebugGameScene(scenes.Scene):
                 dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
                 self._world_view.move_camera_in_world(dxy)
                 self._world_view.set_free_camera(True)
-        if self._world is not None:
-            self._world.update()
-        if self._world_view is not None:
-            self._world_view.update()
 
-    def all_sprites(self):
-        if self._world_view is not None:
-            for spr in self._world_view.all_sprites():
-                yield spr
-        else:
-            return []
+        super().update()
 
     def _create_new_world(self, world_type=0):
-
         if isinstance(world_type, blueprints.LevelBlueprint):
-            print("INFO: activating blueprint: {}".format(world_type.name()))
-            self._world = world_type.create_world()
+            self.setup_new_world(world_type)
         else:
             types = ("moving_plat", "full_level", "floating_blocks", "start_and_end")
             type_to_use = types[world_type % len(types)]
@@ -255,6 +422,6 @@ class DebugGameScene(scenes.Scene):
             else:
                 return
 
-        self._world_view = worldview.WorldView(self._world)
+            self._world_view = worldview.WorldView(self._world)
 
 

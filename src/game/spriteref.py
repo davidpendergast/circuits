@@ -106,9 +106,6 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             const.PLAYER_FLYING: self.player_d
         }
 
-        self.title_img = None
-        self.title_img_small = None
-
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
         if player_id not in self._player_id_to_sprite_lookup:
             raise ValueError("unrecognized player id: {}".format(player_id))
@@ -150,9 +147,6 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_d[PlayerStates.WALKING] = [_img(0 + i * 16, 128, 16, 32, offs=start_pos) for i in range(0, 8)]
         self.player_d[PlayerStates.CROUCH_IDLE] = [_img(0 + i * 16, 176, 16, 16, offs=start_pos) for i in range(0, 2)]
         self.player_d[PlayerStates.AIRBORNE] = [_img(32 + i * 16, 160, 16, 32, offs=start_pos) for i in range(0, 6)]
-
-        self.title_img = _img(0, 272, 160, 80, offs=start_pos)
-        self.title_img_small = _img(0, 224, 80, 40, offs=start_pos)
 
 
 class _BlockSheet(spritesheets.SpriteSheet):
@@ -240,6 +234,52 @@ class _BlockSheet(spritesheets.SpriteSheet):
             self.start_blocks[(2, 1, player_id)] = start_block
         for end_block, player_id in zip(_make_blocks((2, 1), 0, 416, n=4, offs=start_pos), player_ids):
             self.end_blocks[(2, 1, player_id)] = end_block
+
+
+class _UiSheet(spritesheets.SpriteSheet):
+
+    def __init__(self):
+        spritesheets.SpriteSheet.__init__(self, "ui", "assets/ui.png")
+
+        self.title_img = None
+        self.title_img_small = None
+
+        self.top_panel_bg = None
+        self.top_panel_progress_bar_bg = None
+        self.top_panel_progress_bars = []
+
+        self._character_cards = {}              # (str: player_id, bool: flared) -> ImageModel
+        self._character_card_animations = {}    # (boolean first, boolean: last) -> list of ImageModel
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+
+        self.title_img = _img(0, 0, 160, 80, offs=start_pos)
+        self.title_img_small = _img(0, 160, 80, 40, offs=start_pos)
+
+        self.top_panel_bg = _img(16, 80, 288, 32, offs=start_pos)
+        self.top_panel_progress_bar_bg = _img(16, 112, 288, 10, offs=start_pos)
+
+        self._character_cards = {}
+        chars = [const.PLAYER_FAST, const.PLAYER_SMALL, const.PLAYER_HEAVY, const.PLAYER_FLYING]
+        for i in range(0, 4):
+            for j in range(0, 2):
+                key = (chars[i], j == 0)
+                self._character_cards[key] = _img(16 + 48 * i, 128 + 32 * j, 48, 32, offs=start_pos)
+
+        n_frames = 1  # TODO draw more of these
+        for i in range(0, 4):
+            first = i == 0 or i == 1
+            last = i == 1 or i == 3
+            sprs = [_img(16 + j * 48, 192 + 32 * i, 48, 32) for j in range(0, n_frames)]
+            self._character_card_animations[(first, last)] = sprs
+
+    def get_character_card_sprite(self, player_type, is_first):
+        return self._character_cards[(player_type.get_id(), is_first)]
+
+    def get_character_card_anim(self, is_first, is_last, frm):
+        res_list = self._character_card_animations[(is_first, is_last)]
+        return res_list[frm % len(res_list)]
 
 
 class _OverworldSheet(spritesheets.SpriteSheet):
@@ -357,6 +397,7 @@ class CutsceneTypes:
 _OBJECTS = None
 _BLOCKS = None
 _OVERWORLD = None
+_UI = None
 
 _CUTSCENES = {}  # sheet_id -> Sheet
 
@@ -373,18 +414,23 @@ def overworld_sheet() -> _OverworldSheet:
     return _OVERWORLD
 
 
+def ui_sheet() -> _UiSheet:
+    return _UI
+
+
 def cutscene_image(sheet_type) -> sprites.ImageModel:
     if sheet_type in _CUTSCENES and _CUTSCENES[sheet_type] is not None:
         return _CUTSCENES[sheet_type].get_img()
 
 
 def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
-    global _OBJECTS, _BLOCKS, _OVERWORLD, _CUTSCENES
+    global _OBJECTS, _BLOCKS, _OVERWORLD, _CUTSCENES, _UI
     _OBJECTS = _ObjectSheet()
     _BLOCKS = _BlockSheet()
     _OVERWORLD = _OverworldSheet()
+    _UI = _UiSheet()
 
-    all_sheets = [_OBJECTS, _BLOCKS, _OVERWORLD]
+    all_sheets = [_OBJECTS, _BLOCKS, _OVERWORLD, _UI]
 
     for sheet_id in CutsceneTypes.ALL_TYPES:
         cutscene_sheet = spritesheets.SingleImageSheet(sheet_id)
