@@ -16,6 +16,7 @@ import src.game.spriteref as spriteref
 import src.game.colors as colors
 import src.game.overworld as overworld
 import src.game.ui as ui
+import src.engine.spritesheets as spritesheets
 
 
 class MainMenuScene(scenes.Scene):
@@ -222,10 +223,21 @@ class _GameState:
         return len(self._players_in_level)
 
     def get_ticks_remaining(self):
-        return self._total_ticks - self._time_elapsed
+        return max(0, self._total_ticks - self._time_elapsed)
+
+    def get_pcnt_ticks_remaining(self):
+        if self._total_ticks == 0 or self._time_elapsed <= 0:
+            return 1
+        elif self._time_elapsed > self._total_ticks:
+            return 0
+        else:
+            return (self._total_ticks - self._time_elapsed) / self._total_ticks
 
     def get_active_player_idx(self):
         return self._active_player_idx
+
+    def get_active_player_type(self):
+        return self.get_player_type(self.get_active_player_idx())
 
     def is_satisfied(self, player_idx):
         return self._currently_satisfied[player_idx]
@@ -247,6 +259,10 @@ class TopPanelUi(ui.UiElement):
         self.character_panel_sprites = []
         self.character_panel_animation_sprites = []
 
+    def get_clock_text(self):
+        ticks_rm = self._state.get_ticks_remaining()
+        return util.ticks_to_time_string(ticks_rm, fps=60, n_decimals=1)
+
     def update(self):
         rect = self.get_rect(absolute=True)
         if self.bg_sprite is None:
@@ -260,11 +276,20 @@ class TopPanelUi(ui.UiElement):
         for i in range(0, len(player_types)):
             model = spriteref.ui_sheet().get_character_card_sprite(player_types[i], i == 0)
             is_active = i == self._state.get_active_player_idx()
-            color = const.get_player_color(player_types[i].get_id(), dark=not is_active)
+            color = const.get_player_color(player_types[i], dark=not is_active)
             self.character_panel_sprites[i] = self.character_panel_sprites[i].update(new_x=rect[0] - 7 + 40 * i,
                                                                                      new_y=rect[1],
                                                                                      new_model=model,
                                                                                      new_color=color)
+
+        clock_text = self.get_clock_text()
+        if self.clock_text_sprite is None:
+            self.clock_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, clock_text,
+                                                        font_lookup=spritesheets.get_default_font(mono=True))
+        self.clock_text_sprite.update(new_text=clock_text)
+        clock_x = rect[0] + 270 - self.clock_text_sprite.size()[0]
+        clock_y = rect[1] + 10
+        self.clock_text_sprite.update(new_x=clock_x, new_y=clock_y, new_color=colors.WHITE)
 
     def get_size(self):
         return (288, 32)
@@ -284,10 +309,7 @@ class ProgressBarUi(ui.UiElement):
         ui.UiElement.__init__(self)
         self._state = state
         self.bg_sprite = None
-
-        self.bar_end_sprite = None
-        self.bar_middle_sprite = None
-        self.bar_particle_sprite = None
+        self.bar_sprite = None
 
     def update(self):
         rect = self.get_rect(absolute=True)
@@ -295,15 +317,19 @@ class ProgressBarUi(ui.UiElement):
             self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
         self.bg_sprite = self.bg_sprite.update(new_model=spriteref.ui_sheet().top_panel_progress_bar_bg,
                                                new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
+        if self.bar_sprite is None:
+            self.bar_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+        active_color = const.get_player_color(self._state.get_active_player_type(), dark=False)
+        pcnt_remaining = self._state.get_pcnt_ticks_remaining()
+        self.bar_sprite = self.bar_sprite.update(new_model=spriteref.ui_sheet().get_bar_sprite(pcnt_remaining),
+                                                 new_x=rect[0], new_y=rect[1], new_color=active_color)
 
     def get_size(self):
         return (288, 10)
 
     def all_sprites(self):
         yield self.bg_sprite
-        yield self.bar_end_sprite
-        yield self.bar_middle_sprite
-        yield self.bar_particle_sprite
+        yield self.bar_sprite
 
 
 class RealGameScene(_BaseGameScene):
@@ -322,7 +348,7 @@ class RealGameScene(_BaseGameScene):
         self._update_ui()
 
     def _update_ui(self):
-        y = 0
+        y = 4
         if self._top_panel_ui is None:
             self._top_panel_ui = TopPanelUi(self._state)
         top_panel_size = self._top_panel_ui.get_size()

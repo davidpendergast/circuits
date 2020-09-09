@@ -547,7 +547,7 @@ def get_test_blueprint_3() -> LevelBlueprint:
         NAME: "Level Start and End Test",
         PLAYERS: [const.PLAYER_FAST, const.PLAYER_SMALL],
         ENTITIES: [
-            {TYPE_ID: "player", X: 3 * 16, Y: 2 * 16, SUBTYPE_ID: const.PLAYER_FAST},
+            {TYPE_ID: "player", X: 4 * 16, Y: 10 * 16, SUBTYPE_ID: const.PLAYER_FAST},
             {TYPE_ID: "block", X: 3 * 16, Y: 7 * 16, W: 4 * 16, H: 16},
             {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 8 * 16},
             {TYPE_ID: "block", X: 10 * 16, Y: 8 * 16, W: 2 * 16, H: 16},
@@ -561,7 +561,8 @@ def get_test_blueprint_3() -> LevelBlueprint:
             {TYPE_ID: "block", X: 22 * 16, Y: 13 * 16, W: 2 * 16, H: 2 * 16},
             {TYPE_ID: "block", X: 18 * 16, Y: 6 * 16, W: 2 * 16, H: 8 * 16},
             {TYPE_ID: "end_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 16, Y: 7 * 16, W: 16 * 2, H: 16},
-            {TYPE_ID: "block", X: 0, Y: 8 * 16, W: 4 * 16, H: 7 * 16}
+            {TYPE_ID: "block", X: 0, Y: 8 * 16, W: 4 * 16, H: 7 * 16},
+            {TYPE_ID: "block", X: 1 * 16, Y: 0, W: 30 * 16, H: 3 * 16}
         ]
     }
 

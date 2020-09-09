@@ -201,7 +201,7 @@ class SingleImageSheet(SpriteSheet):
 _SINGLETON = None
 
 
-def create_instance():
+def create_instance() -> 'SpriteAtlas':
     global _SINGLETON
     if _SINGLETON is None:
         _SINGLETON = SpriteAtlas()
@@ -210,8 +210,26 @@ def create_instance():
         raise ValueError("SpriteAtlas has already been created")
 
 
-def get_instance():
+def get_instance() -> 'SpriteAtlas':
     return _SINGLETON
+
+
+def get_default_font(mono=False, small=False) -> FontSheet:
+    if small:
+        if mono:
+            raise ValueError("No small mono-spaced font (yet)")
+        else:
+            res = get_instance().get_sheet(DefaultFontSmall.SHEET_ID)
+    else:
+        if mono:
+            res = get_instance().get_sheet(DefaultFontMono.SHEET_ID)
+        else:
+            res = get_instance().get_sheet(DefaultFont.SHEET_ID)
+
+    if res is None:
+        raise ValueError("No font for mono={}, small={}".format(mono, small))
+    else:
+        return res
 
 
 class SpriteAtlas:

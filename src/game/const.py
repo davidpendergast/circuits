@@ -39,8 +39,8 @@ _PLAYER_COLOR_MAP = {
 
 
 def get_player_color(player_type, dark=False):
-    if player_type in _PLAYER_COLOR_MAP:
-        return _PLAYER_COLOR_MAP[player_type][1 if dark else 0]
+    if player_type is not None and player_type.get_id() in _PLAYER_COLOR_MAP:
+        return _PLAYER_COLOR_MAP[player_type.get_id()][1 if dark else 0]
     else:
         return colors.WHITE
 

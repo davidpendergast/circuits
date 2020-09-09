@@ -797,7 +797,7 @@ class OverworldInfoPanelElement(ui.UiElement):
         if desc_text is None:
             self.description_text_sprite = None
         else:
-            font = spritesheets.get_instance().get_sheet(spritesheets.DefaultFontSmall.SHEET_ID)
+            font = spritesheets.get_default_font(small=True)
             if self.description_text_sprite is None:
                 self.description_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "test test test",
                                                                   color=colors.WHITE, font_lookup=font)

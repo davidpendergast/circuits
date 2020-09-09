@@ -778,7 +778,7 @@ class TextSprite(MultiSprite):
             self._font_lookup = font_lookup
         else:
             import src.engine.spritesheets as spritesheets  # (.-.)
-            self._font_lookup = spritesheets.get_instance().get_sheet(spritesheets.DefaultFont.SHEET_ID)
+            self._font_lookup = spritesheets.get_default_font()
 
         # this stuff is calculated by _build_character_sprites
         self._character_sprites = []

@@ -123,7 +123,7 @@ class PlayerType:
         return hash(self._id)
 
     def __repr__(self):
-        return self.get_name()
+        return type(self).__name__ + "({}, {})".format(self.get_name(), self.get_id())
 
 
 class PlayerTypes:

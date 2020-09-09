@@ -247,6 +247,7 @@ class _UiSheet(spritesheets.SpriteSheet):
         self.top_panel_bg = None
         self.top_panel_progress_bar_bg = None
         self.top_panel_progress_bars = []
+        self.top_panel_progress_bar_full = None
 
         self._character_cards = {}              # (str: player_id, bool: flared) -> ImageModel
         self._character_card_animations = {}    # (boolean first, boolean: last) -> list of ImageModel
@@ -259,6 +260,7 @@ class _UiSheet(spritesheets.SpriteSheet):
 
         self.top_panel_bg = _img(16, 80, 288, 32, offs=start_pos)
         self.top_panel_progress_bar_bg = _img(16, 112, 288, 10, offs=start_pos)
+        self.top_panel_progress_bar_full = _img(16, 320, 288, 10, offs=start_pos)
 
         self._character_cards = {}
         chars = [const.PLAYER_FAST, const.PLAYER_SMALL, const.PLAYER_HEAVY, const.PLAYER_FLYING]
@@ -280,6 +282,10 @@ class _UiSheet(spritesheets.SpriteSheet):
     def get_character_card_anim(self, is_first, is_last, frm):
         res_list = self._character_card_animations[(is_first, is_last)]
         return res_list[frm % len(res_list)]
+
+    def get_bar_sprite(self, pcnt_full):
+        # TODO decaying bar
+        return self.top_panel_progress_bar_full
 
 
 class _OverworldSheet(spritesheets.SpriteSheet):

@@ -929,14 +929,19 @@ def diag_neighbors(x, y, dist=1):
     yield (x - dist, y - dist)
 
 
-def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False):
+def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False, n_decimals=0):
     seconds = max(0, n_ticks // fps)
     hours = seconds // 3600
     seconds = seconds % 3600
     minutes = seconds // 60
     seconds = seconds % 60
+    sub_seconds = n_ticks % fps
 
     res = str(seconds)
+
+    if n_decimals > 0:
+        res = res + "{:.{}f}".format(sub_seconds / fps, n_decimals)[1:]
+
     if seconds < 10:
         res = ":0" + res
     else:
