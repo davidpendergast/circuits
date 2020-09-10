@@ -228,6 +228,50 @@ def find_bounding_rect(search_rect, sheet, keep_horz=False, keep_vert=False):
         return [min_x, min_y, max_x - min_x + 1, max_y - min_y + 1]
 
 
+def draw_decay_animation_effect(src_sheet, src_rect, n_frames, dest_sheet, dest_rect_provider,
+                                full_decay_rect_provider, partial_decay_rect_provider,
+                                decay_chance_provider=lambda i, xy: 0.05):
+    """
+    src_sheet: Surface containing the source image
+    src_rect: Location of the source image
+    n_frames: Number of frames to draw
+    dest_sheet: Surface to draw the decayed images
+    dest_rect_provider: frm_idx -> rect
+    full_decay_rect_provider: frm_idx -> rect
+    partial_decay_rect_provider: frm_idx -> rect
+    decay_chance_provider: frm_idx, xy -> rect
+
+    returns: list of dest rects drawn
+    """
+    res = []
+    decayed = set()  # set of decayed pixels
+    for i in range(0, n_frames):
+        dest_rect = dest_rect_provider(i)
+        full_decay_rect = full_decay_rect_provider(i)
+        partial_decay_rect = partial_decay_rect_provider(i)
+
+        for x in range(0, min(dest_rect[2], src_rect[2])):
+            for y in range(0, min(dest_rect[3], src_rect[3])):
+                src_xy = (src_rect[0] + x, src_rect[1] + y)
+                if src_xy in decayed:
+                    continue
+                elif util.rect_contains(full_decay_rect, src_xy):
+                    decayed.add(src_xy)
+                    continue
+                elif util.rect_contains(partial_decay_rect, src_xy):
+                    decay_chance = decay_chance_provider(i, src_xy)
+                    if random.random() < decay_chance:
+                        decayed.add(src_xy)
+                        continue
+
+                color = src_sheet.get_at(src_xy)
+                dest_xy = (dest_rect[0] + x, dest_rect[1] + y)
+                dest_sheet.set_at(dest_xy, color)
+
+        res.append(dest_rect)
+    return res
+
+
 if __name__ == "__main__":
     test_img = pygame.image.load("planning/mockup_5.png")
     output_img_path = "planning/mockup_5_mazified.png"

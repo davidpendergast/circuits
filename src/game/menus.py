@@ -319,10 +319,11 @@ class ProgressBarUi(ui.UiElement):
                                                new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
         if self.bar_sprite is None:
             self.bar_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
-        active_color = const.get_player_color(self._state.get_active_player_type(), dark=False)
+        # active_color = const.get_player_color(self._state.get_active_player_type(), dark=False)
+        active_color = colors.WHITE
         pcnt_remaining = self._state.get_pcnt_ticks_remaining()
         self.bar_sprite = self.bar_sprite.update(new_model=spriteref.ui_sheet().get_bar_sprite(pcnt_remaining),
-                                                 new_x=rect[0], new_y=rect[1], new_color=active_color)
+                                                 new_x=rect[0], new_y=rect[1] + 2, new_color=active_color)
 
     def get_size(self):
         return (288, 10)
