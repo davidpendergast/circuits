@@ -189,6 +189,9 @@ class _BaseGameScene(scenes.Scene):
             self._world = bp.create_world()
             self._world_view = worldview.WorldView(self._world)
 
+    def get_world(self):
+        return self._world
+
     def update(self):
         if self._world is not None:
             self._world.update()
@@ -245,8 +248,12 @@ class _GameState:
     def set_satisfied(self, player_idx, val):
         self._currently_satisfied[player_idx] = val
 
-    def update(self):
+    def update(self, world):
         self._time_elapsed += 1
+
+        # TODO check end blocks
+        for idx in range(0, self.num_players()):
+            self.set_satisfied(idx, True)
 
 
 class TopPanelUi(ui.UiElement):
@@ -257,7 +264,7 @@ class TopPanelUi(ui.UiElement):
         self.bg_sprite = None
         self.clock_text_sprite = None
         self.character_panel_sprites = []
-        self.character_panel_animation_sprites = []
+        self.character_panel_animation_sprites = []  # arrows that spin around
 
     def get_clock_text(self):
         ticks_rm = self._state.get_ticks_remaining()
@@ -273,14 +280,32 @@ class TopPanelUi(ui.UiElement):
         player_types = [self._state.get_player_type(i) for i in range(0, self._state.num_players())]
         util.extend_or_empty_list_to_length(self.character_panel_sprites, len(player_types),
                                             creator=lambda: sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER))
+        util.extend_or_empty_list_to_length(self.character_panel_animation_sprites, len(player_types),
+                                            creator=lambda: None)
         for i in range(0, len(player_types)):
             model = spriteref.ui_sheet().get_character_card_sprite(player_types[i], i == 0)
             is_active = i == self._state.get_active_player_idx()
             color = const.get_player_color(player_types[i], dark=not is_active)
-            self.character_panel_sprites[i] = self.character_panel_sprites[i].update(new_x=rect[0] - 7 + 40 * i,
-                                                                                     new_y=rect[1],
+            card_x = rect[0] - 7 + 40 * i
+            card_y = rect[1]
+            self.character_panel_sprites[i] = self.character_panel_sprites[i].update(new_x=card_x,
+                                                                                     new_y=card_y,
                                                                                      new_model=model,
                                                                                      new_color=color)
+            if self._state.is_satisfied(i):
+                if self.character_panel_animation_sprites[i] is None:
+                    self.character_panel_animation_sprites[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+                is_first = i == 0
+                is_last = i == len(player_types) - 1  # TODO not correct
+                model = spriteref.ui_sheet().get_character_card_anim(is_first, is_last,
+                                                                     gs.get_instance().anim_tick())
+                self.character_panel_animation_sprites[i] = self.character_panel_animation_sprites[i].update(new_x=card_x,
+                                                                                                             new_y=card_y,
+                                                                                                             new_model=model,
+                                                                                                             new_color=colors.WHITE,
+                                                                                                             new_depth=10)
+            else:
+                self.character_panel_animation_sprites[i] = None
 
         clock_text = self.get_clock_text()
         if self.clock_text_sprite is None:
@@ -300,7 +325,8 @@ class TopPanelUi(ui.UiElement):
         for spr in self.character_panel_sprites:
             yield spr
         for spr in self.character_panel_animation_sprites:
-            yield spr
+            if spr is not None:
+                yield spr
 
 
 class ProgressBarUi(ui.UiElement):
@@ -344,7 +370,7 @@ class RealGameScene(_BaseGameScene):
 
     def update(self):
         super().update()
-        self._state.update()
+        self._state.update(self.get_world())
 
         self._update_ui()
 

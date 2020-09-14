@@ -275,27 +275,30 @@ class _UiSheet(spritesheets.SpriteSheet):
         for i in range(0, 4):
             for j in range(0, 2):
                 key = (chars[i], j == 0)
-                self._character_cards[key] = _img(16 + 48 * i, 128 + 32 * j, 48, 32, offs=start_pos)
+                self._character_cards[key] = _img(16 + 48 * i, 144 + 32 * j, 48, 32, offs=start_pos)
 
-        n_frames = 1  # TODO draw more of these
+        n_frames = 16
         for i in range(0, 4):
             first = i == 0 or i == 1
-            last = i == 1 or i == 3
-            sprs = [_img(16 + j * 48, 192 + 32 * i, 48, 32) for j in range(0, n_frames)]
-            self._character_card_animations[(first, last)] = sprs
+            last = i == 0 or i == 2
+            row_1_sprs = [_img(16 + j * 48, 208 + 64 * i, 48, 32) for j in range(0, n_frames // 2)]
+            row_2_sprs = [_img(16 + j * 48, 208 + 64 * i + 32, 48, 32) for j in range(0, n_frames // 2)]
+            self._character_card_animations[(first, last)] = row_1_sprs + row_2_sprs
 
+        bar_x = 16
+        bar_y = 128
         bar_w = 288
         bar_h = 6
-        self.top_panel_progress_bar_full = _img(16, 320, bar_w, bar_h, offs=start_pos)
-        self.top_panel_progress_bar_empty = _img(16, 326, bar_w, bar_h, offs=start_pos)
+        self.top_panel_progress_bar_full = _img(bar_x, bar_y, bar_w, bar_h, offs=start_pos)
+        self.top_panel_progress_bar_empty = _img(bar_x, bar_y + 8, bar_w, bar_h, offs=start_pos)
         self.top_panel_progress_bars = []
 
         bar_anim_xy = (16 + start_pos[0], sheet.get_height() + start_pos[1])
         n_frames = _UiSheet.N_PROGRESS_BARS
-        rects_drawn = artutils.draw_decay_animation_effect(sheet, [16, 320, bar_w, bar_h], n_frames,
+        rects_drawn = artutils.draw_decay_animation_effect(sheet, [bar_x, bar_y, bar_w, bar_h], n_frames,
                              atlas, lambda frm_idx: [bar_anim_xy[0], bar_anim_xy[1] + bar_h * frm_idx, bar_w, bar_h],
-                             lambda frm_idx: [16, 320, int(bar_w * frm_idx / n_frames), bar_h],
-                             lambda frm_idx: [16, 320, int(bar_w * frm_idx * 1.2 / n_frames), bar_h],
+                             lambda frm_idx: [bar_x, bar_y, int(bar_w * frm_idx / n_frames), bar_h],
+                             lambda frm_idx: [bar_x, bar_y, int(bar_w * frm_idx * 1.2 / n_frames), bar_h],
                              decay_chance_provider=lambda frm_idx, xy: 0.1 - (0.08 * frm_idx / n_frames))
         for r in rects_drawn:
             self.top_panel_progress_bars.append(_img(r[0], r[1], r[2], r[3], offs=(0, 0)))
