@@ -306,6 +306,12 @@ class Entity:
     def is_block(self):
         return isinstance(self, AbstractBlockEntity)
 
+    def is_end_block(self):
+        return isinstance(self, EndBlock)
+
+    def is_start_block(self):
+        return isinstance(self, StartBlock)
+
     def is_player(self):
         return isinstance(self, PlayerEntity)
 
@@ -1201,6 +1207,12 @@ class PlayerEntity(Entity):
         for spr_id in self._sprites:
             if self._sprites[spr_id] is not None:
                 yield self._sprites[spr_id]
+
+    def get_body_sprite(self):
+        if "body" in self._sprites:
+            return self._sprites["body"]
+        else:
+            return None
 
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.get_player_type().get_id(), self.get_rect())

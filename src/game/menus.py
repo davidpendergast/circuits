@@ -245,15 +245,43 @@ class _GameState:
     def is_satisfied(self, player_idx):
         return self._currently_satisfied[player_idx]
 
+    def all_satisfied(self):
+        for idx in range(0, self.num_players()):
+            if not self.is_satisfied(idx):
+                return False
+        return True
+
     def set_satisfied(self, player_idx, val):
         self._currently_satisfied[player_idx] = val
+
+    def do_level_completed(self):
+        pass
 
     def update(self, world):
         self._time_elapsed += 1
 
-        # TODO check end blocks
+        end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
+
+        became_satisfied = []
+
         for idx in range(0, self.num_players()):
-            self.set_satisfied(idx, True)
+            player_type = self.get_player_type(idx)
+            for eb in end_blocks:
+                if eb.get_player_type() == player_type and eb.is_satisfied():
+                    if not self.is_satisfied(idx):
+                        self.set_satisfied(idx, True)
+                        became_satisfied.append(player_type)
+
+        if len(became_satisfied) > 0:
+            if self.all_satisfied():
+                self.do_level_completed()
+            else:
+                active_type = self.get_active_player_type()
+                if active_type in became_satisfied:
+                    player = world.get_player()
+
+                    start_xy = world.get_player_start_position(player)
+                    world.teleport_entity_to(player, start_xy, 30, new_entity=None)
 
 
 class TopPanelUi(ui.UiElement):

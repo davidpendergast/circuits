@@ -126,6 +126,34 @@ class World:
     def get_blueprint(self):
         return self._orig_blueprint
 
+    def get_start_block(self, player_type):
+        for b in self.all_entities(lambda ent: ent.is_start_block()):
+            if b.get_player_type() == player_type:
+                return b
+        return None
+
+    def get_end_block(self, player_type):
+        for b in self.all_entities(lambda ent: ent.is_end_block()):
+            if b.get_player_type() == player_type:
+                return b
+        return None
+
+    def get_player_start_position(self, player):
+        player_type = player.get_player_type()
+        start_block = self.get_start_block(player_type)
+        if start_block is None:
+            print("WARN: no start block for player type: {}".format(player_type))
+            return (0, 0)
+        else:
+            block_rect = start_block.get_rect()
+            x = block_rect[0] + block_rect[2] // 2 - player.get_w() // 2
+            y = block_rect[1] - player.get_h()
+            return (x, y)
+
+    def teleport_entity_to(self, entity, xy, duration, new_entity=None):
+        # TODO
+        entity.set_xy(xy)
+
     def update(self):
         if configs.is_dev:
             self.handle_debug_commands()
