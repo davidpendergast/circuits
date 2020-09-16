@@ -192,6 +192,9 @@ class _BaseGameScene(scenes.Scene):
     def get_world(self):
         return self._world
 
+    def get_world_view(self):
+        return self._world_view
+
     def update(self):
         if self._world is not None:
             self._world.update()
@@ -212,12 +215,35 @@ class _GameState:
         self.bp = bp
 
         self._players_in_level = bp.get_player_types()
-        self._currently_satisfied = [False] * len(self._players_in_level)
+        n_players = len(self._players_in_level)
+
+        self._currently_satisfied = [False] * n_players
+        self._recorded_runs = [None] * n_players  # list of PlaybackPlayerController
 
         self._total_ticks = bp.time_limit()
         self._time_elapsed = 0
 
         self._active_player_idx = 0
+
+    def reset(self, all_players=False):
+        self._time_elapsed = 0
+        for i in range(0, len(self._currently_satisfied)):
+            self._currently_satisfied[i] = False
+        if all_players:
+            self._active_player_idx = 0
+            self._recorded_runs = [None] * self.num_players()
+
+    def active_player_succeeded(self, recording):
+        self._recorded_runs[self._active_player_idx] = recording
+
+        self.reset()
+        self._active_player_idx += 1
+
+    def has_recording(self, player_idx):
+        return self._recorded_runs[player_idx] is not None
+
+    def get_recording(self, player_idx):
+        return self._recorded_runs[player_idx]
 
     def get_player_type(self, player_idx):
         return self._players_in_level[player_idx]
@@ -254,15 +280,13 @@ class _GameState:
     def set_satisfied(self, player_idx, val):
         self._currently_satisfied[player_idx] = val
 
-    def do_level_completed(self):
-        pass
+    def is_active_character_satisfied(self):
+        return self._currently_satisfied[self._active_player_idx]
 
     def update(self, world):
         self._time_elapsed += 1
 
         end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
-
-        became_satisfied = []
 
         for idx in range(0, self.num_players()):
             player_type = self.get_player_type(idx)
@@ -270,18 +294,6 @@ class _GameState:
                 if eb.get_player_type() == player_type and eb.is_satisfied():
                     if not self.is_satisfied(idx):
                         self.set_satisfied(idx, True)
-                        became_satisfied.append(player_type)
-
-        if len(became_satisfied) > 0:
-            if self.all_satisfied():
-                self.do_level_completed()
-            else:
-                active_type = self.get_active_player_type()
-                if active_type in became_satisfied:
-                    player = world.get_player()
-
-                    start_xy = world.get_player_start_position(player)
-                    world.teleport_entity_to(player, start_xy, 30, new_entity=None)
 
 
 class TopPanelUi(ui.UiElement):
@@ -390,8 +402,9 @@ class ProgressBarUi(ui.UiElement):
 class RealGameScene(_BaseGameScene):
 
     def __init__(self, bp):
-        _BaseGameScene.__init__(self, bp=bp)
         self._state = _GameState(bp)
+
+        _BaseGameScene.__init__(self, bp=bp)
 
         self._top_panel_ui = None
         self._progress_bar_ui = None
@@ -400,7 +413,51 @@ class RealGameScene(_BaseGameScene):
         super().update()
         self._state.update(self.get_world())
 
+        reset_keys = keybinds.get_instance().get_keys(const.RESET)
+        if inputs.get_instance().was_pressed(reset_keys):
+            self._state.reset(all_players=True)
+            self.setup_new_world(self._state.bp)
+
+        elif self._state.all_satisfied():
+            pass  # TODO complete level / show replay or something
+        else:
+            active_satisfied = True
+            for i in range(0, self._state.get_active_player_idx() + 1):
+                if not self._state.is_satisfied(i):
+                    active_satisfied = False
+                    break
+
+            if active_satisfied:
+                player_ent = self.get_world().get_player()
+                recording = player_ent.get_controller().get_recording()
+                self._state.active_player_succeeded(recording)
+                self.setup_new_world(self._state.bp)
+
         self._update_ui()
+
+    def setup_new_world(self, bp):
+        old_show_grid = False if self.get_world_view() is None else self.get_world_view()._show_grid
+        super().setup_new_world(bp)
+
+        # gotta place the players down
+        world = self.get_world()
+        self.get_world_view()._show_grid = old_show_grid
+
+        import src.game.entities as entities
+
+        for i in range(0, self._state.num_players()):
+            player_type = self._state.get_player_type(i)
+
+            if i == self._state.get_active_player_idx():
+                controller = entities.RecordingPlayerController()
+            else:
+                controller = self._state.get_recording(i)
+
+            if controller is not None:
+                player_ent = entities.PlayerEntity(0, 0, player_type, controller)
+                start_xy = world.get_player_start_position(player_ent)
+                player_ent.set_xy(start_xy)
+                world.add_entity(player_ent, next_update=False)
 
     def _update_ui(self):
         y = 4
@@ -457,7 +514,9 @@ class DebugGameScene(_BaseGameScene):
             # TODO clean this up please...
             if isinstance(self._cur_test_world, int):
                 self._cur_test_world += 1
-                self._create_new_world(world_type=self._cur_test_world)
+            else:
+                self._cur_test_world = 0
+            self._create_new_world(world_type=self._cur_test_world)
 
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_LEVEL_DEBUG)):
             if self._world is not None:

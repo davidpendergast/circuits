@@ -758,9 +758,160 @@ class SlopeBlockEntity(AbstractBlockEntity):
         self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=30)
 
 
+class PlayerInputs:
+
+    # 2 = pressed, 1 = held, 0 = neutral
+    def __init__(self, jump=0, left=0, down=0, right=0, act=0):
+        self.jump = jump
+        self.left = left
+        self.down = down
+        self.right = right
+        self.act = act
+
+    def __repr__(self):
+        "[{}{}{}{}{}]".format(
+            "W" if self.jump == 2 else ("w" if self.jump == 1 else "_"),
+            "A" if self.left == 2 else ("a" if self.left == 1 else "_"),
+            "S" if self.down == 2 else ("s" if self.down == 1 else "_"),
+            "D" if self.right == 2 else ("d" if self.right == 1 else "_"),
+            "J" if self.act == 2 else ("j" if self.act == 1 else "_"),
+        )
+
+    def is_jump_held(self):
+        return self.jump > 0
+
+    def was_jump_pressed(self):
+        return self.jump == 2
+
+    def is_left_held(self):
+        return self.left > 0
+
+    def is_down_held(self):
+        return self.down > 0
+
+    def is_right_held(self):
+        return self.right > 0
+
+    def is_act_held(self):
+        return self.act > 0
+
+    def was_act_pressed(self):
+        return self.act == 2
+
+    def to_ints(self):
+        return (self.jump, self.left, self.down, self.right, self.act)
+
+    @staticmethod
+    def from_ints(ints):
+        return PlayerInputs(jump=ints[0], left=ints[1], down=ints[2], right=ints[3], act=ints[4])
+
+    def __eq__(self, other):
+        if not isinstance(other, PlayerInputs):
+            return False
+        else:
+            return self.to_ints() == other.to_ints()
+
+    def __hash__(self):
+        return hash(self.to_ints())
+
+
+class PlayerController:
+
+    EMPTY_INPUT = PlayerInputs()
+
+    def get_inputs(self, tick) -> PlayerInputs:
+        keys = keybinds.get_instance()
+        keys_we_care_about = [keys.get_keys(const.JUMP),
+                              keys.get_keys(const.MOVE_LEFT),
+                              keys.get_keys(const.CROUCH),
+                              keys.get_keys(const.MOVE_RIGHT),
+                              keys.get_keys(const.ACTION_1)]
+        ints = []
+        for k in keys_we_care_about:
+            if inputs.get_instance().was_pressed(k):
+                val = 2
+            elif inputs.get_instance().is_held(k):
+                val = 1
+            else:
+                val = 0
+            ints.append(val)
+
+        return PlayerInputs.from_ints(ints)
+
+    def is_active(self):
+        return True
+
+
+class RecordingPlayerController(PlayerController):
+
+    HARD_LIMIT = 216000  # = 60 * 60 * 60 (an hour of gameplay)
+
+    def __init__(self):
+        self._pool = {}
+        self._recorded_inputs = []
+
+        self._did_print_warning = False
+
+    def store(self, tick, player_inputs):
+        # conserve objects
+        if player_inputs == PlayerController.EMPTY_INPUT:
+            player_inputs = PlayerController.EMPTY_INPUT
+        elif player_inputs in self._pool:
+            player_inputs = self._pool[player_inputs]
+        else:
+            self._pool[player_inputs] = player_inputs
+
+        if 0 <= tick <= RecordingPlayerController.HARD_LIMIT:
+            if len(self._recorded_inputs) == tick:
+                self._recorded_inputs.append(player_inputs)
+            elif len(self._recorded_inputs) > tick:
+                self._recorded_inputs[tick] = player_inputs
+            else:
+                util.extend_or_empty_list_to_length(self._recorded_inputs, tick,
+                                                    creator=lambda: PlayerController.EMPTY_INPUT)
+                self._recorded_inputs.append(player_inputs)
+        else:
+            if not self._did_print_warning:
+                print("ERROR: number of player actions is over the limit: {}".format(tick))
+                self._did_print_warning = True
+
+    def is_full(self):
+        return len(self._recorded_inputs) >= RecordingPlayerController.HARD_LIMIT
+
+    def __len__(self):
+        return len(self._recorded_inputs)
+
+    def get_inputs(self, tick) -> PlayerInputs:
+        res = super().get_inputs(tick)
+        self.store(tick, res)
+        return res
+
+    def get_recording(self) -> 'PlaybackPlayerController':
+        recording = list(self._recorded_inputs)
+        return PlaybackPlayerController(recording)
+
+
+class PlaybackPlayerController(PlayerController):
+
+    def __init__(self, input_list):
+        self._input_list = input_list
+
+    def __len__(self):
+        return len(self._input_list)
+
+    def get_inputs(self, tick):
+        if 0 <= tick < len(self._input_list):
+            return self._input_list[tick]
+        else:
+            return PlayerController.EMPTY_INPUT
+
+    def is_active(self):
+        return False
+
+
 class PlayerEntity(Entity):
 
-    def __init__(self, x, y, player_type: playertypes.PlayerType, align_to_cells=True):
+    def __init__(self, x, y, player_type: playertypes.PlayerType, controller=None, align_to_cells=True):
         cs = gs.get_instance().cell_size
         w = int(cs * player_type.get_size()[0])
         h = int(cs * player_type.get_size()[1])
@@ -768,6 +919,7 @@ class PlayerEntity(Entity):
         Entity.__init__(self, 0, 0, w=w, h=h)
 
         self._player_type = player_type
+        self._controller = controller if controller is not None else PlayerController()
 
         self._sprites = {}  # id -> Sprite
         self._dir_facing = 1
@@ -928,6 +1080,12 @@ class PlayerEntity(Entity):
     def get_player_type(self):
         return self._player_type
 
+    def get_controller(self):
+        return self._controller
+
+    def is_active(self):
+        return self._controller.is_active()
+
     def is_dynamic(self):
         return True
 
@@ -996,10 +1154,11 @@ class PlayerEntity(Entity):
 
     def _handle_inputs(self):
         keys = keybinds.get_instance()
-        request_left = inputs.get_instance().is_held(keys.get_keys(const.MOVE_LEFT))
-        request_right = inputs.get_instance().is_held(keys.get_keys(const.MOVE_RIGHT))
-        request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))
-        holding_jump = inputs.get_instance().is_held(keys.get_keys(const.JUMP))
+        cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
+        request_left = cur_inputs.is_left_held()
+        request_right = cur_inputs.is_right_held()
+        request_jump = cur_inputs.was_jump_pressed()
+        holding_jump = cur_inputs.is_jump_held()
 
         holding_crouch = inputs.get_instance().is_held(keys.get_keys(const.CROUCH))
         self._holding_crouch = self.get_player_type().can_crouch() and holding_crouch

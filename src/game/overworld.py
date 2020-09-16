@@ -579,7 +579,7 @@ class LevelNodeElement(ui.UiElement):
         color = colors.PERFECT_RED if selected else colors.PERFECT_WHITE
 
         if idx in corners:
-            player_type = playertypes.PlayerTypes.get_type(corners[idx])
+            player_type = corners[idx]
             if player_type in players_in_level:
                 return full_sprites[idx], colors.PERFECT_WHITE
             else:

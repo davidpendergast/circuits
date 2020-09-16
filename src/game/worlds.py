@@ -27,6 +27,8 @@ class World:
 
         self._orig_blueprint = bp
 
+        self._tick = 0
+
     def add_entity(self, ent, next_update=True):
         if ent is None or ent in self.entities:
             raise ValueError("can't add entity, either because it's None or it's already in world: {}".format(ent))
@@ -154,6 +156,9 @@ class World:
         # TODO
         entity.set_xy(xy)
 
+    def get_tick(self):
+        return self._tick
+
     def update(self):
         if configs.is_dev:
             self.handle_debug_commands()
@@ -211,6 +216,8 @@ class World:
         for ent in self.entities:
             ent.update_sprites()
 
+        self._tick += 1
+
     def all_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
         for e in self.entities:
             if cond is None or cond(e):
@@ -238,7 +245,7 @@ class World:
 
     def get_player(self) -> entities.PlayerEntity:
         for e in self.entities:
-            if isinstance(e, entities.PlayerEntity):
+            if isinstance(e, entities.PlayerEntity) and e.is_active():
                 return e
         return None
 

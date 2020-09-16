@@ -5,6 +5,7 @@ MOVE_LEFT = "move_left"
 MOVE_RIGHT = "move_right"
 JUMP = "jump"
 CROUCH = "crouch"
+ACTION_1 = "action_1"
 
 MENU_UP = "menu_up"
 MENU_DOWN = "menu_down"
