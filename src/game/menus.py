@@ -444,9 +444,13 @@ class RealGameScene(_BaseGameScene):
         super().update()
         self._state.update(self.get_world())
 
-        reset_keys = keybinds.get_instance().get_keys(const.RESET)
-        if inputs.get_instance().was_pressed(reset_keys):
+        hard_reset_keys = keybinds.get_instance().get_keys(const.RESET)
+        soft_reset_keys = keybinds.get_instance().get_keys(const.SOFT_RESET)
+        if inputs.get_instance().was_pressed(hard_reset_keys):
             self._state.reset(all_players=True)
+            self.setup_new_world(self._state.bp)
+        elif inputs.get_instance().was_pressed(soft_reset_keys):
+            self._state.reset(all_players=False)
             self.setup_new_world(self._state.bp)
 
         elif self._state.all_satisfied():

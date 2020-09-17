@@ -15,6 +15,7 @@ MENU_ACCEPT = "menu_accept"
 MENU_CANCEL = "menu_cancel"
 
 RESET = "reset"
+SOFT_RESET = "soft_reset"
 
 NEXT_LEVEL_DEBUG = "next"
 TOGGLE_SPRITE_MODE_DEBUG = "toggle_sprite_mode"

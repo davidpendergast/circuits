@@ -45,6 +45,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.MENU_CANCEL, [pygame.K_ESCAPE])
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
+        keybinds.get_instance().set_binding(const.SOFT_RESET, [pygame.K_z, pygame.K_BACKSPACE])
 
         # debug commands
         keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
