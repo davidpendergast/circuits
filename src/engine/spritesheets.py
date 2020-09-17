@@ -150,7 +150,6 @@ class DefaultFontSmall(FontSheet):
                 c = chr(y * 32 + x)
                 grid_cell = [x * char_w, y * char_h, char_w, char_h]
                 true_rect = artutils.find_bounding_rect(grid_cell, sheet, keep_vert=True)
-                print("INFO: found c={} --> {}".format(c, true_rect))
                 if true_rect[2] == 0:
                     self.set_char(c, None)
                 else:
