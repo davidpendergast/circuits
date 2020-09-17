@@ -905,6 +905,9 @@ class PlaybackPlayerController(PlayerController):
         else:
             return PlayerController.EMPTY_INPUT
 
+    def is_finished(self, tick):
+        return tick >= len(self._input_list)
+
     def is_active(self):
         return False
 
@@ -1153,14 +1156,13 @@ class PlayerEntity(Entity):
             return self._dir_facing
 
     def _handle_inputs(self):
-        keys = keybinds.get_instance()
         cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
         request_left = cur_inputs.is_left_held()
         request_right = cur_inputs.is_right_held()
         request_jump = cur_inputs.was_jump_pressed()
         holding_jump = cur_inputs.is_jump_held()
+        holding_crouch = cur_inputs.is_down_held()
 
-        holding_crouch = inputs.get_instance().is_held(keys.get_keys(const.CROUCH))
         self._holding_crouch = self.get_player_type().can_crouch() and holding_crouch
 
         if request_jump:

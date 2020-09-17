@@ -255,6 +255,7 @@ class _UiSheet(spritesheets.SpriteSheet):
 
         self._character_cards = {}              # (str: player_id, bool: flared) -> ImageModel
         self._character_card_animations = {}    # (boolean first, boolean: last) -> list of ImageModel
+        self._character_card_anim_done = None
 
     def get_size(self, img_size):
         size = super().get_size(img_size)
@@ -285,6 +286,8 @@ class _UiSheet(spritesheets.SpriteSheet):
             row_2_sprs = [_img(16 + j * 48, 208 + 64 * i + 32, 48, 32) for j in range(0, n_frames // 2)]
             self._character_card_animations[(first, last)] = row_1_sprs + row_2_sprs
 
+        self._character_card_anim_done = _img(16, 464, 48, 32)
+
         bar_x = 16
         bar_y = 128
         bar_w = 288
@@ -306,9 +309,12 @@ class _UiSheet(spritesheets.SpriteSheet):
     def get_character_card_sprite(self, player_type, is_first):
         return self._character_cards[(player_type.get_id(), is_first)]
 
-    def get_character_card_anim(self, is_first, is_last, frm):
-        res_list = self._character_card_animations[(is_first, is_last)]
-        return res_list[frm % len(res_list)]
+    def get_character_card_anim(self, is_first, is_last, frm, done=False):
+        if done:
+            return self._character_card_anim_done
+        else:
+            res_list = self._character_card_animations[(is_first, is_last)]
+            return res_list[frm % len(res_list)]
 
     def get_bar_sprite(self, pcnt_full):
         if pcnt_full >= 1:

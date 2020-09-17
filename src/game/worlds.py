@@ -243,10 +243,15 @@ class World:
         cells = [c for c in self.all_cells_in_rect(rect)]
         return self.all_entities_in_cells(cells, cond=cond)
 
-    def get_player(self) -> entities.PlayerEntity:
+    def get_player(self, must_be_active=True, with_type=None) -> entities.PlayerEntity:
         for e in self.entities:
-            if isinstance(e, entities.PlayerEntity) and e.is_active():
-                return e
+            if isinstance(e, entities.PlayerEntity):
+                if must_be_active and not e.is_active():
+                    continue
+                elif with_type is not None and e.get_player_type() != with_type:
+                    continue
+                else:
+                    return e
         return None
 
     def get_sensor_state(self, sensor_id) -> typing.Iterable[entities.Entity]:

@@ -217,6 +217,7 @@ class _GameState:
         self._players_in_level = bp.get_player_types()
         n_players = len(self._players_in_level)
 
+        self.currently_playing = [False] * n_players
         self._currently_satisfied = [False] * n_players
         self._recorded_runs = [None] * n_players  # list of PlaybackPlayerController
 
@@ -229,6 +230,8 @@ class _GameState:
         self._time_elapsed = 0
         for i in range(0, len(self._currently_satisfied)):
             self._currently_satisfied[i] = False
+        for i in range(0, len(self.currently_playing)):
+            self.currently_playing[i] = False
         if all_players:
             self._active_player_idx = 0
             self._recorded_runs = [None] * self.num_players()
@@ -277,6 +280,15 @@ class _GameState:
                 return False
         return True
 
+    def is_playing_back(self, player_idx):
+        return self.currently_playing[player_idx]
+
+    def set_playing_back(self, player_idx, val):
+        self.currently_playing[player_idx] = val
+
+    def was_playing_back(self, player_idx):
+        return player_idx < self.get_active_player_idx()
+
     def set_satisfied(self, player_idx, val):
         self._currently_satisfied[player_idx] = val
 
@@ -291,9 +303,14 @@ class _GameState:
         for idx in range(0, self.num_players()):
             player_type = self.get_player_type(idx)
             for eb in end_blocks:
-                if eb.get_player_type() == player_type and eb.is_satisfied():
-                    if not self.is_satisfied(idx):
-                        self.set_satisfied(idx, True)
+                if eb.get_player_type() == player_type:
+                    self.set_satisfied(idx, eb.is_satisfied())
+
+            player = world.get_player(must_be_active=False, with_type=player_type)
+            if player is not None and not player.is_active() and not player.get_controller().is_finished(world.get_tick()):
+                self.set_playing_back(idx, True)
+            else:
+                self.set_playing_back(idx, False)
 
 
 class TopPanelUi(ui.UiElement):
@@ -318,32 +335,46 @@ class TopPanelUi(ui.UiElement):
                                                new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
 
         player_types = [self._state.get_player_type(i) for i in range(0, self._state.num_players())]
+        active_idx = self._state.get_active_player_idx()
+
         util.extend_or_empty_list_to_length(self.character_panel_sprites, len(player_types),
                                             creator=lambda: sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER))
         util.extend_or_empty_list_to_length(self.character_panel_animation_sprites, len(player_types),
                                             creator=lambda: None)
         for i in range(0, len(player_types)):
             model = spriteref.ui_sheet().get_character_card_sprite(player_types[i], i == 0)
-            is_active = i == self._state.get_active_player_idx()
-            color = const.get_player_color(player_types[i], dark=not is_active)
+            color = const.get_player_color(player_types[i], dark=i > active_idx)
             card_x = rect[0] - 7 + 40 * i
             card_y = rect[1]
             self.character_panel_sprites[i] = self.character_panel_sprites[i].update(new_x=card_x,
                                                                                      new_y=card_y,
                                                                                      new_model=model,
                                                                                      new_color=color)
-            if self._state.is_satisfied(i):
+            if i == active_idx or self._state.was_playing_back(i):
                 if self.character_panel_animation_sprites[i] is None:
                     self.character_panel_animation_sprites[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+
                 is_first = i == 0
-                is_last = i == len(player_types) - 1  # TODO not correct
-                model = spriteref.ui_sheet().get_character_card_anim(is_first, is_last,
-                                                                     gs.get_instance().anim_tick())
-                self.character_panel_animation_sprites[i] = self.character_panel_animation_sprites[i].update(new_x=card_x,
-                                                                                                             new_y=card_y,
-                                                                                                             new_model=model,
-                                                                                                             new_color=colors.WHITE,
-                                                                                                             new_depth=10)
+                is_last = i == len(player_types) - 1
+                is_done = i != active_idx and not self._state.is_playing_back(i)
+                frm = gs.get_instance().anim_tick()
+                model = spriteref.ui_sheet().get_character_card_anim(is_first, is_last, frm, done=is_done)
+
+                if self._state.is_satisfied(i):
+                    color = colors.PERFECT_GREEN
+                elif i == active_idx:
+                    color = colors.WHITE
+                elif self._state.is_playing_back(i):
+                    color = colors.LIGHT_GRAY
+                else:
+                    color = colors.PERFECT_RED  # failed
+
+                anim_spr = self.character_panel_animation_sprites[i].update(new_x=card_x,
+                                                                            new_y=card_y,
+                                                                            new_model=model,
+                                                                            new_color=color,
+                                                                            new_depth=10)
+                self.character_panel_animation_sprites[i] = anim_spr
             else:
                 self.character_panel_animation_sprites[i] = None
 
