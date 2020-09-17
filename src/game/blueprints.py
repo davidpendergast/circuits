@@ -389,7 +389,7 @@ class LevelBlueprint:
     def create_world(self) -> worlds.World:
         world = worlds.World(bp=self)
 
-        self._recache_entity_specs(force=True)
+        self._recache_entity_specs(force=False)
         for (blob, spec) in self.all_entities():
             try:
                 spec.build(blob, world)

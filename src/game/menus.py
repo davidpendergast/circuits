@@ -490,6 +490,9 @@ class RealGameScene(_BaseGameScene):
                 player_ent.set_xy(start_xy)
                 world.add_entity(player_ent, next_update=False)
 
+        world.update()
+        self.get_world_view().update()
+
     def _update_ui(self):
         y = 4
         if self._top_panel_ui is None:
