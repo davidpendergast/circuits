@@ -558,6 +558,75 @@ class MovingBlockEntity(BlockEntity):
         super().update()
 
 
+class ToggleBlock(BlockEntity):
+
+    def __init__(self, x, y, w, h, toggle_idx):
+        BlockEntity.__init__(self, x, y, w, h)
+        self._toggle_idx = toggle_idx
+        self._is_solid = True
+
+    def get_toggle_idx(self):
+        return self._toggle_idx
+
+    def is_solid(self):
+        return self._is_solid
+
+    def set_solid(self, val):
+        self._is_solid = val
+        for c in self.all_colliders(solid=True):
+            c.set_enabled(val)
+
+    def get_main_model(self):
+        w, h = self.get_size()
+        return spriteref.object_sheet().get_toggle_block_sprite(self.get_toggle_idx(), w, h, self.is_solid())
+
+
+class ToggleBlockKeyEntity(Entity):
+
+    @staticmethod
+    def make_at_cell(grid_x, grid_y, toggle_idx):
+        cs = gs.get_instance().cell_size
+        return ToggleBlockKeyEntity(cs * grid_x + cs // 4, cs * grid_y, toggle_idx)
+
+    def __init__(self, x, y, toggle_idx):
+        cs = gs.get_instance().cell_size
+        Entity.__init__(self, x, y, cs // 2, cs)
+        self._toggle_idx = toggle_idx
+        self._icon_sprite = None
+        self._base_sprite = None
+
+        self._bob_height_min = 4
+        self._bob_height_max = 16
+        self._bob_tick_period = 30
+        self._bob_tick_count = int(random.random() * self._bob_tick_period)
+
+    def all_sprites(self):
+        yield self._icon_sprite
+        yield self._base_sprite
+
+    def get_toggle_idx(self):
+        return self._toggle_idx
+
+    def update(self):
+        rect = self.get_rect()
+        if self._icon_sprite is None:
+            self._icon_sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=-5)
+        key_model = spriteref.object_sheet().toggle_block_icons[self.get_toggle_idx()]
+        bob_prog = math.cos(2 * 3.141529 * self._bob_tick_count / self._bob_tick_period)
+        bob_height = int(self._bob_height_min + (self._bob_height_max - self._bob_height_min) * bob_prog)
+        self._icon_sprite = self._icon_sprite.update(new_model=key_model,
+                                                     new_x=rect[0] + rect[2] // 2 - key_model.width() // 2,
+                                                     new_y=rect[1] - bob_height - key_model.height() // 2)
+        self._bob_tick_count += 1
+
+        if self._base_sprite is None:
+            self._base_sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=-3)
+        base_model = spriteref.object_sheet().toggle_block_bases[self.get_toggle_idx()]
+        self._base_sprite = self._base_sprite.update(new_model=base_model,
+                                                     new_x=rect[0] + rect[2] // 2 - base_model.width() // 2,
+                                                     new_y=rect[1] + rect[3] - base_model.height())
+
+
 class StartBlock(BlockEntity):
 
     def __init__(self, x, y, w, h, player_type, facing_dir=1, color_id=-1):

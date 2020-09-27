@@ -107,6 +107,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             const.PLAYER_FLYING: self.player_d
         }
 
+        self.toggle_block_bases = []
+        self.toggle_block_icons = []
+        self._toggle_blocks = {}
+
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
         if player_id not in self._player_id_to_sprite_lookup:
             raise ValueError("unrecognized player id: {}".format(player_id))
@@ -125,6 +129,14 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             return None
         else:
             return spr_list[frame % len(spr_list)]
+
+    def get_toggle_block_sprite(self, idx, w, h, solid):
+        key = (idx, w, h, solid)
+        if key in self._toggle_blocks:
+            return key
+        else:
+            print("WARN: no sprite for toggle block: {}".format(key))
+            return None
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
@@ -148,6 +160,21 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_d[PlayerStates.WALKING] = [_img(0 + i * 16, 128, 16, 32, offs=start_pos) for i in range(0, 8)]
         self.player_d[PlayerStates.CROUCH_IDLE] = [_img(0 + i * 16, 176, 16, 16, offs=start_pos) for i in range(0, 2)]
         self.player_d[PlayerStates.AIRBORNE] = [_img(32 + i * 16, 160, 16, 32, offs=start_pos) for i in range(0, 6)]
+
+        self.toggle_block_bases = []
+        self.toggle_block_icons = []
+        self._toggle_blocks = {}  # (idx, w, h, solid) -> ImageModel
+
+        tb_xy = (0, 224)
+        for i in range(0, 4):
+            self.toggle_block_icons.append(_img(tb_xy[0], tb_xy[1] + i * 32, 16, 16, offs=start_pos))
+            self.toggle_block_bases.append(_img(tb_xy[0], tb_xy[1] + 16 + i * 32, 16, 16, offs=start_pos))
+            self._toggle_blocks[(i, 16, 16, True)] = _img(tb_xy[0] + 16, tb_xy[1] + 32 * i, 16, 16, offs=start_pos)
+            self._toggle_blocks[(i, 32, 16, True)] = _img(tb_xy[0] + 32, tb_xy[1] + 32 * i, 32, 16, offs=start_pos)
+            self._toggle_blocks[(i, 16, 32, True)] = _img(tb_xy[0] + 64, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
+            self._toggle_blocks[(i, 16, 16, False)] = _img(tb_xy[0] + 16, tb_xy[1] + 16 + 32 * i, 16, 16, offs=start_pos)
+            self._toggle_blocks[(i, 32, 16, False)] = _img(tb_xy[0] + 32, tb_xy[1] + 16 + 32 * i, 32, 16, offs=start_pos)
+            self._toggle_blocks[(i, 16, 32, False)] = _img(tb_xy[0] + 80, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
 
 
 class _BlockSheet(spritesheets.SpriteSheet):
