@@ -335,6 +335,17 @@ class LevelBlueprint:
 
         self._cached_entities = None  # list of (blob, spec)
 
+    @staticmethod
+    def build(name, level_id, players, timelimit, desc, entity_specs):
+        return LevelBlueprint({
+            NAME: name,
+            PLAYERS: [p.get_id() for p in players],
+            LEVEL_ID: level_id,
+            TIME_LIMIT: timelimit,
+            DESCRIPTION: desc,
+            ENTITIES: entity_specs
+        })
+
     def name(self):
         return util.read_string(self.json_blob, NAME, "???")
 
@@ -439,6 +450,27 @@ def write_level_to_file(level, filepath):
     except Exception:
         traceback.print_exc()
         return False
+
+
+class SpecUtils:
+
+    @staticmethod
+    def get_rect(spec_blob, default_size=16):
+        if X in spec_blob:
+            x = int(spec_blob[X])
+        else:
+            return None
+        if Y in spec_blob:
+            y = int(spec_blob[Y])
+        else:
+            return None
+        w = default_size
+        h = default_size
+        if W in spec_blob:
+            w = int(spec_blob[W])
+        if H in spec_blob:
+            h = int(spec_blob[H])
+        return [x, y, w, h]
 
 
 def get_test_blueprint_0() -> LevelBlueprint:
@@ -547,7 +579,6 @@ def get_test_blueprint_3() -> LevelBlueprint:
         NAME: "Level Start and End Test",
         PLAYERS: [const.PLAYER_FAST, const.PLAYER_SMALL, const.PLAYER_FLYING],
         ENTITIES: [
-            # {TYPE_ID: "player", X: 4 * 16, Y: 10 * 16, SUBTYPE_ID: const.PLAYER_FAST},
             {TYPE_ID: "block", X: 3 * 16, Y: 7 * 16, W: 4 * 16, H: 16},
             {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 8 * 16},
             {TYPE_ID: "block", X: 10 * 16, Y: 8 * 16, W: 2 * 16, H: 16},
@@ -564,6 +595,34 @@ def get_test_blueprint_3() -> LevelBlueprint:
             {TYPE_ID: "end_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 16, Y: 7 * 16, W: 16 * 2, H: 16},
             {TYPE_ID: "end_block", SUBTYPE_ID: const.PLAYER_FLYING, X: 16 * 16, Y: 14 * 16, W: 16 * 2, H: 16},
             {TYPE_ID: "block", X: 0, Y: 8 * 16, W: 4 * 16, H: 7 * 16},
+            {TYPE_ID: "block", X: 1 * 16, Y: 0, W: 30 * 16, H: 3 * 16, COLOR_ID: 1},
+            {TYPE_ID: "block", X: 18 * 16, Y: 14 * 16, W: 4 * 16, H: 1 * 16, COLOR_ID: 0},
+            {TYPE_ID: "block", X: 26 * 16, Y: 10 * 16, W: 1 * 16, H: 5 * 16, COLOR_ID: 0}
+        ]
+    }
+
+    return LevelBlueprint(json_blob)
+
+
+def get_test_blueprint_4() -> LevelBlueprint:
+    json_blob = {
+        NAME: "Toggle Block Test",
+        PLAYERS: [const.PLAYER_FAST, const.PLAYER_SMALL],
+        ENTITIES: [
+            {TYPE_ID: "block", X: 2 * 16, Y: 5 * 16, W: 4 * 16, H: 16},
+            {TYPE_ID: "block", X: 0, Y: 0, W: 16, H: 15 * 16},
+            {TYPE_ID: "block", X: 6 * 16, Y: 7 * 16, W: 2 * 16, H: 16},
+            {TYPE_ID: "block", X: 4 * 16, Y: 14 * 16, W: 12 * 16, H: 16},
+            {TYPE_ID: "block", X: 1 * 16, Y: 6 * 16, W: 5 * 16, H: 2 * 16},
+            {TYPE_ID: "block", X: 12 * 16, Y: 12 * 16, W: 2 * 16, H: 2 * 16},
+            {TYPE_ID: "block", X: 4 * 16, Y: 12 * 16, W: 1 * 16, H: 2 * 16},
+            {TYPE_ID: "start_block", SUBTYPE_ID: const.PLAYER_FAST, X: 1 * 16, Y: 11 * 16, W: 16, H: 16, X_DIR: 1},
+            {TYPE_ID: "start_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 1 * 16, Y: 5 * 16, W: 16, H: 16, X_DIR: 1},
+            {TYPE_ID: "block", X: 14 * 16, Y: 11 * 16, W: 2 * 16, H: 3 * 16},
+            {TYPE_ID: "block", X: 22 * 16, Y: 13 * 16, W: 2 * 16, H: 2 * 16},
+            {TYPE_ID: "block", X: 18 * 16, Y: 6 * 16, W: 2 * 16, H: 8 * 16},
+            {TYPE_ID: "end_block", SUBTYPE_ID: const.PLAYER_FAST, X: 22 * 16, Y: 12 * 16, W: 16 * 2, H: 16},
+            {TYPE_ID: "end_block", SUBTYPE_ID: const.PLAYER_SMALL, X: 27 * 16, Y: 5 * 16, W: 16 * 2, H: 16},
             {TYPE_ID: "block", X: 1 * 16, Y: 0, W: 30 * 16, H: 3 * 16, COLOR_ID: 1},
             {TYPE_ID: "block", X: 18 * 16, Y: 14 * 16, W: 4 * 16, H: 1 * 16, COLOR_ID: 0},
             {TYPE_ID: "block", X: 26 * 16, Y: 10 * 16, W: 1 * 16, H: 5 * 16, COLOR_ID: 0}

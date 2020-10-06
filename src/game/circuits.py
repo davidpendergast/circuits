@@ -53,6 +53,8 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
         keybinds.get_instance().set_binding(const.SAVE_LEVEL_DEBUG, [pygame.K_F2])
 
+        keybinds.get_instance().set_binding(const.TOGGLE_EDIT_MODE, [pygame.K_F5])
+
         self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
 
     def get_sheets(self):

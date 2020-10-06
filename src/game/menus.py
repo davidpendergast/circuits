@@ -17,6 +17,7 @@ import src.game.colors as colors
 import src.game.overworld as overworld
 import src.game.ui as ui
 import src.engine.spritesheets as spritesheets
+import src.game.worlds as worlds
 
 
 class MainMenuScene(scenes.Scene):
@@ -26,11 +27,12 @@ class MainMenuScene(scenes.Scene):
         self._title_element = ui.SpriteElement()
 
         self._options_list = ui.OptionsList()
-        self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(RealGameScene(blueprints.get_test_blueprint_3())))
+        self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(RealGameScene(blueprints.get_test_blueprint_4())))
         self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
         self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene("overworlds/test_overworld")))
-        self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(DebugGameScene()))
-        self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(DebugGameScene()))
+        self._options_list.add_option("create", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
 
     def update(self):
         self.update_sprites()
@@ -189,10 +191,10 @@ class _BaseGameScene(scenes.Scene):
             self._world = bp.create_world()
             self._world_view = worldview.WorldView(self._world)
 
-    def get_world(self):
+    def get_world(self) -> worlds.World:
         return self._world
 
-    def get_world_view(self):
+    def get_world_view(self) -> worldview.WorldView:
         return self._world_view
 
     def update(self):
@@ -200,6 +202,28 @@ class _BaseGameScene(scenes.Scene):
             self._world.update()
         if self._world_view is not None:
             self._world_view.update()
+
+        if inputs.get_instance().mouse_in_window():
+            screen_pos = inputs.get_instance().mouse_pos()
+            pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
+            if inputs.get_instance().mouse_was_pressed(button=1):
+                self.handle_click_at(pos_in_world, button=1)
+            if inputs.get_instance().mouse_was_pressed(button=2):
+                self.handle_click_at(pos_in_world, button=2)
+            if inputs.get_instance().mouse_was_pressed(button=3):
+                self.handle_click_at(pos_in_world, button=3)
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
+            self.handle_esc_pressed()
+
+    def handle_esc_pressed(self):
+        pass
+
+    def handle_click_at(self, world_xy, button=1):
+        if configs.is_dev:
+            cell_size = gs.get_instance().cell_size
+            print("INFO: mouse pressed at ({}, {})".format(int(world_xy[0]) // cell_size,
+                                                           int(world_xy[1]) // cell_size))
 
     def all_sprites(self):
         if self._world_view is not None:
@@ -470,6 +494,9 @@ class RealGameScene(_BaseGameScene):
 
         self._update_ui()
 
+    def handle_esc_pressed(self):
+        self.get_manager().set_next_scene(MainMenuScene())
+
     def setup_new_world(self, bp):
         old_show_grid = False if self.get_world_view() is None else self.get_world_view()._show_grid
         super().setup_new_world(bp)
@@ -524,52 +551,84 @@ class RealGameScene(_BaseGameScene):
                 yield spr
 
 
-class DebugGameScene(_BaseGameScene):
-    # TODO this will become the level editor I think
+class DebugGameScene(RealGameScene):
 
-    def __init__(self, world_type=0):
+    def __init__(self, bp, edit_scene):
+        RealGameScene.__init__(self, bp)
+
+        self.edit_scene = edit_scene
+
+    def update(self):
+        super().update()
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_EDIT_MODE)):
+            self.handle_esc_pressed()
+
+    def handle_esc_pressed(self):
+        self.get_manager().set_next_scene(self.edit_scene)
+
+
+class LevelEditGameScene(_BaseGameScene):
+
+    def __init__(self, bp: blueprints.LevelBlueprint, output_file=None):
         """
         world_type: an int or level blueprint
         """
         _BaseGameScene.__init__(self)
 
-        self._cur_test_world = world_type
-        self._create_new_world(world_type=world_type)
+        self.orig_bp = bp
+        self.output_file = output_file if output_file is not None else "testing/saved_level.json"
+
+        self.setup_new_world(bp)
+
+        self.selected_spec = None
+        self.all_spec_blobs = [s[0] for s in bp.all_entities()]
+        self.entities_for_specs = {}  # SpecType -> List of Entities
+
+    def build_current_bp(self):
+        return blueprints.LevelBlueprint.build(self.orig_bp.name(),
+                                               self.orig_bp.level_id(),
+                                               self.orig_bp.get_player_types(),
+                                               self.orig_bp.time_limit(),
+                                               self.orig_bp.description(),
+                                               self.all_spec_blobs)
+
+    def get_specs_at(self, world_xy):
+        res = []
+        for spec in self.all_spec_blobs:
+            r = blueprints.SpecUtils.get_rect(spec, default_size=gs.get_instance().cell_size)
+            if r is None:
+                continue
+            elif util.rect_contains(r, world_xy):
+                res.append(spec)
+        return res
 
     def update(self):
-        if inputs.get_instance().mouse_was_pressed() and inputs.get_instance().mouse_in_window():  # debug
-            screen_pos = inputs.get_instance().mouse_pos()
-            pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
-
-            cell_size = gs.get_instance().cell_size
-            print("INFO: mouse pressed at ({}, {})".format(int(pos_in_world[0]) // cell_size,
-                                                           int(pos_in_world[1]) // cell_size))
-
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
-            self._create_new_world(world_type=self._cur_test_world)
+            self.get_world_view().set_camera_pos_in_world((0, 0))
+            pass
 
-        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.NEXT_LEVEL_DEBUG)):
-            # TODO clean this up please...
-            if isinstance(self._cur_test_world, int):
-                self._cur_test_world += 1
-            else:
-                self._cur_test_world = 0
-            self._create_new_world(world_type=self._cur_test_world)
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_EDIT_MODE)):
+            self.get_manager().set_next_scene(DebugGameScene(self.build_current_bp(), self))
 
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_LEVEL_DEBUG)):
             if self._world is not None:
                 bp = self._world.get_blueprint()
                 if bp is not None:
-                    filepath = "testing/saved_level.json"
-                    print("INFO: saving level to {}".format(filepath))
-                    blueprints.write_level_to_file(bp, filepath)
-
-        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
-            # TODO probably want to disable this once we start editing levels
-            self.get_manager().set_next_scene(MainMenuScene())
+                    filepath = self.output_file
+                    save_result = blueprints.write_level_to_file(bp, filepath)
+                    if save_result:
+                        print("INFO: saved level to {}".format(filepath))
+                    else:
+                        print("INFO: failed to save level to {}".format(filepath))
 
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
             debug.toggle_debug_sprite_mode()
+
+        if inputs.get_instance().mouse_in_window():
+            screen_xy = inputs.get_instance().mouse_pos()
+
+            self.get_world_view()
 
         if inputs.get_instance().mouse_is_dragging(button=1):
             drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
@@ -580,6 +639,20 @@ class DebugGameScene(_BaseGameScene):
                 self._world_view.set_free_camera(True)
 
         super().update()
+
+    def handle_esc_pressed(self):
+        # TODO probably want to pop an "are you sure you want to exit" dialog
+        pass
+
+    def handle_click_at(self, world_xy, button=1):
+        if button == 1:
+            specs_at_click = self.get_specs_at(world_xy)
+            if len(specs_at_click) > 0:
+                print("INFO: clicked spec(s): {}".format(specs_at_click))
+            else:
+                super().handle_click_at(world_xy, button=button)
+        else:
+            super().handle_click_at(world_xy, button=button)
 
     def _create_new_world(self, world_type=0):
         if isinstance(world_type, blueprints.LevelBlueprint):
