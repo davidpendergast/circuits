@@ -58,6 +58,9 @@ class Entity:
         self._y_vel = 0
 
         self._world = None  # world sets this when entity is added / removed
+        self._spec = None   # bp sets this when it creates the entity
+
+        self._color_override = None
 
         self._debug_sprites = {}
 
@@ -71,8 +74,17 @@ class Entity:
     def get_world(self) -> 'src.game.worlds.World':
         return self._world
 
+    def get_spec(self):
+        return self._spec
+
     def set_world(self, world):
         self._world = world
+
+    def set_color_override(self, val):
+        self._color_override = val
+
+    def get_color_override(self):
+        return self._color_override
 
     def about_to_remove_from_world(self):
         pass
@@ -349,7 +361,10 @@ class AbstractBlockEntity(Entity):
         return 0
 
     def get_color(self):
-        return spriteref.get_color(self.get_color_id())
+        if self.get_color_override() is not None:
+            return self.get_color_override()
+        else:
+            return spriteref.get_color(self.get_color_id())
 
     def all_sprites(self):
         for spr in self.all_debug_sprites():

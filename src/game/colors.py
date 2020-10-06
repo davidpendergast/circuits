@@ -46,4 +46,6 @@ DARK_PURPLE = to_float(94, 56, 94)
 # PURPLE = to_float(99, 228, 253)
 # DARK_PURPLE = to_float(94, 56, 94)
 
+EDITOR_SELECTION_COLOR = PERFECT_RED
+
 

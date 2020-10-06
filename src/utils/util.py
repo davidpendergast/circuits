@@ -1080,6 +1080,18 @@ def string_checksum(the_string, m=982451653):
     return res
 
 
+def to_key(obj):
+    if isinstance(obj, list):
+        return tuple(obj)
+    elif isinstance(obj, set):
+        return frozenset(obj)
+    elif isinstance(obj, dict):
+        # this feels legit but no guarantees
+        return frozenset([(k, to_key(obj[k])) for k in obj])
+    else:
+        return obj
+
+
 def checksum(blob, m=982451653, strict=True):
     """
         Calculates a checksum of any composition of dicts, lists, tuples, bools, strings, and ints.

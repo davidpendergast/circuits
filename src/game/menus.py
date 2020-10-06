@@ -18,6 +18,7 @@ import src.game.overworld as overworld
 import src.game.ui as ui
 import src.engine.spritesheets as spritesheets
 import src.game.worlds as worlds
+import random
 
 
 class MainMenuScene(scenes.Scene):
@@ -179,8 +180,6 @@ class _BaseGameScene(scenes.Scene):
 
         self._world = None
         self._world_view = None
-
-        self.setup_new_world(bp)
 
     def setup_new_world(self, bp):
         if bp is None:
@@ -464,6 +463,8 @@ class RealGameScene(_BaseGameScene):
         self._top_panel_ui = None
         self._progress_bar_ui = None
 
+        self.setup_new_world(bp)
+
     def update(self):
         super().update()
         self._state.update(self.get_world())
@@ -579,11 +580,11 @@ class LevelEditGameScene(_BaseGameScene):
         self.orig_bp = bp
         self.output_file = output_file if output_file is not None else "testing/saved_level.json"
 
-        self.setup_new_world(bp)
-
         self.selected_spec = None
         self.all_spec_blobs = [s[0] for s in bp.all_entities()]
         self.entities_for_specs = {}  # SpecType -> List of Entities
+
+        self.setup_new_world(bp)
 
     def build_current_bp(self):
         return blueprints.LevelBlueprint.build(self.orig_bp.name(),
@@ -602,6 +603,21 @@ class LevelEditGameScene(_BaseGameScene):
             elif util.rect_contains(r, world_xy):
                 res.append(spec)
         return res
+
+    def setup_new_world(self, bp):
+        super().setup_new_world(bp)
+
+        self.entities_for_specs.clear()
+
+        for ent in self.get_world().all_entities():
+            spec = ent.get_spec()
+            if spec is not None:
+                as_key = util.to_key(spec)
+                if as_key not in self.entities_for_specs:
+                    self.entities_for_specs[as_key] = []
+                self.entities_for_specs[as_key].append(ent)
+
+        print("INFO: entities_for_specs = {}".format(self.entities_for_specs))
 
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
@@ -649,10 +665,29 @@ class LevelEditGameScene(_BaseGameScene):
             specs_at_click = self.get_specs_at(world_xy)
             if len(specs_at_click) > 0:
                 print("INFO: clicked spec(s): {}".format(specs_at_click))
+                idx = int(random.random() * len(specs_at_click))  # TODO pls
+                self.select_spec(specs_at_click[idx])
             else:
+                self.select_spec(None)
                 super().handle_click_at(world_xy, button=button)
         else:
             super().handle_click_at(world_xy, button=button)
+
+    def select_spec(self, spec):
+        if self.selected_spec is not None:
+            old_key = util.to_key(self.selected_spec)
+            if old_key in self.entities_for_specs:
+                for ent in self.entities_for_specs[old_key]:
+                    ent.set_color_override(None)
+
+        self.selected_spec = spec
+        if self.selected_spec is not None:
+            new_key = util.to_key(self.selected_spec)
+            if new_key in self.entities_for_specs:
+                for ent in self.entities_for_specs[new_key]:
+                    ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
+            else:
+                print("WARN: selected spec with no entities: {}".format(spec))
 
     def _create_new_world(self, world_type=0):
         if isinstance(world_type, blueprints.LevelBlueprint):

@@ -90,6 +90,7 @@ class SpecType:
         for ent in self.build_entities(blob_copy):
             if ent is not None:
                 world.add_entity(ent, next_update=False)
+                ent._spec = json_blob.copy()  # XXX but helpful for the level editor
 
     def __repr__(self):
         return type(self).__name__
