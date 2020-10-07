@@ -55,7 +55,7 @@ class InputState:
                 del self._mouse_down_pos[keycode]
 
     def set_mouse_pos(self, pos):
-        if self._mouse_pos != pos:
+        if pos is not None and self._mouse_pos != pos:
             # update any mouse downs that also happened this frame
             for k in self._mouse_down_pos:
                 x, y, tick = self._mouse_down_pos[k]

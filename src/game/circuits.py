@@ -53,7 +53,24 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
         keybinds.get_instance().set_binding(const.SAVE_LEVEL_DEBUG, [pygame.K_F2])
 
+        # level editor commands
         keybinds.get_instance().set_binding(const.TOGGLE_EDIT_MODE, [pygame.K_F5])
+
+        keybinds.get_instance().set_binding(const.MOVE_SELECTION_UP, [pygame.K_w])
+        keybinds.get_instance().set_binding(const.MOVE_SELECTION_LEFT, [pygame.K_a])
+        keybinds.get_instance().set_binding(const.MOVE_SELECTION_DOWN, [pygame.K_s])
+        keybinds.get_instance().set_binding(const.MOVE_SELECTION_RIGHT, [pygame.K_d])
+
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_VERT, [pygame.K_UP])
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_HORZ, [pygame.K_LEFT])
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, [pygame.K_DOWN])
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, [pygame.K_RIGHT])
+
+        keybinds.get_instance().set_binding(const.DECREASE_EDIT_RESOLUTION, [pygame.K_LEFTBRACKET])
+        keybinds.get_instance().set_binding(const.INCREASE_EDIT_RESOLUTION, [pygame.K_RIGHTBRACKET])
+
+        keybinds.get_instance().set_binding(const.UNDO, [pygame.K_z])  # TODO add a way to specify modifier keys
+        keybinds.get_instance().set_binding(const.REDO, [pygame.K_y])
 
         self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
 

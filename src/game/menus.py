@@ -580,11 +580,66 @@ class LevelEditGameScene(_BaseGameScene):
         self.orig_bp = bp
         self.output_file = output_file if output_file is not None else "testing/saved_level.json"
 
+        self.edit_queue = []
+        self.edit_queue_idx = -1
+        self.edit_queue_max_size = 32
+
         self.selected_specs = set()
         self.all_spec_blobs = [s[0] for s in bp.all_entities()]
         self.entities_for_specs = {}  # SpecType -> List of Entities
 
+        cs = gs.get_instance().cell_size
+        self.edit_resolution = cs  # how far blocks move & change in size when you press the key commands
+        self.resolution_options = [cs // 8, cs // 4, cs // 2, cs]  # essentially assumes cs >= 16
+
+        self.stamp_current_state()
         self.setup_new_world(bp)
+
+    def stamp_current_state(self):
+        cur_specs = [s.copy() for s in self.all_spec_blobs]
+        cur_selection = set(self.selected_specs)
+        state = EditorState(cur_specs, cur_selection)
+
+        if 0 <= self.edit_queue_idx < len(self.edit_queue):
+            if self.edit_queue[self.edit_queue_idx] == state:
+                return  # no changes were made, just abort
+
+        self.edit_queue_idx += 1
+        if len(self.edit_queue) >= self.edit_queue_idx:
+            # if there are non-applied edits ahead of us, blow them away
+            self.edit_queue = self.edit_queue[0 : self.edit_queue_idx]
+        self.edit_queue.append(state)
+
+        if len(self.edit_queue) > self.edit_queue_max_size:
+            self.edit_queue = self.edit_queue[-self.edit_queue_max_size:]
+
+    def undo(self):
+        self.edit_queue_idx = util.bound(self.edit_queue_idx, 0, len(self.edit_queue))
+        if self.edit_queue_idx > 0:
+            self.edit_queue_idx -= 1
+        else:
+            return
+        state_to_apply = self.edit_queue[self.edit_queue_idx]
+        self._apply_state(state_to_apply)
+
+    def redo(self):
+        self.edit_queue_idx = util.bound(self.edit_queue_idx, 0, len(self.edit_queue))
+        if self.edit_queue_idx < len(self.edit_queue) - 1:
+            self.edit_queue_idx += 1
+        else:
+            return
+        state_to_apply = self.edit_queue[self.edit_queue_idx]
+        self._apply_state(state_to_apply)
+
+    def _apply_state(self, state: 'EditorState'):
+        self.all_spec_blobs = [s.copy() for s in state.all_specs]
+
+        self.setup_new_world(self.build_current_bp())
+        for spec in self.all_spec_blobs:
+            if util.to_key(spec) in state.selected_specs:
+                self.set_selected(spec, select=True)
+            else:
+                self.set_selected(spec, select=False)
 
     def build_current_bp(self):
         return blueprints.LevelBlueprint.build(self.orig_bp.name(),
@@ -617,8 +672,6 @@ class LevelEditGameScene(_BaseGameScene):
                     self.entities_for_specs[as_key] = []
                 self.entities_for_specs[as_key].append(ent)
 
-        print("INFO: entities_for_specs = {}".format(self.entities_for_specs))
-
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
             self.get_world_view().set_camera_pos_in_world((0, 0))
@@ -641,11 +694,6 @@ class LevelEditGameScene(_BaseGameScene):
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
             debug.toggle_debug_sprite_mode()
 
-        if inputs.get_instance().mouse_in_window():
-            screen_xy = inputs.get_instance().mouse_pos()
-
-            self.get_world_view()
-
         if inputs.get_instance().mouse_is_dragging(button=3):
             drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=3)
             if drag_this_frame is not None:
@@ -654,11 +702,31 @@ class LevelEditGameScene(_BaseGameScene):
                 self._world_view.move_camera_in_world(dxy)
                 self._world_view.set_free_camera(True)
 
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.INCREASE_EDIT_RESOLUTION)):
+            self.adjust_edit_resolution(True)
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DECREASE_EDIT_RESOLUTION)):
+            self.adjust_edit_resolution(False)
+
+        if inputs.get_instance().ctrl_is_held():
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.UNDO)):
+                self.undo()
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.REDO)):
+                self.redo()
+
         super().update()
 
     def handle_esc_pressed(self):
         # TODO probably want to pop an "are you sure you want to exit" dialog
         pass
+
+    def adjust_edit_resolution(self, increase):
+        if self.edit_resolution in self.resolution_options:
+            cur_idx = self.resolution_options.index(self.edit_resolution)
+            new_idx = util.bound(cur_idx + (1 if increase else -1), 0, len(self.resolution_options) - 1)
+            self.edit_resolution = self.resolution_options[new_idx]
+        else:
+            self.edit_resolution = self.resolution_options[-1]
+        print("INFO: new editor resolution: {}".format(self.edit_resolution))
 
     def handle_click_at(self, world_xy, button=1):
         if button == 1:
@@ -675,6 +743,7 @@ class LevelEditGameScene(_BaseGameScene):
             else:
                 self.deselect_all()
                 super().handle_click_at(world_xy, button=button)
+            self.stamp_current_state()
         else:
             super().handle_click_at(world_xy, button=button)
 
@@ -697,7 +766,8 @@ class LevelEditGameScene(_BaseGameScene):
                     for ent in self.entities_for_specs[key]:
                         ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
             else:
-                self.selected_specs.remove(key)
+                if key in self.selected_specs:
+                    self.selected_specs.remove(key)
                 if key in self.entities_for_specs:
                     for ent in self.entities_for_specs[key]:
                         ent.set_color_override(None)
@@ -724,3 +794,12 @@ class LevelEditGameScene(_BaseGameScene):
             self._world_view = worldview.WorldView(self._world)
 
 
+class EditEvent:
+    def __init__(self, old_state, new_state):
+        self.old_state = old_state
+        self.new_state = new_state
+
+class EditorState:
+    def __init__(self, all_specs, selected_specs):
+        self.all_specs = all_specs
+        self.selected_specs = selected_specs

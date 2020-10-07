@@ -23,6 +23,20 @@ TOGGLE_PLAYER_TYPE = "toggle_player_type"
 SAVE_LEVEL_DEBUG = "save_level_debug"
 TOGGLE_EDIT_MODE = "toggle_edit_mode"
 
+MOVE_SELECTION_UP = "move_selection_up"
+MOVE_SELECTION_LEFT = "move_selection_left"
+MOVE_SELECTION_DOWN = "move_selection_down"
+MOVE_SELECTION_RIGHT = "move_selection_right"
+SHRINK_SELECTION_VERT = "shrink_selection_vert"
+SHRINK_SELECTION_HORZ = "shrink_selection_horz"
+GROW_SELECTION_VERT = "grow_selection_vert"
+GROW_SELECTION_HORZ = "grow_selection_horz"
+UNDO = "undo"
+REDO = "redo"
+
+INCREASE_EDIT_RESOLUTION = "increase_edit_resolution"
+DECREASE_EDIT_RESOLUTION = "decrease_edit_resolution"
+
 # player ids
 PLAYER_FAST = "player_fast"
 PLAYER_SMALL = "player_small"
