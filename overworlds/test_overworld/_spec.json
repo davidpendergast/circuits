@@ -1,0 +1,52 @@
+{
+"name": "Baby Steps",
+"ref_id": "test_1", 
+"author": "Ghast",
+"data_stride": 2,
+"data":[
+    ". s . . . . . . ",
+    ". 1 . . . . . . ",
+    ". | . . . . . . ",
+    ". 2 4 ~ ~ 5 6 . ",
+    ". | . . . 7 8 e0",
+    "e13 . . . | . . ",
+    ". . . . . | . . ",
+    ". . . * ~ * . . ",
+    ". . . 9 . . . . ",
+    ". . . f . . . . "
+],
+"lvl_1": "test_lvl_0",
+"lvl_2": "test_lvl_0",
+"lvl_3": "test_lvl_0",
+"lvl_4": "test_lvl_0",
+"lvl_5": "test_lvl_0",
+"lvl_6": "test_lvl_0",
+"lvl_7": "test_lvl_0",
+"lvl_8": "test_lvl_0",
+"lvl_9": "test_lvl_0",
+"bg_triangles": {
+    "top": [],
+    "left": [],
+    "bottom": [],
+    "right": [],
+    "top_left": [],
+    "bottom_left": [
+        [[28, 0], [45, -88], [58, 0], "dark_gray"],
+        [[0, -192], [45, -88], [45, 0], "light_gray"],
+        [[0, -192], [0, 0], [45, 0], "light_gray"]
+    ],
+    "top_right": [
+        [[-55, 84], [0, 104], [0, 60], "dark_gray"],
+        [[-55, 84], [0, 60], [0, 0], "light_gray"],
+        [[-77, 32], [-19, 35], [-27, 47], "dark_gray"],
+        [[-77, 32], [-13, 41], [0, 0], "light_gray"],
+        [[-77, 32], [-91, 0], [0, 0], "light_gray"]
+    ],
+    "bottom_right": [
+        [[-32, 0], [0, -40], [0, 0], "dark_gray"],
+        [[-72, 0], [0, -50], [-32, 0], "light_gray"],
+        [[0, -50], [-32, 0], [0, 0], "light_gray"]
+    ],
+    "center":[]
+}
+}

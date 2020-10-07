@@ -3,6 +3,7 @@ import traceback
 
 import src.engine.sprites as sprites
 import src.utils.util as util
+import src.utils.artutils as artutils
 
 
 class SpriteSheet:
@@ -44,25 +45,31 @@ class FontCharacterSpriteLookup:
         return None
 
 
-class DefaultFont(SpriteSheet, FontCharacterSpriteLookup):
+class FontSheet(SpriteSheet, FontCharacterSpriteLookup):
 
-    SHEET_ID = "default_font"
+    def __init__(self, sheet_id, filename):
+        SpriteSheet.__init__(self, sheet_id, filename)
+        self._sprite_lookup = {}  # char -> ImageModel
+        self._swap_chars = {}  # char -> char
 
-    def __init__(self):
-        SpriteSheet.__init__(self, DefaultFont.SHEET_ID, "assets/font.png")
-        self._sprite_lookup = {}  # char -> sprite rect on atlas
+        self.char_sizes = set()
 
-        self._char_mappings = {
-            "→": chr(16),
-            "←": chr(17),
-            "↑": chr(24),
-            "↓": chr(25)
-        }
+    def set_swap_chars(self, mapping):
+        self._swap_chars = mapping
+
+    def set_char(self, c, model):
+        self._sprite_lookup[c] = model
+        if model is not None:
+            self.char_sizes.add(model.size())
+
+    def is_mono(self):
+        """returns: whether the font is monospaced"""
+        return len(self.char_sizes) <= 1
 
     def get_char(self, c):
         """returns: an ImageSprite for the character c, or None if one isn't defined."""
-        if c in self._char_mappings:
-            c = self._char_mappings[c]
+        if c in self._swap_chars:
+            c = self._swap_chars[c]
 
         if c in self._sprite_lookup:
             return self._sprite_lookup[c]
@@ -70,6 +77,24 @@ class DefaultFont(SpriteSheet, FontCharacterSpriteLookup):
             return self._sprite_lookup["?"]
         else:
             return None
+
+
+class DefaultFontMono(FontSheet):
+
+    SHEET_ID = "default_font_mono"
+
+    def __init__(self, font_id=None):
+        FontSheet.__init__(self, DefaultFontMono.SHEET_ID if font_id is None else font_id, "assets/font.png")
+
+        self.set_swap_chars({
+            "→": chr(16),
+            "←": chr(17),
+            "↑": chr(24),
+            "↓": chr(25)
+        })
+
+    def xform_char_rect(self, r, sheet):
+        return r
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
@@ -82,7 +107,55 @@ class DefaultFont(SpriteSheet, FontCharacterSpriteLookup):
         for y in range(0, 8):
             for x in range(0, 32):
                 c = chr(y * 32 + x)
-                self._sprite_lookup[c] = sprites.ImageModel(x * char_w, y * char_h, char_w, char_h, offset=start_pos)
+                rect = [x * char_w, y * char_h, char_w, char_h]
+                rect = self.xform_char_rect(rect, sheet)
+                if rect is None or rect[2] == 0:
+                    self.set_char(c, None)
+                else:
+                    self.set_char(c, sprites.ImageModel(rect[0], rect[1], rect[2], rect[3], offset=start_pos))
+
+
+class DefaultFont(DefaultFontMono):
+
+    SHEET_ID = "default_font"
+
+    def __init__(self):
+        DefaultFontMono.__init__(self, DefaultFont.SHEET_ID)
+
+    def xform_char_rect(self, rect, sheet):
+        r = artutils.find_bounding_rect(rect, sheet, keep_vert=True)
+        if r is not None and r[2] > 0:
+            return util.rect_expand(r, right_expand=1)
+        else:
+            return None
+
+
+class DefaultFontSmall(FontSheet):
+
+    SHEET_ID = "font_small"
+
+    def __init__(self):
+        FontSheet.__init__(self, DefaultFontSmall.SHEET_ID, "assets/font_small.png")
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+        if sheet is None:
+            return
+
+        # it's a 32x8 grid of characters
+        char_w = round(sheet.get_width() / 32)
+        char_h = round(sheet.get_height() / 8)
+        for y in range(0, 8):
+            for x in range(0, 32):
+                c = chr(y * 32 + x)
+                grid_cell = [x * char_w, y * char_h, char_w, char_h]
+                true_rect = artutils.find_bounding_rect(grid_cell, sheet, keep_vert=True)
+                if true_rect[2] == 0:
+                    self.set_char(c, None)
+                else:
+                    true_rect = util.rect_expand(true_rect, right_expand=1)
+                    img = sprites.ImageModel(true_rect[0], true_rect[1], true_rect[2], true_rect[3], offset=start_pos)
+                    self.set_char(c, img)
 
 
 class WhiteSquare(SpriteSheet):
@@ -127,7 +200,7 @@ class SingleImageSheet(SpriteSheet):
 _SINGLETON = None
 
 
-def create_instance():
+def create_instance() -> 'SpriteAtlas':
     global _SINGLETON
     if _SINGLETON is None:
         _SINGLETON = SpriteAtlas()
@@ -136,8 +209,26 @@ def create_instance():
         raise ValueError("SpriteAtlas has already been created")
 
 
-def get_instance():
+def get_instance() -> 'SpriteAtlas':
     return _SINGLETON
+
+
+def get_default_font(mono=False, small=False) -> FontSheet:
+    if small:
+        if mono:
+            raise ValueError("No small mono-spaced font (yet)")
+        else:
+            res = get_instance().get_sheet(DefaultFontSmall.SHEET_ID)
+    else:
+        if mono:
+            res = get_instance().get_sheet(DefaultFontMono.SHEET_ID)
+        else:
+            res = get_instance().get_sheet(DefaultFont.SHEET_ID)
+
+    if res is None:
+        raise ValueError("No font for mono={}, small={}".format(mono, small))
+    else:
+        return res
 
 
 class SpriteAtlas:
@@ -147,6 +238,9 @@ class SpriteAtlas:
 
         # some "built-in" sheets
         self.add_sheet(DefaultFont())
+        self.add_sheet(DefaultFontMono())
+        self.add_sheet(DefaultFontSmall())
+
         self.add_sheet(WhiteSquare())
 
     def add_sheet(self, sheet):

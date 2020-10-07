@@ -172,6 +172,106 @@ def lighter(color, pcnt=0.2):
     return tuple(res)
 
 
+def is_transparent(color):
+    if len(color) < 4:
+        return False
+    else:
+        return color[2] == 0
+
+
+def find_bounding_rect(search_rect, sheet, keep_horz=False, keep_vert=False):
+    if keep_horz and keep_vert:
+        return search_rect
+
+    min_x = None
+    min_y = None
+    max_x = None
+    max_y = None
+
+    if keep_horz:
+        min_x = search_rect[0]
+        max_x = search_rect[0] + search_rect[2] - 1
+
+    if keep_vert:
+        min_y = search_rect[1]
+        max_y = search_rect[1] + search_rect[3] - 1
+
+    sheet_size = sheet.get_size()
+    sheet.lock()
+    for x in range(search_rect[0], search_rect[0] + search_rect[2]):
+        for y in range(search_rect[1], search_rect[1] + search_rect[3]):
+            if 0 <= x < sheet_size[0] and 0 <= y < sheet_size[1]:
+                color = sheet.get_at((x, y))
+                if not is_transparent(color):
+                    if min_x is None:
+                        min_x = x
+                        max_x = x
+                    else:
+                        min_x = min(x, min_x)
+                        max_x = max(x, max_x)
+
+                    if min_y is None:
+                        min_y = y
+                        max_y = y
+                    else:
+                        min_y = min(y, min_y)
+                        max_y = max(y, max_y)
+    sheet.unlock()
+
+    if min_x is None and min_y is None:
+        return [search_rect[0], search_rect[1], 0, 0]
+    elif min_x is None:
+        return [search_rect[0], min_y, 0, max_y - min_y + 1]
+    elif min_y is None:
+        return [min_x, search_rect[1], max_x - min_x + 1, 0]
+    else:
+        return [min_x, min_y, max_x - min_x + 1, max_y - min_y + 1]
+
+
+def draw_decay_animation_effect(src_sheet, src_rect, n_frames, dest_sheet, dest_rect_provider,
+                                full_decay_rect_provider, partial_decay_rect_provider,
+                                decay_chance_provider=lambda i, xy: 0.05):
+    """
+    src_sheet: Surface containing the source image
+    src_rect: Location of the source image
+    n_frames: Number of frames to draw
+    dest_sheet: Surface to draw the decayed images
+    dest_rect_provider: frm_idx -> rect
+    full_decay_rect_provider: frm_idx -> rect
+    partial_decay_rect_provider: frm_idx -> rect
+    decay_chance_provider: frm_idx, xy -> rect
+
+    returns: list of dest rects drawn
+    """
+    res = []
+    decayed = set()  # set of decayed pixels
+    for i in range(0, n_frames):
+        dest_rect = dest_rect_provider(i)
+        full_decay_rect = full_decay_rect_provider(i)
+        partial_decay_rect = partial_decay_rect_provider(i)
+
+        for x in range(0, min(dest_rect[2], src_rect[2])):
+            for y in range(0, min(dest_rect[3], src_rect[3])):
+                src_xy = (src_rect[0] + x, src_rect[1] + y)
+                if src_xy in decayed:
+                    continue
+                elif util.rect_contains(full_decay_rect, src_xy):
+                    decayed.add(src_xy)
+                    continue
+                elif util.rect_contains(partial_decay_rect, src_xy):
+                    decay_chance = decay_chance_provider(i, src_xy)
+                    if random.random() < decay_chance:
+                        decayed.add(src_xy)
+                        continue
+
+                color = src_sheet.get_at(src_xy)
+                dest_xy = (dest_rect[0] + x, dest_rect[1] + y)
+                dest_sheet.set_at(dest_xy, color)
+
+        res.append(dest_rect)
+    return res
+
+
 if __name__ == "__main__":
     test_img = pygame.image.load("planning/mockup_5.png")
     output_img_path = "planning/mockup_5_mazified_bg.png"

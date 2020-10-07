@@ -9,11 +9,12 @@ import src.game.globalstate as gs
 import src.game.entities as entities
 import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
+import src.game.playertypes as playertypes
 
 
 class World:
 
-    def __init__(self):
+    def __init__(self, bp=None):
         self.entities = set()    # set of entities in world
         self._to_add = set()     # set of new entities to add next frame
         self._to_remove = set()  # set of entities to remove next frame
@@ -23,6 +24,10 @@ class World:
         # spacial hashing
         self._entities_to_cells = {}  # ent -> set of cells (x, y) it's inside
         self._cells_to_entities = {}   # (x, y) - set of entities inside
+
+        self._orig_blueprint = bp
+
+        self._tick = 0
 
     def add_entity(self, ent, next_update=True):
         if ent is None or ent in self.entities:
@@ -40,6 +45,7 @@ class World:
         elif next_update:
             self._to_remove.add(ent)
         else:
+            ent.about_to_remove_from_world()
             self.entities.remove(ent)
             self._unhash(ent)
             ent.set_world(None)
@@ -99,7 +105,7 @@ class World:
             return
         else:
             ptype = cur_player.get_player_type()
-            all_types = [t for t in entities.PlayerTypes.all_types()]
+            all_types = [t for t in playertypes.PlayerTypes.all_types()]
             if ptype in all_types:
                 idx = all_types.index(ptype)
                 next_type = all_types[(idx + 1) % len(all_types)]
@@ -118,6 +124,40 @@ class World:
     def handle_debug_commands(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_PLAYER_TYPE)):
             self._do_debug_player_type_toggle()
+
+    def get_blueprint(self):
+        return self._orig_blueprint
+
+    def get_start_block(self, player_type):
+        for b in self.all_entities(lambda ent: ent.is_start_block()):
+            if b.get_player_type() == player_type:
+                return b
+        return None
+
+    def get_end_block(self, player_type):
+        for b in self.all_entities(lambda ent: ent.is_end_block()):
+            if b.get_player_type() == player_type:
+                return b
+        return None
+
+    def get_player_start_position(self, player):
+        player_type = player.get_player_type()
+        start_block = self.get_start_block(player_type)
+        if start_block is None:
+            print("WARN: no start block for player type: {}".format(player_type))
+            return (0, 0)
+        else:
+            block_rect = start_block.get_rect()
+            x = block_rect[0] + block_rect[2] // 2 - player.get_w() // 2
+            y = block_rect[1] - player.get_h()
+            return (x, y)
+
+    def teleport_entity_to(self, entity, xy, duration, new_entity=None):
+        # TODO
+        entity.set_xy(xy)
+
+    def get_tick(self):
+        return self._tick
 
     def update(self):
         if configs.is_dev:
@@ -176,6 +216,8 @@ class World:
         for ent in self.entities:
             ent.update_sprites()
 
+        self._tick += 1
+
     def all_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
         for e in self.entities:
             if cond is None or cond(e):
@@ -196,18 +238,23 @@ class World:
                         res.add(ent)
         return res
 
-    def all_entities_in_rect(self, rect, cond=None):
+    def all_entities_in_rect(self, rect, cond=None) -> typing.Iterable[entities.Entity]:
         """returns: all entities that are in the cells that rect contains"""
         cells = [c for c in self.all_cells_in_rect(rect)]
         return self.all_entities_in_cells(cells, cond=cond)
 
-    def get_player(self):
+    def get_player(self, must_be_active=True, with_type=None) -> entities.PlayerEntity:
         for e in self.entities:
             if isinstance(e, entities.PlayerEntity):
-                return e
+                if must_be_active and not e.is_active():
+                    continue
+                elif with_type is not None and e.get_player_type() != with_type:
+                    continue
+                else:
+                    return e
         return None
 
-    def get_sensor_state(self, sensor_id):
+    def get_sensor_state(self, sensor_id) -> typing.Iterable[entities.Entity]:
         if sensor_id not in self._sensor_states:
             return []
         else:
@@ -409,9 +456,14 @@ class CollisionResolver:
             for c in ent.all_colliders(sensor=True):
                 c_state = []
                 c_rect = c.get_rect(offs=ent_xy)
-                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):  # TODO assumes we only care about blocks
-                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
+                cares_about_blocks = c.collides_with_masks((entities.CollisionMasks.BLOCK,
+                                                            entities.CollisionMasks.SLOPE_BLOCK_HORZ,
+                                                            entities.CollisionMasks.SLOPE_BLOCK_VERT), any=True)
+                cares_about_actors = c.collides_with_mask(entities.CollisionMasks.ACTOR)
+                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: (cares_about_blocks and _e.is_block()) or (cares_about_actors and _e.is_actor())):
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders()):
                         c_state.append(b)
+
                 res[c.get_id()] = c_state
 
         CollisionResolver._calc_slope_sensor_states(world, dyna_ents, res)

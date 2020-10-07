@@ -778,7 +778,7 @@ class TextSprite(MultiSprite):
             self._font_lookup = font_lookup
         else:
             import src.engine.spritesheets as spritesheets  # (.-.)
-            self._font_lookup = spritesheets.get_instance().get_sheet(spritesheets.DefaultFont.SHEET_ID)
+            self._font_lookup = spritesheets.get_default_font()
 
         # this stuff is calculated by _build_character_sprites
         self._character_sprites = []
@@ -794,7 +794,7 @@ class TextSprite(MultiSprite):
         return self._bounding_rect[2], self._bounding_rect[3]
 
     def _build_character_sprites(self):
-        a_character = self._font_lookup.get_char("a")
+        a_character = self._font_lookup.get_char("o")
         char_size = a_character.size()
 
         # we're going to reuse these if possible
@@ -896,7 +896,26 @@ class TextSprite(MultiSprite):
         return type(self).__name__ + "({}, {}, {})".format(self._x, self._y, self._text.replace("\n", "\\n"))
 
     @staticmethod
+    def _get_char_width(c, font_lookup, scale):
+        char_sprite = font_lookup.get_char(c)
+        if char_sprite is None:
+            char_sprite = font_lookup.get_char("o")
+            if char_sprite is None:
+                return 0
+        return char_sprite.width() * scale
+
+    @staticmethod
+    def _get_line_width(text, font_lookup, scale, x_kerning):
+        res = 0
+        for i in range(0, len(text)):
+            res += TextSprite._get_char_width(text[i], font_lookup, scale)
+            if i < len(text) - 1:
+                res += x_kerning
+        return res
+
+    @staticmethod
     def wrap_text_to_fit(text, width, scale=1, font_lookup=None, x_kerning=DEFAULT_X_KERNING):
+        """returns: list of strings, one per line."""
         if font_lookup is None:
             import src.engine.spritesheets as spritesheets  # (.-.)
             font_lookup = spritesheets.get_instance().get_sheet(spritesheets.DefaultFont.SHEET_ID)
@@ -911,7 +930,6 @@ class TextSprite(MultiSprite):
         else:
             # at this point, text contains no newlines
             res = []
-            letter_width = font_lookup.get_char("a").width() * scale + x_kerning
 
             words = text.split(" ")  # FYI if you have repeated spaces this will delete them
             cur_line = []
@@ -921,19 +939,20 @@ class TextSprite(MultiSprite):
                 if len(w) == 0:
                     continue
                 else:
-                    word_width = len(w) * letter_width
+                    word_width = TextSprite._get_line_width(w, font_lookup, scale, x_kerning)
+                    space_width = TextSprite._get_char_width(" ", font_lookup, scale) + x_kerning
                     if len(cur_line) == 0:
                         cur_line.append(w)
                         cur_width = word_width
-                    elif cur_width + letter_width + word_width > width / scale:
+                    elif cur_width + space_width + word_width > width / scale:
                         # gotta wrap
                         res.append(" ".join(cur_line))
                         cur_line.clear()
                         cur_line.append(w)
-                        cur_width = word_width
+                        cur_width = word_width + x_kerning
                     else:
                         cur_line.append(w)
-                        cur_width += letter_width + word_width
+                        cur_width += space_width + word_width + x_kerning
 
             if len(cur_line) > 0:
                 res.append(" ".join(cur_line))

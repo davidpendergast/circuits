@@ -6,6 +6,7 @@ import re
 import pathlib
 import sys
 import heapq
+import typing
 
 
 def bound(val, lower, upper):
@@ -15,6 +16,10 @@ def bound(val, lower, upper):
         return lower
     else:
         return val
+
+
+def signum(val):
+    return (val > 0) - (val < 0)
 
 
 def next_power_of_2(val):
@@ -80,6 +85,11 @@ def angle_between(v1, v2):
         return 0
     else:
         return v1_dot_v2 / (mag1 * mag2)
+
+
+def cardinal_direction_between(from_xy, to_xy):
+    """example: (0, 0) to (5, -6) would give (1, -1)"""
+    return tuple(signum(v) for v in sub(to_xy, from_xy))
 
 
 def to_degrees(rads):
@@ -715,25 +725,74 @@ def resource_path(relative_path):
 
 
 def load_json_from_path(filepath):
-    with open(filepath) as f:
+    with open(filepath, "r") as f:
         data = json.load(f)
         return data
 
 
-def save_json_to_path(json_blob, filepath):
+def save_json_to_path(json_blob, filepath, make_pretty=True):
     try:
-        json.dumps(json_blob, indent=4, sort_keys=True)
+        json_string = json.dumps(json_blob, indent=4, sort_keys=True)
     except (ValueError, TypeError) as e:
         print("ERROR: tried to save invalid json to file: {}".format(filepath))
         print("ERROR: json_blob: {}".format(json_blob))
         raise e
 
+    if make_pretty:
+        json_string = make_json_pretty(json_string)
+
     directory = os.path.dirname(filepath)
-    if not os.path.exists(directory):
+    if directory != "" and not os.path.exists(directory):
         os.makedirs(directory)
 
     with open(filepath, 'w') as outfile:
-        json.dump(json_blob, outfile, indent=4, sort_keys=True)
+        outfile.write(json_string)
+
+
+_paren_dict = {"(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{", "<": ">", ">": "<"}
+
+
+def opposite_paren(paren_char):
+    if paren_char in _paren_dict:
+        return _paren_dict[paren_char]
+    else:
+        return paren_char
+
+
+def make_json_pretty(json_string, _rm_newlines=True):
+    """removes newlines between elements of innermost lists."""
+
+    def find_close_paren(string, index, open='(', closed=')'):
+        balance = 0
+        for i in range(index, len(string)):
+            if string[i] == open:
+                balance += 1
+            elif string[i] == closed:
+                balance -= 1
+            if balance == 0:
+                return i
+        raise ValueError("Unbalanced parenthesis in " + string)
+
+    m = re.search('[({[]', json_string)
+    if m is None:
+        if _rm_newlines:
+            # json_string has no inner collection, so remove all internal newlines
+            res = re.sub("\s*,\s*", ", ", json_string)
+
+            # remove leading and trailing whitespace
+            res = re.sub("^\s*", "", res)
+            res = re.sub("\s*$", "", res)
+        else:
+            res = json_string
+    else:
+        # TODO treat small lists like non-lists
+        i = m.start(0)
+        j = find_close_paren(json_string, i, json_string[i], opposite_paren(json_string[i]))
+        substring = make_json_pretty(json_string[i + 1:j], True)
+
+        res = json_string[:i + 1] + substring + make_json_pretty(json_string[j:], False)
+
+    return res
 
 
 def read_int(json_blob, key, default):
@@ -870,14 +929,19 @@ def diag_neighbors(x, y, dist=1):
     yield (x - dist, y - dist)
 
 
-def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False):
+def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False, n_decimals=0):
     seconds = max(0, n_ticks // fps)
     hours = seconds // 3600
     seconds = seconds % 3600
     minutes = seconds // 60
     seconds = seconds % 60
+    sub_seconds = n_ticks % fps
 
     res = str(seconds)
+
+    if n_decimals > 0:
+        res = res + "{:.{}f}".format(sub_seconds / fps, n_decimals)[1:]
+
     if seconds < 10:
         res = ":0" + res
     else:
@@ -911,12 +975,121 @@ def python_version_string():
     return "{}.{}.{}".format(major, minor, patch)
 
 
+class Grid:
+
+    def __init__(self, width, height, missing_val=None):
+        self._size = (width, height)
+        self._missing_val = missing_val
+
+        self.grid = []  # stored as [x_idx][y_idx]
+        for _ in range(0, width):
+            self.grid.append([missing_val] * height)
+
+    def resize(self, width, height):
+        new_grid = []
+        for _ in range(0, width):
+            new_grid.append([self._missing_val] * height)
+
+        for x in range(0, self._size[0]):
+            for y in range(0, self._size[1]):
+                if x < width and y < height:
+                    # TODO break
+                    new_grid[x][y] = self.grid[x][y]
+
+        self._size = (width, height)
+        self.grid = new_grid
+        return self
+
+    def size(self):
+        return self._size
+
+    def width(self):
+        return self.size()[0]
+
+    def height(self):
+        return self.size()[1]
+
+    def is_valid(self, xy):
+        return 0 <= xy[0] < self.width() and 0 <= xy[1] < self.height()
+
+    def is_empty(self, xy):
+        if not self.is_valid(xy):
+            return True
+        else:
+            return self.get(xy) == self._missing_val
+
+    def get(self, xy):
+        if self.is_valid(xy):
+            return self.grid[xy[0]][xy[1]]
+        else:
+            raise ValueError("index out of range for grid size {}: {}".format(self.size(), xy))
+
+    def set(self, xy, val, expand_if_needed=False):
+        if self.is_valid(xy):
+            self.grid[xy[0]][xy[1]] = val
+        elif expand_if_needed and xy[0] >= 0 and xy[1] >= 0:
+            new_w = max(self.width(), xy[0] + 1)
+            new_h = max(self.height(), xy[1] + 1)
+            self.resize(new_w, new_h)
+            self.set(xy, val, expand_if_needed=False)  # shouldn't need to expand again
+        else:
+            raise ValueError("index out of range for grid size {}: {}".format(self.size(), xy))
+
+    def indices(self, ignore_missing=False):
+        for y in range(0, self.height()):
+            for x in range(0, self.width()):
+                xy = (x, y)
+                if not ignore_missing or self.get(xy) != self._missing_val:
+                    yield xy
+
+    def values(self, ignore_missing=True):
+        for xy in self.indices():
+            val = self.get(xy)
+            if not ignore_missing or val != self._missing_val:
+                yield val
+
+    def to_string(self, to_str=str, delim=", ", spacer=" ", newline_char="\n"):
+        all_values = []
+        max_len = 0
+        for v in self.values(ignore_missing=False):
+            as_str = to_str(v) + delim
+            max_len = max(max_len, len(as_str))
+            all_values.append(as_str)
+
+        formatted = []
+        for i in range(0, len(all_values)):
+            val = all_values[i]
+            if i % self.width() < self.width() - 1:
+                if len(val) < max_len:
+                    val = val + (spacer * (max_len - len(val)))
+            elif (i // self.width()) % self.height() < self.height() - 1:
+                val = val + newline_char
+            formatted.append(val)
+
+        return "".join(formatted)
+
+    def __repr__(self):
+        return self.to_string()
+
+
 def string_checksum(the_string, m=982451653):
     res = 0
     for c in the_string:
         res += ord(c)
         res = (res * 31) % m
     return res
+
+
+def to_key(obj):
+    if isinstance(obj, list):
+        return tuple(obj)
+    elif isinstance(obj, set):
+        return frozenset(obj)
+    elif isinstance(obj, dict):
+        # this feels legit but no guarantees
+        return frozenset([(k, to_key(obj[k])) for k in obj])
+    else:
+        return obj
 
 
 def checksum(blob, m=982451653, strict=True):

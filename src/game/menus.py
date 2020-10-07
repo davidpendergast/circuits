@@ -14,20 +14,26 @@ import src.game.debug as debug
 import src.utils.util as util
 import src.game.spriteref as spriteref
 import src.game.colors as colors
+import src.game.overworld as overworld
+import src.game.ui as ui
+import src.engine.spritesheets as spritesheets
+import src.game.worlds as worlds
+import random
 
 
 class MainMenuScene(scenes.Scene):
 
     def __init__(self):
         scenes.Scene.__init__(self)
-        self._title_element = SpriteElement()
+        self._title_element = ui.SpriteElement()
 
-        self._options_list = OptionsList()
-        self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(DebugGameScene()))
+        self._options_list = ui.OptionsList()
+        self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(RealGameScene(blueprints.get_test_blueprint_4())))
         self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
-        self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(DebugGameScene()))
-        self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(DebugGameScene()))
-        self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(DebugGameScene()))
+        self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene("overworlds/test_overworld")))
+        self._options_list.add_option("create", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
 
     def update(self):
         self.update_sprites()
@@ -39,7 +45,7 @@ class MainMenuScene(scenes.Scene):
         total_size = renderengine.get_instance().get_game_size()
 
         if self._title_element.get_sprite() is None:
-            text_sprite = sprites.ImageSprite(spriteref.object_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=4)
+            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=2)
             self._title_element.set_sprite(text_sprite)
 
         title_x = total_size[0] // 2 - self._title_element.get_size()[0] // 2
@@ -167,266 +173,56 @@ class IntroCutsceneScene(CutsceneScene):
             return MainMenuScene()
 
 
-_ELEMENT_UID_COUNT = 0
+class _BaseGameScene(scenes.Scene):
 
-
-def _get_next_uid():
-    global _ELEMENT_UID_COUNT
-    _ELEMENT_UID_COUNT += 1
-    return _ELEMENT_UID_COUNT - 1
-
-
-class UiElement:
-
-    def __init__(self):
-        self.uid = _get_next_uid()
-        self._parent = None
-        self._children = []
-
-        self._rel_xy = (0, 0)  # position relative to parent
-
-    def update(self):
-        raise NotImplementedError()
-
-    def all_sprites(self):
-        raise NotImplementedError()
-
-    def get_size(self):
-        raise NotImplementedError()
-
-    def all_sprites_from_self_and_kids(self):
-        for c in self._children:
-            for spr in c.all_sprites_from_self_and_kids():
-                yield spr
-        for spr in self.all_sprites():
-            yield spr
-
-    def update_self_and_kids(self):
-        self.update()
-        for c in self._children:
-            c.update()
-
-    def get_rect(self, absolute=False):
-        xy = self.get_xy(absolute=absolute)
-        size = self.get_size()
-        return (xy[0], xy[1], size[0], size[1])
-
-    def get_xy(self, absolute=False):
-        if absolute and self._parent is not None:
-            return util.add(self._parent.get_xy(absolute=True), self._rel_xy)
-        else:
-            return self._rel_xy
-
-    def set_xy(self, rel_xy):
-        self._rel_xy = rel_xy
-
-    def add_child(self, element):
-        element.set_parent(self)
-
-    def add_children(self, elements):
-        for e in elements:
-            e.set_parent(self)
-
-    def remove_child(self, element):
-        if element in self._children:
-            element.set_parent(None)
-        else:
-            print("WARN: tried to remove non-child: child={}".format(element))
-
-    def remove_children(self, elements):
-        for e in elements:
-            self.remove_child(e)
-
-    def get_parent(self):
-        return self._parent
-
-    def set_parent(self, element):
-        if self._parent is not None:
-            if self in self._parent._children:
-                self._parent._children.remove(self)
-            else:
-                print("WARN: child element was disconnected from parent: child={}, parent={}".format(self, self._parent))
-        self._parent = element
-        if self._parent is not None:
-            if self not in self._parent._children:
-                self._parent._children.append(self)
-            else:
-                print("WARN: parent element already has reference to child?: child={}, parent={}".format(self, self._parent))
-
-    def dfs(self, cond):
-        for element in self.depth_first_traverse():
-            if cond(element):
-                return element
-        return None
-
-    def depth_first_traverse(self, include_self=True):
-        for c in self._children:
-            for element in c._children:
-                yield element
-        if include_self:
-            yield self
-
-    def __eq__(self, other):
-        if isinstance(other, UiElement):
-            return self.uid == other.uid
-        else:
-            return None
-
-    def __hash__(self):
-        return self.uid
-
-
-class ElementGroup(UiElement):
-
-    def __init__(self):
-        UiElement.__init__(self)
-
-    def get_size(self):
-        my_xy = self.get_xy(absolute=True)
-        x_size = 0
-        y_size = 0
-        for c in self.depth_first_traverse(include_self=False):
-            c_xy = c.get_xy(absolute=True)
-            c_size = c.get_size()
-            x_size = max(x_size, c_xy[0] - my_xy[0] + c_size[0])
-            y_size = max(y_size, c_xy[1] - my_xy[1] + c_size[1])
-        return (x_size, y_size)
-
-    def all_sprites(self):
-        return []
-
-
-class OptionsList(ElementGroup):
-
-    def __init__(self):
-        ElementGroup.__init__(self)
-        self.selected_idx = 0
-        self.options = []  # list of (UiElement: element, str: text, lambda: do_action, lambda: is_enabled)
-        self.y_spacing = 4
-
-    def add_option(self, text, do_action, is_enabled=lambda: True):
-        element = SpriteElement()
-        self.options.append((element, text, do_action, is_enabled))
-        self.add_child(element)
-
-    def update(self):
-
-        # TODO - is this the place we should be doing this?
-        # TODO - it's fine for now I think
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_UP)):
-            self.selected_idx = (self.selected_idx - 1) % len(self.options)
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
-            self.selected_idx = (self.selected_idx + 1) % len(self.options)
-
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
-            if 0 <= self.selected_idx < len(self.options):
-                action = self.options[self.selected_idx][2]
-                try:
-                    action()
-                except Exception as e:
-                    print("ERROR: failed to activate option: {}".format(self.options[1]))
-                    traceback.print_exc()
-
-        y = 0
-        for i in range(0, len(self.options)):
-            element, text, do_action, is_enabled = self.options[i]
-
-            if not is_enabled():
-                element.set_color(colors.DARK_GRAY)
-            elif i == self.selected_idx:
-                element.set_color(colors.PERFECT_RED)
-            else:
-                element.set_color(colors.PERFECT_WHITE)
-
-            text_spr = element.get_sprite()
-            if text_spr is None:
-                text_spr = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, text)
-                element.set_sprite(text_spr)
-
-            element.set_xy((0, y))
-            y += element.get_size()[1] + self.y_spacing
-
-
-class SpriteElement(UiElement):
-
-    def __init__(self, sprite=None):
-        UiElement.__init__(self)
-        self.sprite = None
-        self.color = colors.PERFECT_WHITE
-        self.set_sprite(sprite)
-
-    def set_sprite(self, sprite):
-        if sprite is None:
-            self.sprite = None
-        else:
-            # XXX only supports sprites that can handle `update(new_x=int, new_y=int)`
-            if not isinstance(sprite, sprites.ImageSprite) and not isinstance(sprite, sprites.TextSprite):
-                raise ValueError("unsupported sprite type: {}".format(type(sprite).__name__))
-            self.sprite = sprite
-
-    def get_sprite(self):
-        return self.sprite
-
-    def set_color(self, color):
-        self.color = color if color is not None else colors.PERFECT_WHITE
-
-    def update(self):
-        abs_xy = self.get_xy(absolute=True)
-        if self.sprite is not None:
-            self.sprite = self.sprite.update(new_x=abs_xy[0], new_y=abs_xy[1], new_color=self.color)
-
-    def all_sprites(self):
-        if self.sprite is not None:
-            for spr in self.sprite.all_sprites():
-                yield spr
-
-    def get_size(self):
-        if self.sprite is not None:
-            return self.sprite.size()
-        else:
-            return (0, 0)
-
-
-class DebugGameScene(scenes.Scene):
-
-    def __init__(self, world_type=0):
+    def __init__(self, bp=None):
         scenes.Scene.__init__(self)
+
         self._world = None
         self._world_view = None
 
-        self._cur_test_world = world_type
-        self._create_new_world(world_type=world_type)
+    def setup_new_world(self, bp):
+        if bp is None:
+            self._world = None
+            self._world_view = None
+        else:
+            print("INFO: activating blueprint: {}".format(bp.name()))
+            self._world = bp.create_world()
+            self._world_view = worldview.WorldView(self._world)
+
+    def get_world(self) -> worlds.World:
+        return self._world
+
+    def get_world_view(self) -> worldview.WorldView:
+        return self._world_view
 
     def update(self):
-        if inputs.get_instance().mouse_was_pressed() and inputs.get_instance().mouse_in_window():  # debug
-            screen_pos = inputs.get_instance().mouse_pos()
-            pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
-
-            cell_size = gs.get_instance().cell_size
-            print("INFO: mouse pressed at ({}, {})".format(int(pos_in_world[0]) // cell_size,
-                                                           int(pos_in_world[1]) // cell_size))
-
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
-            self._create_new_world(world_type=self._cur_test_world)
-
-        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.NEXT_LEVEL_DEBUG)):
-            self._cur_test_world += 1
-            self._create_new_world(world_type=self._cur_test_world)
-
-        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
-            debug.toggle_debug_sprite_mode()
-
-        if inputs.get_instance().mouse_is_dragging(button=1):
-            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
-            if drag_this_frame is not None:
-                dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
-                dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
-                self._world_view.move_camera_in_world(dxy)
-                self._world_view.set_free_camera(True)
         if self._world is not None:
             self._world.update()
         if self._world_view is not None:
             self._world_view.update()
+
+        if inputs.get_instance().mouse_in_window():
+            screen_pos = inputs.get_instance().mouse_pos()
+            pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
+            if inputs.get_instance().mouse_was_pressed(button=1):
+                self.handle_click_at(pos_in_world, button=1)
+            if inputs.get_instance().mouse_was_pressed(button=2):
+                self.handle_click_at(pos_in_world, button=2)
+            if inputs.get_instance().mouse_was_pressed(button=3):
+                self.handle_click_at(pos_in_world, button=3)
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
+            self.handle_esc_pressed()
+
+    def handle_esc_pressed(self):
+        pass
+
+    def handle_click_at(self, world_xy, button=1):
+        if configs.is_dev:
+            cell_size = gs.get_instance().cell_size
+            print("INFO: mouse pressed at ({}, {})".format(int(world_xy[0]) // cell_size,
+                                                           int(world_xy[1]) // cell_size))
 
     def all_sprites(self):
         if self._world_view is not None:
@@ -435,22 +231,483 @@ class DebugGameScene(scenes.Scene):
         else:
             return []
 
-    def _create_new_world(self, world_type=0):
-        types = ("moving_plat", "full_level", "floating_blocks", "start_and_end")
-        type_to_use = types[world_type % len(types)]
-        print("INFO: activating test world: {}".format(type_to_use))
 
-        if type_to_use == types[0]:
-            self._world = blueprints.get_test_blueprint_0().create_world()
-        elif type_to_use == types[1]:
-            self._world = blueprints.get_test_blueprint_1().create_world()
-        elif type_to_use == types[2]:
-            self._world = blueprints.get_test_blueprint_2().create_world()
-        elif type_to_use == types[3]:
-            self._world = blueprints.get_test_blueprint_3().create_world()
+class _GameState:
+
+    def __init__(self, bp):
+        self.bp = bp
+
+        self._players_in_level = bp.get_player_types()
+        n_players = len(self._players_in_level)
+
+        self.currently_playing = [False] * n_players
+        self._currently_satisfied = [False] * n_players
+        self._recorded_runs = [None] * n_players  # list of PlaybackPlayerController
+
+        self._total_ticks = bp.time_limit()
+        self._time_elapsed = 0
+
+        self._active_player_idx = 0
+
+    def reset(self, all_players=False):
+        self._time_elapsed = 0
+        for i in range(0, len(self._currently_satisfied)):
+            self._currently_satisfied[i] = False
+        for i in range(0, len(self.currently_playing)):
+            self.currently_playing[i] = False
+        if all_players:
+            self._active_player_idx = 0
+            self._recorded_runs = [None] * self.num_players()
+
+    def active_player_succeeded(self, recording):
+        self._recorded_runs[self._active_player_idx] = recording
+
+        self.reset()
+        self._active_player_idx += 1
+
+    def has_recording(self, player_idx):
+        return self._recorded_runs[player_idx] is not None
+
+    def get_recording(self, player_idx):
+        return self._recorded_runs[player_idx]
+
+    def get_player_type(self, player_idx):
+        return self._players_in_level[player_idx]
+
+    def num_players(self):
+        return len(self._players_in_level)
+
+    def get_ticks_remaining(self):
+        return max(0, self._total_ticks - self._time_elapsed)
+
+    def get_pcnt_ticks_remaining(self):
+        if self._total_ticks == 0 or self._time_elapsed <= 0:
+            return 1
+        elif self._time_elapsed > self._total_ticks:
+            return 0
         else:
-            return
+            return (self._total_ticks - self._time_elapsed) / self._total_ticks
 
-        self._world_view = worldview.WorldView(self._world)
+    def get_active_player_idx(self):
+        return self._active_player_idx
+
+    def get_active_player_type(self):
+        return self.get_player_type(self.get_active_player_idx())
+
+    def is_satisfied(self, player_idx):
+        return self._currently_satisfied[player_idx]
+
+    def all_satisfied(self):
+        for idx in range(0, self.num_players()):
+            if not self.is_satisfied(idx):
+                return False
+        return True
+
+    def is_playing_back(self, player_idx):
+        return self.currently_playing[player_idx]
+
+    def set_playing_back(self, player_idx, val):
+        self.currently_playing[player_idx] = val
+
+    def was_playing_back(self, player_idx):
+        return player_idx < self.get_active_player_idx()
+
+    def set_satisfied(self, player_idx, val):
+        self._currently_satisfied[player_idx] = val
+
+    def is_active_character_satisfied(self):
+        return self._currently_satisfied[self._active_player_idx]
+
+    def update(self, world):
+        self._time_elapsed += 1
+
+        end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
+
+        for idx in range(0, self.num_players()):
+            player_type = self.get_player_type(idx)
+            for eb in end_blocks:
+                if eb.get_player_type() == player_type:
+                    self.set_satisfied(idx, eb.is_satisfied())
+
+            player = world.get_player(must_be_active=False, with_type=player_type)
+            if player is not None and not player.is_active() and not player.get_controller().is_finished(world.get_tick()):
+                self.set_playing_back(idx, True)
+            else:
+                self.set_playing_back(idx, False)
+
+
+class TopPanelUi(ui.UiElement):
+
+    def __init__(self, state: _GameState):
+        ui.UiElement.__init__(self)
+        self._state = state
+        self.bg_sprite = None
+        self.clock_text_sprite = None
+        self.character_panel_sprites = []
+        self.character_panel_animation_sprites = []  # arrows that spin around
+
+    def get_clock_text(self):
+        ticks_rm = self._state.get_ticks_remaining()
+        return util.ticks_to_time_string(ticks_rm, fps=60, n_decimals=1)
+
+    def update(self):
+        rect = self.get_rect(absolute=True)
+        if self.bg_sprite is None:
+            self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
+        self.bg_sprite = self.bg_sprite.update(new_model=spriteref.ui_sheet().top_panel_bg,
+                                               new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
+
+        player_types = [self._state.get_player_type(i) for i in range(0, self._state.num_players())]
+        active_idx = self._state.get_active_player_idx()
+
+        util.extend_or_empty_list_to_length(self.character_panel_sprites, len(player_types),
+                                            creator=lambda: sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER))
+        util.extend_or_empty_list_to_length(self.character_panel_animation_sprites, len(player_types),
+                                            creator=lambda: None)
+        for i in range(0, len(player_types)):
+            model = spriteref.ui_sheet().get_character_card_sprite(player_types[i], i == 0)
+            color = const.get_player_color(player_types[i], dark=i > active_idx)
+            card_x = rect[0] - 7 + 40 * i
+            card_y = rect[1]
+            self.character_panel_sprites[i] = self.character_panel_sprites[i].update(new_x=card_x,
+                                                                                     new_y=card_y,
+                                                                                     new_model=model,
+                                                                                     new_color=color)
+            if i == active_idx or self._state.was_playing_back(i):
+                if self.character_panel_animation_sprites[i] is None:
+                    self.character_panel_animation_sprites[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+
+                is_first = i == 0
+                is_last = i == len(player_types) - 1
+                is_done = i != active_idx and not self._state.is_playing_back(i)
+                frm = gs.get_instance().anim_tick()
+                model = spriteref.ui_sheet().get_character_card_anim(is_first, is_last, frm, done=is_done)
+
+                if self._state.is_satisfied(i):
+                    color = colors.PERFECT_GREEN
+                elif i == active_idx:
+                    color = colors.WHITE
+                elif self._state.is_playing_back(i):
+                    color = colors.LIGHT_GRAY
+                else:
+                    color = colors.PERFECT_RED  # failed
+
+                anim_spr = self.character_panel_animation_sprites[i].update(new_x=card_x,
+                                                                            new_y=card_y,
+                                                                            new_model=model,
+                                                                            new_color=color,
+                                                                            new_depth=10)
+                self.character_panel_animation_sprites[i] = anim_spr
+            else:
+                self.character_panel_animation_sprites[i] = None
+
+        clock_text = self.get_clock_text()
+        if self.clock_text_sprite is None:
+            self.clock_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, clock_text,
+                                                        font_lookup=spritesheets.get_default_font(mono=True))
+        self.clock_text_sprite.update(new_text=clock_text)
+        clock_x = rect[0] + 270 - self.clock_text_sprite.size()[0]
+        clock_y = rect[1] + 10
+        self.clock_text_sprite.update(new_x=clock_x, new_y=clock_y, new_color=colors.WHITE)
+
+    def get_size(self):
+        return (288, 32)
+
+    def all_sprites(self):
+        yield self.bg_sprite
+        yield self.clock_text_sprite
+        for spr in self.character_panel_sprites:
+            yield spr
+        for spr in self.character_panel_animation_sprites:
+            if spr is not None:
+                yield spr
+
+
+class ProgressBarUi(ui.UiElement):
+
+    def __init__(self, state):
+        ui.UiElement.__init__(self)
+        self._state = state
+        self.bg_sprite = None
+        self.bar_sprite = None
+
+    def update(self):
+        rect = self.get_rect(absolute=True)
+        if self.bg_sprite is None:
+            self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
+        self.bg_sprite = self.bg_sprite.update(new_model=spriteref.ui_sheet().top_panel_progress_bar_bg,
+                                               new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
+        if self.bar_sprite is None:
+            self.bar_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+        # active_color = const.get_player_color(self._state.get_active_player_type(), dark=False)
+        active_color = colors.WHITE
+        pcnt_remaining = self._state.get_pcnt_ticks_remaining()
+        self.bar_sprite = self.bar_sprite.update(new_model=spriteref.ui_sheet().get_bar_sprite(pcnt_remaining),
+                                                 new_x=rect[0], new_y=rect[1] + 2, new_color=active_color)
+
+    def get_size(self):
+        return (288, 10)
+
+    def all_sprites(self):
+        yield self.bg_sprite
+        yield self.bar_sprite
+
+
+class RealGameScene(_BaseGameScene):
+
+    def __init__(self, bp):
+        self._state = _GameState(bp)
+
+        _BaseGameScene.__init__(self, bp=bp)
+
+        self._top_panel_ui = None
+        self._progress_bar_ui = None
+
+        self.setup_new_world(bp)
+
+    def update(self):
+        super().update()
+        self._state.update(self.get_world())
+
+        hard_reset_keys = keybinds.get_instance().get_keys(const.RESET)
+        soft_reset_keys = keybinds.get_instance().get_keys(const.SOFT_RESET)
+        if inputs.get_instance().was_pressed(hard_reset_keys):
+            self._state.reset(all_players=True)
+            self.setup_new_world(self._state.bp)
+        elif inputs.get_instance().was_pressed(soft_reset_keys):
+            self._state.reset(all_players=False)
+            self.setup_new_world(self._state.bp)
+
+        elif self._state.all_satisfied():
+            pass  # TODO complete level / show replay or something
+        else:
+            active_satisfied = True
+            for i in range(0, self._state.get_active_player_idx() + 1):
+                if not self._state.is_satisfied(i):
+                    active_satisfied = False
+                    break
+
+            if active_satisfied:
+                player_ent = self.get_world().get_player()
+                recording = player_ent.get_controller().get_recording()
+                self._state.active_player_succeeded(recording)
+                self.setup_new_world(self._state.bp)
+
+        self._update_ui()
+
+    def handle_esc_pressed(self):
+        self.get_manager().set_next_scene(MainMenuScene())
+
+    def setup_new_world(self, bp):
+        old_show_grid = False if self.get_world_view() is None else self.get_world_view()._show_grid
+        super().setup_new_world(bp)
+
+        # gotta place the players down
+        world = self.get_world()
+        self.get_world_view()._show_grid = old_show_grid
+
+        import src.game.entities as entities
+
+        for i in range(0, self._state.num_players()):
+            player_type = self._state.get_player_type(i)
+
+            if i == self._state.get_active_player_idx():
+                controller = entities.RecordingPlayerController()
+            else:
+                controller = self._state.get_recording(i)
+
+            if controller is not None:
+                player_ent = entities.PlayerEntity(0, 0, player_type, controller)
+                start_xy = world.get_player_start_position(player_ent)
+                player_ent.set_xy(start_xy)
+                world.add_entity(player_ent, next_update=False)
+
+        world.update()
+        self.get_world_view().update()
+
+    def _update_ui(self):
+        y = 4
+        if self._top_panel_ui is None:
+            self._top_panel_ui = TopPanelUi(self._state)
+        top_panel_size = self._top_panel_ui.get_size()
+        display_size = renderengine.get_instance().get_game_size()
+        self._top_panel_ui.set_xy((display_size[0] // 2 - top_panel_size[0] // 2, y))
+        self._top_panel_ui.update()
+        y += top_panel_size[1]
+
+        if self._progress_bar_ui is None:
+            self._progress_bar_ui = ProgressBarUi(self._state)
+        prog_bar_size = self._progress_bar_ui.get_size()
+        self._progress_bar_ui.set_xy((display_size[0] // 2 - prog_bar_size[0] // 2, y))
+        self._progress_bar_ui.update()
+
+    def all_sprites(self):
+        for spr in super().all_sprites():
+            yield spr
+        if self._top_panel_ui is not None:
+            for spr in self._top_panel_ui.all_sprites():
+                yield spr
+        if self._progress_bar_ui is not None:
+            for spr in self._progress_bar_ui.all_sprites():
+                yield spr
+
+
+class DebugGameScene(RealGameScene):
+
+    def __init__(self, bp, edit_scene):
+        RealGameScene.__init__(self, bp)
+
+        self.edit_scene = edit_scene
+
+    def update(self):
+        super().update()
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_EDIT_MODE)):
+            self.handle_esc_pressed()
+
+    def handle_esc_pressed(self):
+        self.get_manager().set_next_scene(self.edit_scene)
+
+
+class LevelEditGameScene(_BaseGameScene):
+
+    def __init__(self, bp: blueprints.LevelBlueprint, output_file=None):
+        """
+        world_type: an int or level blueprint
+        """
+        _BaseGameScene.__init__(self)
+
+        self.orig_bp = bp
+        self.output_file = output_file if output_file is not None else "testing/saved_level.json"
+
+        self.selected_spec = None
+        self.all_spec_blobs = [s[0] for s in bp.all_entities()]
+        self.entities_for_specs = {}  # SpecType -> List of Entities
+
+        self.setup_new_world(bp)
+
+    def build_current_bp(self):
+        return blueprints.LevelBlueprint.build(self.orig_bp.name(),
+                                               self.orig_bp.level_id(),
+                                               self.orig_bp.get_player_types(),
+                                               self.orig_bp.time_limit(),
+                                               self.orig_bp.description(),
+                                               self.all_spec_blobs)
+
+    def get_specs_at(self, world_xy):
+        res = []
+        for spec in self.all_spec_blobs:
+            r = blueprints.SpecUtils.get_rect(spec, default_size=gs.get_instance().cell_size)
+            if r is None:
+                continue
+            elif util.rect_contains(r, world_xy):
+                res.append(spec)
+        return res
+
+    def setup_new_world(self, bp):
+        super().setup_new_world(bp)
+
+        self.entities_for_specs.clear()
+
+        for ent in self.get_world().all_entities():
+            spec = ent.get_spec()
+            if spec is not None:
+                as_key = util.to_key(spec)
+                if as_key not in self.entities_for_specs:
+                    self.entities_for_specs[as_key] = []
+                self.entities_for_specs[as_key].append(ent)
+
+        print("INFO: entities_for_specs = {}".format(self.entities_for_specs))
+
+    def update(self):
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
+            self.get_world_view().set_camera_pos_in_world((0, 0))
+            pass
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_EDIT_MODE)):
+            self.get_manager().set_next_scene(DebugGameScene(self.build_current_bp(), self))
+
+        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_LEVEL_DEBUG)):
+            if self._world is not None:
+                bp = self._world.get_blueprint()
+                if bp is not None:
+                    filepath = self.output_file
+                    save_result = blueprints.write_level_to_file(bp, filepath)
+                    if save_result:
+                        print("INFO: saved level to {}".format(filepath))
+                    else:
+                        print("INFO: failed to save level to {}".format(filepath))
+
+        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
+            debug.toggle_debug_sprite_mode()
+
+        if inputs.get_instance().mouse_in_window():
+            screen_xy = inputs.get_instance().mouse_pos()
+
+            self.get_world_view()
+
+        if inputs.get_instance().mouse_is_dragging(button=1):
+            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
+            if drag_this_frame is not None:
+                dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
+                dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
+                self._world_view.move_camera_in_world(dxy)
+                self._world_view.set_free_camera(True)
+
+        super().update()
+
+    def handle_esc_pressed(self):
+        # TODO probably want to pop an "are you sure you want to exit" dialog
+        pass
+
+    def handle_click_at(self, world_xy, button=1):
+        if button == 1:
+            specs_at_click = self.get_specs_at(world_xy)
+            if len(specs_at_click) > 0:
+                print("INFO: clicked spec(s): {}".format(specs_at_click))
+                idx = int(random.random() * len(specs_at_click))  # TODO pls
+                self.select_spec(specs_at_click[idx])
+            else:
+                self.select_spec(None)
+                super().handle_click_at(world_xy, button=button)
+        else:
+            super().handle_click_at(world_xy, button=button)
+
+    def select_spec(self, spec):
+        if self.selected_spec is not None:
+            old_key = util.to_key(self.selected_spec)
+            if old_key in self.entities_for_specs:
+                for ent in self.entities_for_specs[old_key]:
+                    ent.set_color_override(None)
+
+        self.selected_spec = spec
+        if self.selected_spec is not None:
+            new_key = util.to_key(self.selected_spec)
+            if new_key in self.entities_for_specs:
+                for ent in self.entities_for_specs[new_key]:
+                    ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
+            else:
+                print("WARN: selected spec with no entities: {}".format(spec))
+
+    def _create_new_world(self, world_type=0):
+        if isinstance(world_type, blueprints.LevelBlueprint):
+            self.setup_new_world(world_type)
+        else:
+            types = ("moving_plat", "full_level", "floating_blocks", "start_and_end")
+            type_to_use = types[world_type % len(types)]
+            print("INFO: activating test world: {}".format(type_to_use))
+
+            if type_to_use == types[0]:
+                self._world = blueprints.get_test_blueprint_0().create_world()
+            elif type_to_use == types[1]:
+                self._world = blueprints.get_test_blueprint_1().create_world()
+            elif type_to_use == types[2]:
+                self._world = blueprints.get_test_blueprint_2().create_world()
+            elif type_to_use == types[3]:
+                self._world = blueprints.get_test_blueprint_3().create_world()
+            else:
+                return
+
+            self._world_view = worldview.WorldView(self._world)
 
 

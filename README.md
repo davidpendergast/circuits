@@ -3,12 +3,12 @@ A platformer about robots.
 
 Here are the five most recent gifs committed:
 
-![039-intro-images.gif](gifs/039-intro-images.gif?raw=true "039-intro-images")
+![053-selecting-stuff-in-edit-mode.gif](gifs/053-selecting-stuff-in-edit-mode.gif?raw=true "053-selecting-stuff-in-edit-mode")
 
-![038-main-menu.gif](gifs/038-main-menu.gif?raw=true "038-main-menu")
+![052-ui-tweaks.gif](gifs/052-ui-tweaks.gif?raw=true "052-ui-tweaks")
 
-![037-start-and-end-blocks.gif](gifs/037-start-and-end-blocks.gif?raw=true "037-start-and-end-blocks")
+![051-multiple-characters-in-level.gif](gifs/051-multiple-characters-in-level.gif?raw=true "051-multiple-characters-in-level")
 
-![036-all-art.gif](gifs/036-all-art.gif?raw=true "036-all-art")
+![050-jump-back-to-start.gif](gifs/050-jump-back-to-start.gif?raw=true "050-jump-back-to-start")
 
-![035-quad-block-art.gif](gifs/035-quad-block-art.gif?raw=true "035-quad-block-art")
+![049-character-card-anim.gif](gifs/049-character-card-anim.gif?raw=true "049-character-card-anim")

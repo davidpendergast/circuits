@@ -1,7 +1,8 @@
 
 import math
 import random
-import traceback
+
+import src as src  # for typing~
 
 import src.utils.util as util
 import src.engine.sprites as sprites
@@ -11,6 +12,7 @@ import src.engine.globaltimer as globaltimer
 import configs as configs
 
 import src.game.spriteref as spriteref
+import src.game.playertypes as playertypes
 import src.game.colors as colors
 import src.game.globalstate as gs
 import src.game.const as const
@@ -56,6 +58,9 @@ class Entity:
         self._y_vel = 0
 
         self._world = None  # world sets this when entity is added / removed
+        self._spec = None   # bp sets this when it creates the entity
+
+        self._color_override = None
 
         self._debug_sprites = {}
 
@@ -66,11 +71,23 @@ class Entity:
         self._frame_of_reference_parent_do_vert = True
         self._frame_of_reference_children = []
 
-    def get_world(self):
+    def get_world(self) -> 'src.game.worlds.World':
         return self._world
+
+    def get_spec(self):
+        return self._spec
 
     def set_world(self, world):
         self._world = world
+
+    def set_color_override(self, val):
+        self._color_override = val
+
+    def get_color_override(self):
+        return self._color_override
+
+    def about_to_remove_from_world(self):
+        pass
 
     def get_rect(self, raw=False):
         xy = self.get_xy(raw=raw)
@@ -301,8 +318,17 @@ class Entity:
     def is_block(self):
         return isinstance(self, AbstractBlockEntity)
 
+    def is_end_block(self):
+        return isinstance(self, EndBlock)
+
+    def is_start_block(self):
+        return isinstance(self, StartBlock)
+
     def is_player(self):
         return isinstance(self, PlayerEntity)
+
+    def is_actor(self):
+        return self.is_player()
 
     def __eq__(self, other):
         if isinstance(other, Entity):
@@ -335,7 +361,10 @@ class AbstractBlockEntity(Entity):
         return 0
 
     def get_color(self):
-        return spriteref.get_color(self.get_color_id())
+        if self.get_color_override() is not None:
+            return self.get_color_override()
+        else:
+            return spriteref.get_color(self.get_color_id())
 
     def all_sprites(self):
         for spr in self.all_debug_sprites():
@@ -402,6 +431,27 @@ class BlockEntity(AbstractBlockEntity):
                 yield spr
 
 
+class SensorEntity(Entity):
+
+    def __init__(self, rect, sensor, parent=None):
+        self.parent = parent
+        Entity.__init__(self, 0, 0, w=rect[2], h=rect[3])
+
+        if self.parent is not None:
+            self.set_xy((self.parent.get_x() + rect[0], self.parent.get_y() + rect[1]))
+            self.set_frame_of_reference_parent(self.parent)
+        else:
+            self.set_xy((rect[0], rect[1]))
+
+        self.set_colliders([sensor])
+
+    def is_dynamic(self):
+        return True
+
+    def get_physics_group(self):
+        return ACTOR_GROUP
+
+
 class CompositeBlockEntity(AbstractBlockEntity):
 
     class BlockSpriteInfo:
@@ -413,6 +463,11 @@ class CompositeBlockEntity(AbstractBlockEntity):
             self.scale = scale
 
     def __init__(self, x, y, colliders, sprite_infos, color_id=0):
+        """
+        colliders: list of colliders in block
+        sprite_infos: list of sprites in block
+        color_id: block color
+        """
         AbstractBlockEntity.__init__(self, x, y)
         self.set_colliders(colliders)
         self._sprite_infos = sprite_infos
@@ -518,6 +573,75 @@ class MovingBlockEntity(BlockEntity):
         super().update()
 
 
+class ToggleBlock(BlockEntity):
+
+    def __init__(self, x, y, w, h, toggle_idx):
+        BlockEntity.__init__(self, x, y, w, h)
+        self._toggle_idx = toggle_idx
+        self._is_solid = True
+
+    def get_toggle_idx(self):
+        return self._toggle_idx
+
+    def is_solid(self):
+        return self._is_solid
+
+    def set_solid(self, val):
+        self._is_solid = val
+        for c in self.all_colliders(solid=True):
+            c.set_enabled(val)
+
+    def get_main_model(self):
+        w, h = self.get_size()
+        return spriteref.object_sheet().get_toggle_block_sprite(self.get_toggle_idx(), w, h, self.is_solid())
+
+
+class ToggleBlockKeyEntity(Entity):
+
+    @staticmethod
+    def make_at_cell(grid_x, grid_y, toggle_idx):
+        cs = gs.get_instance().cell_size
+        return ToggleBlockKeyEntity(cs * grid_x + cs // 4, cs * grid_y, toggle_idx)
+
+    def __init__(self, x, y, toggle_idx):
+        cs = gs.get_instance().cell_size
+        Entity.__init__(self, x, y, cs // 2, cs)
+        self._toggle_idx = toggle_idx
+        self._icon_sprite = None
+        self._base_sprite = None
+
+        self._bob_height_min = 4
+        self._bob_height_max = 16
+        self._bob_tick_period = 30
+        self._bob_tick_count = int(random.random() * self._bob_tick_period)
+
+    def all_sprites(self):
+        yield self._icon_sprite
+        yield self._base_sprite
+
+    def get_toggle_idx(self):
+        return self._toggle_idx
+
+    def update(self):
+        rect = self.get_rect()
+        if self._icon_sprite is None:
+            self._icon_sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=-5)
+        key_model = spriteref.object_sheet().toggle_block_icons[self.get_toggle_idx()]
+        bob_prog = math.cos(2 * 3.141529 * self._bob_tick_count / self._bob_tick_period)
+        bob_height = int(self._bob_height_min + (self._bob_height_max - self._bob_height_min) * bob_prog)
+        self._icon_sprite = self._icon_sprite.update(new_model=key_model,
+                                                     new_x=rect[0] + rect[2] // 2 - key_model.width() // 2,
+                                                     new_y=rect[1] - bob_height - key_model.height() // 2)
+        self._bob_tick_count += 1
+
+        if self._base_sprite is None:
+            self._base_sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=-3)
+        base_model = spriteref.object_sheet().toggle_block_bases[self.get_toggle_idx()]
+        self._base_sprite = self._base_sprite.update(new_model=base_model,
+                                                     new_x=rect[0] + rect[2] // 2 - base_model.width() // 2,
+                                                     new_y=rect[1] + rect[3] - base_model.height())
+
+
 class StartBlock(BlockEntity):
 
     def __init__(self, x, y, w, h, player_type, facing_dir=1, color_id=-1):
@@ -547,10 +671,9 @@ class StartBlock(BlockEntity):
         return spriteref.block_sheet().get_start_block_sprite(size, self.get_player_type().get_id())
 
 
-class EndBlock(BlockEntity):
+class EndBlock(CompositeBlockEntity):
 
     def __init__(self, x, y, w, h, player_type, color_id=-1):
-        # TODO unique geometry
         cs = gs.get_instance().cell_size
         if w != cs * 2:
             raise ValueError("illegal width for start block: {}".format(w))
@@ -562,7 +685,58 @@ class EndBlock(BlockEntity):
         if color_id < 0:
             color_id = player_type.get_color_id()
 
-        BlockEntity.__init__(self, x, y, w, h, color_id=color_id)
+        dip_h = 3
+
+        colliders = []
+        colliders.extend(BlockEntity.build_colliders_for_rect([2, dip_h, 28, 16 - dip_h]))  # center
+        colliders.extend(BlockEntity.build_colliders_for_rect([0, 0, 2, 16]))   # left
+        colliders.extend(BlockEntity.build_colliders_for_rect([30, 0, 2, 16]))  # right
+
+        self._is_satisfied = False
+
+        sprite_infos = [CompositeBlockEntity.BlockSpriteInfo(model_provider=lambda: self.get_main_model(),
+                                                             xy_offs=(0, 0))]
+
+        CompositeBlockEntity.__init__(self, x, y, colliders, sprite_infos, color_id=color_id)
+
+        # this is what it uses to detect the player (normally blocks can't have sensors)
+        level_end_collider = RectangleCollider([0, 0, 28, 10], CollisionMasks.SENSOR,
+                                               collides_with=CollisionMasks.ACTOR,
+                                               name="level_end_{}".format(self._player_type))
+        self._level_end_sensor_id = level_end_collider.get_id()
+        self._player_stationary_in_sensor_count = 0
+        self._player_stationary_in_sensor_limit = 10
+        self._sensor_ent = SensorEntity([2, 0, 28, dip_h + 2], level_end_collider, parent=self)
+
+    def set_world(self, world):
+        super().set_world(world)
+        if world is not None:
+            world.add_entity(self._sensor_ent)
+
+    def about_to_remove_from_world(self):
+        super().about_to_remove_from_world()
+        self.get_world().remove_entity(self._sensor_ent)
+
+    def update(self):
+        actors_in_sensor = self.get_world().get_sensor_state(self._level_end_sensor_id)
+        found_one = False
+        for a in actors_in_sensor:
+            if isinstance(a, PlayerEntity) and a.get_player_type() == self._player_type:
+                # TODO velocity relative to block?
+                if util.mag(a.get_vel()) < 2:
+                    self._player_stationary_in_sensor_count += 1
+                    found_one = True
+        if not found_one:
+            self._player_stationary_in_sensor_count = 0
+
+        was_satisfied = self._is_satisfied
+        self._is_satisfied = self._player_stationary_in_sensor_count >= self._player_stationary_in_sensor_limit
+
+        if not was_satisfied and self._is_satisfied:
+            print("INFO: satisfied end block for player: {}".format(self.get_player_type()))
+
+    def is_satisfied(self):
+        return self._is_satisfied
 
     def get_player_type(self):
         return self._player_type
@@ -571,6 +745,9 @@ class EndBlock(BlockEntity):
         cs = gs.get_instance().cell_size
         size = (self.get_w() // cs, self.get_h() // cs)
         return spriteref.block_sheet().get_end_block_sprite(size, self.get_player_type().get_id())
+
+    def __repr__(self):
+        return type(self).__name__ + "({}, {})".format(self.get_rect(), self.get_player_type())
 
 
 class SlopeOrientation:
@@ -665,158 +842,163 @@ class SlopeBlockEntity(AbstractBlockEntity):
         self._debug_sprites[main_body_key] = spr.update(new_points=pts, new_color=self.get_debug_color(), new_depth=30)
 
 
-DEFAULT_GRAVITY = -0.15 / 16
+class PlayerInputs:
 
+    # 2 = pressed, 1 = held, 0 = neutral
+    def __init__(self, jump=0, left=0, down=0, right=0, act=0):
+        self.jump = jump
+        self.left = left
+        self.down = down
+        self.right = right
+        self.act = act
 
-class PlayerType:
+    def __repr__(self):
+        "[{}{}{}{}{}]".format(
+            "W" if self.jump == 2 else ("w" if self.jump == 1 else "_"),
+            "A" if self.left == 2 else ("a" if self.left == 1 else "_"),
+            "S" if self.down == 2 else ("s" if self.down == 1 else "_"),
+            "D" if self.right == 2 else ("d" if self.right == 1 else "_"),
+            "J" if self.act == 2 else ("j" if self.act == 1 else "_"),
+        )
 
-    def __init__(self, name, color_id, id_num, size=(0.75, 1.75),
-                 move_speed=7.5,
-                 jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
-                 can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
-                 anim_rate_overrides=None, should_ever_xflip=True):
-        self._name = name
-        self._color_id = color_id
-        self._id = id_num
-        self._size = size
+    def is_jump_held(self):
+        return self.jump > 0
 
-        self._move_speed = move_speed
+    def was_jump_pressed(self):
+        return self.jump == 2
 
-        jump_info = util.calc_missing_jump_info(H=jump_height, T=jump_duration, g=gravity)
-        self._jump_height = jump_info.H
-        self._jump_gravity = jump_info.g
-        self._jump_duration = jump_info.T
-        self._jump_vel = jump_info.vel
+    def is_left_held(self):
+        return self.left > 0
 
-        self._can_walljump = can_walljump
-        self._can_fly = can_fly
-        self._can_crouch = can_crouch
-        self._can_grab = can_grab
-        self._can_be_grabbed = can_be_grabbed
+    def is_down_held(self):
+        return self.down > 0
 
-        self._should_ever_xflip = should_ever_xflip
+    def is_right_held(self):
+        return self.right > 0
 
-        self._anim_rates = {
-            spriteref.PlayerStates.WALKING: 1,
-            spriteref.PlayerStates.CROUCH_WALKING: 2,
-            spriteref.PlayerStates.IDLE: 8,
-            spriteref.PlayerStates.CROUCH_IDLE: 8,
-            spriteref.PlayerStates.AIRBORNE: 8,
-            spriteref.PlayerStates.WALLSLIDE: 8
-        }
+    def is_act_held(self):
+        return self.act > 0
 
-        if anim_rate_overrides is not None:
-            self._anim_rates.update(anim_rate_overrides)
+    def was_act_pressed(self):
+        return self.act == 2
 
-    def get_id(self):
-        return self._id
+    def to_ints(self):
+        return (self.jump, self.left, self.down, self.right, self.act)
 
-    def get_color_id(self):
-        return self._color_id
-
-    def get_name(self):
-        return self._name
-
-    def can_walljump(self):
-        return self._can_walljump
-
-    def can_fly(self):
-        return self._can_fly
-
-    def can_crouch(self):
-        return self._can_crouch
-
-    def can_grab(self):
-        return self._can_grab
-
-    def can_be_grabbed(self):
-        return self._can_be_grabbed
-
-    def get_size(self):
-        """returns: size of player in cells"""
-        return self._size
-
-    def get_jump_height(self):
-        """returns: maximum jump height in cells"""
-        return self._jump_height
-
-    def get_jump_duration(self):
-        """returns: jump duration in ticks"""
-        return self._jump_duration
-
-    def get_jump_info(self):
-        """returns: jump info in cells and ticks"""
-        return util.JumpInfo(self._jump_height, self._jump_duration, self._jump_gravity, self._jump_vel)
-
-    def get_move_speed(self):
-        """returns: maximum x velocity in cells per second"""
-        return self._move_speed
-
-    def get_anim_rate(self, player_state, player_ent):
-        if player_state in self._anim_rates:
-            rate = self._anim_rates[player_state]
-            if isinstance(rate, int) or isinstance(rate, float):
-                return int(rate)
-            else:
-                try:
-                    # should be a lambda: Entity -> int
-                    return rate(player_ent)
-                except Exception:
-                    print("{} failed to calculate animation rate for {}, {}".format(self, player_state, player_ent))
-                    traceback.print_exc()
-        else:
-            return 1  # very fast because something is very wrong
-
-    def should_ever_xflip(self):
-        return self._should_ever_xflip
-
-    def get_player_img(self, player_state, frame=0):
-        return spriteref.object_sheet().get_player_sprite(self._id, player_state, frame)
+    @staticmethod
+    def from_ints(ints):
+        return PlayerInputs(jump=ints[0], left=ints[1], down=ints[2], right=ints[3], act=ints[4])
 
     def __eq__(self, other):
-        if isinstance(other, PlayerType):
-            return self._id == other._id
+        if not isinstance(other, PlayerInputs):
+            return False
         else:
-            return None
+            return self.to_ints() == other.to_ints()
 
     def __hash__(self):
-        return hash(self._id)
+        return hash(self.to_ints())
 
 
-class PlayerTypes:
+class PlayerController:
 
-    FAST = PlayerType("A", 1, const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
-                      move_speed=7.5, jump_height=3.2)
-    SMALL = PlayerType("B", 2, const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
-                       move_speed=5.5, jump_height=2.1)
-    HEAVY = PlayerType("C", 3, const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
-                       move_speed=4, jump_height=3.2)
-    FLYING = PlayerType("D", 4, const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True, can_crouch=True,
-                        move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2,
-                        should_ever_xflip=False,
-                        anim_rate_overrides={
-                            spriteref.PlayerStates.AIRBORNE: lambda _ent: 1 if _ent.get_y_vel() < 0 else 1,
-                            spriteref.PlayerStates.WALKING: 2,
-                            spriteref.PlayerStates.IDLE: 4
-                        })
+    EMPTY_INPUT = PlayerInputs()
 
-    _ALL_TYPES = [FAST, SMALL, HEAVY, FLYING]
+    def get_inputs(self, tick) -> PlayerInputs:
+        keys = keybinds.get_instance()
+        keys_we_care_about = [keys.get_keys(const.JUMP),
+                              keys.get_keys(const.MOVE_LEFT),
+                              keys.get_keys(const.CROUCH),
+                              keys.get_keys(const.MOVE_RIGHT),
+                              keys.get_keys(const.ACTION_1)]
+        ints = []
+        for k in keys_we_care_about:
+            if inputs.get_instance().was_pressed(k):
+                val = 2
+            elif inputs.get_instance().is_held(k):
+                val = 1
+            else:
+                val = 0
+            ints.append(val)
 
-    @staticmethod
-    def all_types():
-        return PlayerTypes._ALL_TYPES
+        return PlayerInputs.from_ints(ints)
 
-    @staticmethod
-    def get_type(ident):
-        for ptype in PlayerTypes._ALL_TYPES:
-            if ident == ptype.get_id():
-                return ptype
-        return None
+    def is_active(self):
+        return True
+
+
+class RecordingPlayerController(PlayerController):
+
+    HARD_LIMIT = 216000  # = 60 * 60 * 60 (an hour of gameplay)
+
+    def __init__(self):
+        self._pool = {}
+        self._recorded_inputs = []
+
+        self._did_print_warning = False
+
+    def store(self, tick, player_inputs):
+        # conserve objects
+        if player_inputs == PlayerController.EMPTY_INPUT:
+            player_inputs = PlayerController.EMPTY_INPUT
+        elif player_inputs in self._pool:
+            player_inputs = self._pool[player_inputs]
+        else:
+            self._pool[player_inputs] = player_inputs
+
+        if 0 <= tick <= RecordingPlayerController.HARD_LIMIT:
+            if len(self._recorded_inputs) == tick:
+                self._recorded_inputs.append(player_inputs)
+            elif len(self._recorded_inputs) > tick:
+                self._recorded_inputs[tick] = player_inputs
+            else:
+                util.extend_or_empty_list_to_length(self._recorded_inputs, tick,
+                                                    creator=lambda: PlayerController.EMPTY_INPUT)
+                self._recorded_inputs.append(player_inputs)
+        else:
+            if not self._did_print_warning:
+                print("ERROR: number of player actions is over the limit: {}".format(tick))
+                self._did_print_warning = True
+
+    def is_full(self):
+        return len(self._recorded_inputs) >= RecordingPlayerController.HARD_LIMIT
+
+    def __len__(self):
+        return len(self._recorded_inputs)
+
+    def get_inputs(self, tick) -> PlayerInputs:
+        res = super().get_inputs(tick)
+        self.store(tick, res)
+        return res
+
+    def get_recording(self) -> 'PlaybackPlayerController':
+        recording = list(self._recorded_inputs)
+        return PlaybackPlayerController(recording)
+
+
+class PlaybackPlayerController(PlayerController):
+
+    def __init__(self, input_list):
+        self._input_list = input_list
+
+    def __len__(self):
+        return len(self._input_list)
+
+    def get_inputs(self, tick):
+        if 0 <= tick < len(self._input_list):
+            return self._input_list[tick]
+        else:
+            return PlayerController.EMPTY_INPUT
+
+    def is_finished(self, tick):
+        return tick >= len(self._input_list)
+
+    def is_active(self):
+        return False
 
 
 class PlayerEntity(Entity):
 
-    def __init__(self, x, y, player_type: PlayerType, align_to_cells=True):
+    def __init__(self, x, y, player_type: playertypes.PlayerType, controller=None, align_to_cells=True):
         cs = gs.get_instance().cell_size
         w = int(cs * player_type.get_size()[0])
         h = int(cs * player_type.get_size()[1])
@@ -824,6 +1006,7 @@ class PlayerEntity(Entity):
         Entity.__init__(self, 0, 0, w=w, h=h)
 
         self._player_type = player_type
+        self._controller = controller if controller is not None else PlayerController()
 
         self._sprites = {}  # id -> Sprite
         self._dir_facing = 1
@@ -984,6 +1167,12 @@ class PlayerEntity(Entity):
     def get_player_type(self):
         return self._player_type
 
+    def get_controller(self):
+        return self._controller
+
+    def is_active(self):
+        return self._controller.is_active()
+
     def is_dynamic(self):
         return True
 
@@ -1051,13 +1240,13 @@ class PlayerEntity(Entity):
             return self._dir_facing
 
     def _handle_inputs(self):
-        keys = keybinds.get_instance()
-        request_left = inputs.get_instance().is_held(keys.get_keys(const.MOVE_LEFT))
-        request_right = inputs.get_instance().is_held(keys.get_keys(const.MOVE_RIGHT))
-        request_jump = inputs.get_instance().was_pressed(keys.get_keys(const.JUMP))
-        holding_jump = inputs.get_instance().is_held(keys.get_keys(const.JUMP))
+        cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
+        request_left = cur_inputs.is_left_held()
+        request_right = cur_inputs.is_right_held()
+        request_jump = cur_inputs.was_jump_pressed()
+        holding_jump = cur_inputs.is_jump_held()
+        holding_crouch = cur_inputs.is_down_held()
 
-        holding_crouch = inputs.get_instance().is_held(keys.get_keys(const.CROUCH))
         self._holding_crouch = self.get_player_type().can_crouch() and holding_crouch
 
         if request_jump:
@@ -1264,6 +1453,12 @@ class PlayerEntity(Entity):
             if self._sprites[spr_id] is not None:
                 yield self._sprites[spr_id]
 
+    def get_body_sprite(self):
+        if "body" in self._sprites:
+            return self._sprites["body"]
+        else:
+            return None
+
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.get_player_type().get_id(), self.get_rect())
 
@@ -1373,8 +1568,23 @@ class PolygonCollider:
     def get_resolution_hint(self):
         return self._resolution_hint
 
-    def collides_with(self, other):
-        return other.get_mask() in self._collides_with
+    def collides_with(self, other: 'PolygonCollider'):
+        return self.collides_with_mask(other.get_mask())
+
+    def collides_with_mask(self, mask: CollisionMask):
+        return mask in self._collides_with
+
+    def collides_with_masks(self, masks, any=True):
+        any_failed = False
+        for mask in masks:
+            if self.collides_with_mask(mask):
+                if any:
+                    return True
+            else:
+                any_failed = True
+                if not any:
+                    return False
+        return not any_failed
 
     def is_overlapping(self, offs, other, other_offs):
         raise NotImplementedError()  # TODO general polygon collisions

@@ -35,18 +35,25 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.MOVE_RIGHT, [pygame.K_RIGHT, pygame.K_d])
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])
         keybinds.get_instance().set_binding(const.CROUCH, [pygame.K_DOWN, pygame.K_s])
+        keybinds.get_instance().set_binding(const.ACTION_1, [pygame.K_j, pygame.K_x])
 
         keybinds.get_instance().set_binding(const.MENU_UP, [pygame.K_UP, pygame.K_w])
         keybinds.get_instance().set_binding(const.MENU_DOWN, [pygame.K_DOWN, pygame.K_s])
+        keybinds.get_instance().set_binding(const.MENU_LEFT, [pygame.K_LEFT, pygame.K_a])
+        keybinds.get_instance().set_binding(const.MENU_RIGHT, [pygame.K_RIGHT, pygame.K_d])
         keybinds.get_instance().set_binding(const.MENU_ACCEPT, [pygame.K_RETURN])
         keybinds.get_instance().set_binding(const.MENU_CANCEL, [pygame.K_ESCAPE])
 
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
+        keybinds.get_instance().set_binding(const.SOFT_RESET, [pygame.K_z, pygame.K_BACKSPACE])
 
         # debug commands
         keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
+        keybinds.get_instance().set_binding(const.SAVE_LEVEL_DEBUG, [pygame.K_F2])
+
+        keybinds.get_instance().set_binding(const.TOGGLE_EDIT_MODE, [pygame.K_F5])
 
         self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
 
@@ -55,7 +62,9 @@ class CircuitsGame(game.Game):
 
     def get_layers(self):
         # TODO layer depth goes opposite to sprite depths???
-        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 0, sort_sprites=True)
+        yield layers.PolygonLayer(spriteref.POLYGON_UI_LAYER, 0, sort_sprites=True)
+        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 3, sort_sprites=True)
+
         yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5, sort_sprites=True, use_color=True)
         yield layers.ImageLayer(spriteref.ENTITY_LAYER, 10, sort_sprites=True, use_color=True)
 
