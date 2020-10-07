@@ -1,3 +1,4 @@
+import pygame
 
 import typing
 import src.engine.globaltimer as globaltimer
@@ -79,6 +80,15 @@ class InputState:
                 return -1
             else:
                 return self._current_time - self._held_keys[key]
+
+    def shift_is_held(self):
+        return self.is_held(pygame.K_LSHIFT) or self.is_held(pygame.K_RSHIFT)
+
+    def ctrl_is_held(self):
+        return self.is_held(pygame.K_LCTRL) or self.is_held(pygame.K_RCTRL)
+
+    def alt_is_held(self):
+        return self.is_held(pygame.K_LALT) or self.is_held(pygame.K_RALT)
     
     def mouse_is_held(self, button=1):
         keycode = self.to_key_code(button)

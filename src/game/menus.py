@@ -580,7 +580,7 @@ class LevelEditGameScene(_BaseGameScene):
         self.orig_bp = bp
         self.output_file = output_file if output_file is not None else "testing/saved_level.json"
 
-        self.selected_spec = None
+        self.selected_specs = set()
         self.all_spec_blobs = [s[0] for s in bp.all_entities()]
         self.entities_for_specs = {}  # SpecType -> List of Entities
 
@@ -646,8 +646,8 @@ class LevelEditGameScene(_BaseGameScene):
 
             self.get_world_view()
 
-        if inputs.get_instance().mouse_is_dragging(button=1):
-            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=1)
+        if inputs.get_instance().mouse_is_dragging(button=3):
+            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=3)
             if drag_this_frame is not None:
                 dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
                 dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
@@ -663,31 +663,44 @@ class LevelEditGameScene(_BaseGameScene):
     def handle_click_at(self, world_xy, button=1):
         if button == 1:
             specs_at_click = self.get_specs_at(world_xy)
+            holding_shift = inputs.get_instance().shift_is_held()
             if len(specs_at_click) > 0:
-                print("INFO: clicked spec(s): {}".format(specs_at_click))
-                idx = int(random.random() * len(specs_at_click))  # TODO pls
-                self.select_spec(specs_at_click[idx])
+                if holding_shift:
+                    for s in specs_at_click:
+                        self.set_selected(s, select=True)
+                else:
+                    self.deselect_all()
+                    idx = int(random.random() * len(specs_at_click))  # TODO pls
+                    self.set_selected(specs_at_click[idx], select=True)
             else:
-                self.select_spec(None)
+                self.deselect_all()
                 super().handle_click_at(world_xy, button=button)
         else:
             super().handle_click_at(world_xy, button=button)
 
-    def select_spec(self, spec):
-        if self.selected_spec is not None:
-            old_key = util.to_key(self.selected_spec)
-            if old_key in self.entities_for_specs:
-                for ent in self.entities_for_specs[old_key]:
-                    ent.set_color_override(None)
+    def is_selected(self, spec):
+        return util.to_key(spec) in self.selected_specs
 
-        self.selected_spec = spec
-        if self.selected_spec is not None:
-            new_key = util.to_key(self.selected_spec)
-            if new_key in self.entities_for_specs:
-                for ent in self.entities_for_specs[new_key]:
-                    ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
+    def deselect_all(self):
+        all_selects = [s for s in self.selected_specs]
+        for s in all_selects:
+            self.set_selected(s, select=False)
+
+    def set_selected(self, spec, select=True):
+        if spec is None:
+            return
+        else:
+            key = util.to_key(spec)
+            if select:
+                self.selected_specs.add(key)
+                if key in self.entities_for_specs:
+                    for ent in self.entities_for_specs[key]:
+                        ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
             else:
-                print("WARN: selected spec with no entities: {}".format(spec))
+                self.selected_specs.remove(key)
+                if key in self.entities_for_specs:
+                    for ent in self.entities_for_specs[key]:
+                        ent.set_color_override(None)
 
     def _create_new_world(self, world_type=0):
         if isinstance(world_type, blueprints.LevelBlueprint):
