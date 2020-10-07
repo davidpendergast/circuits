@@ -174,26 +174,34 @@ def lighter(color, pcnt=0.2):
 
 if __name__ == "__main__":
     test_img = pygame.image.load("planning/mockup_5.png")
-    output_img_path = "planning/mockup_5_mazified.png"
+    output_img_path = "planning/mockup_5_mazified_bg.png"
 
     blue = colors.to_int(colors.BLUE)
     green = colors.to_int(colors.GREEN)
     tan = colors.to_int(colors.TAN)
     purple = colors.to_int(colors.PURPLE)
+    black = colors.to_int(colors.PERFECT_BLACK)
+    red = (70, 25, 25)
 
     avoid_colors = [colors.to_int(colors.PERFECT_BLACK)]
+    # avoid_colors = [blue, green, tan, purple]
 
-    colors_to_mazify = [blue, green, tan, purple]
-    print("colors_to_mazify={}".format(colors_to_mazify))
-
-    pcnts = (-0.6, -0.5, 0.3, 0.4, 0.5)
+    pcnts = (-0.3, 0.35, 0.5)
+    pcnts = (0.1, 0.15, 0.2, 0.25)
 
     color_shifts = {
-        blue: [darker(blue, pcnt=v) for v in pcnts],
-        green: [darker(green, pcnt=v) for v in pcnts],
-        tan: [darker(tan, pcnt=v) for v in pcnts],
-        purple: [darker(purple, pcnt=v) for v in pcnts]
+        # blue: [darker(blue, pcnt=v) for v in pcnts],
+        # green: [darker(green, pcnt=v) for v in pcnts],
+        # tan: [darker(tan, pcnt=v) for v in pcnts],
+        # purple: [darker(purple, pcnt=v) for v in pcnts]
+        # black: [lighter(red, pcnt=v) for v in pcnts]
+        blue: [black],
+        green: [black],
+        tan: [black],
+        purple: [black],
     }
+
+    colors_to_mazify = [c for c in color_shifts]
 
     base_regions = find_color_regions(test_img, colors_to_include=colors_to_mazify)
 
