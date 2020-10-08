@@ -631,17 +631,54 @@ class LevelEditGameScene(_BaseGameScene):
         state_to_apply = self.edit_queue[self.edit_queue_idx]
         self._apply_state(state_to_apply)
 
-    def delete_selection(self):
-        to_del = [s for s in self.all_spec_blobs if self.is_selected(s)]
-        if len(to_del) == 0:
-            return
-        else:
+    def _mutate_selected_specs(self, funct, select_results=True, undoable=True):
+        """
+        funct: lambda spec -> spec, or a list of specs
+        returns: (list of orig specs, list of new specs)
+        """
+        # TODO this is all pretty inefficient
+        orig_specs = []
+        new_specs = []
+        if len(self.selected_specs) > 0:
+            to_modify = [s for s in self.all_spec_blobs if self.is_selected(s)]
             self.deselect_all()
-            for s in to_del:
-                self.all_spec_blobs.remove(s)
-            print("INFO: deleted {} spec(s)".format(len(to_del)))
-            self.stamp_current_state()
+
+            for orig_s in to_modify:
+                orig_specs.append(orig_s)
+                try:
+                    res = util.listify(funct(orig_s))
+                except Exception:
+                    print("ERROR: failed to modify spec: {}".format(orig_s))
+                    traceback.print_exc()
+                    res = [orig_s]  # keep it as-is
+
+                if len(res) == 0:
+                    self.all_spec_blobs.remove(orig_s)
+                else:
+                    orig_idx = self.all_spec_blobs.index(orig_s)
+                    self.all_spec_blobs[orig_idx] = res[0]
+                    for i in range(1, len(res)):
+                        self.all_spec_blobs.append(res[i])
+                    for new_s in res:
+                        new_specs.append(new_s)
+                        if select_results:
+                            self.set_selected(new_s, select=True)
+            if undoable:
+                self.stamp_current_state()
+
             self.setup_new_world(self.build_current_bp())
+
+        return orig_specs, new_specs
+
+    def delete_selection(self):
+        orig, new = self._mutate_selected_specs(lambda s: [])
+        print("INFO: deleted {} spec(s)".format(len(orig)))
+
+    def move_selection(self, dx, dy):
+        if dx == 0 and dy == 0:
+            return
+        move_funct = lambda s: blueprints.SpecUtils.move(s, (dx * self.edit_resolution, dy * self.edit_resolution))
+        self._mutate_selected_specs(move_funct)
 
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
@@ -698,6 +735,11 @@ class LevelEditGameScene(_BaseGameScene):
                     self.entities_for_specs[as_key] = []
                 self.entities_for_specs[as_key].append(ent)
 
+            if util.to_key(spec) in self.selected_specs:
+                ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
+            else:
+                ent.set_color_override(None)
+
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
             self.get_world_view().set_camera_pos_in_world((0, 0))
@@ -742,6 +784,21 @@ class LevelEditGameScene(_BaseGameScene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
             self.delete_selection()
 
+        move_x = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_RIGHT)):
+            move_x += 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_LEFT)):
+            move_x -= 1
+
+        move_y = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_DOWN)):
+            move_y += 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_UP)):
+            move_y -= 1
+
+        if move_x != 0 or move_y != 0:
+            self.move_selection(move_x, move_y)
+
         super().update()
 
     def handle_esc_pressed(self):
@@ -761,8 +818,9 @@ class LevelEditGameScene(_BaseGameScene):
         if button == 1:
             specs_at_click = self.get_specs_at(world_xy)
             holding_shift = inputs.get_instance().shift_is_held()
+            holding_ctrl = inputs.get_instance().ctrl_is_held()
             if len(specs_at_click) > 0:
-                if holding_shift:
+                if holding_shift or holding_ctrl:
                     for s in specs_at_click:
                         self.set_selected(s, select=True)
                 else:
@@ -827,6 +885,7 @@ class EditEvent:
     def __init__(self, old_state, new_state):
         self.old_state = old_state
         self.new_state = new_state
+
 
 class EditorState:
     def __init__(self, all_specs, selected_specs):

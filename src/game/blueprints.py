@@ -473,6 +473,24 @@ class SpecUtils:
             h = int(spec_blob[H])
         return [x, y, w, h]
 
+    @staticmethod
+    def set_xy(spec_blob, xy):
+        res = spec_blob.copy()
+        if X in spec_blob:
+            res[X] = int(xy[0])
+        if Y in spec_blob:
+            res[Y] = int(xy[1])
+        return res
+
+    @staticmethod
+    def move(spec_blob, dxy):
+        res = spec_blob.copy()
+        if X in spec_blob:
+            res[X] = int(spec_blob[X] + dxy[0])
+        if Y in spec_blob:
+            res[Y] = int(spec_blob[Y] + dxy[1])
+        return res
+
 
 def get_test_blueprint_0() -> LevelBlueprint:
     cs = gs.get_instance().cell_size
