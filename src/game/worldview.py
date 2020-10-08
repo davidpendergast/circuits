@@ -78,6 +78,12 @@ class WorldView:
     def get_zoom(self):
         return self._zoom_levels[self._camera_zoom_idx]
 
+    def set_zoom(self, zoom_level):
+        if zoom_level in self._zoom_levels:
+            self._camera_zoom_idx = self._zoom_levels.index(zoom_level)
+        else:
+            print("ERROR: invalid zoom level, ignoring request: {}".format(zoom_level))
+
     def get_camera_pos_in_world(self):
         return self._camera_xy
 

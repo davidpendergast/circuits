@@ -631,6 +631,18 @@ class LevelEditGameScene(_BaseGameScene):
         state_to_apply = self.edit_queue[self.edit_queue_idx]
         self._apply_state(state_to_apply)
 
+    def delete_selection(self):
+        to_del = [s for s in self.all_spec_blobs if self.is_selected(s)]
+        if len(to_del) == 0:
+            return
+        else:
+            self.deselect_all()
+            for s in to_del:
+                self.all_spec_blobs.remove(s)
+            print("INFO: deleted {} spec(s)".format(len(to_del)))
+            self.stamp_current_state()
+            self.setup_new_world(self.build_current_bp())
+
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
 
@@ -659,9 +671,23 @@ class LevelEditGameScene(_BaseGameScene):
                 res.append(spec)
         return res
 
-    def setup_new_world(self, bp):
-        super().setup_new_world(bp)
+    def setup_new_world(self, bp, reset_camera=False):
+        camera_pos = None
+        camera_zoom = None
 
+        if self.get_world_view() is not None and not reset_camera:
+            camera_pos = self.get_world_view().get_camera_pos_in_world()
+            camera_zoom = self.get_world_view().get_zoom()
+
+        super().setup_new_world(bp)
+        self._refresh_entities()
+
+        if camera_pos is not None:
+            self.get_world_view().set_camera_pos_in_world(camera_pos)
+        if camera_zoom is not None:
+            self.get_world_view().set_zoom(camera_zoom)
+
+    def _refresh_entities(self):
         self.entities_for_specs.clear()
 
         for ent in self.get_world().all_entities():
@@ -712,6 +738,9 @@ class LevelEditGameScene(_BaseGameScene):
                 self.undo()
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.REDO)):
                 self.redo()
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
+            self.delete_selection()
 
         super().update()
 

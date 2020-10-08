@@ -33,6 +33,7 @@ GROW_SELECTION_VERT = "grow_selection_vert"
 GROW_SELECTION_HORZ = "grow_selection_horz"
 UNDO = "undo"
 REDO = "redo"
+DELETE = "delete_selection"
 
 INCREASE_EDIT_RESOLUTION = "increase_edit_resolution"
 DECREASE_EDIT_RESOLUTION = "decrease_edit_resolution"

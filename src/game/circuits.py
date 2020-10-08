@@ -71,6 +71,7 @@ class CircuitsGame(game.Game):
 
         keybinds.get_instance().set_binding(const.UNDO, [pygame.K_z])  # TODO add a way to specify modifier keys
         keybinds.get_instance().set_binding(const.REDO, [pygame.K_y])
+        keybinds.get_instance().set_binding(const.DELETE, [pygame.K_DELETE, pygame.K_BACKSPACE])
 
         self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
 
