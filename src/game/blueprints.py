@@ -491,6 +491,21 @@ class SpecUtils:
             res[Y] = int(spec_blob[Y] + dxy[1])
         return res
 
+    @staticmethod
+    def resize(spec_blob, dxy, min_size=4):
+        res = spec_blob.copy()
+        if W in spec_blob:
+            if res[W] < dxy[0]:
+                res[W] = dxy[0]
+            else:
+                res[W] = max(min_size, int(res[W] + dxy[0]))
+        if H in spec_blob:
+            if res[H] < dxy[1]:
+                res[H] = dxy[1]
+            else:
+                res[H] = max(min_size, int(res[H] + dxy[1]))
+        return res
+
 
 def get_test_blueprint_0() -> LevelBlueprint:
     cs = gs.get_instance().cell_size

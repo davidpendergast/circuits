@@ -675,10 +675,12 @@ class LevelEditGameScene(_BaseGameScene):
         print("INFO: deleted {} spec(s)".format(len(orig)))
 
     def move_selection(self, dx, dy):
-        if dx == 0 and dy == 0:
-            return
         move_funct = lambda s: blueprints.SpecUtils.move(s, (dx * self.edit_resolution, dy * self.edit_resolution))
         self._mutate_selected_specs(move_funct)
+
+    def resize_selection(self, dx, dy):
+        resize_funct = lambda s: blueprints.SpecUtils.resize(s, (dx * self.edit_resolution, dy * self.edit_resolution))
+        self._mutate_selected_specs(resize_funct)
 
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
@@ -797,7 +799,10 @@ class LevelEditGameScene(_BaseGameScene):
             move_y -= 1
 
         if move_x != 0 or move_y != 0:
-            self.move_selection(move_x, move_y)
+            if inputs.get_instance().shift_is_held():
+                self.resize_selection(move_x, move_y)
+            else:
+                self.move_selection(move_x, move_y)
 
         super().update()
 
