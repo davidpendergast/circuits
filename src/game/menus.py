@@ -804,6 +804,25 @@ class LevelEditGameScene(_BaseGameScene):
             else:
                 self.move_selection(move_x, move_y)
 
+        camera_speed = 8  # ticks per move (smaller == faster)
+        camera_move_x = 0
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_RIGHT)) % camera_speed == 1:
+            camera_move_x += 1
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_LEFT)) % camera_speed == 1:
+            camera_move_x -= 1
+
+        camera_move_y = 0
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_DOWN)) % camera_speed == 1:
+            camera_move_y += 1
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_UP)) % camera_speed == 1:
+            camera_move_y -= 1
+
+        if camera_move_x != 0 or camera_move_y != 0:
+            zoom = self.get_world_view().get_zoom()
+            dx = 2 * gs.get_instance().cell_size // zoom * camera_move_x
+            dy = 2 * gs.get_instance().cell_size // zoom * camera_move_y
+            self.get_world_view().move_camera_in_world((dx, dy))
+
         super().update()
 
     def handle_esc_pressed(self):
