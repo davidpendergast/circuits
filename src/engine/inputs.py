@@ -1,7 +1,7 @@
 import pygame
 
-import typing
 import src.engine.globaltimer as globaltimer
+import src.engine.keybinds as keybinds
 
 _INSTANCE = None  # should access this via get_instance(), at the bottom of the file
 
@@ -65,21 +65,38 @@ class InputState:
         self._mouse_pos = pos
     
     def is_held(self, key):
-        """:param key - single key or list of keys"""
-        if isinstance(key, list):
+        """:param key - Binding, single key, or list of keys"""
+        if isinstance(key, list) or isinstance(key, tuple):
             return any(map(lambda k: self.is_held(k), key))
+        elif isinstance(key, keybinds.Binding):
+            return key.is_held(self)
         else:
             return key in self._held_keys
     
     def time_held(self, key):
-        """:param key - single key or list of keys"""
-        if isinstance(key, list):
+        """:param key - Binding, single key, or list of keys"""
+        if isinstance(key, list) or isinstance(key, tuple):
             return max(map(lambda k: self.time_held(k), key))
+        elif isinstance(key, keybinds.Binding):
+            return key.time_held(self)
         else:
             if key not in self._held_keys:
                 return -1
             else:
                 return self._current_time - self._held_keys[key]
+
+    def was_pressed(self, key):
+        """:param key - Binding, single key, or list of keys"""
+        if isinstance(key, list) or isinstance(key, tuple):
+            for k in key:
+                if k in self._pressed_this_frame and self._pressed_this_frame[k] > 0:
+                    return True
+            return False
+        elif isinstance(key, keybinds.Binding):
+            return key.was_pressed(self)  # wtf...
+        else:
+            # it's a single key, hopefully
+            return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0
 
     def shift_is_held(self):
         return self.is_held(pygame.K_LSHIFT) or self.is_held(pygame.K_RSHIFT)
@@ -130,17 +147,7 @@ class InputState:
         return self._mouse_pos_last_frame != self._mouse_pos
         
     def mouse_in_window(self):
-        return self._mouse_pos is not None    
-            
-    def was_pressed(self, key):
-        """:param key - single key or list of keys"""
-        if isinstance(key, list):
-            for k in key:
-                if k in self._pressed_this_frame and self._pressed_this_frame[k] > 0:
-                    return True
-            return False
-        else:
-            return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0
+        return self._mouse_pos is not None
     
     def all_held_keys(self):
         return self._held_keys.keys()

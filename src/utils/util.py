@@ -432,6 +432,15 @@ def listify(obj):
         return [obj]
 
 
+def tuplify(obj):
+    if (isinstance(obj, tuple)):
+        return obj
+    elif (isinstance(obj, list)):
+        return tuple(obj)
+    else:
+        return (obj,)
+
+
 def min_component(v_list, i):
     res = None
     for v in v_list:

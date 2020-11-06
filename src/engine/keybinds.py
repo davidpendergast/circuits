@@ -22,13 +22,16 @@ class KeyBindings:
     def load_from_file(self, filepath):
         pass
 
-    def set_binding(self, action_code, keylist):
-        if keylist is None:
+    def set_binding(self, action_code, binding):
+        if binding is None:
             if action_code in self._binds:
                 del self._binds[action_code]
+        elif isinstance(binding, Binding):
+            self._binds[action_code] = binding
         else:
-            keylist = util.listify(keylist)
-            self._binds[action_code] = keylist
+            # assume it's a raw keycode or list of keycodes
+            keylist = util.listify(binding)
+            self._binds[action_code] = Binding(keylist)
 
     def set_global_action(self, key, name, action):
         if action is None:
@@ -61,4 +64,67 @@ class KeyBindings:
 
 def get_instance() -> KeyBindings:
     return _INSTANCE
+
+
+def modifier_to_key(key):
+    if key == pygame.KMOD_CTRL:
+        return [pygame.K_LCTRL, pygame.K_RCTRL]
+    elif key == pygame.KMOD_LCTRL:
+        return pygame.K_LCTRL
+    elif key == pygame.KMOD_RCTRL:
+        return pygame.K_RCTRL
+
+    elif key == pygame.KMOD_ALT:
+        return [pygame.K_LALT, pygame.K_RALT]
+    elif key == pygame.KMOD_LALT:
+        return pygame.K_LALT
+    elif key == pygame.KMOD_RALT:
+        return pygame.K_RALT
+
+    elif key == pygame.KMOD_SHIFT:
+        return [pygame.K_LSHIFT, pygame.K_RSHIFT]
+    elif key == pygame.KMOD_LSHIFT:
+        return pygame.K_LSHIFT
+    elif key == pygame.KMOD_RSHIFT:
+        return pygame.K_RSHIFT
+
+    raise ValueError("unrecognized modifier key: {}".format(key))
+
+
+class Binding:
+
+    def __init__(self, keycode, mods=()):
+        """
+        keycode: a pygame keycode or list of pygame keycodes.
+        mods: a pygame key modifier or a list of pygame key modifiers.
+        """
+        self.keycode = util.tuplify(keycode)
+        self.mods = util.tuplify(mods)
+
+    def _mods_held(self, input_state):
+        for m in self.mods:
+            if not input_state.is_held(modifier_to_key(m)):
+                return False
+        return True
+
+    def is_held(self, input_state):
+        if not input_state.is_held(self.keycode):
+            return False
+        return self._mods_held(input_state)
+
+    def was_pressed(self, input_state):
+        if not input_state.was_pressed(self.keycode):
+            return False
+        return self._mods_held(input_state)
+
+    def time_held(self, input_state):
+        min_time = input_state.time_held(self.keycode)
+        if min_time < 0:
+            return min_time
+        else:
+            for m in self.mods:
+                min_time = min(min_time, modifier_to_key(m))
+                if min_time < 0:
+                    return min_time
+        return min_time
 

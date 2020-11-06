@@ -27,10 +27,18 @@ MOVE_SELECTION_UP = "move_selection_up"
 MOVE_SELECTION_LEFT = "move_selection_left"
 MOVE_SELECTION_DOWN = "move_selection_down"
 MOVE_SELECTION_RIGHT = "move_selection_right"
+
+MOVE_CAMERA_UP = "move_camera_up"
+MOVE_CAMERA_LEFT = "move_camera_left"
+MOVE_CAMERA_DOWN = "move_camera_down"
+MOVE_CAMERA_RIGHT = "move_camera_right"
+
 SHRINK_SELECTION_VERT = "shrink_selection_vert"
 SHRINK_SELECTION_HORZ = "shrink_selection_horz"
+
 GROW_SELECTION_VERT = "grow_selection_vert"
 GROW_SELECTION_HORZ = "grow_selection_horz"
+
 UNDO = "undo"
 REDO = "redo"
 DELETE = "delete_selection"

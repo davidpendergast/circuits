@@ -61,10 +61,15 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.MOVE_SELECTION_DOWN, [pygame.K_s])
         keybinds.get_instance().set_binding(const.MOVE_SELECTION_RIGHT, [pygame.K_d])
 
-        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_VERT, [pygame.K_UP])
-        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_HORZ, [pygame.K_LEFT])
-        keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, [pygame.K_DOWN])
-        keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, [pygame.K_RIGHT])
+        keybinds.get_instance().set_binding(const.MOVE_CAMERA_UP, [pygame.K_UP])
+        keybinds.get_instance().set_binding(const.MOVE_CAMERA_LEFT, [pygame.K_LEFT])
+        keybinds.get_instance().set_binding(const.MOVE_CAMERA_DOWN, [pygame.K_DOWN])
+        keybinds.get_instance().set_binding(const.MOVE_CAMERA_RIGHT, [pygame.K_RIGHT])
+
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_VERT, [(pygame.KMOD_CTRL, pygame.K_w)])
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_HORZ, [(pygame.KMOD_CTRL, pygame.K_a)])
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, [(pygame.KMOD_CTRL, pygame.K_s)])
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, [(pygame.KMOD_CTRL, pygame.K_d)])
 
         keybinds.get_instance().set_binding(const.DECREASE_EDIT_RESOLUTION, [pygame.K_LEFTBRACKET])
         keybinds.get_instance().set_binding(const.INCREASE_EDIT_RESOLUTION, [pygame.K_RIGHTBRACKET])
