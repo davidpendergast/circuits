@@ -591,6 +591,7 @@ class LevelEditGameScene(_BaseGameScene):
         cs = gs.get_instance().cell_size
         self.edit_resolution = cs  # how far blocks move & change in size when you press the key commands
         self.resolution_options = [cs // 8, cs // 4, cs // 2, cs]  # essentially assumes cs >= 16
+        self.camera_speed = 8  # ticks per move (smaller == faster)
 
         self.stamp_current_state()
         self.setup_new_world(bp)
@@ -682,6 +683,11 @@ class LevelEditGameScene(_BaseGameScene):
         resize_funct = lambda s: blueprints.SpecUtils.resize(s, (dx * self.edit_resolution, dy * self.edit_resolution))
         self._mutate_selected_specs(resize_funct)
 
+    def cycle_selection_type(self, steps):
+        print("INFO: cycling selection")
+        cycle_funct = lambda s: blueprints.SpecUtils.cycle_subtype(s, steps)
+        self._mutate_selected_specs(cycle_funct)
+
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
 
@@ -745,7 +751,6 @@ class LevelEditGameScene(_BaseGameScene):
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
             self.get_world_view().set_camera_pos_in_world((0, 0))
-            pass
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_EDIT_MODE)):
             self.get_manager().set_next_scene(DebugGameScene(self.build_current_bp(), self))
@@ -786,6 +791,15 @@ class LevelEditGameScene(_BaseGameScene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
             self.delete_selection()
 
+        cycle_type_steps = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_FORWARD)):
+            cycle_type_steps += 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_BACKWARD)):
+            cycle_type_steps -= 1
+
+        if cycle_type_steps != 0:
+            self.cycle_selection_type(cycle_type_steps)
+
         move_x = 0
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_RIGHT)):
             move_x += 1
@@ -804,17 +818,16 @@ class LevelEditGameScene(_BaseGameScene):
             else:
                 self.move_selection(move_x, move_y)
 
-        camera_speed = 8  # ticks per move (smaller == faster)
         camera_move_x = 0
-        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_RIGHT)) % camera_speed == 1:
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_RIGHT)) % self.camera_speed == 1:
             camera_move_x += 1
-        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_LEFT)) % camera_speed == 1:
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_LEFT)) % self.camera_speed == 1:
             camera_move_x -= 1
 
         camera_move_y = 0
-        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_DOWN)) % camera_speed == 1:
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_DOWN)) % self.camera_speed == 1:
             camera_move_y += 1
-        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_UP)) % camera_speed == 1:
+        if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_UP)) % self.camera_speed == 1:
             camera_move_y -= 1
 
         if camera_move_x != 0 or camera_move_y != 0:

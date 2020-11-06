@@ -71,6 +71,9 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, [(pygame.KMOD_CTRL, pygame.K_s)])
         keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, [(pygame.KMOD_CTRL, pygame.K_d)])
 
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_FORWARD, [pygame.K_e])
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_BACKWARD, [pygame.K_q])
+
         keybinds.get_instance().set_binding(const.DECREASE_EDIT_RESOLUTION, [pygame.K_LEFTBRACKET])
         keybinds.get_instance().set_binding(const.INCREASE_EDIT_RESOLUTION, [pygame.K_RIGHTBRACKET])
 

@@ -33,6 +33,9 @@ MOVE_CAMERA_LEFT = "move_camera_left"
 MOVE_CAMERA_DOWN = "move_camera_down"
 MOVE_CAMERA_RIGHT = "move_camera_right"
 
+CYCLE_SELECTION_FORWARD = "cycle_selection_forward"
+CYCLE_SELECTION_BACKWARD = "cycle_selection_backward"
+
 SHRINK_SELECTION_VERT = "shrink_selection_vert"
 SHRINK_SELECTION_HORZ = "shrink_selection_horz"
 

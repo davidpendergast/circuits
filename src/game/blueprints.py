@@ -506,6 +506,25 @@ class SpecUtils:
                 res[H] = max(min_size, int(res[H] + dxy[1]))
         return res
 
+    @staticmethod
+    def cycle_subtype(spec_blob, steps):
+        res = spec_blob.copy()
+        if TYPE_ID in spec_blob and SUBTYPE_ID in spec_blob:
+            type_id = spec_blob[TYPE_ID]
+            try:
+                spec_type = SpecTypes.get(type_id)
+                my_subtype = res[SUBTYPE_ID]
+                all_subtypes = spec_type.get_subtypes()
+                if my_subtype in all_subtypes:
+                    cur_idx = all_subtypes.index(my_subtype)
+                    next_idx = (cur_idx + steps) % len(all_subtypes)
+                    next_subtype = all_subtypes[next_idx]
+                    res[SUBTYPE_ID] = next_subtype
+            except Exception:
+                print("ERROR: failed to cycle spec: {}".format(spec_blob))
+                traceback.print_exc()
+        return res
+
 
 def get_test_blueprint_0() -> LevelBlueprint:
     cs = gs.get_instance().cell_size
