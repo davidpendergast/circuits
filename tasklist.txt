@@ -20,15 +20,15 @@ issues:
     
     
 vertical slice: 
- - title screen 
-    - logo, still image, options for [start, continue, controls, editor]
- - overworld
-    - can select levels in a grid connected by paths, with branches and stuff
-    - some kind of spaceship graphics
-    - design basically ripped from baba (where all my good ideas come from)
-    - should be extremely modular
+ [x] title screen 
+    [x] logo, still image, options for [start, continue, controls, editor]
+ [x] overworld
+    [x] can select levels in a grid connected by paths, with branches and stuff
+    [x] some kind of spaceship graphics (or rocks)
+        - design basically ripped from baba (where all my good ideas come from)
+        - should be extremely modular
  - in levels 
-    - platforming phyiscs
+    [x] platforming phyiscs
     - play alongside your "ghosts"
     - mixture of longer, traditional single-robot platforming challenges
         and multi-robot coordination puzzles
@@ -36,6 +36,7 @@ vertical slice:
     - save / load levels as json
     - create / move / modify objects in the game
     - toggle between play mode and edit mode
+    - some kind of in-editor console where you can modify stuff more directly
     ui:
       - creation sidepanel
         - select objects to create from grid

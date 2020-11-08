@@ -92,6 +92,46 @@ class SpecType:
                 world.add_entity(ent, next_update=False)
                 ent._spec = json_blob.copy()  # XXX but helpful for the level editor
 
+    def get_default_value(self, k):
+        if k in self.optional_keys:
+            return self.optional_keys[k]
+        elif k == X or k == Y:
+            return 0
+        elif k == W or k == H:
+            return 16
+        elif k == POINTS:
+            return []
+        elif k in (PT_1, PT_2, PT_3):
+            return (0, 0)
+        elif k == ART_ID or k == COLOR_ID:
+            return 0
+        elif k == LOOP:
+            return True
+        elif k == DURATION:
+            return 60
+        elif k == X_DIR or k == Y_DIR:
+            return 0
+        else:
+            return None
+
+    def get_default_blob(self):
+        res = {TYPE_ID: self.get_id()}
+        subtypes = self.get_subtypes()
+        if len(subtypes) > 0:
+            res[SUBTYPE_ID] = subtypes[0]
+        all_keys = [k for k in self.required_keys] + [k for k in self.optional_keys]
+        for k in all_keys:
+            if k in res:
+                continue
+            else:
+                val = self.get_default_value(k)
+                if val is not None:
+                    res[k] = val
+                else:
+                    raise ValueError("No default value exists for key: {}".format(k))
+
+        return res
+
     def __repr__(self):
         return type(self).__name__
 
@@ -139,7 +179,7 @@ class SlopedQuadBlockSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "sloped_2x2_block", required_keys=(X, Y, SUBTYPE_ID),
-                          optional_keys={ART_ID: -1, COLOR_ID: 0})
+                          optional_keys={ART_ID: -1, COLOR_ID: 0, W: 32, H: 32})
 
     def get_subtypes(self):
         return SlopedQuadBlockSpecType.ALL_SUBTYPES
@@ -219,6 +259,12 @@ class StartBlockSpecType(SpecType):
     def get_subtypes(self):
         return const.ALL_PLAYER_IDS
 
+    def get_default_value(self, k):
+        if k == W or k == H:
+            return 16
+        else:
+            return super().get_default_value(k)
+
     def get_player_type(self, json_blob):
         return playertypes.PlayerTypes.get_type(json_blob[SUBTYPE_ID])
 
@@ -242,6 +288,14 @@ class EndBlockSpecType(SpecType):
 
     def get_subtypes(self):
         return const.ALL_PLAYER_IDS
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 16
+        else:
+            return super().get_default_value(k)
 
     def build_entities(self, json_blob):
         subtype = json_blob[SUBTYPE_ID]

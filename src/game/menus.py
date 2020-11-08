@@ -580,6 +580,8 @@ class LevelEditGameScene(_BaseGameScene):
         self.orig_bp = bp
         self.output_file = output_file if output_file is not None else "testing/saved_level.json"
 
+        self.mouse_mode = NormalMouseMode(self)
+
         self.edit_queue = []
         self.edit_queue_idx = -1
         self.edit_queue_max_size = 32
@@ -595,6 +597,8 @@ class LevelEditGameScene(_BaseGameScene):
 
         self.stamp_current_state()
         self.setup_new_world(bp)
+
+        self.object_pallette = self._load_object_pallette()
 
     def stamp_current_state(self):
         cur_specs = [s.copy() for s in self.all_spec_blobs]
@@ -631,6 +635,12 @@ class LevelEditGameScene(_BaseGameScene):
             return
         state_to_apply = self.edit_queue[self.edit_queue_idx]
         self._apply_state(state_to_apply)
+
+    def set_mouse_mode(self, mode):
+        if mode is None:
+            self.mouse_mode = NormalMouseMode(self)
+        else:
+            self.mouse_mode = mode
 
     def _mutate_selected_specs(self, funct, select_results=True, undoable=True):
         """
@@ -769,13 +779,8 @@ class LevelEditGameScene(_BaseGameScene):
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
             debug.toggle_debug_sprite_mode()
 
-        if inputs.get_instance().mouse_is_dragging(button=3):
-            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=3)
-            if drag_this_frame is not None:
-                dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
-                dxy = util.mult(dxy, -1 / self._world_view.get_zoom())
-                self._world_view.move_camera_in_world(dxy)
-                self._world_view.set_free_camera(True)
+        self.mouse_mode.handle_drag_events()
+        self.mouse_mode.handle_key_events()
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.INCREASE_EDIT_RESOLUTION)):
             self.adjust_edit_resolution(True)
@@ -787,36 +792,6 @@ class LevelEditGameScene(_BaseGameScene):
                 self.undo()
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.REDO)):
                 self.redo()
-
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
-            self.delete_selection()
-
-        cycle_type_steps = 0
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_FORWARD)):
-            cycle_type_steps += 1
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_BACKWARD)):
-            cycle_type_steps -= 1
-
-        if cycle_type_steps != 0:
-            self.cycle_selection_type(cycle_type_steps)
-
-        move_x = 0
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_RIGHT)):
-            move_x += 1
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_LEFT)):
-            move_x -= 1
-
-        move_y = 0
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_DOWN)):
-            move_y += 1
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_UP)):
-            move_y -= 1
-
-        if move_x != 0 or move_y != 0:
-            if inputs.get_instance().shift_is_held():
-                self.resize_selection(move_x, move_y)
-            else:
-                self.move_selection(move_x, move_y)
 
         camera_move_x = 0
         if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_RIGHT)) % self.camera_speed == 1:
@@ -852,24 +827,8 @@ class LevelEditGameScene(_BaseGameScene):
         print("INFO: new editor resolution: {}".format(self.edit_resolution))
 
     def handle_click_at(self, world_xy, button=1):
-        if button == 1:
-            specs_at_click = self.get_specs_at(world_xy)
-            holding_shift = inputs.get_instance().shift_is_held()
-            holding_ctrl = inputs.get_instance().ctrl_is_held()
-            if len(specs_at_click) > 0:
-                if holding_shift or holding_ctrl:
-                    for s in specs_at_click:
-                        self.set_selected(s, select=True)
-                else:
-                    self.deselect_all()
-                    idx = int(random.random() * len(specs_at_click))  # TODO pls
-                    self.set_selected(specs_at_click[idx], select=True)
-            else:
-                self.deselect_all()
-                super().handle_click_at(world_xy, button=button)
-            self.stamp_current_state()
-        else:
-            super().handle_click_at(world_xy, button=button)
+        super().handle_click_at(world_xy, button=button)
+        self.mouse_mode.handle_click_at(world_xy, button=button)
 
     def is_selected(self, spec):
         return util.to_key(spec) in self.selected_specs
@@ -917,6 +876,36 @@ class LevelEditGameScene(_BaseGameScene):
 
             self._world_view = worldview.WorldView(self._world)
 
+    def _load_object_pallette(self):
+        res = []
+        res.append(blueprints.SpecTypes.BLOCK.get_default_blob())
+        res.append(blueprints.SpecTypes.START_BLOCK.get_default_blob())
+        res.append(blueprints.SpecTypes.END_BLOCK.get_default_blob())
+        res.append(blueprints.SpecTypes.SLOPE_BLOCK_QUAD.get_default_blob())
+        res.append(blueprints.SpecTypes.MOVING_BLOCK.get_default_blob())
+
+        return res
+
+    def get_pallette_object(self, idx):
+        if 0 <= idx < len(self.object_pallette):
+            return dict(self.object_pallette[idx])
+        else:
+            return None
+
+    def spawn_pallette_object_at_mouse(self, idx):
+        spec_to_spawn = self.get_pallette_object(idx)
+        if spec_to_spawn is not None and inputs.get_instance().mouse_in_window():
+            screen_pos = inputs.get_instance().mouse_pos()
+            mouse_pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
+            spawn_x = mouse_pos_in_world[0] - (mouse_pos_in_world[0] % self.edit_resolution)
+            spawn_y = mouse_pos_in_world[1] - (mouse_pos_in_world[1] % self.edit_resolution)
+
+            spec_to_spawn = blueprints.SpecUtils.set_xy(spec_to_spawn, (spawn_x, spawn_y))
+
+            self.all_spec_blobs.append(spec_to_spawn)
+            self.stamp_current_state()
+            self.setup_new_world(self.build_current_bp())
+
 
 class EditEvent:
     def __init__(self, old_state, new_state):
@@ -928,3 +917,100 @@ class EditorState:
     def __init__(self, all_specs, selected_specs):
         self.all_specs = all_specs
         self.selected_specs = selected_specs
+
+
+class MouseMode:
+
+    def __init__(self, scene: LevelEditGameScene):
+        self.scene = scene
+
+    def activate(self):
+        pass
+
+    def deactivate(self):
+        pass
+
+    def handle_drag_events(self):
+        pass
+
+    def handle_click_at(self, world_xy, button=1):
+        pass
+
+    def handle_key_events(self):
+        pass
+
+
+class NormalMouseMode(MouseMode):
+
+    def __init__(self, scene: LevelEditGameScene):
+        super().__init__(scene)
+
+    def handle_drag_events(self):
+        if inputs.get_instance().mouse_is_dragging(button=3):
+            drag_this_frame = inputs.get_instance().mouse_drag_this_frame(button=3)
+            if drag_this_frame is not None:
+                dxy = util.sub(drag_this_frame[1], drag_this_frame[0])
+                dxy = util.mult(dxy, -1 / self.scene.get_world_view().get_zoom())
+                self.scene.get_world_view().move_camera_in_world(dxy)
+                self.scene.get_world_view().set_free_camera(True)
+
+    def handle_click_at(self, world_xy, button=1):
+        if button == 1:
+            specs_at_click = self.scene.get_specs_at(world_xy)
+            holding_shift = inputs.get_instance().shift_is_held()
+            holding_ctrl = inputs.get_instance().ctrl_is_held()
+            if len(specs_at_click) > 0:
+                if holding_shift or holding_ctrl:
+                    for s in specs_at_click:
+                        self.scene.set_selected(s, select=True)
+                else:
+                    self.scene.deselect_all()
+                    idx = int(random.random() * len(specs_at_click))  # TODO pls
+                    self.scene.set_selected(specs_at_click[idx], select=True)
+            else:
+                self.scene.deselect_all()
+            self.scene.stamp_current_state()
+
+    def handle_key_events(self):
+        move_x = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_RIGHT)):
+            move_x += 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_LEFT)):
+            move_x -= 1
+
+        move_y = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_DOWN)):
+            move_y += 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_UP)):
+            move_y -= 1
+
+        if move_x != 0 or move_y != 0:
+            if inputs.get_instance().shift_is_held():
+                self.scene.resize_selection(move_x, move_y)
+            else:
+                self.scene.move_selection(move_x, move_y)
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
+            self.scene.delete_selection()
+
+        cycle_type_steps = 0
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_FORWARD)):
+            cycle_type_steps += 1
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_BACKWARD)):
+            cycle_type_steps -= 1
+
+        if cycle_type_steps != 0:
+            self.scene.cycle_selection_type(cycle_type_steps)
+
+        for i in range(0, len(const.OPTIONS)):
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.OPTIONS[i])):
+                spawn_idx = i
+                if inputs.get_instance().shift_is_held():
+                    spawn_idx += 10
+                if inputs.get_instance().ctrl_is_held():
+                    spawn_idx += 20
+                if inputs.get_instance().alt_is_held():
+                    spawn_idx += 40
+                print("INFO: spawning object [{}] at mouse: {}".format(spawn_idx,
+                                                                       self.scene.get_pallette_object(spawn_idx)))
+                self.scene.spawn_pallette_object_at_mouse(spawn_idx)

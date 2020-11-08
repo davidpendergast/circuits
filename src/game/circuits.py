@@ -77,6 +77,17 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.DECREASE_EDIT_RESOLUTION, [pygame.K_LEFTBRACKET])
         keybinds.get_instance().set_binding(const.INCREASE_EDIT_RESOLUTION, [pygame.K_RIGHTBRACKET])
 
+        keybinds.get_instance().set_binding(const.OPTION_0, [pygame.K_1])
+        keybinds.get_instance().set_binding(const.OPTION_1, [pygame.K_2])
+        keybinds.get_instance().set_binding(const.OPTION_2, [pygame.K_3])
+        keybinds.get_instance().set_binding(const.OPTION_3, [pygame.K_4])
+        keybinds.get_instance().set_binding(const.OPTION_4, [pygame.K_5])
+        keybinds.get_instance().set_binding(const.OPTION_5, [pygame.K_6])
+        keybinds.get_instance().set_binding(const.OPTION_6, [pygame.K_7])
+        keybinds.get_instance().set_binding(const.OPTION_7, [pygame.K_8])
+        keybinds.get_instance().set_binding(const.OPTION_8, [pygame.K_9])
+        keybinds.get_instance().set_binding(const.OPTION_9, [pygame.K_0])
+
         keybinds.get_instance().set_binding(const.UNDO, [pygame.K_z])  # TODO add a way to specify modifier keys
         keybinds.get_instance().set_binding(const.REDO, [pygame.K_y])
         keybinds.get_instance().set_binding(const.DELETE, [pygame.K_DELETE, pygame.K_BACKSPACE])

@@ -42,6 +42,20 @@ SHRINK_SELECTION_HORZ = "shrink_selection_horz"
 GROW_SELECTION_VERT = "grow_selection_vert"
 GROW_SELECTION_HORZ = "grow_selection_horz"
 
+OPTION_0 = "option_0"
+OPTION_1 = "option_1"
+OPTION_2 = "option_2"
+OPTION_3 = "option_3"
+OPTION_4 = "option_4"
+OPTION_5 = "option_5"
+OPTION_6 = "option_6"
+OPTION_7 = "option_7"
+OPTION_8 = "option_8"
+OPTION_9 = "option_9"
+
+OPTIONS = [OPTION_0, OPTION_1, OPTION_2, OPTION_3, OPTION_4,
+           OPTION_5, OPTION_6, OPTION_7, OPTION_8, OPTION_9]
+
 UNDO = "undo"
 REDO = "redo"
 DELETE = "delete_selection"
