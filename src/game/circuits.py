@@ -66,10 +66,10 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.MOVE_CAMERA_DOWN, [pygame.K_DOWN])
         keybinds.get_instance().set_binding(const.MOVE_CAMERA_RIGHT, [pygame.K_RIGHT])
 
-        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_VERT, [(pygame.KMOD_CTRL, pygame.K_w)])
-        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_HORZ, [(pygame.KMOD_CTRL, pygame.K_a)])
-        keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, [(pygame.KMOD_CTRL, pygame.K_s)])
-        keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, [(pygame.KMOD_CTRL, pygame.K_d)])
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_VERT, keybinds.Binding(pygame.K_w, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_HORZ, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, keybinds.Binding(pygame.K_s, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, keybinds.Binding(pygame.K_d, mods=pygame.KMOD_SHIFT))
 
         keybinds.get_instance().set_binding(const.CYCLE_SELECTION_FORWARD, [pygame.K_e])
         keybinds.get_instance().set_binding(const.CYCLE_SELECTION_BACKWARD, [pygame.K_q])
@@ -88,9 +88,15 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.OPTION_8, [pygame.K_9])
         keybinds.get_instance().set_binding(const.OPTION_9, [pygame.K_0])
 
-        keybinds.get_instance().set_binding(const.UNDO, [pygame.K_z])  # TODO add a way to specify modifier keys
-        keybinds.get_instance().set_binding(const.REDO, [pygame.K_y])
+        keybinds.get_instance().set_binding(const.UNDO, keybinds.Binding(pygame.K_z, mods=pygame.KMOD_CTRL))
+        keybinds.get_instance().set_binding(const.REDO, keybinds.Binding(pygame.K_y, mods=pygame.KMOD_CTRL))
+
         keybinds.get_instance().set_binding(const.DELETE, [pygame.K_DELETE, pygame.K_BACKSPACE])
+
+        keybinds.get_instance().set_binding(const.COPY, keybinds.Binding(pygame.K_c, mods=pygame.KMOD_CTRL))
+        keybinds.get_instance().set_binding(const.PASTE, keybinds.Binding(pygame.K_v, mods=pygame.KMOD_CTRL))
+        keybinds.get_instance().set_binding(const.CUT, keybinds.Binding(pygame.K_x, mods=pygame.KMOD_CTRL))
+        keybinds.get_instance().set_binding(const.SELECT_ALL, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_CTRL))
 
         self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
 

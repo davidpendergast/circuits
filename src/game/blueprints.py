@@ -78,6 +78,15 @@ class SpecType:
     def get_subtypes(self):
         return []
 
+    def index_of_subtype(self, subtype):
+        all_subtypes = self.get_subtypes()
+        if subtype in all_subtypes:
+            return all_subtypes.index(subtype)
+        elif util.tuplify(subtype) in all_subtypes:
+            return all_subtypes.index(util.tuplify(subtype))
+        else:
+            return -1
+
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         raise NotImplementedError()
 
@@ -569,9 +578,9 @@ class SpecUtils:
                 spec_type = SpecTypes.get(type_id)
                 my_subtype = res[SUBTYPE_ID]
                 all_subtypes = spec_type.get_subtypes()
-                if my_subtype in all_subtypes:
-                    cur_idx = all_subtypes.index(my_subtype)
-                    next_idx = (cur_idx + steps) % len(all_subtypes)
+                idx = spec_type.index_of_subtype(my_subtype)
+                if idx >= 0:
+                    next_idx = (idx + steps) % len(all_subtypes)
                     next_subtype = all_subtypes[next_idx]
                     res[SUBTYPE_ID] = next_subtype
             except Exception:

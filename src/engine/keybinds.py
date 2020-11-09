@@ -91,6 +91,18 @@ def modifier_to_key(key):
     raise ValueError("unrecognized modifier key: {}".format(key))
 
 
+_ALL_MODS = [pygame.KMOD_CTRL, pygame.KMOD_LCTRL, pygame.KMOD_RCTRL,
+             pygame.KMOD_SHIFT, pygame.KMOD_LSHIFT, pygame.KMOD_RSHIFT,
+             pygame.KMOD_ALT, pygame.KMOD_LALT, pygame.KMOD_RALT,
+             pygame.KMOD_CAPS,
+             pygame.KMOD_META, pygame.KMOD_LMETA, pygame.KMOD_RMETA,
+             pygame.KMOD_MODE, pygame.KMOD_NONE, pygame.KMOD_NUM]
+
+
+def _is_mod(code):
+    return code in _ALL_MODS
+
+
 class Binding:
 
     def __init__(self, keycode, mods=()):

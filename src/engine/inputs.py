@@ -98,6 +98,32 @@ class InputState:
             # it's a single key, hopefully
             return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0
 
+    def is_held_four_way(self, left=None, right=None, up=None, down=None):
+        x = 0
+        if left is not None and self.is_held(left):
+            x -= 1
+        if right is not None and self.is_held(right):
+            x += 1
+        y = 0
+        if up is not None and self.is_held(up):
+            y -= 1
+        if down is not None and self.is_held(down):
+            y += 1
+        return (x, y)
+
+    def was_pressed_four_way(self, left=None, right=None, up=None, down=None):
+        x = 0
+        if left is not None and self.was_pressed(left):
+            x -= 1
+        if right is not None and self.was_pressed(right):
+            x += 1
+        y = 0
+        if up is not None and self.was_pressed(up):
+            y -= 1
+        if down is not None and self.was_pressed(down):
+            y += 1
+        return (x, y)
+
     def shift_is_held(self):
         return self.is_held(pygame.K_LSHIFT) or self.is_held(pygame.K_RSHIFT)
 

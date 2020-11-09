@@ -1,4 +1,6 @@
 import traceback
+import random
+import json
 
 import src.engine.scenes as scenes
 import src.game.blueprints as blueprints
@@ -18,7 +20,6 @@ import src.game.overworld as overworld
 import src.game.ui as ui
 import src.engine.spritesheets as spritesheets
 import src.game.worlds as worlds
-import random
 
 
 class MainMenuScene(scenes.Scene):
@@ -642,6 +643,10 @@ class LevelEditGameScene(_BaseGameScene):
         else:
             self.mouse_mode = mode
 
+    def get_selected_specs(self):
+        # TODO pretty inefficient due to poor design
+        return [s for s in self.all_spec_blobs if self.is_selected(s)]
+
     def _mutate_selected_specs(self, funct, select_results=True, undoable=True):
         """
         funct: lambda spec -> spec, or a list of specs
@@ -651,7 +656,7 @@ class LevelEditGameScene(_BaseGameScene):
         orig_specs = []
         new_specs = []
         if len(self.selected_specs) > 0:
-            to_modify = [s for s in self.all_spec_blobs if self.is_selected(s)]
+            to_modify = self.get_selected_specs()
             self.deselect_all()
 
             for orig_s in to_modify:
@@ -680,6 +685,57 @@ class LevelEditGameScene(_BaseGameScene):
             self.setup_new_world(self.build_current_bp())
 
         return orig_specs, new_specs
+
+    def copy_selection_to_clipboard(self):
+        selected_specs = self.get_selected_specs()
+        as_json_str = json.dumps(selected_specs)  # these should always be serializable (that's the whole point)
+        util.set_clipboard(as_json_str)
+        print("INFO: copied {} spec(s) to clipboard".format(len(selected_specs)))
+
+    def cut_selection_to_clipboard(self):
+        self.copy_selection_to_clipboard()
+        self.delete_selection()
+
+    def paste_clipboard_at_mouse(self):
+        raw_data = util.get_clipboard()
+        needs_undo_stamp = False
+        try:
+            if inputs.get_instance().mouse_in_window():
+                screen_pos = inputs.get_instance().mouse_pos()
+                mouse_pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
+                spawn_x = mouse_pos_in_world[0] - (mouse_pos_in_world[0] % self.edit_resolution)
+                spawn_y = mouse_pos_in_world[1] - (mouse_pos_in_world[1] % self.edit_resolution)
+
+                blob = json.loads(raw_data) # should be a list of specs
+                min_xy = [float('inf'), float('inf')]
+                for spec in blob:
+                    if blueprints.X in spec:
+                        min_xy[0] = min(min_xy[0], int(spec[blueprints.X]))
+                    if blueprints.Y in spec:
+                        min_xy[1] = min(min_xy[1], int(spec[blueprints.Y]))
+
+                shifted_specs = []
+                move_x = spawn_x - min_xy[0] if min_xy[0] < float('inf') else 0
+                move_y = spawn_y - min_xy[1] if min_xy[1] < float('inf') else 0
+                for spec in blob:
+                    shifted_specs.append(blueprints.SpecUtils.move(spec, (move_x, move_y)))
+
+                if len(shifted_specs) > 0:
+                    needs_undo_stamp = True
+                    self.deselect_all()
+                    for spec in shifted_specs:
+                        self.all_spec_blobs.append(spec)
+                        self.set_selected(spec, select=True)
+
+                    print("INFO: pasted {} spec(s) into world".format(len(shifted_specs)))
+
+        except Exception:
+            print("ERROR: failed to paste data from clipboard: {}".format(raw_data))
+            traceback.print_exc()
+
+        self.setup_new_world(self.build_current_bp())
+        if needs_undo_stamp:
+            self.stamp_current_state()
 
     def delete_selection(self):
         orig, new = self._mutate_selected_specs(lambda s: [])
@@ -787,11 +843,10 @@ class LevelEditGameScene(_BaseGameScene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DECREASE_EDIT_RESOLUTION)):
             self.adjust_edit_resolution(False)
 
-        if inputs.get_instance().ctrl_is_held():
-            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.UNDO)):
-                self.undo()
-            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.REDO)):
-                self.redo()
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.UNDO)):
+            self.undo()
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.REDO)):
+            self.redo()
 
         camera_move_x = 0
         if inputs.get_instance().time_held(keybinds.get_instance().get_keys(const.MOVE_CAMERA_RIGHT)) % self.camera_speed == 1:
@@ -972,39 +1027,40 @@ class NormalMouseMode(MouseMode):
             self.scene.stamp_current_state()
 
     def handle_key_events(self):
-        move_x = 0
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_RIGHT)):
-            move_x += 1
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_LEFT)):
-            move_x -= 1
+        resize_xy = inputs.get_instance().was_pressed_four_way(left=keybinds.get_instance().get_keys(const.SHRINK_SELECTION_HORZ),
+                                                               right=keybinds.get_instance().get_keys(const.GROW_SELECTION_HORZ),
+                                                               up=keybinds.get_instance().get_keys(const.SHRINK_SELECTION_VERT),
+                                                               down=keybinds.get_instance().get_keys(const.GROW_SELECTION_VERT))
+        move_xy = inputs.get_instance().was_pressed_four_way(left=keybinds.get_instance().get_keys(const.MOVE_SELECTION_LEFT),
+                                                             right=keybinds.get_instance().get_keys(const.MOVE_SELECTION_RIGHT),
+                                                             up=keybinds.get_instance().get_keys(const.MOVE_SELECTION_UP),
+                                                             down=keybinds.get_instance().get_keys(const.MOVE_SELECTION_DOWN))
 
-        move_y = 0
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_DOWN)):
-            move_y += 1
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MOVE_SELECTION_UP)):
-            move_y -= 1
+        # TODO this assumes that resize is the one with modifier keys
+        # TODO (how should we manage keybinds that are subsets of other keybinds?)
+        if resize_xy != (0, 0):
+            self.scene.resize_selection(resize_xy[0], resize_xy[1])
+        elif move_xy != (0, 0):
+            self.scene.move_selection(move_xy[0], move_xy[1])
 
-        if move_x != 0 or move_y != 0:
-            if inputs.get_instance().shift_is_held():
-                self.scene.resize_selection(move_x, move_y)
-            else:
-                self.scene.move_selection(move_x, move_y)
-
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.COPY)):
+            self.scene.copy_selection_to_clipboard()
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CUT)):
+            self.scene.cut_selection_to_clipboard()
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.PASTE)):
+            self.scene.paste_clipboard_at_mouse()
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
             self.scene.delete_selection()
 
-        cycle_type_steps = 0
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_FORWARD)):
-            cycle_type_steps += 1
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CYCLE_SELECTION_BACKWARD)):
-            cycle_type_steps -= 1
-
+        cycle_type_steps = inputs.get_instance().was_pressed_four_way(right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_FORWARD),
+                                                                      left=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_BACKWARD))[0]
         if cycle_type_steps != 0:
             self.scene.cycle_selection_type(cycle_type_steps)
 
         for i in range(0, len(const.OPTIONS)):
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.OPTIONS[i])):
                 spawn_idx = i
+                # 79 different choices!~
                 if inputs.get_instance().shift_is_held():
                     spawn_idx += 10
                 if inputs.get_instance().ctrl_is_held():

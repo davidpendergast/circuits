@@ -6,7 +6,6 @@ import re
 import pathlib
 import sys
 import heapq
-import typing
 
 
 def bound(val, lower, upper):
@@ -982,6 +981,20 @@ def python_version_string():
     minor = sys.version_info[1]
     patch = sys.version_info[2]
     return "{}.{}.{}".format(major, minor, patch)
+
+
+_FAKE_CLIPBOARD = ""
+
+
+def set_clipboard(text):
+    # TODO find a good platform-independent way to use the system clipboard
+    global _FAKE_CLIPBOARD
+    _FAKE_CLIPBOARD = text if text is not None else ""
+
+
+def get_clipboard() -> str:
+    # TODO find a good platform-independent way to use the system clipboard
+    return _FAKE_CLIPBOARD
 
 
 class Grid:

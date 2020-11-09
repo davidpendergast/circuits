@@ -59,6 +59,10 @@ OPTIONS = [OPTION_0, OPTION_1, OPTION_2, OPTION_3, OPTION_4,
 UNDO = "undo"
 REDO = "redo"
 DELETE = "delete_selection"
+SELECT_ALL = "select_all"
+COPY = "copy"
+PASTE = "paste"
+CUT = "cut"
 
 INCREASE_EDIT_RESOLUTION = "increase_edit_resolution"
 DECREASE_EDIT_RESOLUTION = "decrease_edit_resolution"
