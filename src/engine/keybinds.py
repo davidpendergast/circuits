@@ -88,7 +88,8 @@ def modifier_to_key(key):
     elif key == pygame.KMOD_RSHIFT:
         return pygame.K_RSHIFT
 
-    raise ValueError("unrecognized modifier key: {}".format(key))
+    else:
+        return []
 
 
 _ALL_MODS = [pygame.KMOD_CTRL, pygame.KMOD_LCTRL, pygame.KMOD_RCTRL,
@@ -97,6 +98,9 @@ _ALL_MODS = [pygame.KMOD_CTRL, pygame.KMOD_LCTRL, pygame.KMOD_RCTRL,
              pygame.KMOD_CAPS,
              pygame.KMOD_META, pygame.KMOD_LMETA, pygame.KMOD_RMETA,
              pygame.KMOD_MODE, pygame.KMOD_NONE, pygame.KMOD_NUM]
+
+
+_ALL_MOD_KEYS = util.flatten_list([modifier_to_key(_m) for _m in _ALL_MODS])
 
 
 def _is_mod(code):
@@ -113,21 +117,25 @@ class Binding:
         self.keycode = util.tuplify(keycode)
         self.mods = util.tuplify(mods)
 
-    def _mods_held(self, input_state):
+    def _mods_satisfied(self, input_state):
         for m in self.mods:
-            if not input_state.is_held(modifier_to_key(m)):
+            if m == pygame.KMOD_NONE:
+                if input_state.is_held(_ALL_MOD_KEYS):
+                    # if we have NO_MODS, and any mods are held, fail the binding
+                    return False
+            elif not input_state.is_held(modifier_to_key(m)):
                 return False
         return True
 
     def is_held(self, input_state):
         if not input_state.is_held(self.keycode):
             return False
-        return self._mods_held(input_state)
+        return self._mods_satisfied(input_state)
 
     def was_pressed(self, input_state):
         if not input_state.was_pressed(self.keycode):
             return False
-        return self._mods_held(input_state)
+        return self._mods_satisfied(input_state)
 
     def time_held(self, input_state):
         min_time = input_state.time_held(self.keycode)

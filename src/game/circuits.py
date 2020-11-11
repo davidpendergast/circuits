@@ -71,8 +71,14 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, keybinds.Binding(pygame.K_s, mods=pygame.KMOD_SHIFT))
         keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, keybinds.Binding(pygame.K_d, mods=pygame.KMOD_SHIFT))
 
-        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_FORWARD, [pygame.K_e])
-        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_BACKWARD, [pygame.K_q])
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_SUBTYPE_FORWARD, keybinds.Binding(pygame.K_t, mods=pygame.KMOD_NONE))
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_SUBTYPE_BACKWARD, keybinds.Binding(pygame.K_t, mods=pygame.KMOD_SHIFT))
+
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_COLOR_FORWARD, keybinds.Binding(pygame.K_c, mods=pygame.KMOD_NONE))
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_COLOR_BACKWARD, keybinds.Binding(pygame.K_c, mods=pygame.KMOD_SHIFT))
+
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_ART_FORWARD, keybinds.Binding(pygame.K_e, mods=pygame.KMOD_NONE))
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_ART_BACKWARD, keybinds.Binding(pygame.K_e, mods=pygame.KMOD_SHIFT))
 
         keybinds.get_instance().set_binding(const.DECREASE_EDIT_RESOLUTION, [pygame.K_LEFTBRACKET])
         keybinds.get_instance().set_binding(const.INCREASE_EDIT_RESOLUTION, [pygame.K_RIGHTBRACKET])

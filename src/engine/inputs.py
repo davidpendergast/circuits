@@ -93,7 +93,7 @@ class InputState:
                     return True
             return False
         elif isinstance(key, keybinds.Binding):
-            return key.was_pressed(self)  # wtf...
+            return key.was_pressed(self)
         else:
             # it's a single key, hopefully
             return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0

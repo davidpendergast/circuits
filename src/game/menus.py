@@ -14,6 +14,7 @@ import src.game.const as const
 import configs as configs
 import src.game.debug as debug
 import src.utils.util as util
+import src.utils.artutils as artutils
 import src.game.spriteref as spriteref
 import src.game.colors as colors
 import src.game.overworld as overworld
@@ -750,9 +751,16 @@ class LevelEditGameScene(_BaseGameScene):
         self._mutate_selected_specs(resize_funct)
 
     def cycle_selection_type(self, steps):
-        print("INFO: cycling selection")
         cycle_funct = lambda s: blueprints.SpecUtils.cycle_subtype(s, steps)
         self._mutate_selected_specs(cycle_funct)
+
+    def cycle_selection_color(self, steps):
+        cycle_func = lambda s: blueprints.SpecUtils.cycle_color(s, steps)
+        self._mutate_selected_specs(cycle_func)
+
+    def cycle_selection_art(self, steps):
+        cycle_func = lambda s: blueprints.SpecUtils.cycle_art(s, steps)
+        self._mutate_selected_specs(cycle_func)
 
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
@@ -810,7 +818,7 @@ class LevelEditGameScene(_BaseGameScene):
                 self.entities_for_specs[as_key].append(ent)
 
             if util.to_key(spec) in self.selected_specs:
-                ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
+                ent.set_color_override(self._get_selected_entity_color(ent))
             else:
                 ent.set_color_override(None)
 
@@ -893,6 +901,13 @@ class LevelEditGameScene(_BaseGameScene):
         for s in all_selects:
             self.set_selected(s, select=False)
 
+    def _get_selected_entity_color(self, ent):
+        color_id = ent.get_color_id()
+        if color_id is not None:
+            return spriteref.get_color(color_id, dark=True)
+        else:
+            return artutils.darker(ent.get_color(ignore_override=True), pcnt=0.30)
+
     def set_selected(self, spec, select=True):
         if spec is None:
             return
@@ -902,7 +917,7 @@ class LevelEditGameScene(_BaseGameScene):
                 self.selected_specs.add(key)
                 if key in self.entities_for_specs:
                     for ent in self.entities_for_specs[key]:
-                        ent.set_color_override(colors.EDITOR_SELECTION_COLOR)
+                        ent.set_color_override(self._get_selected_entity_color(ent))
             else:
                 if key in self.selected_specs:
                     self.selected_specs.remove(key)
@@ -1052,10 +1067,23 @@ class NormalMouseMode(MouseMode):
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
             self.scene.delete_selection()
 
-        cycle_type_steps = inputs.get_instance().was_pressed_four_way(right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_FORWARD),
-                                                                      left=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_BACKWARD))[0]
+        cycle_type_steps = inputs.get_instance().was_pressed_four_way(
+            right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_SUBTYPE_FORWARD),
+            left=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_SUBTYPE_BACKWARD))[0]
         if cycle_type_steps != 0:
             self.scene.cycle_selection_type(cycle_type_steps)
+
+        cycle_color_steps = inputs.get_instance().was_pressed_four_way(
+            right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_COLOR_FORWARD),
+            left=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_COLOR_BACKWARD))[0]
+        if cycle_color_steps != 0:
+            self.scene.cycle_selection_color(cycle_color_steps)
+
+        cycle_art_steps = inputs.get_instance().was_pressed_four_way(
+            right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_ART_FORWARD),
+            left=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_ART_BACKWARD))[0]
+        if cycle_art_steps != 0:
+            self.scene.cycle_selection_art(cycle_art_steps)
 
         for i in range(0, len(const.OPTIONS)):
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.OPTIONS[i])):

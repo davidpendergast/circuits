@@ -307,9 +307,17 @@ class Entity:
     def get_debug_color(self):
         return colors.PERFECT_WHITE
 
-    def get_color(self):
+    def get_color_id(self):
+        return None
+
+    def get_color(self, ignore_override=False):
         """return: the tint applied to this entity's sprites"""
-        return colors.PERFECT_WHITE
+        if not ignore_override and self.get_color_override() is not None:
+            return self.get_color_override()
+        elif self.get_color_id() is not None:
+            return spriteref.get_color(self.get_color_id())
+        else:
+            return colors.PERFECT_WHITE
 
     def dir_facing(self):
         """return: -1 or 1"""
@@ -359,12 +367,6 @@ class AbstractBlockEntity(Entity):
 
     def get_color_id(self):
         return 0
-
-    def get_color(self):
-        if self.get_color_override() is not None:
-            return self.get_color_override()
-        else:
-            return spriteref.get_color(self.get_color_id())
 
     def all_sprites(self):
         for spr in self.all_debug_sprites():

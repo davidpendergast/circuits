@@ -201,11 +201,20 @@ class _BlockSheet(spritesheets.SpriteSheet):
         else:
             return None
 
+    def num_block_sprites(self, size):
+        if size in self.blocks:
+            return 1 + len(self.blocks[size])
+        else:
+            return 1
+
     def get_quad_block_sprite(self, art_id):
         if len(self.quad_blocks) > 0:
             return self.quad_blocks[art_id % len(self.quad_blocks)]
         else:
             return None
+
+    def num_quad_block_sprites(self):
+        return len(self.quad_blocks)
 
     def get_start_block_sprite(self, size, player_id):
         key = (size[0], size[1], player_id)

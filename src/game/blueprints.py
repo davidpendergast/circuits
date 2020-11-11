@@ -78,6 +78,12 @@ class SpecType:
     def get_subtypes(self):
         return []
 
+    def get_color_ids(self, spec):
+        return []
+
+    def get_art_ids(self, spec):
+        return []
+
     def index_of_subtype(self, subtype):
         all_subtypes = self.get_subtypes()
         if subtype in all_subtypes:
@@ -149,7 +155,7 @@ class BlockSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "block", required_keys=(X, Y, W, H),
-                          optional_keys={ART_ID: -1, COLOR_ID: 0})
+                          optional_keys={ART_ID: 0, COLOR_ID: 0})
 
     def build_entities(self, json_blob):
         x = json_blob[X]
@@ -161,6 +167,14 @@ class BlockSpecType(SpecType):
         color_id = json_blob[COLOR_ID]
 
         yield entities.BlockEntity(x, y, w, h, art_id=art_id, color_id=color_id)
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
+
+    def get_art_ids(self, spec):
+        size = (spec[W] // gs.get_instance().cell_size, spec[H] // gs.get_instance().cell_size)
+        n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
+        return [i for i in range(0, n_block_sprites)]
 
 
 class SlopedQuadBlockSpecType(SpecType):
@@ -188,7 +202,7 @@ class SlopedQuadBlockSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "sloped_2x2_block", required_keys=(X, Y, SUBTYPE_ID),
-                          optional_keys={ART_ID: -1, COLOR_ID: 0, W: 32, H: 32})
+                          optional_keys={ART_ID: 0, COLOR_ID: 0, W: 32, H: 32})
 
     def get_subtypes(self):
         return SlopedQuadBlockSpecType.ALL_SUBTYPES
@@ -227,6 +241,13 @@ class SlopedQuadBlockSpecType(SpecType):
 
         return entities.CompositeBlockEntity.BlockSpriteInfo(lambda: spriteref.block_sheet().get_quad_block_sprite(art_id),
                                                              rotation=rot, xflip=xflip)
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
+
+    def get_art_ids(self, spec):
+        n_block_sprites = spriteref.block_sheet().num_quad_block_sprites()
+        return [i for i in range(0, n_block_sprites)]
 
     def build_entities(self, json_blob):
         x = json_blob[X]
@@ -335,6 +356,14 @@ class MovingBlockSpecType(SpecType):
         color_id = json_blob[COLOR_ID]
 
         yield entities.MovingBlockEntity(w, h, points, period=duration, loop=loop, art_id=art_id, color_id=color_id)
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
+
+    def get_art_ids(self, spec):
+        size = (spec[W] // gs.get_instance().cell_size, spec[H] // gs.get_instance().cell_size)
+        n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
+        return [i for i in range(0, n_block_sprites)]
 
 
 class PlayerSpecType(SpecType):
@@ -584,10 +613,64 @@ class SpecUtils:
                     next_subtype = all_subtypes[next_idx]
                     res[SUBTYPE_ID] = next_subtype
             except Exception:
-                print("ERROR: failed to cycle spec: {}".format(spec_blob))
+                print("ERROR: failed to cycle spec subtype: {}".format(spec_blob))
                 traceback.print_exc()
         return res
 
+    @staticmethod
+    def cycle_color(spec_blob, steps):
+        res = spec_blob.copy()
+        if TYPE_ID in spec_blob:
+            type_id = spec_blob[TYPE_ID]
+
+            try:
+                spec_type = SpecTypes.get(type_id)
+
+                if COLOR_ID in spec_blob:
+                    cur_color = spec_blob[COLOR_ID]
+                elif COLOR_ID in spec_type.optional_keys:
+                    cur_color = spec_type.optional_keys[COLOR_ID]
+                else:
+                    return res  # this spec doesn't support color
+
+                available_colors = spec_type.get_color_ids(res)
+                if len(available_colors) > 0:
+                    cur_idx = -1
+                    if cur_color in available_colors:
+                        cur_idx = available_colors.index(cur_color)
+                    new_idx = (cur_idx + steps) % len(available_colors)
+                    res[COLOR_ID] = available_colors[new_idx]
+            except Exception:
+                print("ERROR: failed to cycle spec color: {}".format(spec_blob))
+                traceback.print_exc()
+        return res
+
+    @staticmethod
+    def cycle_art(spec_blob, steps):
+        res = spec_blob.copy()
+        if TYPE_ID in spec_blob:
+            type_id = spec_blob[TYPE_ID]
+            try:
+                spec_type = SpecTypes.get(type_id)
+
+                if ART_ID in spec_blob:
+                    cur_art = spec_blob[ART_ID]
+                elif ART_ID in spec_type.optional_keys:
+                    cur_art = spec_type.optional_keys[COLOR_ID]
+                else:
+                    return res  # this spec doesn't support art
+
+                available_art = spec_type.get_art_ids(res)
+                if len(available_art) > 0:
+                    cur_idx = -1
+                    if cur_art in available_art:
+                        cur_idx = available_art.index(cur_art)
+                    new_idx = (cur_idx + steps) % len(available_art)
+                    res[ART_ID] = available_art[new_idx]
+            except Exception:
+                print("ERROR: failed to cycle spec art: {}".format(spec_blob))
+                traceback.print_exc()
+        return res
 
 def get_test_blueprint_0() -> LevelBlueprint:
     cs = gs.get_instance().cell_size
