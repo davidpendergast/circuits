@@ -1,6 +1,7 @@
 import traceback
 import random
 import json
+import os
 
 import src.engine.scenes as scenes
 import src.game.blueprints as blueprints
@@ -790,6 +791,32 @@ class LevelEditGameScene(_BaseGameScene):
                 res.append(spec)
         return res
 
+    def save_to_disk(self, prompt_for_location=False):
+        bp_to_save = self.build_current_bp()
+        file_to_use = self.output_file
+
+        if prompt_for_location or self.output_file is None:
+            file_to_use = util.prompt_for_file("enter file name for save", root="testing/", ext=".json")
+            if file_to_use is None:
+                return
+            if os.path.isfile(file_to_use):
+                ans = util.prompt_question("overwrite {}?".format(file_to_use), accepted_answers=("y", "n"))
+                if ans == "y":
+                    self.output_file = file_to_use
+                else:
+                    print("INFO: save canceled")
+                    return
+            else:
+                self.output_file = file_to_use
+
+        save_result = blueprints.write_level_to_file(bp_to_save, file_to_use)
+        if save_result:
+            print("INFO: saved level to {}".format(file_to_use))
+            self.output_file = file_to_use
+        else:
+            print("INFO: failed to save level to {}".format(file_to_use))
+            self.output_file = None
+
     def setup_new_world(self, bp, reset_camera=False):
         camera_pos = None
         camera_zoom = None
@@ -829,22 +856,16 @@ class LevelEditGameScene(_BaseGameScene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_EDIT_MODE)):
             self.get_manager().set_next_scene(DebugGameScene(self.build_current_bp(), self))
 
-        if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_LEVEL_DEBUG)):
-            if self._world is not None:
-                bp = self._world.get_blueprint()
-                if bp is not None:
-                    filepath = self.output_file
-                    save_result = blueprints.write_level_to_file(bp, filepath)
-                    if save_result:
-                        print("INFO: saved level to {}".format(filepath))
-                    else:
-                        print("INFO: failed to save level to {}".format(filepath))
-
         if configs.is_dev and inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SPRITE_MODE_DEBUG)):
             debug.toggle_debug_sprite_mode()
 
         self.mouse_mode.handle_drag_events()
         self.mouse_mode.handle_key_events()
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_AS)):
+            self.save_to_disk(prompt_for_location=True)
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE)):
+            self.save_to_disk(prompt_for_location=False)
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.INCREASE_EDIT_RESOLUTION)):
             self.adjust_edit_resolution(True)

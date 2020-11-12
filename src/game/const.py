@@ -20,7 +20,6 @@ SOFT_RESET = "soft_reset"
 NEXT_LEVEL_DEBUG = "next"
 TOGGLE_SPRITE_MODE_DEBUG = "toggle_sprite_mode"
 TOGGLE_PLAYER_TYPE = "toggle_player_type"
-SAVE_LEVEL_DEBUG = "save_level_debug"
 TOGGLE_EDIT_MODE = "toggle_edit_mode"
 
 MOVE_SELECTION_UP = "move_selection_up"
@@ -69,6 +68,9 @@ SELECT_ALL = "select_all"
 COPY = "copy"
 PASTE = "paste"
 CUT = "cut"
+
+SAVE = "save"
+SAVE_AS = "save_as"
 
 INCREASE_EDIT_RESOLUTION = "increase_edit_resolution"
 DECREASE_EDIT_RESOLUTION = "decrease_edit_resolution"
