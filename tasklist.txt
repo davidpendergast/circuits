@@ -58,6 +58,18 @@ puzzle archetypes:
     - resource allocation (should I use this now, or leave it for a future ghost)
         - should i prevent a past ghost from using a resource
     - coordination (need to act in-sync with a past ghost)
+    
+Level editor:    
+    [ ] add / remove points to moving blocks
+    [ ] increase / decrease duration for specs
+    [ ] let you choose which level to edit
+    [ ] let you edit raw text data of levels / specs
+    
+General:
+    [ ] UI for editing text
+    
+Art:
+    [ ] Animations for player D
  
     
     

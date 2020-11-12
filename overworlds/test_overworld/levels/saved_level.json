@@ -25,12 +25,13 @@
             "h": 16,
             "loop": true,
             "points": [
-                [160, 96],
                 [256, 96],
                 [256, 160]
             ],
             "type": "moving_block",
-            "w": 32
+            "w": 32,
+            "x": 160,
+            "y": 96
         }
     ],
     "level_id": "test_lvl_0",

@@ -342,11 +342,15 @@ class EndBlockSpecType(SpecType):
 class MovingBlockSpecType(SpecType):
 
     def __init__(self):
-        SpecType.__init__(self, "moving_block", required_keys=(POINTS, W, H, DURATION, LOOP),
-                          optional_keys={ART_ID: -1, COLOR_ID: 0})
+        SpecType.__init__(self, "moving_block", required_keys=(X, Y, W, H, DURATION, LOOP),
+                          optional_keys={POINTS: tuple(), ART_ID: -1, COLOR_ID: 0})
 
     def build_entities(self, json_blob):
-        points = json_blob[POINTS]
+        points = util.listify(json_blob[POINTS])
+        x = json_blob[X]
+        y = json_blob[Y]
+        points.insert(0, (x, y))
+
         w = json_blob[W]
         h = json_blob[H]
         duration = json_blob[DURATION]
@@ -359,6 +363,14 @@ class MovingBlockSpecType(SpecType):
 
     def get_color_ids(self, spec):
         return [0, 1, 2, 3, 4]
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 8
+        else:
+            return super().get_default_value(k)
 
     def get_art_ids(self, spec):
         size = (spec[W] // gs.get_instance().cell_size, spec[H] // gs.get_instance().cell_size)
@@ -694,8 +706,8 @@ def get_test_blueprint_0() -> LevelBlueprint:
         ]
     }
 
-    pts = [(10 * cs, 6 * cs), (16 * cs, 6 * cs), (16 * cs, 10 * cs)]
-    json_blob[ENTITIES].append({TYPE_ID: "moving_block", POINTS: pts, W: cs * 2, H: cs * 1, DURATION: 90, LOOP: True})
+    pts = [(16 * cs, 6 * cs), (16 * cs, 10 * cs)]
+    json_blob[ENTITIES].append({TYPE_ID: "moving_block", X: 10 * cs, Y: 6 * cs, POINTS: pts, W: cs * 2, H: cs * 1, DURATION: 90, LOOP: True})
 
     return LevelBlueprint(json_blob)
 
