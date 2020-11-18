@@ -46,7 +46,7 @@ class UiElement:
     def update_self_and_kids(self):
         self.update()
         for c in self._children:
-            c.update()
+            c.update_self_and_kids()
 
     def get_rect(self, absolute=False):
         xy = self.get_xy(absolute=absolute)
@@ -69,6 +69,9 @@ class UiElement:
     def add_children(self, elements):
         for e in elements:
             e.set_parent(self)
+
+    def has_child(self, element):
+        return element in self._children
 
     def remove_child(self, element):
         if element in self._children:
@@ -148,9 +151,16 @@ class OptionsList(ElementGroup):
         self.y_spacing = 4
 
     def add_option(self, text, do_action, is_enabled=lambda: True):
+        self.insert_option(len(self.options), text, do_action, is_enabled=is_enabled)
+
+    def insert_option(self, idx, text, do_action, is_enabled=lambda: True):
         element = SpriteElement()
-        self.options.append((element, text, do_action, is_enabled))
+        opt = (element, text, do_action, is_enabled)
+        self.options.insert(idx, opt)
         self.add_child(element)
+
+    def num_options(self):
+        return len(self.options)
 
     def update(self):
 
@@ -191,6 +201,67 @@ class OptionsList(ElementGroup):
 
             element.set_xy((0, y))
             y += element.get_size()[1] + self.y_spacing
+
+
+class MultiPageOptionsList(OptionsList):
+
+    def __init__(self, opts_per_page=8, next_text="next", prev_text="prev"):
+        OptionsList.__init__(self)
+        self.pages = []
+
+        self.opts_per_page = opts_per_page
+        self.next_text = next_text
+        self.prev_text = prev_text
+        self.cur_page = 0
+
+    def set_current_page(self, idx):
+        self.cur_page = idx
+        self._refresh_children()
+
+    def _refresh_children(self):
+        for i in range(0, len(self.pages)):
+            if i == self.cur_page:
+                if not self.has_child(self.pages[i]):
+                    self.add_child(self.pages[i])
+            else:
+                if self.has_child(self.pages[i]):
+                    self.remove_child(self.pages[i])
+
+    def _add_new_page(self):
+        if len(self.pages) == 0:
+            self.pages.append(OptionsList())
+        elif len(self.pages) == 1:
+            first_page = self.pages[0]
+            new_page = OptionsList()
+            self.pages.append(new_page)
+
+            first_page.add_option(self.next_text, lambda: self.set_current_page(1))
+            new_page.add_option(self.prev_text, lambda: self.set_current_page(0))
+        else:
+            n = len(self.pages)
+            prev_page = self.pages[n - 1]
+            new_page = OptionsList()
+            self.pages.append(new_page)
+
+            prev_page.insert_option(len(prev_page.num_options()) - 1, self.next_text, lambda: self.set_current_page(n))
+            new_page.add_option(self.prev_text, lambda: self.set_current_page(n - 1))
+
+        self._refresh_children()
+        return self.pages[-1]
+
+    def add_option(self, text, do_action, is_enabled=lambda: True):
+        if len(self.pages) == 0:
+            last_page = self._add_new_page()
+        elif len(self.pages) == 1 and self.pages[0].num_options() >= self.opts_per_page:
+            last_page = self._add_new_page()
+        elif self.pages[-1].num_options() + 1 >= self.opts_per_page:
+            last_page = self._add_new_page()
+        else:
+            last_page = self.pages[-1]
+
+        idx_to_add_at = last_page.num_options() if len(self.pages) == 1 else last_page.num_options() - 1
+        last_page.insert_option(idx_to_add_at, text, do_action, is_enabled=is_enabled)
+        self._refresh_children()
 
 
 class SpriteElement(UiElement):

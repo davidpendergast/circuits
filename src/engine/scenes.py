@@ -9,6 +9,9 @@ class Scene:
     def get_manager(self) -> 'SceneManager':
         return self._manager
 
+    def jump_to_scene(self, next_scene):
+        self.get_manager().set_next_scene(next_scene)
+
     def all_sprites(self):
         raise NotImplementedError()
 

@@ -1154,15 +1154,23 @@ def string_checksum(the_string, m=982451653):
 
 
 def to_key(obj):
-    if isinstance(obj, list):
-        return tuple(obj)
-    elif isinstance(obj, set):
-        return frozenset(obj)
-    elif isinstance(obj, dict):
-        # this feels legit but no guarantees
-        return frozenset([(k, to_key(obj[k])) for k in obj])
-    else:
-        return obj
+    return _HashableWrapper(obj)
+
+
+class _HashableWrapper:
+    """You can make mutable objects hashable with this handy wrapper. Is this a good idea? No."""
+
+    def __init__(self, obj):
+        if isinstance(obj, _HashableWrapper):
+            self.obj = obj.obj
+        else:
+            self.obj = obj
+
+    def __hash__(self):
+        return checksum(self.obj, strict=False)
+
+    def __eq__(self, other):
+        return other.obj == self.obj
 
 
 def checksum(blob, m=982451653, strict=True):
@@ -1185,7 +1193,7 @@ def checksum(blob, m=982451653, strict=True):
     elif isinstance(blob, (list, tuple)):
         res = 0
         for c in blob:
-            res += checksum(c)
+            res += checksum(c, m=m, strict=strict)
             res = (res * 37) % m
         return res
     elif isinstance(blob, dict):
@@ -1194,8 +1202,8 @@ def checksum(blob, m=982451653, strict=True):
 
         res = 0
         for key in keys:
-            k_checksum = checksum(key, m=m)
-            val_checksum = checksum(blob[key])
+            k_checksum = checksum(key, m=m, strict=strict)
+            val_checksum = checksum(blob[key], m=m, strict=strict)
             res += k_checksum
             res = (res * 41) % m
             res += val_checksum

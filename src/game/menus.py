@@ -31,12 +31,12 @@ class MainMenuScene(scenes.Scene):
         self._title_element = ui.SpriteElement()
 
         self._options_list = ui.OptionsList()
-        self._options_list.add_option("start", lambda: self.get_manager().set_next_scene(RealGameScene(blueprints.get_test_blueprint_4())))
-        self._options_list.add_option("intro", lambda: self.get_manager().set_next_scene(IntroCutsceneScene()))
-        self._options_list.add_option("load", lambda: self.get_manager().set_next_scene(overworld.OverworldScene("overworlds/test_overworld")))
-        self._options_list.add_option("create", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
-        self._options_list.add_option("options", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
-        self._options_list.add_option("exit", lambda: self.get_manager().set_next_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("start", lambda: self.jump_to_scene(RealGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
+        self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
+        self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene("testing")))
+        self._options_list.add_option("options", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
 
     def update(self):
         self.update_sprites()
@@ -64,6 +64,57 @@ class MainMenuScene(scenes.Scene):
             yield spr
         for spr in self._options_list.all_sprites_from_self_and_kids():
             yield spr
+
+
+class OptionSelectScene(scenes.Scene):
+
+    OPTS_PER_PAGE = 8
+
+    def __init__(self, title=None):
+        scenes.Scene.__init__(self)
+        self.title_text = title
+        self.title_sprite = None
+        self.title_scale = 2
+
+        self.option_pages = ui.MultiPageOptionsList(opts_per_page=OptionSelectScene.OPTS_PER_PAGE)
+
+    def add_option(self, text, do_action, is_enabled=lambda: True):
+        self.option_pages.add_option(text, do_action, is_enabled=is_enabled)
+
+    def update(self):
+        if self.title_sprite is None:
+            self.title_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, self.title_text, scale=self.title_scale)
+        screen_size = renderengine.get_instance().get_game_size()
+        title_x = screen_size[0] // 2 - self.title_sprite.size()[0] // 2
+        title_y = max(16, screen_size[1] // 5 - self.title_sprite.size()[1] // 2)
+        self.title_sprite.update(new_x=title_x, new_y=title_y)
+
+        options_y = title_y + 32 + self.title_sprite.size()[1]
+        options_x = screen_size[0] // 2 - self.option_pages.get_size()[0] // 2
+        self.option_pages.set_xy((options_x, options_y))
+        self.option_pages.update_self_and_kids()
+
+    def all_sprites(self):
+        if self.title_sprite is not None:
+            for spr in self.title_sprite.all_sprites():
+                yield spr
+        for spr in self.option_pages.all_sprites_from_self_and_kids():
+            yield spr
+
+
+class LevelSelectForEditScene(OptionSelectScene):
+
+    def __init__(self, dirpath):
+        OptionSelectScene.__init__(self, "create level")
+        self.all_levels = blueprints.load_all_levels_from_dir(dirpath)  # level_id -> LevelBlueprint
+
+        sorted_ids = [k for k in self.all_levels]
+        sorted_ids.sort()
+
+        self.add_option("create new", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+
+        for level_id in sorted_ids:
+            self.add_option(level_id, lambda: self.jump_to_scene(LevelEditGameScene(self.all_levels[level_id])))
 
 
 class CutsceneScene(scenes.Scene):
@@ -96,7 +147,7 @@ class CutsceneScene(scenes.Scene):
 
     def handle_inputs(self):
         if self.tick_count > 5 and inputs.get_instance().was_anything_pressed():
-            self.get_manager().set_next_scene(self.get_next_scene())
+            self.jump_to_scene(self.get_next_scene())
 
     def update_sprites(self):
         bg_img = self.get_bg_image()
