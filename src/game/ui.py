@@ -4,6 +4,8 @@ import src.utils.util as util
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
 import src.engine.sprites as sprites
+import src.engine.globaltimer as globaltimer
+import src.engine.spritesheets as spritesheets
 
 import src.game.const as const
 import src.game.spriteref as spriteref
@@ -27,14 +29,28 @@ class UiElement:
 
         self._rel_xy = (0, 0)  # position relative to parent
 
+        self.focus_manager = None
+
     def update(self):
         raise NotImplementedError()
+
+    def get_uid(self):
+        return self.uid
 
     def all_sprites(self):
         return []
 
     def get_size(self):
         raise NotImplementedError()
+
+    def set_focus_manager(self, manager):
+        self.focus_manager = manager
+
+    def is_focused(self):
+        if self.focus_manager is None:
+            return True
+        else:
+            return self.focus_manager.is_focused(self)
 
     def all_sprites_from_self_and_kids(self):
         for c in self._children:
@@ -302,3 +318,105 @@ class SpriteElement(UiElement):
             return self.sprite.size()
         else:
             return (0, 0)
+
+
+class FocusManager:
+
+    def __init__(self):
+        self.focused_element_uid = None
+
+    def set_focused(self, element):
+        if element is not None:
+            self.focused_element_uid = element.get_uid()
+        else:
+            self.focused_element_uid = None
+
+    def is_focused(self, element):
+        return element is not None and self.focused_element_uid == element.get_uid()
+
+
+class TextEditElement(UiElement):
+
+    CURSOR_CHAR = "_"
+
+    def __init__(self, text, scale=1, color=None, font=None, char_limit=24, outline_color=None):
+        UiElement.__init__(self)
+
+        self.text = text
+
+        self.scale = scale
+        self.color = color
+        self.char_limit = char_limit
+        self.font = font if font is not None else spritesheets.get_default_font(mono=True)
+        self.text_sprite = None
+
+        self.outline_color = outline_color
+        self.outline_inset = 2
+        self.bg_sprite = None
+
+        self.cursor_pos = len(text)
+        self._dummy_text_for_size_calc = None
+
+    def get_text_for_display(self):
+        anim_tick = (globaltimer.tick_count() // 20) % 2
+        if anim_tick == 0 and self.is_focused() and len(self.text) < self.char_limit:
+            if self.cursor_pos >= len(self.text):
+                return self.text + TextEditElement.CURSOR_CHAR
+            else:
+                l = list(self.text)
+                l[max(0, self.cursor_pos)] = TextEditElement.CURSOR_CHAR
+                return "".join(l)
+        else:
+            return self.text
+
+    def has_outline(self):
+        return self.outline_color is not None
+
+    def get_size(self):
+        if self._dummy_text_for_size_calc is None:
+            # hope it's monospaced~
+            self._dummy_text_for_size_calc = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0,
+                    "X" * self.char_limit,
+                    scale=self.scale,
+                    font_lookup=self.font)
+        self._dummy_text_for_size_calc.update(new_text="X" * self.char_limit)
+        size = self._dummy_text_for_size_calc.size()
+        if self.has_outline():
+            size = (size[0] + self.outline_inset * 2, size[1] + self.outline_inset * 2)
+
+        return size
+
+    def get_text(self):
+        return self.text
+
+    def _update_sprites(self):
+        if self.text_sprite is None:
+            self.text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, self.get_text_for_display(),
+                                                  font_lookup=self.font)
+        abs_xy = self.get_xy(absolute=True)
+        text_xy = abs_xy
+        if self.has_outline():
+            text_xy = (text_xy[0] + self.outline_inset, text_xy[1] + self.outline_inset)
+        self.text_sprite.update(new_x=text_xy[0], new_y=text_xy[1], new_text=self.get_text_for_display(),
+                                new_scale=self.scale, new_color=self.color)
+        if self.has_outline():
+            abs_size = self.get_size()
+            outline_box = [abs_xy[0], abs_xy[1], abs_size[0], abs_size[1]]
+            if self.bg_sprite is None:
+                self.bg_sprite = sprites.BorderBoxSprite(spriteref.UI_BG_LAYER, outline_box,
+                                                         color=self.outline_color,
+                                                         all_borders=spriteref.overworld_sheet().border_thin)
+            self.bg_sprite.update(new_rect=outline_box)
+
+    def update(self):
+        # TODO keyevents
+        self._update_sprites()
+
+    def all_sprites(self):
+        if self.text_sprite is not None:
+            for spr in self.text_sprite.all_sprites():
+                yield spr
+        if self.bg_sprite is not None:
+            for spr in self.bg_sprite.all_sprites():
+                yield spr
+

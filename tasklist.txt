@@ -62,7 +62,7 @@ puzzle archetypes:
 Level editor:    
     [ ] add / remove points to moving blocks
     [ ] increase / decrease duration for specs
-    [ ] let you choose which level to edit
+    [x] let you choose which level to edit
     [ ] let you edit raw text data of levels / specs
     
 General:

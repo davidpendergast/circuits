@@ -117,6 +117,38 @@ class LevelSelectForEditScene(OptionSelectScene):
             self.add_option(level_id, lambda: self.jump_to_scene(LevelEditGameScene(self.all_levels[level_id])))
 
 
+class TextEditScene(scenes.Scene):
+
+    def __init__(self, prompt_text, default_text=""):
+        scenes.Scene.__init__(self)
+        self.prompt_text = prompt_text
+        self.prompt_element = ui.SpriteElement()
+
+        self.text_box = ui.TextEditElement(default_text, scale=1, char_limit=32, outline_color=colors.LIGHT_GRAY)
+
+    def update(self):
+        if self.prompt_element.get_sprite() is None:
+            self.prompt_element.set_sprite(sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, self.prompt_text, scale=2))
+
+        total_size = renderengine.get_instance().get_game_size()
+        title_size = self.prompt_element.get_size()
+        title_x = total_size[0] // 2 - title_size[0] // 2
+        title_y = max(16, total_size[1] // 5 - title_size[1] // 2)
+        self.prompt_element.set_xy((title_x, title_y))
+        self.prompt_element.update_self_and_kids()
+
+        text_x = total_size[0] // 2 - self.text_box.get_size()[0] // 2
+        text_y = max(self.prompt_element.get_xy()[1] + 32, total_size[1] // 2 - self.text_box.get_size()[1] // 2)
+        self.text_box.set_xy((text_x, text_y))
+        self.text_box.update_self_and_kids()
+
+    def all_sprites(self):
+        for spr in self.text_box.all_sprites():
+            yield spr
+        for spr in self.prompt_element.all_sprites():
+            yield spr
+
+
 class CutsceneScene(scenes.Scene):
 
     def __init__(self):
@@ -914,7 +946,10 @@ class LevelEditGameScene(_BaseGameScene):
         self.mouse_mode.handle_key_events()
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_AS)):
-            self.save_to_disk(prompt_for_location=True)
+            default_text = "" if self.output_file is None else self.output_file
+            self.jump_to_scene(TextEditScene("enter filename:", default_text=default_text))
+            return
+            # self.save_to_disk(prompt_for_location=True)
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE)):
             self.save_to_disk(prompt_for_location=False)
 
