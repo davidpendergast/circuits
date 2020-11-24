@@ -1,4 +1,5 @@
 import traceback
+import pygame
 
 import src.utils.util as util
 import src.engine.inputs as inputs
@@ -389,6 +390,42 @@ class TextEditElement(UiElement):
     def get_text(self):
         return self.text
 
+    def _handle_inputs(self):
+        edits = inputs.get_instance().all_pressed_ascii_keys()
+        allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz1234567890_./"
+
+        text = self.text
+        cursor_pos = self.cursor_pos
+
+        jump_cursor = inputs.get_instance().was_pressed_two_way(pygame.K_HOME, pygame.K_END)
+        if jump_cursor < 0:
+            cursor_pos = 0
+        elif jump_cursor > 0:
+            cursor_pos = len(text)
+
+        move_cursor = 0
+        if inputs.get_instance().was_pressed_or_held_and_repeated(pygame.K_LEFT) and not inputs.get_instance().is_held(pygame.K_RIGHT):
+            move_cursor = -1
+        if inputs.get_instance().was_pressed_or_held_and_repeated(pygame.K_RIGHT) and not inputs.get_instance().is_held(pygame.K_LEFT):
+            move_cursor = 1
+        if move_cursor != 0:
+            cursor_pos = util.bound(cursor_pos + move_cursor, 0, len(text))
+
+        if inputs.get_instance().was_pressed_or_held_and_repeated(pygame.K_DELETE):
+            text, cursor_pos = util.apply_ascii_edits_to_text(text, ["~delete~"], cursor_pos=cursor_pos)
+
+        if not inputs.get_instance().was_pressed(pygame.K_BACKSPACE) and inputs.get_instance().was_pressed_or_held_and_repeated(pygame.K_BACKSPACE):
+            # backspace is an ascii character, so if it was pressed this frame it'll be in edits
+            text, cursor_pos = util.apply_ascii_edits_to_text(text, ["\b"], cursor_pos=cursor_pos)
+
+        # TODO can't hold regular keys to make them repeat
+
+        if len(edits) > 0:
+            text, cursor_pos = util.apply_ascii_edits_to_text(text, edits, cursor_pos=cursor_pos,
+                                                              max_len=self.char_limit, allowlist=allowed_chars)
+        self.text = text
+        self.cursor_pos = cursor_pos
+
     def _update_sprites(self):
         if self.text_sprite is None:
             self.text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, self.get_text_for_display(),
@@ -409,7 +446,7 @@ class TextEditElement(UiElement):
             self.bg_sprite.update(new_rect=outline_box)
 
     def update(self):
-        # TODO keyevents
+        self._handle_inputs()
         self._update_sprites()
 
     def all_sprites(self):
@@ -419,4 +456,3 @@ class TextEditElement(UiElement):
         if self.bg_sprite is not None:
             for spr in self.bg_sprite.all_sprites():
                 yield spr
-

@@ -1157,6 +1157,36 @@ def to_key(obj):
     return _HashableWrapper(obj)
 
 
+def apply_ascii_edits_to_text(text, ascii_edits, cursor_pos=-1, max_len=None, allowlist=None,
+                              blocklist=('\t', '\r', "^[")):
+    if cursor_pos < 0 or len(text) == 0:
+        pre_text = text
+        post_text = ""
+        cursor_pos = len(text)
+    else:
+        cursor_pos = bound(cursor_pos, 0, len(text))
+        pre_text = text[:cursor_pos]
+        post_text = text[cursor_pos:]
+
+    for add_char in ascii_edits:
+        if add_char == '\b' and '\b' not in blocklist:  # backspace
+            if len(pre_text) > 0:
+                pre_text = pre_text[:len(pre_text) - 1]
+                cursor_pos -= 1
+        elif add_char == "~delete~":
+            if len(post_text) > 0:
+                post_text = post_text[1:]
+        elif allowlist is not None and add_char not in allowlist:
+            continue
+        elif add_char in blocklist:
+            continue
+        elif max_len is None or len(pre_text) + len(add_char) + len(post_text) <= max_len:
+            pre_text += add_char
+            cursor_pos += len(add_char)
+
+    return (pre_text + post_text, cursor_pos)
+
+
 class _HashableWrapper:
     """You can make mutable objects hashable with this handy wrapper. Is this a good idea? No."""
 

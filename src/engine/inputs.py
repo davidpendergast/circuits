@@ -3,6 +3,8 @@ import pygame
 import src.engine.globaltimer as globaltimer
 import src.engine.keybinds as keybinds
 
+import configs
+
 _INSTANCE = None  # should access this via get_instance(), at the bottom of the file
 
 
@@ -22,6 +24,8 @@ class InputState:
         self._pressed_this_frame = {}  # keycode -> num times
         self._held_keys = {}           # keycode -> time pressed
 
+        self._ascii_pressed_this_frame = []  # list of ascii chars typed this frame
+
         self._mouse_pos_last_frame = (0, 0)
         self._mouse_pos = (0, 0)
 
@@ -29,11 +33,14 @@ class InputState:
         self._mouse_down_pos = {}  # mouse code -> (x, y, tick_pressed)
         self._end_drags_when_mouse_leaves_window = False  # configurable
     
-    def set_key(self, key, held):
+    def set_key(self, key, held, ascii_val=''):
         if held:
             if key not in self._pressed_this_frame:
-                self._pressed_this_frame[key] = 0
-            self._pressed_this_frame[key] += 1
+                self._pressed_this_frame[key] = 1
+                if ascii_val is not None and len(ascii_val) > 0:
+                    self._ascii_pressed_this_frame.append(ascii_val)
+            else:
+                self._pressed_this_frame[key] += 1
 
         if held and key not in self._held_keys:
             self._held_keys[key] = self._current_time
@@ -98,6 +105,15 @@ class InputState:
             # it's a single key, hopefully
             return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0
 
+    def was_pressed_or_held_and_repeated(self, key, delay=configs.key_repeat_delay, freq=configs.key_repeat_period):
+        if self.was_pressed(key):
+            return True
+        elif self.is_held(key):
+            held_time = self.time_held(key)
+            return held_time > delay and (held_time - delay) % freq == 0
+        else:
+            return False
+
     def is_held_four_way(self, left=None, right=None, up=None, down=None):
         x = 0
         if left is not None and self.is_held(left):
@@ -112,17 +128,17 @@ class InputState:
         return (x, y)
 
     def was_pressed_four_way(self, left=None, right=None, up=None, down=None):
-        x = 0
-        if left is not None and self.was_pressed(left):
-            x -= 1
-        if right is not None and self.was_pressed(right):
-            x += 1
-        y = 0
-        if up is not None and self.was_pressed(up):
-            y -= 1
-        if down is not None and self.was_pressed(down):
-            y += 1
+        x = self.was_pressed_two_way(left, right)
+        y = self.was_pressed_two_way(up, down)  # down is always positive
         return (x, y)
+
+    def was_pressed_two_way(self, lower, upper):
+        x = 0
+        if lower is not None and self.was_pressed(lower):
+            x -= 1
+        if upper is not None and self.was_pressed(upper):
+            x += 1
+        return x
 
     def shift_is_held(self):
         return self.is_held(pygame.K_LSHIFT) or self.is_held(pygame.K_RSHIFT)
@@ -181,6 +197,9 @@ class InputState:
     def all_pressed_keys(self):
         return [x for x in self._pressed_this_frame if self._pressed_this_frame[x] > 0]
 
+    def all_pressed_ascii_keys(self):
+        return self._ascii_pressed_this_frame
+
     def was_anything_pressed(self):
         if len(self.all_pressed_keys()) > 0:
             return True
@@ -196,6 +215,7 @@ class InputState:
         """
         self._mouse_pos_last_frame = self._mouse_pos
         self._pressed_this_frame.clear()
+        self._ascii_pressed_this_frame.clear()
         
     def update(self):
         """

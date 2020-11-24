@@ -136,7 +136,7 @@ class _GameLoop:
                     running = False
                     continue
                 elif py_event.type == pygame.KEYDOWN:
-                    input_state.set_key(py_event.key, True)
+                    input_state.set_key(py_event.key, True, ascii_val=py_event.unicode)
                     keybinds.get_instance().do_global_action_if_necessary(py_event.key)
 
                 elif py_event.type == pygame.KEYUP:
