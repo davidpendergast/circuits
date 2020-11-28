@@ -16,7 +16,7 @@ class WorldView:
     def __init__(self, world):
         self._world = world
 
-        self._free_camera = True  # if false, camera follows player
+        self._free_camera = False  # if false, camera follows player
 
         self._show_grid = True
         self._grid_line_sprites = []
@@ -51,9 +51,10 @@ class WorldView:
             player = self._world.get_player()
             if player is not None:
                 rect = player.get_rect()
-                new_cam_center = (rect[0] + rect[2] // 2, rect[1] + rect[3] // 2)
-
+                # new_cam_center = (rect[0] + rect[2] // 2, rect[1] + rect[3] // 2)
+                new_cam_center = (rect[0] + rect[2] // 2, None)
                 self.set_camera_center_in_world(new_cam_center)
+                self._world.constrain_camera(self)
 
         cam_x, cam_y = self.get_camera_pos_in_world()
 
@@ -88,15 +89,21 @@ class WorldView:
         return self._camera_xy
 
     def set_camera_pos_in_world(self, xy):
-        self._camera_xy = xy
+        new_x = xy[0] if xy[0] is not None else self._camera_xy[0]
+        new_y = xy[1] if xy[1] is not None else self._camera_xy[1]
+        self._camera_xy = (new_x, new_y)
 
     def set_camera_center_in_world(self, xy):
         size = self.get_camera_size_in_world()
-        self._camera_xy = (xy[0] - size[0] // 2, xy[1] - size[1] // 2)
+        new_x = xy[0] - size[0] // 2 if xy[0] is not None else self._camera_xy[0]
+        new_y = xy[1] - size[1] // 2 if xy[1] is not None else self._camera_xy[1]
+        self._camera_xy = (new_x, new_y)
 
     def move_camera_in_world(self, dxy):
         cur_pos = self.get_camera_pos_in_world()
-        self.set_camera_pos_in_world((cur_pos[0] + dxy[0], cur_pos[1] + dxy[1]))
+        new_x = cur_pos[0] + dxy[0] if dxy[0] is not None else None
+        new_y = cur_pos[1] + dxy[1] if dxy[1] is not None else None
+        self.set_camera_pos_in_world((new_x, new_y))
 
     def get_camera_size_in_world(self, integer=True):
         game_size = renderengine.get_instance().get_game_size()

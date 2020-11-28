@@ -25,6 +25,9 @@ class World:
         self._entities_to_cells = {}  # ent -> set of cells (x, y) it's inside
         self._cells_to_entities = {}   # (x, y) - set of entities inside
 
+        self.camera_min_xy = [None, None]
+        self.camera_max_xy = [None, None]
+
         self._orig_blueprint = bp
 
         self._tick = 0
@@ -152,10 +155,6 @@ class World:
             y = block_rect[1] - player.get_h()
             return (x, y)
 
-    def teleport_entity_to(self, entity, xy, duration, new_entity=None):
-        # TODO
-        entity.set_xy(xy)
-
     def get_tick(self):
         return self._tick
 
@@ -213,8 +212,24 @@ class World:
             for i in invalids:
                 i.set_vel((0, 0))
 
+        self.camera_min_xy = [float('inf'), float('inf')]
+        self.camera_max_xy = [-float('inf'), float('-inf')]
+        saw_block = False
+
         for ent in self.entities:
             ent.update_sprites()
+
+            if ent.is_block():
+                # TODO we'll probably need something a bit more complex than this in the future
+                saw_block = True
+                self.camera_min_xy[0] = min(self.camera_min_xy[0], ent.get_rect()[0])
+                self.camera_max_xy[0] = max(self.camera_max_xy[0], ent.get_rect()[0] + ent.get_rect()[2])
+                self.camera_min_xy[1] = min(self.camera_min_xy[1], ent.get_rect()[1])
+                self.camera_max_xy[1] = max(self.camera_max_xy[1], ent.get_rect()[1] + ent.get_rect()[3])
+
+        if not saw_block:
+            self.camera_min_xy = [None, None]
+            self.camera_max_xy = [None, None]
 
         self._tick += 1
 
@@ -267,6 +282,29 @@ class World:
                     return True
         return False
 
+    def constrain_camera(self, worldview):
+        if self.camera_min_xy[0] is not None:  # this will be none if the level is empty
+            cam_rect = worldview.get_camera_rect_in_world()
+            new_cam_xy = [None, None]
+            if cam_rect[2] < self.camera_max_xy[0] - self.camera_min_xy[0]:
+                if cam_rect[0] + cam_rect[2] > self.camera_max_xy[0]:
+                    new_cam_xy[0] = self.camera_max_xy[0] - cam_rect[2]
+                if cam_rect[0] < self.camera_min_xy[0]:
+                    new_cam_xy[0] = self.camera_min_xy[0]
+            else:
+                # camera is too wide to fit within the bounds, so center it?
+                new_cam_xy[0] = int((self.camera_max_xy[0] + self.camera_min_xy[0]) / 2 - cam_rect[2] / 2)
+
+            if cam_rect[3] < self.camera_max_xy[1] - self.camera_min_xy[1]:
+                if cam_rect[1] + cam_rect[3] > self.camera_max_xy[1]:
+                    new_cam_xy[1] = self.camera_max_xy[1] - cam_rect[3]
+                elif cam_rect[1] < self.camera_min_xy[1]:
+                    new_cam_xy[1] = self.camera_min_xy[1]
+            else:
+                # camera is too tall to fit within the bounds, snap to top
+                new_cam_xy[1] = self.camera_min_xy[0]
+
+            worldview.set_camera_pos_in_world(new_cam_xy)
 
 class _Contact:
 

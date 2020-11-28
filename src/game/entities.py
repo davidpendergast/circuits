@@ -628,7 +628,7 @@ class KeyEntity(Entity):
         self._player_collide_thresh = 15
         self._player_collide_max = self._player_collide_thresh + 20
 
-        player_collider = RectangleCollider([cs // 4, 0, cs // 2, cs], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR,))
+        player_collider = RectangleCollider([0, 0, cs // 2, cs], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR,))
         self.player_sensor_id = player_collider.get_id()
         self._sensor_ent = SensorEntity([0, 0, cs // 2, cs], player_collider, parent=self)
 

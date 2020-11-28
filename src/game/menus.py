@@ -294,6 +294,7 @@ class _BaseGameScene(scenes.Scene):
             print("INFO: activating blueprint: {}".format(bp.name()))
             self._world = bp.create_world()
             self._world_view = worldview.WorldView(self._world)
+            self._world_view.set_free_camera(False)
 
     def get_world(self) -> worlds.World:
         return self._world
@@ -929,6 +930,8 @@ class LevelEditGameScene(_BaseGameScene):
 
         super().setup_new_world(bp)
         self._refresh_entities()
+
+        self.get_world_view().set_free_camera(True)
 
         if camera_pos is not None:
             self.get_world_view().set_camera_pos_in_world(camera_pos)
