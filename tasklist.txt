@@ -29,7 +29,7 @@ vertical slice:
         - should be extremely modular
  - in levels 
     [x] platforming phyiscs
-    - play alongside your "ghosts"
+    [x] play alongside your "ghosts"
     - mixture of longer, traditional single-robot platforming challenges
         and multi-robot coordination puzzles
  - level editor
@@ -60,13 +60,21 @@ puzzle archetypes:
     - coordination (need to act in-sync with a past ghost)
     
 Level editor:    
-    [ ] add / remove points to moving blocks
-    [ ] increase / decrease duration for specs
-    [x] let you choose which level to edit
-    [ ] let you edit raw text data of levels / specs
+    [ ] (P1) add / remove points to moving blocks
+    [ ] (P1) increase / decrease duration for specs
+    [x] (P1) let you choose which level to edit
+    [ ] (P3) let you edit metadata of levels / specs
     
 General:
-    [ ] UI for editing text
+    [x] UI for editing text
+    [ ] (P1) moving camera in levels (horizontal only?)
+        - should encompass the active player + ghosts if possible 
+    [ ] locks and doors
+    [ ] completing levels
+    [ ] animation when you reach the finish
+    [ ] animation when you spawn
+    [ ] kill blocks
+    
     
 Art:
     [ ] Animations for player D

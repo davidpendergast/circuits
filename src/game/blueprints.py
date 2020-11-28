@@ -339,6 +339,42 @@ class EndBlockSpecType(SpecType):
         yield entities.EndBlock(x, y, w, h, player_type, color_id=color_id)
 
 
+class DoorBlockSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "door_block", required_keys=(SUBTYPE_ID, X, Y, W, H),
+                          optional_keys={ART_ID: 0})
+
+    def get_subtypes(self):
+        return [1, 2, 3, 4]
+
+    def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+
+        toggle_idx = int(json_blob[SUBTYPE_ID])
+
+        yield entities.DoorBlock(x, y, w, h, toggle_idx)
+
+
+class KeySpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "key", required_keys=(SUBTYPE_ID, X, Y))
+
+    def get_subtypes(self):
+        return [1, 2, 3, 4]
+
+    def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        x = json_blob[X]
+        y = json_blob[Y]
+        toggle_idx = int(json_blob[SUBTYPE_ID])
+
+        yield entities.KeyEntity.make_at_cell(x // 16, y // 16, toggle_idx)
+
+
 class MovingBlockSpecType(SpecType):
 
     def __init__(self):
@@ -411,6 +447,9 @@ class SpecTypes:
     PLAYER = PlayerSpecType()
     START_BLOCK = StartBlockSpecType()
     END_BLOCK = EndBlockSpecType()
+
+    DOOR_BLOCK = DoorBlockSpecType()
+    KEY_BLOCK = KeySpecType()
 
     @staticmethod
     def get(type_id) -> SpecType:

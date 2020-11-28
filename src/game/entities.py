@@ -109,9 +109,6 @@ class Entity:
             return (int(self._x), int(self._y))
 
     def set_xy(self, xy, update_frame_of_reference=True):
-        dx = 0
-        dy = 0
-
         old_x = self._x
         old_y = self._y
 
@@ -575,7 +572,7 @@ class MovingBlockEntity(BlockEntity):
         super().update()
 
 
-class ToggleBlock(BlockEntity):
+class DoorBlock(BlockEntity):
 
     def __init__(self, x, y, w, h, toggle_idx):
         BlockEntity.__init__(self, x, y, w, h)
@@ -598,12 +595,12 @@ class ToggleBlock(BlockEntity):
         return spriteref.object_sheet().get_toggle_block_sprite(self.get_toggle_idx(), w, h, self.is_solid())
 
 
-class ToggleBlockKeyEntity(Entity):
+class KeyEntity(Entity):
 
     @staticmethod
     def make_at_cell(grid_x, grid_y, toggle_idx):
         cs = gs.get_instance().cell_size
-        return ToggleBlockKeyEntity(cs * grid_x + cs // 4, cs * grid_y, toggle_idx)
+        return KeyEntity(cs * grid_x + cs // 4, cs * grid_y, toggle_idx)
 
     def __init__(self, x, y, toggle_idx):
         cs = gs.get_instance().cell_size
@@ -613,9 +610,29 @@ class ToggleBlockKeyEntity(Entity):
         self._base_sprite = None
 
         self._bob_height_min = 4
-        self._bob_height_max = 16
-        self._bob_tick_period = 30
+        self._bob_height_max = 12
+        self._bob_tick_period = 90
         self._bob_tick_count = int(random.random() * self._bob_tick_period)
+
+        self._player_colliding_tick_count = 0
+        self._player_collide_thresh = 15
+        self._player_collide_max = self._player_collide_thresh + 20
+
+        player_collider = RectangleCollider([cs // 4, 0, cs // 2, cs], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR,))
+        self.player_sensor_id = player_collider.get_id()
+        self._sensor_ent = SensorEntity([0, 0, cs // 2, cs], player_collider, parent=self)
+
+    def set_world(self, world):
+        super().set_world(world)
+        if world is not None:
+            world.add_entity(self._sensor_ent)
+
+    def about_to_remove_from_world(self):
+        super().about_to_remove_from_world()
+        self.get_world().remove_entity(self._sensor_ent)
+
+    def is_satisfied(self):
+        return self._player_colliding_tick_count >= self._player_collide_thresh
 
     def all_sprites(self):
         yield self._icon_sprite
@@ -625,20 +642,38 @@ class ToggleBlockKeyEntity(Entity):
         return self._toggle_idx
 
     def update(self):
+        if len(self.get_world().get_sensor_state(self.player_sensor_id)) > 0:
+            self._player_colliding_tick_count = min(self._player_collide_max, self._player_colliding_tick_count + 1)
+        else:
+            self._player_colliding_tick_count = max(0, self._player_colliding_tick_count - 1)
+        if self.is_satisfied():
+            # reset the cycle so it starts at the bottom when it resumes bobbing
+            self._bob_tick_count = int(3 / 4 * self._bob_tick_period)
+
+        self._update_sprites()
+
+    def _update_sprites(self):
         rect = self.get_rect()
         if self._icon_sprite is None:
             self._icon_sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=-5)
         key_model = spriteref.object_sheet().toggle_block_icons[self.get_toggle_idx()]
-        bob_prog = math.cos(2 * 3.141529 * self._bob_tick_count / self._bob_tick_period)
+        base_model = spriteref.object_sheet().toggle_block_bases[self.get_toggle_idx()]
+
+        bob_prog = (1 + math.cos(2 * 3.141529 * self._bob_tick_count / self._bob_tick_period)) / 2
         bob_height = int(self._bob_height_min + (self._bob_height_max - self._bob_height_min) * bob_prog)
+
+        if self.is_satisfied():
+            bob_height = 0
+        else:
+            bob_height = int(bob_height * (1 - self._player_colliding_tick_count / self._player_collide_thresh))
+
         self._icon_sprite = self._icon_sprite.update(new_model=key_model,
                                                      new_x=rect[0] + rect[2] // 2 - key_model.width() // 2,
-                                                     new_y=rect[1] - bob_height - key_model.height() // 2)
+                                                     new_y=rect[1] + rect[3] - bob_height - key_model.height())
         self._bob_tick_count += 1
 
         if self._base_sprite is None:
             self._base_sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=-3)
-        base_model = spriteref.object_sheet().toggle_block_bases[self.get_toggle_idx()]
         self._base_sprite = self._base_sprite.update(new_model=base_model,
                                                      new_x=rect[0] + rect[2] // 2 - base_model.width() // 2,
                                                      new_y=rect[1] + rect[3] - base_model.height())

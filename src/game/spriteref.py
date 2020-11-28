@@ -133,7 +133,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
     def get_toggle_block_sprite(self, idx, w, h, solid):
         key = (idx, w, h, solid)
         if key in self._toggle_blocks:
-            return key
+            return self._toggle_blocks[key]
         else:
             print("WARN: no sprite for toggle block: {}".format(key))
             return None

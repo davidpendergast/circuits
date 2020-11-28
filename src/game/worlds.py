@@ -254,7 +254,7 @@ class World:
                     return e
         return None
 
-    def get_sensor_state(self, sensor_id) -> typing.Iterable[entities.Entity]:
+    def get_sensor_state(self, sensor_id) -> typing.List[entities.Entity]:
         if sensor_id not in self._sensor_states:
             return []
         else:

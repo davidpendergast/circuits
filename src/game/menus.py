@@ -1089,6 +1089,8 @@ class LevelEditGameScene(_BaseGameScene):
         res.append(blueprints.SpecTypes.END_BLOCK.get_default_blob())
         res.append(blueprints.SpecTypes.SLOPE_BLOCK_QUAD.get_default_blob())
         res.append(blueprints.SpecTypes.MOVING_BLOCK.get_default_blob())
+        res.append(blueprints.SpecTypes.DOOR_BLOCK.get_default_blob())
+        res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())
 
         return res
 
