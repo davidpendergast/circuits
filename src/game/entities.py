@@ -582,12 +582,22 @@ class DoorBlock(BlockEntity):
     def get_toggle_idx(self):
         return self._toggle_idx
 
+    def update(self):
+        should_be_solid = not self.get_world().is_door_unlocked(self._toggle_idx)
+        if self._is_solid != should_be_solid:
+            if should_be_solid:
+                # TODO kill any player within bounds after becoming solid
+                players = [p for p in self.get_world().all_entities_in_rect(self.get_rect(), cond=lambda e: e.is_player())]
+                if len(players) > 0:
+                    print("INFO: crushed players: {}".format(players))
+            self.set_solid(should_be_solid)
+
     def is_solid(self):
         return self._is_solid
 
     def set_solid(self, val):
         self._is_solid = val
-        for c in self.all_colliders(solid=True):
+        for c in self.all_colliders(solid=True, enabled=None):
             c.set_enabled(val)
 
     def get_main_model(self):

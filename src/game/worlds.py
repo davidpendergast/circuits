@@ -260,6 +260,13 @@ class World:
         else:
             return self._sensor_states[sensor_id]
 
+    def is_door_unlocked(self, toggle_idx):
+        for e in self.all_entities():
+            if isinstance(e, entities.KeyEntity):
+                if e.get_toggle_idx() == toggle_idx and e.is_satisfied():
+                    return True
+        return False
+
 
 class _Contact:
 
