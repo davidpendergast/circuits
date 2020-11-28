@@ -114,17 +114,26 @@ class LevelSelectForEditScene(OptionSelectScene):
         self.add_option("create new", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
 
         for level_id in sorted_ids:
-            self.add_option(level_id, lambda: self.jump_to_scene(LevelEditGameScene(self.all_levels[level_id])))
+            level_bp = self.all_levels[level_id]
+            self.add_option(level_id, lambda: self.jump_to_scene(LevelEditGameScene(level_bp,
+                                                                                    output_file=level_bp.loaded_from_file)))
 
 
 class TextEditScene(scenes.Scene):
 
-    def __init__(self, prompt_text, default_text=""):
+    def __init__(self, prompt_text, default_text="", on_cancel=None, on_accept=None):
+        """
+        :param on_exit: lambda () -> None
+        :param on_accept: lambda (final_text) -> None
+        """
         scenes.Scene.__init__(self)
         self.prompt_text = prompt_text
         self.prompt_element = ui.SpriteElement()
 
         self.text_box = ui.TextEditElement(default_text, scale=1, char_limit=32, outline_color=colors.LIGHT_GRAY)
+
+        self.on_cancel = on_cancel
+        self.on_accept = on_accept
 
     def update(self):
         if self.prompt_element.get_sprite() is None:
@@ -141,6 +150,16 @@ class TextEditScene(scenes.Scene):
         text_y = max(self.prompt_element.get_xy()[1] + 32, total_size[1] // 2 - self.text_box.get_size()[1] // 2)
         self.text_box.set_xy((text_x, text_y))
         self.text_box.update_self_and_kids()
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
+            if self.on_cancel is not None:
+                self.on_cancel()
+                return
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
+            if self.on_accept is not None:
+                self.on_accept(self.text_box.get_text())
+                return
 
     def all_sprites(self):
         for spr in self.text_box.all_sprites():
@@ -947,7 +966,17 @@ class LevelEditGameScene(_BaseGameScene):
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_AS)):
             default_text = "" if self.output_file is None else self.output_file
-            self.jump_to_scene(TextEditScene("enter filename:", default_text=default_text))
+            manager = self.get_manager()
+
+            def _do_accept(filename):
+                # TODO validate the filename?
+                self.output_file = filename
+                self.save_to_disk(prompt_for_location=False)
+                manager.set_next_scene(self)
+
+            self.jump_to_scene(TextEditScene("enter filename:", default_text=default_text,
+                                             on_cancel=lambda: manager.set_next_scene(self),
+                                             on_accept=_do_accept))
             return
             # self.save_to_disk(prompt_for_location=True)
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE)):

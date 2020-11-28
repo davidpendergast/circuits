@@ -438,6 +438,7 @@ class LevelBlueprint:
     def __init__(self, json_blob):
         self.json_blob = json_blob
 
+        self.loaded_from_file = None
         self._cached_entities = None  # list of (blob, spec)
 
     @staticmethod
@@ -538,6 +539,7 @@ def load_all_levels_from_dir(path):
                 filepath = os.path.join(path, file)
                 level = load_level_from_file(filepath)
                 if level is not None:
+                    level.loaded_from_file = filepath
                     res[level.level_id()] = level
                     print("INFO: loaded level \"{}\" from file: {}".format(level.level_id(), filepath))
     except Exception:
