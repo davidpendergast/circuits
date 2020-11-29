@@ -107,6 +107,13 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             const.PLAYER_FLYING: self.player_d
         }
 
+        self.player_broken_pieces = {
+            const.PLAYER_FAST: [],
+            const.PLAYER_SMALL: [],
+            const.PLAYER_HEAVY: [],
+            const.PLAYER_FLYING: [],
+        }
+
         self.toggle_block_bases = []
         self.toggle_block_icons = []
         self._toggle_blocks = {}
@@ -129,6 +136,15 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             return None
         else:
             return spr_list[frame % len(spr_list)]
+
+    def get_broken_player_sprites(self, player_id, rotation=0):
+        """
+        :param rotation: [0, 1)
+        """
+        res = []
+        for l in self.player_broken_pieces[player_id]:
+            res.append(util.index_into(l, rotation))
+        return res
 
     def get_toggle_block_sprite(self, idx, w, h, solid):
         key = (idx, w, h, solid)
@@ -161,6 +177,11 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_d[PlayerStates.CROUCH_IDLE] = [_img(0 + i * 16, 176, 16, 16, offs=start_pos) for i in range(0, 2)]
         self.player_d[PlayerStates.AIRBORNE] = [_img(32 + i * 16, 160, 16, 32, offs=start_pos) for i in range(0, 6)]
 
+        self.player_broken_pieces[const.PLAYER_FAST] = self._handle_rotated_player_pieces([624, 0, 8, 8], 7, 8, atlas, start_pos)
+        self.player_broken_pieces[const.PLAYER_SMALL] = self._handle_rotated_player_pieces([624, 32, 8, 8], 7, 8, atlas, start_pos)
+        self.player_broken_pieces[const.PLAYER_HEAVY] = self._handle_rotated_player_pieces([624, 64, 8, 8], 8, 8, atlas, start_pos)
+        self.player_broken_pieces[const.PLAYER_FLYING] = self._handle_rotated_player_pieces([624, 96, 8, 8], 6, 8, atlas, start_pos)
+
         self.toggle_block_bases = []
         self.toggle_block_icons = []
         self._toggle_blocks = {}  # (idx, w, h, solid) -> ImageModel
@@ -175,6 +196,22 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             self._toggle_blocks[(i, 16, 16, False)] = _img(tb_xy[0] + 16, tb_xy[1] + 16 + 32 * i, 16, 16, offs=start_pos)
             self._toggle_blocks[(i, 32, 16, False)] = _img(tb_xy[0] + 32, tb_xy[1] + 16 + 32 * i, 32, 16, offs=start_pos)
             self._toggle_blocks[(i, 16, 32, False)] = _img(tb_xy[0] + 80, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
+
+    def _handle_rotated_player_pieces(self, base_rect, n_pieces, n_rots, atlas, start_pos):
+        res = []
+        for p_i in range(0, n_pieces):
+            piece_base_rect = [base_rect[0] + (p_i % 2) * base_rect[2] + start_pos[0],
+                               base_rect[1] + (p_i // 2) * base_rect[3] + start_pos[1],
+                               base_rect[2], base_rect[3]]
+            rots_for_piece = []
+            rots_for_piece.append(_img(piece_base_rect[0], piece_base_rect[1], piece_base_rect[2], piece_base_rect[3]))
+            for r_i in range(1, n_rots):
+                dest_rect = [piece_base_rect[0] - r_i * piece_base_rect[2] * 2,
+                             piece_base_rect[1], piece_base_rect[2], piece_base_rect[3]]
+                artutils.draw_rotated_sprite(atlas, piece_base_rect, atlas, dest_rect, r_i / n_rots)
+                rots_for_piece.append(_img(dest_rect[0], dest_rect[1], dest_rect[2], dest_rect[3]))
+            res.append(rots_for_piece)
+        return res
 
 
 class _BlockSheet(spritesheets.SpriteSheet):

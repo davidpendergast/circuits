@@ -441,6 +441,15 @@ def tuplify(obj):
         return (obj,)
 
 
+def index_into(l, val):
+    if val <= 0:
+        return l[0]
+    elif val >= 1:
+        return l[-1]
+    else:
+        return l[int(val * len(l))]
+
+
 def min_component(v_list, i):
     res = None
     for v in v_list:

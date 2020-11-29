@@ -272,6 +272,18 @@ def draw_decay_animation_effect(src_sheet, src_rect, n_frames, dest_sheet, dest_
     return res
 
 
+def draw_rotated_sprite(src_sheet, src_rect, dest_sheet, dest_rect, rot):
+    temp_surf = pygame.Surface((src_rect[2], src_rect[3]), pygame.SRCALPHA, 32)
+    temp_surf.blit(src_sheet, (0, 0), area=src_rect)
+    rotated_surf = pygame.transform.rotate(temp_surf, rot * 360)
+
+    temp_surf_2 = pygame.Surface((dest_rect[2], dest_rect[3]), pygame.SRCALPHA, 32)
+    temp_surf_2.blit(rotated_surf, (dest_rect[2] // 2 - rotated_surf.get_width() // 2,
+                                    dest_rect[3] // 2 - rotated_surf.get_height() // 2))
+
+    dest_sheet.blit(temp_surf_2, dest_rect)
+
+
 if __name__ == "__main__":
     test_img = pygame.image.load("planning/mockup_5.png")
     output_img_path = "planning/mockup_5_mazified_bg.png"
