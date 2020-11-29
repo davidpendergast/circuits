@@ -61,6 +61,7 @@ class Entity:
         self._spec = None   # bp sets this when it creates the entity
 
         self._color_override = None
+        self._is_selected_in_editor = False
 
         self._debug_sprites = {}
 
@@ -85,6 +86,12 @@ class Entity:
 
     def get_color_override(self):
         return self._color_override
+
+    def set_selected_in_editor(self, val):
+        self._is_selected_in_editor = val
+
+    def is_selected_in_editor(self):
+        return self._is_selected_in_editor
 
     def about_to_remove_from_world(self):
         pass
@@ -541,11 +548,13 @@ class MovingBlockEntity(BlockEntity):
         self._period = period
         self._loop = loop
 
+        self._point_sprites_for_editor = []
+
     def is_dynamic(self):
         return False
 
     def update(self):
-        tick_count = globaltimer.tick_count()  # TODO - hook up a real timer
+        tick_count = self.get_world().get_tick()
 
         step = tick_count // self._period
         cycle = step // len(self._pts)
@@ -570,6 +579,27 @@ class MovingBlockEntity(BlockEntity):
         self.set_vel(util.sub(old_xy, pos))
 
         super().update()
+
+    def update_sprites(self):
+        if not self.is_selected_in_editor():
+            self._point_sprites_for_editor.clear()
+        else:
+            util.extend_or_empty_list_to_length(self._point_sprites_for_editor, len(self._pts),
+                                                creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
+            block_size = self.get_size()
+            for i in range(0, len(self._pts)):
+                pt = self._pts[i]
+                pt_sprite = self._point_sprites_for_editor[i]
+                self._point_sprites_for_editor[i] = pt_sprite.update(new_rect=[pt[0], pt[1], block_size[0], block_size[1]],
+                                                                     new_outline=1, new_color=colors.PERFECT_YELLOW,
+                                                                     new_depth=-500)
+        super().update_sprites()
+
+    def all_sprites(self):
+        for spr in self._point_sprites_for_editor:
+            yield spr
+        for spr in super().all_sprites():
+            yield spr
 
 
 class DoorBlock(BlockEntity):

@@ -963,8 +963,10 @@ class LevelEditGameScene(_BaseGameScene):
 
             if util.to_key(spec) in self.selected_specs:
                 ent.set_color_override(self._get_selected_entity_color(ent))
+                ent.set_selected_in_editor(True)
             else:
                 ent.set_color_override(None)
+                ent.set_selected_in_editor(False)
 
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.RESET)):
@@ -1069,12 +1071,14 @@ class LevelEditGameScene(_BaseGameScene):
                 if key in self.entities_for_specs:
                     for ent in self.entities_for_specs[key]:
                         ent.set_color_override(self._get_selected_entity_color(ent))
+                        ent.set_selected_in_editor(True)
             else:
                 if key in self.selected_specs:
                     self.selected_specs.remove(key)
                 if key in self.entities_for_specs:
                     for ent in self.entities_for_specs[key]:
                         ent.set_color_override(None)
+                        ent.set_selected_in_editor(False)
 
     def _create_new_world(self, world_type=0):
         if isinstance(world_type, blueprints.LevelBlueprint):
@@ -1205,6 +1209,11 @@ class NormalMouseMode(MouseMode):
     def handle_key_events(self):
         mouse_xy = self.scene.get_mouse_position_in_world(snap_to_grid=False)
         edit_xy = self.scene.get_mouse_position_in_world(snap_to_grid=True)
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_AS)):
+            # XXX this keybind tends to conflict with others (shift-S), so just bail if it's pressed
+            # (saving is handled in the scene's update method directly)
+            return
 
         resize_xy = inputs.get_instance().was_pressed_four_way(left=keybinds.get_instance().get_keys(const.SHRINK_SELECTION_HORZ),
                                                                right=keybinds.get_instance().get_keys(const.GROW_SELECTION_HORZ),

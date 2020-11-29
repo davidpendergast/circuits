@@ -123,7 +123,7 @@ class SpecType:
         elif k == LOOP:
             return True
         elif k == DURATION:
-            return 60
+            return 90
         elif k == X_DIR or k == Y_DIR:
             return 0
         else:
@@ -666,7 +666,7 @@ class SpecUtils:
     def remove_points(spec_blob, xy, r=16):
         res = spec_blob.copy()
         if POINTS in spec_blob:
-            res[POINTS] = tuple(pt for pt in spec_blob[POINTS] if util.dist(pt, xy) <= r)
+            res[POINTS] = tuple(pt for pt in spec_blob[POINTS] if util.dist(pt, xy) > r)
         return res
 
     @staticmethod
