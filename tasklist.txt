@@ -67,13 +67,18 @@ Level editor:
     
 General:
     [x] UI for editing text
-    [ ] (P1) moving camera in levels (horizontal only?)
+    [x] (P1) moving camera in levels (horizontal only?)
         - should encompass the active player + ghosts if possible 
-    [ ] locks and doors
+    [x] locks and doors
     [ ] completing levels
     [ ] animation when you reach the finish
     [ ] animation when you spawn
     [ ] kill blocks
+    [ ] scene transitions of some kind
+        - "player A go!"
+	- "level complete!"
+	- "you died!"
+	- like nuclear throne, still image, text_bg, and text move slowly with parallax
     
     
 Art:

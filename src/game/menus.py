@@ -854,6 +854,18 @@ class LevelEditGameScene(_BaseGameScene):
         resize_funct = lambda s: blueprints.SpecUtils.resize(s, (dx * self.edit_resolution, dy * self.edit_resolution))
         self._mutate_selected_specs(resize_funct)
 
+    def add_point_to_selection(self, x, y):
+        add_funct = lambda s: blueprints.SpecUtils.add_point(s, (x, y))
+        self._mutate_selected_specs(add_funct)
+
+    def remove_point_from_selection(self, x, y):
+        rem_funct = lambda s: blueprints.SpecUtils.remove_points(s, (x, y), r=16)
+        self._mutate_selected_specs(rem_funct)
+
+    def clear_points_from_selection(self):
+        clear_funct = lambda s: blueprints.SpecUtils.clear_points(s)
+        self._mutate_selected_specs(clear_funct)
+
     def cycle_selection_type(self, steps):
         cycle_funct = lambda s: blueprints.SpecUtils.cycle_subtype(s, steps)
         self._mutate_selected_specs(cycle_funct)
@@ -1103,15 +1115,23 @@ class LevelEditGameScene(_BaseGameScene):
         else:
             return None
 
-    def spawn_pallette_object_at_mouse(self, idx):
-        spec_to_spawn = self.get_pallette_object(idx)
-        if spec_to_spawn is not None and inputs.get_instance().mouse_in_window():
+    def get_mouse_position_in_world(self, snap_to_grid=True):
+        if not inputs.get_instance().mouse_in_window():
+            return None
+        else:
             screen_pos = inputs.get_instance().mouse_pos()
             mouse_pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
-            spawn_x = mouse_pos_in_world[0] - (mouse_pos_in_world[0] % self.edit_resolution)
-            spawn_y = mouse_pos_in_world[1] - (mouse_pos_in_world[1] % self.edit_resolution)
+            if not snap_to_grid:
+                return mouse_pos_in_world
+            else:
+                snapped_x = mouse_pos_in_world[0] - (mouse_pos_in_world[0] % self.edit_resolution)
+                snapped_y = mouse_pos_in_world[1] - (mouse_pos_in_world[1] % self.edit_resolution)
+                return (snapped_x, snapped_y)
 
-            spec_to_spawn = blueprints.SpecUtils.set_xy(spec_to_spawn, (spawn_x, spawn_y))
+    def spawn_pallette_object_at(self, idx, xy):
+        spec_to_spawn = self.get_pallette_object(idx)
+        if spec_to_spawn is not None and xy is not None:
+            spec_to_spawn = blueprints.SpecUtils.set_xy(spec_to_spawn, xy)
 
             self.all_spec_blobs.append(spec_to_spawn)
             self.stamp_current_state()
@@ -1183,6 +1203,9 @@ class NormalMouseMode(MouseMode):
             self.scene.stamp_current_state()
 
     def handle_key_events(self):
+        mouse_xy = self.scene.get_mouse_position_in_world(snap_to_grid=False)
+        edit_xy = self.scene.get_mouse_position_in_world(snap_to_grid=True)
+
         resize_xy = inputs.get_instance().was_pressed_four_way(left=keybinds.get_instance().get_keys(const.SHRINK_SELECTION_HORZ),
                                                                right=keybinds.get_instance().get_keys(const.GROW_SELECTION_HORZ),
                                                                up=keybinds.get_instance().get_keys(const.SHRINK_SELECTION_VERT),
@@ -1192,8 +1215,6 @@ class NormalMouseMode(MouseMode):
                                                              up=keybinds.get_instance().get_keys(const.MOVE_SELECTION_UP),
                                                              down=keybinds.get_instance().get_keys(const.MOVE_SELECTION_DOWN))
 
-        # TODO this assumes that resize is the one with modifier keys
-        # TODO (how should we manage keybinds that are subsets of other keybinds?)
         if resize_xy != (0, 0):
             self.scene.resize_selection(resize_xy[0], resize_xy[1])
         elif move_xy != (0, 0):
@@ -1226,10 +1247,18 @@ class NormalMouseMode(MouseMode):
         if cycle_art_steps != 0:
             self.scene.cycle_selection_art(cycle_art_steps)
 
+        if mouse_xy is not None and edit_xy is not None:
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CLEAR_POINTS)):
+                self.scene.clear_points_from_selection()
+            elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.REMOVE_POINT)):
+                self.scene.remove_point_from_selection(mouse_xy[0], mouse_xy[1])
+            elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ADD_POINT)):
+                self.scene.add_point_to_selection(edit_xy[0], edit_xy[1])
+
         for i in range(0, len(const.OPTIONS)):
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.OPTIONS[i])):
                 spawn_idx = i
-                # 79 different choices!~
+                # 80 different choices!~
                 if inputs.get_instance().shift_is_held():
                     spawn_idx += 10
                 if inputs.get_instance().ctrl_is_held():
@@ -1238,4 +1267,4 @@ class NormalMouseMode(MouseMode):
                     spawn_idx += 40
                 print("INFO: spawning object [{}] at mouse: {}".format(spawn_idx,
                                                                        self.scene.get_pallette_object(spawn_idx)))
-                self.scene.spawn_pallette_object_at_mouse(spawn_idx)
+                self.scene.spawn_pallette_object_at(spawn_idx, edit_xy)

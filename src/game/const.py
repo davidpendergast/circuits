@@ -41,6 +41,10 @@ CYCLE_SELECTION_COLOR_BACKWARD = "cycle_selection_color_backward"
 CYCLE_SELECTION_ART_FORWARD = "cycle_selection_art_forward"
 CYCLE_SELECTION_ART_BACKWARD = "cycle_selection_art_backward"
 
+ADD_POINT = "add_pt"
+REMOVE_POINT = "remove_pt"
+CLEAR_POINTS = "clear_pts"
+
 SHRINK_SELECTION_VERT = "shrink_selection_vert"
 SHRINK_SELECTION_HORZ = "shrink_selection_horz"
 

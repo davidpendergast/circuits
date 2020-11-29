@@ -628,12 +628,14 @@ class SpecUtils:
         return res
 
     @staticmethod
-    def move(spec_blob, dxy):
+    def move(spec_blob, dxy, and_points=True):
         res = spec_blob.copy()
         if X in spec_blob:
             res[X] = int(spec_blob[X] + dxy[0])
         if Y in spec_blob:
             res[Y] = int(spec_blob[Y] + dxy[1])
+        if and_points:
+            res = SpecUtils.move_points(res, dxy)
         return res
 
     @staticmethod
@@ -649,6 +651,36 @@ class SpecUtils:
                 res[H] = dxy[1]
             else:
                 res[H] = max(min_size, int(res[H] + dxy[1]))
+        return res
+
+    @staticmethod
+    def add_point(spec_blob, xy):
+        res = spec_blob.copy()
+        if POINTS in spec_blob:
+            new_points = [pt for pt in spec_blob[POINTS]]
+            new_points.append(xy)
+            res[POINTS] = tuple(new_points)
+        return res
+
+    @staticmethod
+    def remove_points(spec_blob, xy, r=16):
+        res = spec_blob.copy()
+        if POINTS in spec_blob:
+            res[POINTS] = tuple(pt for pt in spec_blob[POINTS] if util.dist(pt, xy) <= r)
+        return res
+
+    @staticmethod
+    def clear_points(spec_blob):
+        res = spec_blob.copy()
+        if POINTS in spec_blob:
+            res[POINTS] = tuple()
+        return res
+
+    @staticmethod
+    def move_points(spec_blob, dxy):
+        res = spec_blob.copy()
+        if POINTS in spec_blob:
+            res[POINTS] = tuple(util.add(pt, dxy) for pt in spec_blob[POINTS])
         return res
 
     @staticmethod
