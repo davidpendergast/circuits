@@ -137,14 +137,22 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         else:
             return spr_list[frame % len(spr_list)]
 
-    def get_broken_player_sprites(self, player_id, rotation=0):
+    def get_broken_player_sprite(self, player_id, part_idx, rotation=0):
         """
         :param rotation: [0, 1)
         """
-        res = []
-        for l in self.player_broken_pieces[player_id]:
-            res.append(util.index_into(l, rotation))
-        return res
+        if player_id not in self.player_broken_pieces:
+            return None
+        part_list = self.player_broken_pieces[player_id]
+        if 0 <= part_idx < len(part_list):
+            return util.index_into(part_list[part_idx], rotation, wrap=True)
+        return None
+
+    def num_broken_player_parts(self, player_id):
+        if player_id not in self.player_broken_pieces:
+            return 0
+        else:
+            return len(self.player_broken_pieces[player_id])
 
     def get_toggle_block_sprite(self, idx, w, h, solid):
         key = (idx, w, h, solid)
