@@ -208,7 +208,7 @@ class World:
                 actor.update_frame_of_reference_parent()
 
         if len(invalids) > 0:
-            print("WARN: failed to solve collisions with: {}".format(invalids))
+            # print("WARN: failed to solve collisions with: {}".format(invalids))
             for i in invalids:
                 i.set_vel((0, 0))
 
@@ -230,6 +230,10 @@ class World:
         if not saw_block:
             self.camera_min_xy = [None, None]
             self.camera_max_xy = [None, None]
+
+        for ent in invalids:
+            if ent.is_player():
+                ent.do_death(entities.DeathReason.CRUSHED)
 
         self._tick += 1
 

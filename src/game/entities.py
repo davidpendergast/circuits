@@ -1545,16 +1545,32 @@ class PlayerEntity(Entity):
         else:
             return None
 
+    def do_death(self, reason, silent=False):
+        player_id = self.get_player_type().get_id()
+        if not silent:
+            cx, cy = self.get_center()
+            for i in range(0, spriteref.object_sheet().num_broken_player_parts(player_id)):
+                self.get_world().add_entity(PlayerBodyPartParticle(cx, cy, player_id, i))
+        self.get_world().remove_entity(self)
+        # TODO tell gs or someone we died?
+        print("INFO: player {} was {}.".format(player_id, reason))
+
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.get_player_type().get_id(), self.get_rect())
 
 
+class DeathReason:
+    CRUSHED = "crushed"
+    UNKNOWN = "killed by the guardians"
+
+
 class ParticleEntity(Entity):
 
-    def __init__(self, x, y, w, h, vel, duration=-1):
+    def __init__(self, x, y, w, h, vel, duration=-1, initial_phasing=-1):
         Entity.__init__(self, x, y, w, h)
         self._x_vel = vel[0]
         self._y_vel = vel[1]
+        self._initial_phasing = initial_phasing
         self._duration = duration
         self._ticks_alive = 0
 
@@ -1608,9 +1624,10 @@ class ParticleEntity(Entity):
             return
         self._ticks_alive += 1
 
-        if self._is_phasing and len(self.get_world().get_sensor_state(self._body_sensor_id)) == 0:
-            self._block_collider.set_enabled(True)
-            self._is_phasing = False
+        if self._is_phasing and 0 <= self._initial_phasing < self._ticks_alive:
+            if len(self.get_world().get_sensor_state(self._body_sensor_id)) == 0:
+                self._block_collider.set_enabled(True)
+                self._is_phasing = False
 
         if self.is_grounded():
             if self._y_vel > 0.1:
@@ -1657,7 +1674,7 @@ class PlayerBodyPartParticle(ParticleEntity):
     def __init__(self, x, y, player_id, part_idx):
         cs = gs.get_instance().cell_size
         initial_vel = (-0.75 + 1.5 * random.random(), -(1.5 + 1 * random.random()))
-        ParticleEntity.__init__(self, x, y, cs // 5, cs // 5, initial_vel, duration=60 * 5)
+        ParticleEntity.__init__(self, x, y, cs // 5, cs // 5, initial_vel, duration=60 * 5, initial_phasing=20)
 
         self.player_id = player_id
         self.part_idx = part_idx
