@@ -208,9 +208,10 @@ class World:
                 actor.update_frame_of_reference_parent()
 
         if len(invalids) > 0:
-            # print("WARN: failed to solve collisions with: {}".format(invalids))
+            print("WARN: failed to solve collisions with: {}".format(invalids))
             for i in invalids:
                 i.set_vel((0, 0))
+                i.was_crushed()
 
         self.camera_min_xy = [float('inf'), float('inf')]
         self.camera_max_xy = [-float('inf'), float('-inf')]
@@ -230,10 +231,6 @@ class World:
         if not saw_block:
             self.camera_min_xy = [None, None]
             self.camera_max_xy = [None, None]
-
-        for ent in invalids:
-            if ent.is_player():
-                ent.do_death(entities.DeathReason.CRUSHED)
 
         self._tick += 1
 
@@ -412,8 +409,7 @@ class CollisionResolver:
             pass  # we already know the next position is valid
         else:
             target_xy = next_positions[dyna_ent]
-            next_xy = CollisionResolver.\
-                _find_nearest_valid_position(world, dyna_ent, target_xy)
+            next_xy = CollisionResolver._find_nearest_valid_position(world, dyna_ent, target_xy)
             next_positions[dyna_ent] = next_xy
 
     @staticmethod
@@ -475,7 +471,6 @@ class CollisionResolver:
             res = util.bfs(target_xy, is_correct, get_neighbors, get_cost=get_cost, limit=max_dist * max_dist)
 
         return res
-
 
     @staticmethod
     def _get_blocked_solid_colliders(world, ent, xy) -> typing.List[entities.PolygonCollider]:

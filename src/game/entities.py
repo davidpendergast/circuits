@@ -245,6 +245,9 @@ class Entity:
     def set_colliders(self, colliders):
         self._colliders = [c for c in colliders]
 
+    def was_crushed(self):
+        pass
+
     def all_sprites(self):
         return []
 
@@ -1545,6 +1548,9 @@ class PlayerEntity(Entity):
         else:
             return None
 
+    def was_crushed(self):
+        self.do_death(DeathReason.CRUSHED)
+
     def do_death(self, reason, silent=False):
         player_id = self.get_player_type().get_id()
         if not silent:
@@ -1578,6 +1584,8 @@ class ParticleEntity(Entity):
         self._bounciness = 0.8
         self._friction = 0.97
 
+        self._x_flip = self._x_vel < 0
+
         self._img = None
 
         self._block_collider = RectangleCollider([0, 0, w, h], CollisionMasks.PARTICLE,
@@ -1586,16 +1594,21 @@ class ParticleEntity(Entity):
         self._is_phasing = True
 
         # detects when the particle isn't overlapping blocks anymore
-        body_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,))
+        body_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,
+                                                                                            CollisionMasks.SLOPE_BLOCK_HORZ,
+                                                                                            CollisionMasks.SLOPE_BLOCK_VERT))
         self._body_sensor_id = body_sensor.get_id()
 
-        foot_sensor = RectangleCollider([0, h, w, 1], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,))
+        foot_sensor = RectangleCollider([0, h, w, 1], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,
+                                                                                            CollisionMasks.SLOPE_BLOCK_HORZ))
         self._foot_sensor_id = foot_sensor.get_id()
 
-        left_sensor = RectangleCollider([-1, 0, 1, h-2], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,))
+        left_sensor = RectangleCollider([-1, 0, 1, h-2], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,
+                                                                                               CollisionMasks.SLOPE_BLOCK_VERT))
         self._left_sensor_id = left_sensor.get_id()
 
-        right_sensor = RectangleCollider([w, 0, 1, h-2], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,))
+        right_sensor = RectangleCollider([w, 0, 1, h-2], CollisionMasks.SENSOR, collides_with=(CollisionMasks.BLOCK,
+                                                                                               CollisionMasks.SLOPE_BLOCK_VERT))
         self._right_sensor_id = right_sensor.get_id()
 
         self.set_colliders([self._block_collider, body_sensor, foot_sensor, left_sensor, right_sensor])
@@ -1617,6 +1630,10 @@ class ParticleEntity(Entity):
 
     def is_right_walled(self):
         return not self._is_phasing and len(self.get_world().get_sensor_state(self._right_sensor_id)) > 0
+
+    def was_crushed(self):
+        # if it gets crushed again after leaving phasing mode, just bail to save the physics engine some work
+        self.get_world().remove_entity(self)
 
     def update(self):
         if 0 <= self._duration <= self._ticks_alive:
@@ -1647,6 +1664,11 @@ class ParticleEntity(Entity):
         elif self._x_vel > 0 and self.is_right_walled():
             self._x_vel = -self._bounciness * self._x_vel
 
+        if self._x_vel < -0.1:
+            self._x_flip = True
+        elif self._x_vel > 0.1:
+            self._x_flip = False
+
     def update_sprites(self):
         model = self.get_sprite()
         if model is None and self._img is not None:
@@ -1660,7 +1682,7 @@ class ParticleEntity(Entity):
             self._img = self._img.update(new_model=model,
                                          new_x=new_x,
                                          new_y=new_y,
-                                         new_xflip=False)  # TODO
+                                         new_xflip=self._x_flip)
 
     def all_sprites(self):
         for spr in super().all_sprites():
@@ -1679,8 +1701,18 @@ class PlayerBodyPartParticle(ParticleEntity):
         self.player_id = player_id
         self.part_idx = part_idx
 
-        self.rotation = 0
-        self.rotation_vel = 0.05
+        self.rotation = random.random()
+        self.rotation_vel = 0.05 + random.random() * 0.1
+        self.rotation_decay = 0.985
+
+    def update(self):
+        super().update()
+
+        if self.rotation_vel < 0.01:
+            self.rotation_vel = 0
+        else:
+            self.rotation -= self.rotation_vel
+            self.rotation_vel *= self.rotation_decay
 
     def get_sprite(self):
         return spriteref.object_sheet().get_broken_player_sprite(self.player_id, self.part_idx, rotation=self.rotation)
@@ -1720,7 +1752,7 @@ class CollisionMasks:
 
     SNAP_DOWN_SENSOR = CollisionMask("snap_down_sensor", is_solid=False, is_sensor=True, render_depth=15)
 
-    PARTICLE = CollisionMask("particle", is_solid=False, render_depth=16)
+    PARTICLE = CollisionMask("particle", is_solid=True, render_depth=16)
 
 
 class CollisionResolutionHint:
