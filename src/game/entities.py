@@ -1003,6 +1003,9 @@ class PlayerController:
 
         return PlayerInputs.from_ints(ints)
 
+    def get_recording(self):
+        return None
+
     def is_active(self):
         return True
 
@@ -1135,9 +1138,13 @@ class PlayerEntity(Entity):
         self._jump_cooldown = 15
 
         self._holding_crouch = False
+        self._holding_left = False
+        self._holding_right = False
 
         w_inset = int(self.get_w() * 0.2)  # 0.15
-        h_inset = int(self.get_h() * 0.15)  # 0.1
+
+        h_inset_upper = int(self.get_h() * 0.15)
+        h_inset_lower = max(4, int(self.get_h() * 0.15))  # 0.1
 
         vert_env_collider = RectangleCollider([w_inset, 0, self.get_w() - (w_inset * 2), self.get_h()],
                                               CollisionMasks.ACTOR,
@@ -1146,7 +1153,7 @@ class PlayerEntity(Entity):
                                               color=colors.PERFECT_WHITE,
                                               name="main_vert_rect_collider")
 
-        horz_env_collider = RectangleCollider([0, 0, self.get_w(), self.get_h() - h_inset],
+        horz_env_collider = RectangleCollider([0, 0, self.get_w(), self.get_h() - h_inset_lower],
                                               CollisionMasks.ACTOR,
                                               collides_with=CollisionMasks.BLOCK,
                                               resolution_hint=CollisionResolutionHints.HORZ_ONLY,
@@ -1160,8 +1167,8 @@ class PlayerEntity(Entity):
                                              color=colors.PERFECT_GREEN,
                                              name="foot_rect_sensor")
 
-        wall_sensor_y = self.get_h() // 2
-        wall_sensor_h = self.get_h() // 2 - h_inset
+        wall_sensor_y = self.get_h() // 4
+        wall_sensor_h = int(self.get_h() * 3 / 4) - h_inset_lower
         self.left_sensor = RectangleCollider([-1, wall_sensor_y, 1, wall_sensor_h],
                                              CollisionMasks.SENSOR,
                                              collides_with=CollisionMasks.BLOCK,
@@ -1307,6 +1314,9 @@ class PlayerEntity(Entity):
     def is_moving(self):
         return abs(self.get_x_vel()) > 0.1
 
+    def is_holding_left_or_right(self):
+        return self._holding_left or self._holding_right
+
     def is_crouching(self):
         # TODO crouch jumps? forced to crouch?
         return self.is_grounded() and self._holding_crouch
@@ -1328,6 +1338,8 @@ class PlayerEntity(Entity):
         holding_jump = cur_inputs.is_jump_held()
         holding_crouch = cur_inputs.is_down_held()
 
+        self._holding_left = request_left
+        self._holding_right = request_right
         self._holding_crouch = self.get_player_type().can_crouch() and holding_crouch
 
         if request_jump:
@@ -1483,7 +1495,7 @@ class PlayerEntity(Entity):
     def get_player_state(self):
         """returns: (state, anim_rate)"""
         if self.is_grounded() and (self._last_jump_time <= 1 or self.get_y_vel() > -0.1):
-            if self.is_moving():
+            if self.is_moving() or self.is_holding_left_or_right():
                 if not self.is_crouching():
                     return spriteref.PlayerStates.WALKING
                 else:

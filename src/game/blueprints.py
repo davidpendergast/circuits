@@ -346,7 +346,7 @@ class DoorBlockSpecType(SpecType):
                           optional_keys={ART_ID: 0})
 
     def get_subtypes(self):
-        return [1, 2, 3, 4]
+        return [0, 1, 2, 3]
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
@@ -365,7 +365,7 @@ class KeySpecType(SpecType):
         SpecType.__init__(self, "key", required_keys=(SUBTYPE_ID, X, Y))
 
     def get_subtypes(self):
-        return [1, 2, 3, 4]
+        return [0, 1, 2, 3]
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
@@ -496,6 +496,22 @@ class LevelBlueprint:
 
     def level_id(self):
         return util.read_string(self.json_blob, LEVEL_ID, "???")
+
+    def copy_with(self, name=None, level_id=None, description=None, edits=None):
+        if edits is None:
+            edits = {}
+
+        if name is not None:
+            edits[NAME] = name
+        if level_id is not None:
+            edits[LEVEL_ID] = level_id
+        if description is not None:
+            edits[DESCRIPTION] = description
+
+        json_copy = util.copy_json(self.json_blob)
+        for key in edits:
+            json_copy[key] = edits[key]
+        return LevelBlueprint(json_copy)
 
     def description(self):
         return util.read_string(self.json_blob, DESCRIPTION, "???")

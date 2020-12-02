@@ -7,6 +7,7 @@ import pathlib
 import sys
 import heapq
 import traceback
+import copy
 
 
 def bound(val, lower, upper):
@@ -745,6 +746,10 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, str(pathlib.Path(relative_path)))
+
+
+def copy_json(json_blob):
+    return copy.deepcopy(json_blob)
 
 
 def load_json_from_path(filepath):

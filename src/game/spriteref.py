@@ -201,9 +201,11 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             self._toggle_blocks[(i, 16, 16, True)] = _img(tb_xy[0] + 16, tb_xy[1] + 32 * i, 16, 16, offs=start_pos)
             self._toggle_blocks[(i, 32, 16, True)] = _img(tb_xy[0] + 32, tb_xy[1] + 32 * i, 32, 16, offs=start_pos)
             self._toggle_blocks[(i, 16, 32, True)] = _img(tb_xy[0] + 64, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
+            self._toggle_blocks[(i, 32, 32, True)] = _img(tb_xy[0] + 96, tb_xy[1] + 32 * i, 32, 32, offs=start_pos)
             self._toggle_blocks[(i, 16, 16, False)] = _img(tb_xy[0] + 16, tb_xy[1] + 16 + 32 * i, 16, 16, offs=start_pos)
             self._toggle_blocks[(i, 32, 16, False)] = _img(tb_xy[0] + 32, tb_xy[1] + 16 + 32 * i, 32, 16, offs=start_pos)
             self._toggle_blocks[(i, 16, 32, False)] = _img(tb_xy[0] + 80, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
+            self._toggle_blocks[(i, 32, 32, False)] = _img(tb_xy[0] + 128, tb_xy[1] + 32 * i, 32, 32, offs=start_pos)
 
     def _handle_rotated_player_pieces(self, base_rect, n_pieces, n_rots, atlas, start_pos):
         res = []

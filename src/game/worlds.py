@@ -118,7 +118,9 @@ class World:
             gs.get_instance().player_type_override = next_type  # new levels will get this player type too
 
             cur_x, cur_y = cur_player.get_xy()
-            new_player = entities.PlayerEntity(cur_x, cur_y, next_type, align_to_cells=False)
+            new_player = entities.PlayerEntity(cur_x, cur_y, next_type,
+                                               align_to_cells=False,
+                                               controller=cur_player.get_controller())
             new_player.set_y(cur_y + cur_player.get_h() - new_player.get_h())  # keep feet position the same
 
             self.remove_entity(cur_player)

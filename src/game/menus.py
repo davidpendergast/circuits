@@ -596,8 +596,11 @@ class RealGameScene(_BaseGameScene):
             if active_satisfied:
                 player_ent = self.get_world().get_player()
                 recording = player_ent.get_controller().get_recording()
-                self._state.active_player_succeeded(recording)
-                self.setup_new_world(self._state.bp)
+                if recording is not None:
+                    self._state.active_player_succeeded(recording)
+                    self.setup_new_world(self._state.bp)
+                else:
+                    print("WARN: active player is satisfied but has no recording. hopefully we're in dev mode?")
 
         self._update_ui()
 
@@ -923,6 +926,10 @@ class LevelEditGameScene(_BaseGameScene):
                     return
             else:
                 self.output_file = file_to_use
+
+        # TODO add a real way to set this from the editor...
+        if bp_to_save.level_id() == "???":
+            bp_to_save = bp_to_save.copy_with(level_id=str(file_to_use))
 
         save_result = blueprints.write_level_to_file(bp_to_save, file_to_use)
         if save_result:
