@@ -284,7 +284,55 @@ def draw_rotated_sprite(src_sheet, src_rect, dest_sheet, dest_rect, rot):
     dest_sheet.blit(temp_surf_2, dest_rect)
 
 
-if __name__ == "__main__":
+def apply_darkness(src_sheet, src_rect, dest_sheet, dest_xy, darkness, contrast_preserving=True, max_change=-1):
+    """
+    :param darkness: a value from [0.0, 1.0) where 1.0 is maximum darkness
+    :param contrast_preserving: whether to use Ghast's special sauce
+    :param max_change: the max amount to shift a color (out of 255)
+    """
+    dest_rect = [dest_xy[0], dest_xy[1], src_rect[2], src_rect[3]]
+    dest_sheet.blit(src_sheet, dest_rect, area=src_rect)
+
+    for x in range(dest_rect[0], dest_rect[0] + dest_rect[2]):
+        for y in range(dest_rect[1], dest_rect[1] + dest_rect[3]):
+            rgb = list(dest_sheet.get_at((x, y)))
+            for i in range(0, 3):
+                val = rgb[i] / 255
+                if contrast_preserving:
+                    # blend the value with a crazy curve
+                    new_val = (1 - darkness) * val ** (1 / (1 - darkness))
+                else:
+                    # just add black with alpha equal to darkness.
+                    # in other words: alpha * 0 + (1 - alpha) * val
+                    new_val = (1 - darkness) * val
+
+                if max_change >= 0:
+                    new_val = max(val - max_change, new_val)
+
+                rgb[i] = int(255 * new_val)
+            dest_sheet.set_at((x, y), rgb)
+
+
+def _do_darkening_testing():
+    input_image = pygame.image.load("planning/Pallet_Town_HGSS.png")
+    # input_image = pygame.image.load("planning/skeletris_full_illum.PNG")
+    src_rect = [0, 0, input_image.get_width(), input_image.get_height()]
+    output_img_path = "planning/light_levels_demo.png"
+    darkness_levels = [i / 10 for i in range(0, 9)]
+
+    output_image = pygame.Surface((input_image.get_width() * 2,
+                                   input_image.get_height() * len(darkness_levels)), pygame.SRCALPHA, 32)
+
+    for row in range(0, len(darkness_levels)):
+        for col in range(0, 2):
+            dest_xy = (col * src_rect[2], row * src_rect[3])
+            darkness = darkness_levels[row]
+            apply_darkness(input_image, src_rect, output_image, dest_xy, darkness, contrast_preserving=col > 0)
+
+    pygame.image.save(output_image, "planning/light_levels_demo.png")
+
+
+def _do_some_weird_maze_testing():
     test_img = pygame.image.load("planning/mockup_5.png")
     output_img_path = "planning/mockup_5_mazified_bg.png"
 

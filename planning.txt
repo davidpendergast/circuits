@@ -65,6 +65,7 @@ platformer mechanics:
  
 core features:
  - easily edit / share levels (through cut and paste, like linerider)
+    - (well, through json at least...)
  - branching overworld map (like baba)
  - save & reload replays (replay will auto play at end of each level, like meatboy)
  

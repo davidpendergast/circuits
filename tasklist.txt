@@ -13,11 +13,6 @@ features:
  - joypad support
  - main menu?
     
-issues:
- - the pastel colors don't really fit with the monochrome ship asthetics
-    - could be OK? if the inside of the ship is more colorful
- - maybe ditch (or modify) the monocrome ship image
-    
     
 vertical slice: 
  [x] title screen 
@@ -71,6 +66,9 @@ General:
         - should encompass the active player + ghosts if possible 
     [x] locks and doors
     [ ] completing levels
+    [ ] failing levels
+	- just keep it running but say R to restart or something?
+	- or 
     [ ] animation when you reach the finish
     [ ] animation when you spawn
     [ ] kill blocks
@@ -79,13 +77,5 @@ General:
 	- "level complete!"
 	- "you died!"
 	- like nuclear throne, still image, text_bg, and text move slowly with parallax
-    
-    
 Art:
     [ ] Animations for player D
- 
-    
-    
-    
-    
-
