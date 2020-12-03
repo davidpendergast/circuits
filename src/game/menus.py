@@ -115,8 +115,11 @@ class LevelSelectForEditScene(OptionSelectScene):
 
         for level_id in sorted_ids:
             level_bp = self.all_levels[level_id]
-            self.add_option(level_id, lambda: self.jump_to_scene(LevelEditGameScene(level_bp,
-                                                                                    output_file=level_bp.loaded_from_file)))
+
+            def _action(bp=level_bp):  # lambdas in loops, yikes
+                self.jump_to_scene(LevelEditGameScene(bp, output_file=bp.loaded_from_file))
+
+            self.add_option(level_id, _action)
 
 
 class TextEditScene(scenes.Scene):

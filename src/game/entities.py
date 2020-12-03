@@ -802,7 +802,7 @@ class EndBlock(CompositeBlockEntity):
         actors_in_sensor = self.get_world().get_sensor_state(self._level_end_sensor_id)
         found_one = False
         for a in actors_in_sensor:
-            if isinstance(a, PlayerEntity) and a.get_player_type() == self._player_type:
+            if isinstance(a, PlayerEntity) and a.get_player_type() == self._player_type and not a.is_crouching():
                 # TODO velocity relative to block?
                 if util.mag(a.get_vel()) < 2:
                     self._player_stationary_in_sensor_count += 1

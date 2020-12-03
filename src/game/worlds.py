@@ -305,12 +305,12 @@ class World:
                     new_cam_xy[1] = self.camera_min_xy[1]
             else:
                 # camera is too tall to fit within the bounds, snap to top
-                new_cam_xy[1] = self.camera_min_xy[0]
+                new_cam_xy[1] = self.camera_min_xy[1]
 
             worldview.set_camera_pos_in_world(new_cam_xy)
 
-class _Contact:
 
+class _Contact:
     def __init__(self, collider1, xy1, collider2, xy2, overlap_rect):
         self.collider1 = collider1
         self.collider1_xy = xy1
