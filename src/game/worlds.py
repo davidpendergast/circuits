@@ -28,9 +28,20 @@ class World:
         self.camera_min_xy = [None, None]
         self.camera_max_xy = [None, None]
 
+        self.safe_zones = []  # list of rects that are safe for actors to be in. if empty, the entire world is safe
+        self.kill_zones = []  # list of rects that kill actors when they enter (overriding safe zones)
+
         self._orig_blueprint = bp
 
         self._tick = 0
+
+    def set_safe_zones(self, safe_zones, kill_zones=()):
+        self.safe_zones = safe_zones
+        self.kill_zones = util.listify(kill_zones)
+
+    def set_camera_bounds(self, camera_min_xy, camera_max_xy):
+        self.camera_min_xy = camera_min_xy
+        self.camera_max_xy = camera_max_xy
 
     def add_entity(self, ent, next_update=True):
         if ent is None or ent in self.entities:
@@ -209,30 +220,34 @@ class World:
             for actor in actor_ents:
                 actor.update_frame_of_reference_parent()
 
+        if len(self.safe_zones) > 0 or len(self.kill_zones) > 0:
+            if entities.ACTOR_GROUP in phys_groups:
+                for actor in phys_groups[entities.ACTOR_GROUP]:
+                    c_xy = actor.get_center()
+                    actor_oob = False
+                    for kill_rect in self.kill_zones:
+                        if util.rect_contains(kill_rect, c_xy):
+                            actor_oob = True
+                            break
+                    if not actor_oob:
+                        any_safe_zone_contains = False
+                        for safe_rect in self.safe_zones:
+                            if util.rect_contains(safe_rect, c_xy):
+                                any_safe_zone_contains = True
+                                break
+                        if len(self.safe_zones) > 0 and not any_safe_zone_contains:
+                            actor_oob = True
+                    if actor_oob:
+                        actor.fell_out_of_bounds()
+
         if len(invalids) > 0:
             print("WARN: failed to solve collisions with: {}".format(invalids))
             for i in invalids:
                 i.set_vel((0, 0))
                 i.was_crushed()
 
-        self.camera_min_xy = [float('inf'), float('inf')]
-        self.camera_max_xy = [-float('inf'), float('-inf')]
-        saw_block = False
-
         for ent in self.entities:
             ent.update_sprites()
-
-            if ent.is_block():
-                # TODO we'll probably need something a bit more complex than this in the future
-                saw_block = True
-                self.camera_min_xy[0] = min(self.camera_min_xy[0], ent.get_rect()[0])
-                self.camera_max_xy[0] = max(self.camera_max_xy[0], ent.get_rect()[0] + ent.get_rect()[2])
-                self.camera_min_xy[1] = min(self.camera_min_xy[1], ent.get_rect()[1])
-                self.camera_max_xy[1] = max(self.camera_max_xy[1], ent.get_rect()[1] + ent.get_rect()[3])
-
-        if not saw_block:
-            self.camera_min_xy = [None, None]
-            self.camera_max_xy = [None, None]
 
         self._tick += 1
 

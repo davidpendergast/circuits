@@ -248,6 +248,10 @@ class Entity:
     def was_crushed(self):
         pass
 
+    def fell_out_of_bounds(self):
+        print("INFO: entity fell out of bounds: {}".format(self))
+        self.get_world().remove_entity(self)
+
     def all_sprites(self):
         return []
 
@@ -1407,13 +1411,13 @@ class PlayerEntity(Entity):
                 self._last_jump_time = 0
 
             elif self.is_clinging_to_wall():
-                    self.set_y_vel(self._wall_jump_y_vel)
-                    self._last_jump_time = 0
-                    # TODO add some way to cancel the x_vel on a wall jump?
-                    if self.is_left_walled():
-                        self.set_x_vel(self._wall_jump_x_vel)
-                    if self.is_right_walled():
-                        self.set_x_vel(-self._wall_jump_x_vel)
+                self.set_y_vel(self._wall_jump_y_vel)
+                self._last_jump_time = 0
+                # TODO add some way to cancel the x_vel on a wall jump?
+                if self.is_left_walled():
+                    self.set_x_vel(self._wall_jump_x_vel)
+                if self.is_right_walled():
+                    self.set_x_vel(-self._wall_jump_x_vel)
 
             elif self.get_player_type().can_fly():
                 if self._fly_y_vel < self.get_y_vel():
@@ -1563,6 +1567,9 @@ class PlayerEntity(Entity):
     def was_crushed(self):
         self.do_death(DeathReason.CRUSHED)
 
+    def fell_out_of_bounds(self):
+        self.do_death(DeathReason.OUT_OF_BOUNDS)
+
     def do_death(self, reason, silent=False):
         player_id = self.get_player_type().get_id()
         if not silent:
@@ -1571,15 +1578,16 @@ class PlayerEntity(Entity):
                 self.get_world().add_entity(PlayerBodyPartParticle(cx, cy, player_id, i))
         self.get_world().remove_entity(self)
         # TODO tell gs or someone we died?
-        print("INFO: player {} was {}.".format(player_id, reason))
+        print("INFO: player {} {}.".format(player_id, reason))
 
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.get_player_type().get_id(), self.get_rect())
 
 
 class DeathReason:
-    CRUSHED = "crushed"
-    UNKNOWN = "killed by the guardians"
+    CRUSHED = "was crushed"
+    OUT_OF_BOUNDS = "fell out of bounds"
+    UNKNOWN = "was killed by the guardians"
 
 
 class ParticleEntity(Entity):
@@ -1595,6 +1603,8 @@ class ParticleEntity(Entity):
         self._gravity = 0.15
         self._bounciness = 0.8
         self._friction = 0.97
+
+        self.max_vel = 20 * gs.get_instance().cell_size / configs.target_fps
 
         self._x_flip = self._x_vel < 0
 
@@ -1675,6 +1685,9 @@ class ParticleEntity(Entity):
             self._x_vel = -self._bounciness * self._x_vel
         elif self._x_vel > 0 and self.is_right_walled():
             self._x_vel = -self._bounciness * self._x_vel
+
+        self._x_vel = util.bound(self._x_vel, -self.max_vel, self.max_vel)
+        self._y_vel = util.bound(self._y_vel, -self.max_vel, self.max_vel)
 
         if self._x_vel < -0.1:
             self._x_flip = True

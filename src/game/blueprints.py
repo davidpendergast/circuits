@@ -569,6 +569,24 @@ class LevelBlueprint:
                 print("ERROR: failed to build blob: {}".format(blob))
                 traceback.print_exc()
 
+        camera_min_xy = [None, None]
+        camera_max_xy = [None, None]
+        for ent in world.all_entities():
+            if ent.is_block():
+                camera_min_xy[0] = min(camera_min_xy[0] if camera_min_xy[0] is not None else float('inf'), ent.get_rect()[0])
+                camera_max_xy[0] = max(camera_max_xy[0] if camera_max_xy[0] is not None else -float('inf'), ent.get_rect()[0] + ent.get_rect()[2])
+                camera_min_xy[1] = min(camera_min_xy[1] if camera_min_xy[1] is not None else float('inf'), ent.get_rect()[1])
+                camera_max_xy[1] = max(camera_max_xy[1] if camera_max_xy[1] is not None else -float('inf'), ent.get_rect()[1] + ent.get_rect()[3])
+        world.set_camera_bounds(camera_min_xy, camera_max_xy)
+
+        if camera_max_xy[0] is not None:
+            safe_zone = [camera_min_xy[0],
+                         camera_min_xy[1],
+                         camera_max_xy[0] - camera_min_xy[0],
+                         camera_max_xy[1] - camera_min_xy[1]]
+            safe_zone = util.rect_expand(safe_zone, gs.get_instance().cell_size * 0.5)
+            world.set_safe_zones([safe_zone])
+
         return world
 
     def __repr__(self):

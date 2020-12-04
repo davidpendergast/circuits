@@ -391,9 +391,10 @@ class _GameState:
         self._players_in_level = bp.get_player_types()
         n_players = len(self._players_in_level)
 
-        self.currently_playing = [False] * n_players
+        self._currently_playing = [False] * n_players
         self._currently_satisfied = [False] * n_players
         self._recorded_runs = [None] * n_players  # list of PlaybackPlayerController
+        self._currently_alive = [False] * n_players
 
         self._total_ticks = bp.time_limit()
         self._time_elapsed = 0
@@ -404,8 +405,8 @@ class _GameState:
         self._time_elapsed = 0
         for i in range(0, len(self._currently_satisfied)):
             self._currently_satisfied[i] = False
-        for i in range(0, len(self.currently_playing)):
-            self.currently_playing[i] = False
+        for i in range(0, len(self._currently_playing)):
+            self._currently_playing[i] = False
         if all_players:
             self._active_player_idx = 0
             self._recorded_runs = [None] * self.num_players()
@@ -455,10 +456,19 @@ class _GameState:
         return True
 
     def is_playing_back(self, player_idx):
-        return self.currently_playing[player_idx]
+        return self._currently_playing[player_idx]
 
     def set_playing_back(self, player_idx, val):
-        self.currently_playing[player_idx] = val
+        self._currently_playing[player_idx] = val
+
+    def is_alive(self, player_idx):
+        return self._currently_alive[player_idx]
+
+    def is_dead(self, player_idx):
+        return player_idx <= self._active_player_idx and not self.is_alive(player_idx)
+
+    def set_alive(self, player_idx, val):
+        self._currently_alive[player_idx] = val
 
     def was_playing_back(self, player_idx):
         return player_idx < self.get_active_player_idx()
@@ -485,6 +495,8 @@ class _GameState:
                 self.set_playing_back(idx, True)
             else:
                 self.set_playing_back(idx, False)
+
+            self.set_alive(idx, player is not None)
 
 
 class TopPanelUi(ui.UiElement):
@@ -530,18 +542,20 @@ class TopPanelUi(ui.UiElement):
 
                 is_first = i == 0
                 is_last = i == len(player_types) - 1
-                is_done = i != active_idx and not self._state.is_playing_back(i)
+                is_done = i != active_idx and not self._state.is_playing_back(i) or self._state.is_dead(i)
                 frm = gs.get_instance().anim_tick()
                 model = spriteref.ui_sheet().get_character_card_anim(is_first, is_last, frm, done=is_done)
 
                 if self._state.is_satisfied(i):
                     color = colors.PERFECT_GREEN
+                elif self._state.is_dead(i):
+                    color = colors.PERFECT_RED
                 elif i == active_idx:
                     color = colors.WHITE
                 elif self._state.is_playing_back(i):
                     color = colors.LIGHT_GRAY
                 else:
-                    color = colors.PERFECT_RED  # failed
+                    color = colors.PERFECT_RED  # actor was knocked off-track and failed
 
                 anim_spr = self.character_panel_animation_sprites[i].update(new_x=card_x,
                                                                             new_y=card_y,
