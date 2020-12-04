@@ -382,7 +382,7 @@ class MovingBlockSpecType(SpecType):
                           optional_keys={POINTS: tuple(), ART_ID: -1, COLOR_ID: 0})
 
     def build_entities(self, json_blob):
-        points = util.listify(json_blob[POINTS])
+        points = list(util.listify(json_blob[POINTS]))
         x = json_blob[X]
         y = json_blob[Y]
         points.insert(0, (x, y))

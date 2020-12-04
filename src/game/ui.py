@@ -167,20 +167,24 @@ class OptionsList(ElementGroup):
         self.options = []  # list of (UiElement: element, str: text, lambda: do_action, lambda: is_enabled)
         self.y_spacing = 4
 
-    def add_option(self, text, do_action, is_enabled=lambda: True):
-        self.insert_option(len(self.options), text, do_action, is_enabled=is_enabled)
+        # the option that'll fire when you press esc (AKA back)
+        self._esc_option = None
 
-    def insert_option(self, idx, text, do_action, is_enabled=lambda: True):
+    def add_option(self, text, do_action, is_enabled=lambda: True, esc_option=False):
+        self.insert_option(len(self.options), text, do_action, is_enabled=is_enabled, esc_option=esc_option)
+
+    def insert_option(self, idx, text, do_action, is_enabled=lambda: True, esc_option=False):
         element = SpriteElement()
         opt = (element, text, do_action, is_enabled)
         self.options.insert(idx, opt)
         self.add_child(element)
+        if esc_option:
+            self._esc_option = opt
 
     def num_options(self):
         return len(self.options)
 
     def update(self):
-
         if len(self.options) == 0:
             return  # probably not initialized yet
 
@@ -191,14 +195,15 @@ class OptionsList(ElementGroup):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
             self.selected_idx = (self.selected_idx + 1) % len(self.options)
 
+        did_activation = False
+
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
+            if self._esc_option is not None:
+                did_activation = self._try_to_activate_option(self._esc_option)
+
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
-            if 0 <= self.selected_idx < len(self.options):
-                action = self.options[self.selected_idx][2]
-                try:
-                    action()
-                except Exception as e:
-                    print("ERROR: failed to activate option: {}".format(self.options[1]))
-                    traceback.print_exc()
+            if not did_activation and 0 <= self.selected_idx < len(self.options):
+                did_activation = self._try_to_activate_option(self.options[self.selected_idx])
 
         y = 0
         for i in range(0, len(self.options)):
@@ -218,6 +223,18 @@ class OptionsList(ElementGroup):
 
             element.set_xy((0, y))
             y += element.get_size()[1] + self.y_spacing
+
+    def _try_to_activate_option(self, opt):
+        element, text, do_action, is_enabled = opt
+        try:
+            if is_enabled():
+                do_action()
+                return True
+        except Exception:
+            print("ERROR: failed to activate option: {}".format(self.options[1]))
+            traceback.print_exc()
+            return False
+        return False
 
 
 class MultiPageOptionsList(OptionsList):
@@ -266,7 +283,7 @@ class MultiPageOptionsList(OptionsList):
         self._refresh_children()
         return self.pages[-1]
 
-    def add_option(self, text, do_action, is_enabled=lambda: True):
+    def add_option(self, text, do_action, is_enabled=lambda: True, esc_option=False):
         if len(self.pages) == 0:
             last_page = self._add_new_page()
         elif len(self.pages) == 1 and self.pages[0].num_options() >= self.opts_per_page:
@@ -277,7 +294,7 @@ class MultiPageOptionsList(OptionsList):
             last_page = self.pages[-1]
 
         idx_to_add_at = last_page.num_options() if len(self.pages) == 1 else last_page.num_options() - 1
-        last_page.insert_option(idx_to_add_at, text, do_action, is_enabled=is_enabled)
+        last_page.insert_option(idx_to_add_at, text, do_action, is_enabled=is_enabled, esc_option=esc_option)
         self._refresh_children()
 
 

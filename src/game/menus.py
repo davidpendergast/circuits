@@ -36,7 +36,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene("testing")))
         self._options_list.add_option("options", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
-        self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
 
     def update(self):
         self.update_sprites()
@@ -70,16 +70,25 @@ class OptionSelectScene(scenes.Scene):
 
     OPTS_PER_PAGE = 8
 
-    def __init__(self, title=None):
+    def __init__(self, title=None, description=None):
         scenes.Scene.__init__(self)
         self.title_text = title
         self.title_sprite = None
         self.title_scale = 2
 
+        self.desc_text = description
+        self.desc_sprite = description
+        self.desc_scale = 1
+        self.desc_horz_inset = 32
+
+        self.vert_spacing = 32
+
         self.option_pages = ui.MultiPageOptionsList(opts_per_page=OptionSelectScene.OPTS_PER_PAGE)
 
-    def add_option(self, text, do_action, is_enabled=lambda: True):
-        self.option_pages.add_option(text, do_action, is_enabled=is_enabled)
+        self._esc_option=None
+
+    def add_option(self, text, do_action, is_enabled=lambda: True, esc_option=False):
+        self.option_pages.add_option(text, do_action, is_enabled=is_enabled, esc_option=esc_option)
 
     def update(self):
         if self.title_sprite is None:
@@ -88,15 +97,33 @@ class OptionSelectScene(scenes.Scene):
         title_x = screen_size[0] // 2 - self.title_sprite.size()[0] // 2
         title_y = max(16, screen_size[1] // 5 - self.title_sprite.size()[1] // 2)
         self.title_sprite.update(new_x=title_x, new_y=title_y)
+        y_pos = title_y + self.title_sprite.size()[1] + self.vert_spacing
 
-        options_y = title_y + 32 + self.title_sprite.size()[1]
+        if self.desc_text is None:
+            self.desc_sprite = None
+        else:
+            if self.desc_sprite is not None:
+                self.desc_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self.desc_scale)
+            wrapped_desc = sprites.TextSprite.wrap_text_to_fit(self.desc_text, screen_size[0] - self.desc_horz_inset * 2,
+                                                               scale=self.desc_scale)
+            self.desc_sprite.update(new_text="\n".join(wrapped_desc))
+            desc_x = screen_size[0] // 2 - self.desc_sprite.size()[0] // 2
+            desc_y = y_pos
+            self.desc_sprite.update(new_x=desc_x, new_y=desc_y)
+            y_pos += self.desc_sprite.size()[1] + self.vert_spacing
+
+        options_y = y_pos
         options_x = screen_size[0] // 2 - self.option_pages.get_size()[0] // 2
         self.option_pages.set_xy((options_x, options_y))
         self.option_pages.update_self_and_kids()
+        y_pos += self.option_pages.get_size()[1] + self.vert_spacing
 
     def all_sprites(self):
         if self.title_sprite is not None:
             for spr in self.title_sprite.all_sprites():
+                yield spr
+        if self.desc_sprite is not None:
+            for spr in self.desc_sprite.all_sprites():
                 yield spr
         for spr in self.option_pages.all_sprites_from_self_and_kids():
             yield spr
@@ -120,6 +147,21 @@ class LevelSelectForEditScene(OptionSelectScene):
                 self.jump_to_scene(LevelEditGameScene(bp, output_file=bp.loaded_from_file))
 
             self.add_option(level_id, _action)
+
+    def update(self):
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
+            self.jump_to_scene(MainMenuScene())
+        else:
+            super().update()
+
+
+class ExitWithoutSavingMenu(OptionSelectScene):
+
+    def __init__(self, on_cancel, on_quit, description=None):
+        super().__init__(title="really quit?", description=description)
+        self.add_option("quit", on_quit)
+        self.add_option("back", on_cancel, esc_option=True)
+        # self.add_option("save and quit", on_save_and_quit)  # TODO?
 
 
 class TextEditScene(scenes.Scene):
@@ -707,6 +749,8 @@ class LevelEditGameScene(_BaseGameScene):
         self.resolution_options = [cs // 8, cs // 4, cs // 2, cs]  # essentially assumes cs >= 16
         self.camera_speed = 8  # ticks per move (smaller == faster)
 
+        self._dirty = False  # whether the current state is different from the last-saved state
+
         self.stamp_current_state()
         self.setup_new_world(bp)
 
@@ -730,6 +774,12 @@ class LevelEditGameScene(_BaseGameScene):
         if len(self.edit_queue) > self.edit_queue_max_size:
             self.edit_queue = self.edit_queue[-self.edit_queue_max_size:]
 
+    def mark_dirty(self):
+        self._dirty = True
+
+    def is_dirty(self):
+        return self._dirty
+
     def undo(self):
         self.edit_queue_idx = util.bound(self.edit_queue_idx, 0, len(self.edit_queue))
         if self.edit_queue_idx > 0:
@@ -738,6 +788,7 @@ class LevelEditGameScene(_BaseGameScene):
             return
         state_to_apply = self.edit_queue[self.edit_queue_idx]
         self._apply_state(state_to_apply)
+        self.mark_dirty()
 
     def redo(self):
         self.edit_queue_idx = util.bound(self.edit_queue_idx, 0, len(self.edit_queue))
@@ -747,6 +798,7 @@ class LevelEditGameScene(_BaseGameScene):
             return
         state_to_apply = self.edit_queue[self.edit_queue_idx]
         self._apply_state(state_to_apply)
+        self.mark_dirty()
 
     def set_mouse_mode(self, mode):
         if mode is None:
@@ -794,6 +846,7 @@ class LevelEditGameScene(_BaseGameScene):
                 self.stamp_current_state()
 
             self.setup_new_world(self.build_current_bp())
+            self.mark_dirty()
 
         return orig_specs, new_specs
 
@@ -847,6 +900,7 @@ class LevelEditGameScene(_BaseGameScene):
         self.setup_new_world(self.build_current_bp())
         if needs_undo_stamp:
             self.stamp_current_state()
+            self.mark_dirty()
 
     def delete_selection(self):
         orig, new = self._mutate_selected_specs(lambda s: [])
@@ -931,6 +985,8 @@ class LevelEditGameScene(_BaseGameScene):
                 self.output_file = file_to_use
 
         # TODO add a real way to set this from the editor...
+        # TODO and make sure it avoids name collisions because otherwise levels won't load properly
+        # (they're hashed by level_id all over the place)
         if bp_to_save.level_id() == "???":
             bp_to_save = bp_to_save.copy_with(level_id=str(file_to_use))
 
@@ -938,6 +994,7 @@ class LevelEditGameScene(_BaseGameScene):
         if save_result:
             print("INFO: saved level to {}".format(file_to_use))
             self.output_file = file_to_use
+            self._dirty = False
         else:
             print("INFO: failed to save level to {}".format(file_to_use))
             self.output_file = None
@@ -1040,8 +1097,15 @@ class LevelEditGameScene(_BaseGameScene):
         super().update()
 
     def handle_esc_pressed(self):
-        # TODO probably want to pop an "are you sure you want to exit" dialog
-        pass
+        if self.is_dirty():
+            desc = "you have unsaved changes."
+        else:
+            desc = None
+        # TODO would be really pro to jump back to the level select screen with this level highlighted
+        manager = self.get_manager()
+        self.jump_to_scene(ExitWithoutSavingMenu(lambda: manager.set_next_scene(self),
+                                                 lambda: manager.set_next_scene(LevelSelectForEditScene("testing")),
+                                                 description=desc))
 
     def adjust_edit_resolution(self, increase):
         if self.edit_resolution in self.resolution_options:
