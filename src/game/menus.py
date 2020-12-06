@@ -77,7 +77,7 @@ class OptionSelectScene(scenes.Scene):
         self.title_scale = 2
 
         self.desc_text = description
-        self.desc_sprite = description
+        self.desc_sprite = None
         self.desc_scale = 1
         self.desc_horz_inset = 32
 
@@ -85,7 +85,7 @@ class OptionSelectScene(scenes.Scene):
 
         self.option_pages = ui.MultiPageOptionsList(opts_per_page=OptionSelectScene.OPTS_PER_PAGE)
 
-        self._esc_option=None
+        self._esc_option = None
 
     def add_option(self, text, do_action, is_enabled=lambda: True, esc_option=False):
         self.option_pages.add_option(text, do_action, is_enabled=is_enabled, esc_option=esc_option)
@@ -111,6 +111,11 @@ class OptionSelectScene(scenes.Scene):
             desc_y = y_pos
             self.desc_sprite.update(new_x=desc_x, new_y=desc_y)
             y_pos += self.desc_sprite.size()[1] + self.vert_spacing
+
+        # XXX on the first frame of this menu existing, option_pages doesn't have sprites yet, so get_size()
+        # returns (0, 0), and unless we pre-generate the sprites here options_x will be in a funky place...
+        if self.option_pages.get_size() == (0, 0):
+            self.option_pages.update_self_and_kids()
 
         options_y = y_pos
         options_x = screen_size[0] // 2 - self.option_pages.get_size()[0] // 2

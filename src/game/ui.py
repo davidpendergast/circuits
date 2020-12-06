@@ -205,10 +205,12 @@ class OptionsList(ElementGroup):
             if not did_activation and 0 <= self.selected_idx < len(self.options):
                 did_activation = self._try_to_activate_option(self.options[self.selected_idx])
 
+        self.update_sprites()
+
+    def update_sprites(self):
         y = 0
         for i in range(0, len(self.options)):
             element, text, do_action, is_enabled = self.options[i]
-
             if not is_enabled():
                 element.set_color(colors.DARK_GRAY)
             elif i == self.selected_idx:
@@ -296,6 +298,9 @@ class MultiPageOptionsList(OptionsList):
         idx_to_add_at = last_page.num_options() if len(self.pages) == 1 else last_page.num_options() - 1
         last_page.insert_option(idx_to_add_at, text, do_action, is_enabled=is_enabled, esc_option=esc_option)
         self._refresh_children()
+
+    def insert_option(self, idx, text, do_action, is_enabled=lambda: True, esc_option=False):
+        raise NotImplementedError()
 
 
 class SpriteElement(UiElement):
