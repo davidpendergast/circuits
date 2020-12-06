@@ -123,6 +123,14 @@ class _ObjectSheet(spritesheets.SpriteSheet):
 
         self.goal_arrows = {}  # player_id -> sprite
 
+        self.player_orb_sprites = []  # list of (ImageModel, ImageModel, ImageModel)
+
+        self.particles_cross_tiny = []
+        self.particles_cross_small = []
+        self.particles_bubbles_small = []
+        self.particles_bubbles_medium = []
+        self.particles_bubbles_large = []
+
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
         if player_id not in self._player_id_to_sprite_lookup:
             raise ValueError("unrecognized player id: {}".format(player_id))
@@ -198,6 +206,16 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.toggle_block_bases = []
         self.toggle_block_icons = []
         self._toggle_blocks = {}  # (idx, w, h, solid) -> ImageModel
+
+        self.player_orb_sprites = [(_img(32, 368 + i * 8, 8, 8, offs=start_pos),
+                                    _img(40, 368 + i * 8, 8, 8, offs=start_pos),
+                                    _img(48, 368 + i * 8, 8, 8, offs=start_pos)) for i in range(0, 2)]
+
+        self.particles_cross_tiny = [_img(56 + i * 3, 368, 3, 3, offs=start_pos) for i in range(0, 2)]
+        self.particles_cross_small = [_img(64 + i * 5, 368, 5, 5, offs=start_pos) for i in range(0, 2)]
+        self.particles_bubbles_small = [_img(56 + i * 3, 381, 3, 3, offs=start_pos) for i in range(0, 2)]
+        self.particles_bubbles_medium = [_img(56 + i * 4, 376, 4, 4, offs=start_pos) for i in range(0, 2)]
+        self.particles_bubbles_large = [_img(64 + i * 5, 376, 5, 5, offs=start_pos) for i in range(0, 2)]
 
         tb_xy = (0, 224)
         for i in range(0, 4):
