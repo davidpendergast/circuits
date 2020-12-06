@@ -76,6 +76,9 @@ class Entity:
     def get_world(self) -> 'src.game.worlds.World':
         return self._world
 
+    def get_ent_id(self) -> int:
+        return self._ent_id
+
     def get_spec(self):
         return self._spec
 
@@ -1145,6 +1148,8 @@ class PlayerEntity(Entity):
         self._holding_left = False
         self._holding_right = False
 
+        self._has_ever_moved = False
+
         w_inset = int(self.get_w() * 0.2)  # 0.15
 
         h_inset_upper = int(self.get_h() * 0.15)
@@ -1325,6 +1330,9 @@ class PlayerEntity(Entity):
         # TODO crouch jumps? forced to crouch?
         return self.is_grounded() and self._holding_crouch
 
+    def has_ever_moved(self):
+        return self._has_ever_moved
+
     def dir_facing(self):
         if self.is_clinging_to_wall():
             if self.is_left_walled() and self.is_right_walled():
@@ -1341,6 +1349,9 @@ class PlayerEntity(Entity):
         request_jump = cur_inputs.was_jump_pressed()
         holding_jump = cur_inputs.is_jump_held()
         holding_crouch = cur_inputs.is_down_held()
+
+        if not self._has_ever_moved:
+            self._has_ever_moved = cur_inputs != PlayerController.EMPTY_INPUT
 
         self._holding_left = request_left
         self._holding_right = request_right
@@ -1741,6 +1752,80 @@ class PlayerBodyPartParticle(ParticleEntity):
 
     def get_sprite(self):
         return spriteref.object_sheet().get_broken_player_sprite(self.player_id, self.part_idx, rotation=self.rotation)
+
+
+class PlayerIndicatorEntity(Entity):
+
+    def __init__(self, target_player, player_num=0):
+        super().__init__(0, 0, w=8, h=8)
+        self.target_player_ent_id = target_player.get_ent_id()
+
+        self.max_bob_height = 12
+        self.min_bob_height = 8
+        self.bob_period = 90
+        self.bob_tick = 0
+
+        self.player_num = player_num
+
+        self._sprites = []
+
+    def get_sprites(self, player):
+        outline_spr = spriteref.object_sheet().character_arrows[self.player_num]
+        fill_spr = spriteref.object_sheet().character_arrow_fills[player.get_player_type().get_id()]
+        return [outline_spr, fill_spr]
+
+    def _get_depth(self):
+        return -200
+
+    def get_target_pts(self, player):
+        return [(player.get_center()[0], player.get_y())]
+
+    def should_remove(self, player):
+        return player.has_ever_moved()
+
+    def update(self):
+        player = self.get_world().get_entity_by_id(self.target_player_ent_id)
+        if player is None or self.should_remove(player):
+            self.get_world().remove_entity(self)
+        else:
+            xy_list = self.get_target_pts(player)
+
+            y_offs = 0.5 * (1 + math.cos(self.bob_tick / self.bob_period * 6.283) * (self.max_bob_height - self.min_bob_height)) + self.min_bob_height
+
+            models = self.get_sprites(player)
+            util.extend_or_empty_list_to_length(self._sprites, len(models) * len(xy_list),
+                                                lambda: sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER,
+                                                                                       depth=self._get_depth()))
+            for i in range(0, len(models) * len(xy_list)):
+                new_model = models[i % len(models)]
+                xy = xy_list[i // len(models)]
+                new_x = xy[0] - new_model.width() // 2
+                new_y = xy[1] - new_model.height() - y_offs
+                self._sprites[i] = self._sprites[i].update(new_x=new_x, new_y=new_y, new_model=new_model)
+
+            self.bob_tick += 1
+
+    def all_sprites(self):
+        for spr in self._sprites:
+            yield spr
+
+
+class EndBlockIndicatorEntity(PlayerIndicatorEntity):
+
+    def get_sprites(self, player):
+        return [spriteref.object_sheet().goal_arrows[player.get_player_type().get_id()]]
+
+    def should_remove(self, player):
+        return False  # ???
+
+    def _get_depth(self):
+        return PLAYER_DEPTH + 2  # behind player
+
+    def get_target_pts(self, player):
+        res = []
+        for block in self.get_world().get_end_blocks(player.get_player_type()):
+            res.append((block.get_center()[0], block.get_y()))
+        return res
 
 
 class CollisionMask:

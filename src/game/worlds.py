@@ -21,6 +21,9 @@ class World:
 
         self._sensor_states = {}  # sensor_id -> list of entities
 
+        # regular hashing
+        self._ent_id_to_ent = {}  # ent_id -> entity
+
         # spacial hashing
         self._entities_to_cells = {}  # ent -> set of cells (x, y) it's inside
         self._cells_to_entities = {}   # (x, y) - set of entities inside
@@ -51,6 +54,7 @@ class World:
         else:
             self.entities.add(ent)
             self.rehash_entity(ent)
+            self._ent_id_to_ent[ent.get_ent_id()] = ent
             ent.set_world(self)
 
     def remove_entity(self, ent, next_update=True):
@@ -62,6 +66,7 @@ class World:
             ent.about_to_remove_from_world()
             self.entities.remove(ent)
             self._unhash(ent)
+            del self._ent_id_to_ent[ent.get_ent_id()]
             ent.set_world(None)
 
     def rehash_entity(self, ent):
@@ -150,11 +155,14 @@ class World:
                 return b
         return None
 
-    def get_end_block(self, player_type):
+    def get_end_blocks(self, player_type):
         for b in self.all_entities(lambda ent: ent.is_end_block()):
             if b.get_player_type() == player_type:
-                return b
-        return None
+                yield b
+
+    def get_entity_by_id(self, ent_id):
+        if ent_id in self._ent_id_to_ent:
+            return self._ent_id_to_ent[ent_id]
 
     def get_player_start_position(self, player):
         player_type = player.get_player_type()

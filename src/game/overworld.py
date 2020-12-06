@@ -929,7 +929,7 @@ class OverworldScene(scenes.Scene):
                     level_bp = self.state.get_level_blueprint(level_id)
                     if level_bp is not None:
                         import src.game.menus as menus
-                        self.get_manager().set_next_scene(menus.DebugGameScene(world_type=level_bp))
+                        self.get_manager().set_next_scene(menus.RealGameScene(level_bp))
                 else:
                     # TODO activating other node types?
                     pass

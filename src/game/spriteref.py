@@ -118,6 +118,11 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.toggle_block_icons = []
         self._toggle_blocks = {}
 
+        self.character_arrows = []
+        self.character_arrow_fills = {}  # player_id -> sprite
+
+        self.goal_arrows = {}  # player_id -> sprite
+
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
         if player_id not in self._player_id_to_sprite_lookup:
             raise ValueError("unrecognized player id: {}".format(player_id))
@@ -206,6 +211,18 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             self._toggle_blocks[(i, 32, 16, False)] = _img(tb_xy[0] + 32, tb_xy[1] + 16 + 32 * i, 32, 16, offs=start_pos)
             self._toggle_blocks[(i, 16, 32, False)] = _img(tb_xy[0] + 80, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
             self._toggle_blocks[(i, 32, 32, False)] = _img(tb_xy[0] + 128, tb_xy[1] + 32 * i, 32, 32, offs=start_pos)
+
+        for i in range(0, 4):
+            self.character_arrows.append(_img(24 * i, 416, 24, 24, offs=start_pos))
+        self.character_arrow_fills[const.PLAYER_FAST] = _img(0, 440, 24, 24, offs=start_pos)
+        self.character_arrow_fills[const.PLAYER_SMALL] = _img(24, 440, 24, 24, offs=start_pos)
+        self.character_arrow_fills[const.PLAYER_HEAVY] = _img(48, 440, 24, 24, offs=start_pos)
+        self.character_arrow_fills[const.PLAYER_FLYING] = _img(72, 440, 24, 24, offs=start_pos)
+
+        self.goal_arrows[const.PLAYER_FAST] = _img(96, 424, 16, 16, offs=start_pos)
+        self.goal_arrows[const.PLAYER_SMALL] = _img(112, 424, 16, 16, offs=start_pos)
+        self.goal_arrows[const.PLAYER_HEAVY] = _img(128, 424, 16, 16, offs=start_pos)
+        self.goal_arrows[const.PLAYER_FLYING] = _img(144, 424, 16, 16, offs=start_pos)
 
     def _handle_rotated_player_pieces(self, base_rect, n_pieces, n_rots, atlas, start_pos):
         res = []

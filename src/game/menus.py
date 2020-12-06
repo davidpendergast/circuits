@@ -683,8 +683,9 @@ class RealGameScene(_BaseGameScene):
 
         for i in range(0, self._state.num_players()):
             player_type = self._state.get_player_type(i)
+            is_active = i == self._state.get_active_player_idx()
 
-            if i == self._state.get_active_player_idx():
+            if is_active:
                 controller = entities.RecordingPlayerController()
             else:
                 controller = self._state.get_recording(i)
@@ -694,6 +695,10 @@ class RealGameScene(_BaseGameScene):
                 start_xy = world.get_player_start_position(player_ent)
                 player_ent.set_xy(start_xy)
                 world.add_entity(player_ent, next_update=False)
+
+                if is_active:
+                    world.add_entity(entities.PlayerIndicatorEntity(player_ent), next_update=False)
+                    world.add_entity(entities.EndBlockIndicatorEntity(player_ent), next_update=False)
 
         world.update()
         self.get_world_view().update()

@@ -123,7 +123,7 @@
         },
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 24, "x": 16, "y": 160}
     ],
-    "level_id": "testing/sleepwalk.json",
+    "level_id": "sleepwalk",
     "name": "Toggle Block Test",
     "time_limit": 3600
 }
