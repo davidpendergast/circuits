@@ -352,11 +352,14 @@ class _BaseGameScene(scenes.Scene):
     def get_world_view(self) -> worldview.WorldView:
         return self._world_view
 
-    def update(self):
+    def update_world_and_view(self):
         if self._world is not None:
             self._world.update()
         if self._world_view is not None:
             self._world_view.update()
+
+    def update(self):
+        self.update_world_and_view()
 
         if inputs.get_instance().mouse_in_window():
             screen_pos = inputs.get_instance().mouse_pos()
@@ -388,10 +391,40 @@ class _BaseGameScene(scenes.Scene):
             return []
 
 
+class Status:
+    def __init__(self, ident, player_control, can_hard_reset, can_soft_reset):
+        self.ident = ident
+        self.can_player_control = player_control
+        self.can_hard_reset = can_hard_reset
+        self.can_soft_reset = can_soft_reset
+
+    def __eq__(self, other):
+        if isinstance(other, Status):
+            return self.ident == other.ident
+        else:
+            return False
+
+    def __str__(self):
+        return self.ident
+
+
+class Statuses:
+    WAITING = Status("waiting", False, True, False)
+    IN_PROGRESS = Status("in_progress", True, True, True)
+    FAIL_DELAY = Status("fail_delay", False, True, True)
+    PARTIAL_SUCCESS = Status("partial_success", False, True, True)
+    TOTAL_SUCCESS = Status("success", False, False, False)
+
+
 class _GameState:
 
-    def __init__(self, bp):
+    def __init__(self, bp, status=Statuses.WAITING):
         self.bp = bp
+
+        self._status = status
+        self._status_elapsed_time = 0
+        self._next_status = None
+        self._next_status_countdown = 0
 
         self._players_in_level = bp.get_player_types()
         n_players = len(self._players_in_level)
@@ -405,6 +438,22 @@ class _GameState:
         self._time_elapsed = 0
 
         self._active_player_idx = 0
+
+    def get_status(self):
+        return self._status
+
+    def set_status(self, status, delay=0):
+        if delay == 0:
+            if status != self._status:
+                print("INFO: status set to: {}".format(status))
+                self._status = status
+                self._status_elapsed_time = 0
+        else:
+            self._next_status = status
+            self._next_status_countdown = delay
+
+    def status_changed_this_frame(self):
+        return self._status_elapsed_time <= 1
 
     def reset(self, all_players=False):
         self._time_elapsed = 0
@@ -485,23 +534,32 @@ class _GameState:
         return self._currently_satisfied[self._active_player_idx]
 
     def update(self, world):
-        self._time_elapsed += 1
+        if self._next_status is not None and self._next_status_countdown <= 1:
+            self.set_status(self._next_status)
+            self._next_status_countdown = 0
+            self._next_status = None
+        elif self._next_status is not None:
+            self._next_status_countdown -= 1
 
-        end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
+        self._status_elapsed_time += 1
 
-        for idx in range(0, self.num_players()):
-            player_type = self.get_player_type(idx)
-            for eb in end_blocks:
-                if eb.get_player_type() == player_type:
-                    self.set_satisfied(idx, eb.is_satisfied())
+        if self.get_status().can_player_control:
+            self._time_elapsed += 1
 
-            player = world.get_player(must_be_active=False, with_type=player_type)
-            if player is not None and not player.is_active() and not player.get_controller().is_finished(world.get_tick()):
-                self.set_playing_back(idx, True)
-            else:
-                self.set_playing_back(idx, False)
+            end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
+            for idx in range(0, self.num_players()):
+                player_type = self.get_player_type(idx)
+                for eb in end_blocks:
+                    if eb.get_player_type() == player_type:
+                        self.set_satisfied(idx, eb.is_satisfied())
 
-            self.set_alive(idx, player is not None)
+                player = world.get_player(must_be_active=False, with_type=player_type)
+                if player is not None and not player.is_active() and not player.get_controller().is_finished(world.get_tick()):
+                    self.set_playing_back(idx, True)
+                else:
+                    self.set_playing_back(idx, False)
+
+                self.set_alive(idx, player is not None)
 
 
 class TopPanelUi(ui.UiElement):
@@ -635,21 +693,33 @@ class RealGameScene(_BaseGameScene):
 
         self.setup_new_world(bp)
 
+    def update_world_and_view(self):
+        if self._world is not None:
+            # TODO only let player / world update if the state is IN_PROGRESS
+            # swap out player entities with dummy entities until you press a key?
+            # the hacks begin~
+            self._world.update()
+        if self._world_view is not None:
+            self._world_view.update()
+
     def update(self):
         super().update()
+
         self._state.update(self.get_world())
 
         hard_reset_keys = keybinds.get_instance().get_keys(const.RESET)
         soft_reset_keys = keybinds.get_instance().get_keys(const.SOFT_RESET)
-        if inputs.get_instance().was_pressed(hard_reset_keys):
+
+        if inputs.get_instance().was_pressed(hard_reset_keys) and self._state.get_status().can_hard_reset:
             self._state.reset(all_players=True)
             self.setup_new_world(self._state.bp)
-        elif inputs.get_instance().was_pressed(soft_reset_keys):
+        elif inputs.get_instance().was_pressed(soft_reset_keys) and self._state.get_status().can_soft_reset:
             self._state.reset(all_players=False)
             self.setup_new_world(self._state.bp)
 
         elif self._state.all_satisfied():
-            pass  # TODO complete level / show replay or something
+            self._state.set_status(Statuses.TOTAL_SUCCESS)
+            # TODO complete level / show replay or something
         else:
             active_satisfied = True
             for i in range(0, self._state.get_active_player_idx() + 1):
@@ -661,6 +731,7 @@ class RealGameScene(_BaseGameScene):
                 player_ent = self.get_world().get_player()
                 recording = player_ent.get_controller().get_recording()
                 if recording is not None:
+                    self._state.set_status(Statuses.PARTIAL_SUCCESS)
                     self._state.active_player_succeeded(recording)
                     self.setup_new_world(self._state.bp)
                 else:
