@@ -1,12 +1,35 @@
 
 
-def to_float(r, g, b):
-    return (r / 256, g / 256, b / 256)
+def _bound(v, lower, upper):
+    return max(min(v, upper), lower)
 
 
-def to_int(rgb):
-    res = (int(rgb[0] * 256), int(rgb[1] * 256), int(rgb[2] * 256))
-    return (min(255, res[0]), min(255, res[1]), min(255, res[2]))
+def to_float(r, g, b, a=None):
+    rf = _bound(r / 256, 0, 1)
+    gf = _bound(g / 256, 0, 1)
+    bf = _bound(b / 256, 0, 1)
+    if a is not None:
+        return (rf, gf, bf, _bound(a / 256, 0, 1))
+    else:
+        return (rf, gf, bf)
+
+
+def to_floatn(color):
+    return tuple(_bound(v / 256, 0, 1) for v in color)
+
+
+def to_int(r, g, b, a=None):
+    ri = _bound(int(r * 256), 0, 255)
+    gi = _bound(int(g * 256), 0, 255)
+    bi = _bound(int(b * 256), 0, 255)
+    if a is not None:
+        return (ri, gi, bi, _bound(int(a * 256), 0, 255))
+    else:
+        return (ri, gi, bi)
+
+
+def to_intn(color):
+    return tuple(_bound(v / 256, 0, 1) for v in color)
 
 
 PERFECT_WHITE = to_float(256, 256, 256)

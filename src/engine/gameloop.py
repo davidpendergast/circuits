@@ -63,7 +63,7 @@ class _GameLoop:
         atlas_surface = sprite_atlas.create_atlas_surface()
 
         # uncomment to save out the full texture atlas
-        # pygame.image.save(atlas_surface, "texture_atlas.png")
+        pygame.image.save(atlas_surface, "texture_atlas.png")
 
         texture_data = pygame.image.tostring(atlas_surface, "RGBA", 1)
         width = atlas_surface.get_width()

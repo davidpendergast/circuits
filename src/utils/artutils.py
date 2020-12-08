@@ -272,6 +272,47 @@ def draw_decay_animation_effect(src_sheet, src_rect, n_frames, dest_sheet, dest_
     return res
 
 
+def draw_vertical_line_phasing_animation(src_sheet, src_rect, n_frames, dest_sheet, dest_pos_provider,
+                                         fade_out=True, rand_seed=None, min_fade_dur=0):
+    if rand_seed is not None:
+        random.seed(rand_seed)
+    res = []
+
+    start_and_end_times = []
+    for i in range(0, src_rect[2]):
+        start_t = random.randint(0, n_frames - min_fade_dur - 1)
+        end_t = random.randint(start_t + min_fade_dur, n_frames - 1)
+        start_and_end_times.append((start_t, end_t))
+
+    for i in range(0, n_frames):
+        dest_xy = dest_pos_provider(i)
+        for x in range(0, src_rect[2]):
+            start_t, end_t = start_and_end_times[x]
+            if i <= start_t:
+                pcnt_col_to_draw = 1
+                fade_factor = 1
+            elif i > end_t:
+                pcnt_col_to_draw = 0
+                fade_factor = 0
+            else:
+                pcnt_col_to_draw = 1 - (i - start_t) / (end_t - start_t)
+                bifurcation = 0.75
+                if pcnt_col_to_draw >= bifurcation:
+                    fade_factor = 1
+                else:
+                    fade_factor = pcnt_col_to_draw / bifurcation
+
+            for y in range(0, src_rect[3]):
+                if y / src_rect[3] >= 1 - pcnt_col_to_draw:
+                    px_val = add_alpha(src_sheet.get_at((x + src_rect[0], y + src_rect[1])))
+                    px_val = (px_val[0], px_val[1], px_val[2], int(px_val[3] * fade_factor))
+                    dest_sheet.set_at((x + dest_xy[0], y + dest_xy[1]), px_val)
+
+            res.append([dest_xy[0], dest_xy[1], src_rect[2], src_rect[3]])
+
+    return res
+
+
 def draw_rotated_sprite(src_sheet, src_rect, dest_sheet, dest_rect, rot):
     temp_surf = pygame.Surface((src_rect[2], src_rect[3]), pygame.SRCALPHA, 32)
     temp_surf.blit(src_sheet, (0, 0), area=src_rect)
@@ -282,6 +323,25 @@ def draw_rotated_sprite(src_sheet, src_rect, dest_sheet, dest_rect, rot):
                                     dest_rect[3] // 2 - rotated_surf.get_height() // 2))
 
     dest_sheet.blit(temp_surf_2, dest_rect)
+
+
+def draw_with_transparency(src_sheet, src_rect, dest_sheet, dest_pos, alpha):
+    """
+    :param alpha: a value from [0.0, 1.0] where 0.0 is fully transparent
+    """
+    draw_wtih_color_xform(src_sheet, src_rect, dest_sheet, dest_pos,
+                          lambda color: (color[0], color[1], color[2], color[3] * alpha))
+
+
+def draw_wtih_color_xform(src_sheet, src_rect, dest_sheet, dest_pos, xform=lambda rgba: rgba):
+    for x in range(src_rect[0], src_rect[0] + src_rect[2]):
+        for y in range(src_rect[1], src_rect[1] + src_rect[3]):
+            orig_rgba = add_alpha(src_sheet.get_at((x, y)))
+            orig_rgba = colors.to_float(orig_rgba[0], orig_rgba[1], orig_rgba[2])
+
+            new_rgba = xform(orig_rgba)
+            dest_pos = (dest_pos[0] + x - src_rect[0], dest_pos[1] + y - src_rect[1])
+            dest_sheet.set_at(dest_pos, new_rgba)
 
 
 def apply_darkness(src_sheet, src_rect, dest_sheet, dest_xy, darkness, contrast_preserving=True, max_change=-1):
@@ -336,14 +396,14 @@ def _do_some_weird_maze_testing():
     test_img = pygame.image.load("planning/mockup_5.png")
     output_img_path = "planning/mockup_5_mazified_bg.png"
 
-    blue = colors.to_int(colors.BLUE)
-    green = colors.to_int(colors.GREEN)
-    tan = colors.to_int(colors.TAN)
-    purple = colors.to_int(colors.PURPLE)
-    black = colors.to_int(colors.PERFECT_BLACK)
+    blue = colors.to_intn(colors.BLUE)
+    green = colors.to_intn(colors.GREEN)
+    tan = colors.to_intn(colors.TAN)
+    purple = colors.to_intn(colors.PURPLE)
+    black = colors.to_intn(colors.PERFECT_BLACK)
     red = (70, 25, 25)
 
-    avoid_colors = [colors.to_int(colors.PERFECT_BLACK)]
+    avoid_colors = [colors.to_intn(colors.PERFECT_BLACK)]
     # avoid_colors = [blue, green, tan, purple]
 
     pcnts = (-0.3, 0.35, 0.5)

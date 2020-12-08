@@ -1353,6 +1353,11 @@ class PlayerEntity(Entity):
         if not self._has_ever_moved:
             self._has_ever_moved = cur_inputs != PlayerController.EMPTY_INPUT
 
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TEST_KEY_1)):
+            anim = PlayerFadeAnimation(self.get_center()[0], self.get_y() + self.get_h(),
+                                       self.dir_facing() > 0, self.get_player_type(), 60, True)
+            self.get_world().add_entity(anim)
+
         self._holding_left = request_left
         self._holding_right = request_right
         self._holding_crouch = self.get_player_type().can_crouch() and holding_crouch
@@ -1752,6 +1757,36 @@ class PlayerBodyPartParticle(ParticleEntity):
 
     def get_sprite(self):
         return spriteref.object_sheet().get_broken_player_sprite(self.player_id, self.part_idx, rotation=self.rotation)
+
+
+class PlayerFadeAnimation(Entity):
+
+    def __init__(self, cx, y_bottom, facing_right, player_type, duration, fade_out):
+        super().__init__(cx - 2, y_bottom - 4, 4, 4)
+        self.facing_right = facing_right
+        self.player_type = player_type
+        self.duration = duration
+        self.ticks_active = 0
+        self.fade_out = fade_out
+
+        self._sprite = None
+
+    def update(self):
+        if self.ticks_active >= self.duration:
+            self.get_world().remove_entity(self)
+        else:
+            if self._sprite is None:
+                self._sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=PLAYER_DEPTH)
+            fade_pcnt = self.ticks_active / self.duration
+            model = spriteref.object_sheet().get_phasing_sprite(self.player_type.get_id(), fade_pcnt, self.fade_out, 0)
+            x = self.get_center()[0] - model.width() // 2
+            y = self.get_y() + self.get_h() - model.height()
+            self._sprite = self._sprite.update(new_model=model, new_x=x, new_y=y, new_xflip=not self.facing_right)
+        self.ticks_active += 1
+
+    def all_sprites(self):
+        if self._sprite is not None:
+            yield self._sprite
 
 
 class PlayerIndicatorEntity(Entity):

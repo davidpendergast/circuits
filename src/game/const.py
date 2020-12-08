@@ -20,6 +20,10 @@ SOFT_RESET = "soft_reset"
 NEXT_LEVEL_DEBUG = "next"
 TOGGLE_SPRITE_MODE_DEBUG = "toggle_sprite_mode"
 TOGGLE_PLAYER_TYPE = "toggle_player_type"
+TEST_KEY_1 = "test_1"
+TEST_KEY_2 = "test_2"
+TEST_KEY_3 = "test_3"
+
 TOGGLE_EDIT_MODE = "toggle_edit_mode"
 
 MOVE_SELECTION_UP = "move_selection_up"

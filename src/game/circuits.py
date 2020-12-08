@@ -51,6 +51,9 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
+        keybinds.get_instance().set_binding(const.TEST_KEY_1, keybinds.Binding(pygame.K_1, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.TEST_KEY_2, keybinds.Binding(pygame.K_2, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.TEST_KEY_3, keybinds.Binding(pygame.K_3, mods=pygame.KMOD_SHIFT))
 
         keybinds.get_instance().set_binding(const.SAVE, keybinds.Binding(pygame.K_s, mods=pygame.KMOD_CTRL))
         keybinds.get_instance().set_binding(const.SAVE_AS, keybinds.Binding(pygame.K_s, mods=[pygame.KMOD_CTRL, pygame.KMOD_SHIFT]))

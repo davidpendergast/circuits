@@ -73,6 +73,11 @@ class _ObjectSheet(spritesheets.SpriteSheet):
     def __init__(self):
         spritesheets.SpriteSheet.__init__(self, "objects", "assets/circuits.png")
 
+        self.extra_space = (0, 256)
+        self.extra_space_rect = None
+        self.extra_space_xy = [0, 0]
+        self.extra_space_row_h = 0
+
         self.player_a = {
             PlayerStates.IDLE: [],
             PlayerStates.CROUCH_IDLE: [],
@@ -119,9 +124,9 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self._toggle_blocks = {}
 
         self.character_arrows = []
-        self.character_arrow_fills = {}  # player_id -> sprite
+        self.character_arrow_fills = {}  # player_id -> ImageModel
 
-        self.goal_arrows = {}  # player_id -> sprite
+        self.goal_arrows = {}  # player_id -> ImageModel
 
         self.player_orb_sprites = []  # list of (ImageModel, ImageModel, ImageModel)
 
@@ -130,6 +135,22 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.particles_bubbles_small = []
         self.particles_bubbles_medium = []
         self.particles_bubbles_large = []
+
+        self.phasing_sprites = {}  # player_id -> list of ImageModels
+
+    def get_size(self, img_size):
+        return (img_size[0] + self.extra_space[0], img_size[1] + self.extra_space[1])
+
+    def _next_extra_space_rect(self, size, offs=(0, 0)):
+        if self.extra_space_xy[0] + size[0] > self.extra_space_rect[2]:
+            self.extra_space_xy[0] = 0
+            self.extra_space_xy[1] += self.extra_space_row_h
+            self.extra_space_row_h = size[1]
+        res = [self.extra_space_xy[0] + offs[0] + self.extra_space_rect[0],
+               self.extra_space_xy[1] + self.extra_space_rect[1] + offs[1], size[0], size[1]]
+        self.extra_space_row_h = max(self.extra_space_row_h, size[1])
+        self.extra_space_xy[0] += size[0]
+        return res
 
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
         if player_id not in self._player_id_to_sprite_lookup:
@@ -175,8 +196,14 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             print("WARN: no sprite for toggle block: {}".format(key))
             return None
 
+    def get_phasing_sprite(self, player_id, fade_pcnt, fade_out, anim_idx):
+        return util.index_into(self.phasing_sprites[player_id], fade_pcnt)
+
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+
+        self.extra_space_rect = [0, sheet.get_height(), sheet.get_width(), self.extra_space[1]]
+        self.extra_space_xy = [0, 0]
 
         self.player_a[PlayerStates.IDLE] = [_img(0 + i * 16, 0, 16, 32, offs=start_pos) for i in range(0, 2)]
         self.player_a[PlayerStates.CROUCH_IDLE] = [_img(96 + i * 16, 0, 16, 32, offs=start_pos) for i in range(0, 2)]
@@ -242,6 +269,11 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.goal_arrows[const.PLAYER_HEAVY] = _img(128, 424, 16, 16, offs=start_pos)
         self.goal_arrows[const.PLAYER_FLYING] = _img(144, 424, 16, 16, offs=start_pos)
 
+        self.phasing_sprites[const.PLAYER_FAST] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
+        self.phasing_sprites[const.PLAYER_SMALL] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
+        self.phasing_sprites[const.PLAYER_HEAVY] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
+        self.phasing_sprites[const.PLAYER_FLYING] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
+
     def _handle_rotated_player_pieces(self, base_rect, n_pieces, n_rots, atlas, start_pos):
         res = []
         for p_i in range(0, n_pieces):
@@ -257,6 +289,15 @@ class _ObjectSheet(spritesheets.SpriteSheet):
                 rots_for_piece.append(_img(dest_rect[0], dest_rect[1], dest_rect[2], dest_rect[3]))
             res.append(rots_for_piece)
         return res
+
+    def _handle_phasing_sprites(self, base_rect, n_frames, atlas, start_pos, fade_out=True):
+        def get_pos(i):
+            # hope this is only called once per img~
+            rect = self._next_extra_space_rect((base_rect[2], base_rect[3]), offs=start_pos)
+            return (rect[0], rect[1])
+        raw_rects = artutils.draw_vertical_line_phasing_animation(atlas, base_rect, n_frames, atlas, get_pos,
+                                                                  min_fade_dur=10, rand_seed=12345, fade_out=fade_out)
+        return [_img(r[0], r[1], r[2], r[3]) for r in raw_rects]  # start_pos offset is already baked in
 
 
 class _BlockSheet(spritesheets.SpriteSheet):
