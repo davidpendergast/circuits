@@ -1343,7 +1343,11 @@ class PlayerEntity(Entity):
             return self._dir_facing
 
     def _handle_inputs(self):
-        cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
+        if self.get_world().get_game_state() is not None and self.get_world().get_game_state().get_status().can_player_control:
+            cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
+        else:
+            cur_inputs = self.get_controller().EMPTY_INPUT
+
         request_left = cur_inputs.is_left_held()
         request_right = cur_inputs.is_right_held()
         request_jump = cur_inputs.was_jump_pressed()

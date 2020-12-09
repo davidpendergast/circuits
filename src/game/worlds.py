@@ -19,6 +19,8 @@ class World:
         self._to_add = set()     # set of new entities to add next frame
         self._to_remove = set()  # set of entities to remove next frame
 
+        self._game_state = None
+
         self._sensor_states = {}  # sensor_id -> list of entities
 
         # regular hashing
@@ -37,6 +39,12 @@ class World:
         self._orig_blueprint = bp
 
         self._tick = 0
+
+    def set_game_state(self, game_state):
+        self._game_state = game_state
+
+    def get_game_state(self) -> 'src.menus._GameState':
+        return self._game_state
 
     def set_safe_zones(self, safe_zones, kill_zones=()):
         self.safe_zones = safe_zones
@@ -257,7 +265,8 @@ class World:
         for ent in self.entities:
             ent.update_sprites()
 
-        self._tick += 1
+        if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
+            self._tick += 1
 
     def all_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
         for e in self.entities:

@@ -392,11 +392,12 @@ class _BaseGameScene(scenes.Scene):
 
 
 class Status:
-    def __init__(self, ident, player_control, can_hard_reset, can_soft_reset):
+    def __init__(self, ident, player_control, can_hard_reset, can_soft_reset, world_ticks_inc=True):
         self.ident = ident
         self.can_player_control = player_control
         self.can_hard_reset = can_hard_reset
         self.can_soft_reset = can_soft_reset
+        self.world_ticks_inc = world_ticks_inc
 
     def __eq__(self, other):
         if isinstance(other, Status):
@@ -409,7 +410,7 @@ class Status:
 
 
 class Statuses:
-    WAITING = Status("waiting", False, True, False)
+    WAITING = Status("waiting", False, True, False, world_ticks_inc=False)
     IN_PROGRESS = Status("in_progress", True, True, True)
     FAIL_DELAY = Status("fail_delay", False, True, True)
     PARTIAL_SUCCESS = Status("partial_success", False, True, True)
@@ -439,7 +440,7 @@ class _GameState:
 
         self._active_player_idx = 0
 
-    def get_status(self):
+    def get_status(self) -> Status:
         return self._status
 
     def set_status(self, status, delay=0):
@@ -464,6 +465,7 @@ class _GameState:
         if all_players:
             self._active_player_idx = 0
             self._recorded_runs = [None] * self.num_players()
+        self.set_status(Statuses.WAITING)
 
     def active_player_succeeded(self, recording):
         self._recorded_runs[self._active_player_idx] = recording
@@ -546,20 +548,20 @@ class _GameState:
         if self.get_status().can_player_control:
             self._time_elapsed += 1
 
-            end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
-            for idx in range(0, self.num_players()):
-                player_type = self.get_player_type(idx)
-                for eb in end_blocks:
-                    if eb.get_player_type() == player_type:
-                        self.set_satisfied(idx, eb.is_satisfied())
+        end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
+        for idx in range(0, self.num_players()):
+            player_type = self.get_player_type(idx)
+            for eb in end_blocks:
+                if eb.get_player_type() == player_type:
+                    self.set_satisfied(idx, eb.is_satisfied())
 
-                player = world.get_player(must_be_active=False, with_type=player_type)
-                if player is not None and not player.is_active() and not player.get_controller().is_finished(world.get_tick()):
-                    self.set_playing_back(idx, True)
-                else:
-                    self.set_playing_back(idx, False)
+            player = world.get_player(must_be_active=False, with_type=player_type)
+            if player is not None and not player.is_active() and not player.get_controller().is_finished(world.get_tick()):
+                self.set_playing_back(idx, True)
+            else:
+                self.set_playing_back(idx, False)
 
-                self.set_alive(idx, player is not None)
+            self.set_alive(idx, player is not None)
 
 
 class TopPanelUi(ui.UiElement):
@@ -605,7 +607,7 @@ class TopPanelUi(ui.UiElement):
 
                 is_first = i == 0
                 is_last = i == len(player_types) - 1
-                is_done = i != active_idx and not self._state.is_playing_back(i) or self._state.is_dead(i)
+                is_done = self._state.is_satisfied(i)
                 frm = gs.get_instance().anim_tick()
                 model = spriteref.ui_sheet().get_character_card_anim(is_first, is_last, frm, done=is_done)
 
@@ -615,7 +617,7 @@ class TopPanelUi(ui.UiElement):
                     color = colors.PERFECT_RED
                 elif i == active_idx:
                     color = colors.WHITE
-                elif self._state.is_playing_back(i):
+                elif self._state.is_playing_back(i) or self._state.get_status() == Statuses.WAITING:
                     color = colors.LIGHT_GRAY
                 else:
                     color = colors.PERFECT_RED  # actor was knocked off-track and failed
@@ -695,14 +697,17 @@ class RealGameScene(_BaseGameScene):
 
     def update_world_and_view(self):
         if self._world is not None:
-            # TODO only let player / world update if the state is IN_PROGRESS
-            # swap out player entities with dummy entities until you press a key?
-            # the hacks begin~
             self._world.update()
         if self._world_view is not None:
             self._world_view.update()
 
     def update(self):
+        if self._state.get_status() == Statuses.WAITING:
+            import src.game.entities as entities
+            if self.get_world().get_player().get_controller().get_inputs(-1) != entities.RecordingPlayerController.EMPTY_INPUT:
+                print("INFO: player moved! starting level")
+                self._state.set_status(Statuses.IN_PROGRESS)
+
         super().update()
 
         self._state.update(self.get_world())
@@ -731,7 +736,7 @@ class RealGameScene(_BaseGameScene):
                 player_ent = self.get_world().get_player()
                 recording = player_ent.get_controller().get_recording()
                 if recording is not None:
-                    self._state.set_status(Statuses.PARTIAL_SUCCESS)
+                    self._state.set_status(Statuses.WAITING)  # TODO PARTIAL_SUCCESS?
                     self._state.active_player_succeeded(recording)
                     self.setup_new_world(self._state.bp)
                 else:
@@ -749,6 +754,8 @@ class RealGameScene(_BaseGameScene):
         # gotta place the players down
         world = self.get_world()
         self.get_world_view()._show_grid = old_show_grid
+
+        world.set_game_state(self._state)
 
         import src.game.entities as entities
 
