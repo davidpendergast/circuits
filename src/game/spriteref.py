@@ -197,7 +197,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             return None
 
     def get_phasing_sprite(self, player_id, fade_pcnt, fade_out, anim_idx):
-        return util.index_into(self.phasing_sprites[player_id], fade_pcnt)
+        return util.index_into(self.phasing_sprites[(player_id, fade_out)], fade_pcnt)
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
@@ -269,10 +269,14 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.goal_arrows[const.PLAYER_HEAVY] = _img(128, 424, 16, 16, offs=start_pos)
         self.goal_arrows[const.PLAYER_FLYING] = _img(144, 424, 16, 16, offs=start_pos)
 
-        self.phasing_sprites[const.PLAYER_FAST] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
-        self.phasing_sprites[const.PLAYER_SMALL] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
-        self.phasing_sprites[const.PLAYER_HEAVY] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
-        self.phasing_sprites[const.PLAYER_FLYING] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos)
+        self.phasing_sprites[(const.PLAYER_FAST, True)] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_SMALL, True)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_HEAVY, True)] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_FLYING, True)] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_FAST, False)] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
+        self.phasing_sprites[(const.PLAYER_SMALL, False)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
+        self.phasing_sprites[(const.PLAYER_HEAVY, False)] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
+        self.phasing_sprites[(const.PLAYER_FLYING, False)] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
 
     def _handle_rotated_player_pieces(self, base_rect, n_pieces, n_rots, atlas, start_pos):
         res = []

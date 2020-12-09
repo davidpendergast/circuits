@@ -1778,6 +1778,9 @@ class PlayerFadeAnimation(Entity):
 
         self._sprite = None
 
+    def get_player_type(self):
+        return self.player_type
+
     def update(self):
         if self.ticks_active >= self.duration:
             self.get_world().remove_entity(self)

@@ -302,8 +302,12 @@ def draw_vertical_line_phasing_animation(src_sheet, src_rect, n_frames, dest_she
                 else:
                     fade_factor = pcnt_col_to_draw / bifurcation
 
+            if not fade_out:
+                fade_factor = 1 - fade_factor
+                pcnt_col_to_draw = 1 - pcnt_col_to_draw
+
             for y in range(0, src_rect[3]):
-                if y / src_rect[3] >= 1 - pcnt_col_to_draw:
+                if (fade_out and y / src_rect[3] >= 1 - pcnt_col_to_draw) or (not fade_out and y / src_rect[3] < pcnt_col_to_draw):
                     px_val = add_alpha(src_sheet.get_at((x + src_rect[0], y + src_rect[1])))
                     px_val = (px_val[0], px_val[1], px_val[2], int(px_val[3] * fade_factor))
                     dest_sheet.set_at((x + dest_xy[0], y + dest_xy[1]), px_val)

@@ -755,6 +755,8 @@ class RealGameScene(_BaseGameScene):
                 if recording is not None:
                     self._state.set_status(Statuses.PARTIAL_SUCCESS)
                     self.replace_players_with_fadeout(delay=self._fadeout_duration)
+                    self.add_fade_in_sprites_at_start_locations([_i for _i in range(0, self._state.get_active_player_idx() + 2)],
+                                                                delay=self._fadeout_duration)
 
                     self.setup_new_world_with_delay(self._state.bp, self._fadeout_duration, Statuses.WAITING,
                                                     runnable=lambda: self._state.active_player_succeeded(recording))
@@ -770,6 +772,17 @@ class RealGameScene(_BaseGameScene):
             if player is not None:
                 player.spawn_fadeout_animation(delay)
                 self.get_world().remove_entity(player)
+
+    def add_fade_in_sprites_at_start_locations(self, player_idxes, delay=60):
+        import src.game.entities as entities  # TODO pretty cringe
+        for idx in player_idxes:
+            player_type = self._state.get_player_type(idx)
+            anim = entities.PlayerFadeAnimation(0, 0, True, player_type, delay, False)
+
+            # it thinks its a player because it has a get_player_type function~
+            xy = self.get_world().get_player_start_position(anim)
+            anim.set_xy(xy)
+            self.get_world().add_entity(anim)
 
     def handle_esc_pressed(self):
         self.get_manager().set_next_scene(MainMenuScene())
