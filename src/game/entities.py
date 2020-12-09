@@ -1267,6 +1267,9 @@ class PlayerEntity(Entity):
     def get_controller(self):
         return self._controller
 
+    def has_inputs_at_tick(self, world_tick):
+        return self.get_controller().get_inputs(world_tick) != RecordingPlayerController.EMPTY_INPUT
+
     def is_active(self):
         return self._controller.is_active()
 
@@ -1356,11 +1359,6 @@ class PlayerEntity(Entity):
 
         if not self._has_ever_moved:
             self._has_ever_moved = cur_inputs != PlayerController.EMPTY_INPUT
-
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TEST_KEY_1)):
-            anim = PlayerFadeAnimation(self.get_center()[0], self.get_y() + self.get_h(),
-                                       self.dir_facing() > 0, self.get_player_type(), 60, True)
-            self.get_world().add_entity(anim)
 
         self._holding_left = request_left
         self._holding_right = request_right
@@ -1599,6 +1597,11 @@ class PlayerEntity(Entity):
         self.get_world().remove_entity(self)
         # TODO tell gs or someone we died?
         print("INFO: player {} {}.".format(player_id, reason))
+
+    def spawn_fadeout_animation(self, duration):
+        anim = PlayerFadeAnimation(self.get_center()[0], self.get_y() + self.get_h(),
+                                   self.dir_facing() > 0, self.get_player_type(), duration, True)
+        self.get_world().add_entity(anim)
 
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.get_player_type().get_id(), self.get_rect())

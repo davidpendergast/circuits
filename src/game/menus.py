@@ -392,12 +392,13 @@ class _BaseGameScene(scenes.Scene):
 
 
 class Status:
-    def __init__(self, ident, player_control, can_hard_reset, can_soft_reset, world_ticks_inc=True):
+    def __init__(self, ident, player_control, can_hard_reset, can_soft_reset, world_ticks_inc=True, is_success=False):
         self.ident = ident
         self.can_player_control = player_control
         self.can_hard_reset = can_hard_reset
         self.can_soft_reset = can_soft_reset
         self.world_ticks_inc = world_ticks_inc
+        self.is_success = is_success
 
     def __eq__(self, other):
         if isinstance(other, Status):
@@ -413,8 +414,8 @@ class Statuses:
     WAITING = Status("waiting", False, True, False, world_ticks_inc=False)
     IN_PROGRESS = Status("in_progress", True, True, True)
     FAIL_DELAY = Status("fail_delay", False, True, True)
-    PARTIAL_SUCCESS = Status("partial_success", False, True, True)
-    TOTAL_SUCCESS = Status("success", False, False, False)
+    PARTIAL_SUCCESS = Status("partial_success", False, True, True, is_success=True)
+    TOTAL_SUCCESS = Status("success", False, True, True, is_success=True)
 
 
 class _GameState:
@@ -607,11 +608,11 @@ class TopPanelUi(ui.UiElement):
 
                 is_first = i == 0
                 is_last = i == len(player_types) - 1
-                is_done = self._state.is_satisfied(i)
+                is_done = self._state.is_satisfied(i) or self._state.get_status().is_success
                 frm = gs.get_instance().anim_tick()
                 model = spriteref.ui_sheet().get_character_card_anim(is_first, is_last, frm, done=is_done)
 
-                if self._state.is_satisfied(i):
+                if is_done:
                     color = colors.PERFECT_GREEN
                 elif self._state.is_dead(i):
                     color = colors.PERFECT_RED
@@ -693,7 +694,12 @@ class RealGameScene(_BaseGameScene):
         self._top_panel_ui = None
         self._progress_bar_ui = None
 
+        self._fadeout_duration = 90
+
         self.setup_new_world(bp)
+
+        self._queued_next_world = None
+        self._next_world_countdown = 0
 
     def update_world_and_view(self):
         if self._world is not None:
@@ -702,9 +708,19 @@ class RealGameScene(_BaseGameScene):
             self._world_view.update()
 
     def update(self):
+        if self._queued_next_world is not None:
+            if self._next_world_countdown <= 0:
+                bp, new_status, runnable = self._queued_next_world
+                self._state.set_status(new_status)
+                runnable()
+
+                self.setup_new_world(bp)
+            else:
+                self._next_world_countdown -= 1
+
         if self._state.get_status() == Statuses.WAITING:
-            import src.game.entities as entities
-            if self.get_world().get_player().get_controller().get_inputs(-1) != entities.RecordingPlayerController.EMPTY_INPUT:
+            player = self.get_world().get_player()
+            if player is not None and player.has_inputs_at_tick(-1):
                 print("INFO: player moved! starting level")
                 self._state.set_status(Statuses.IN_PROGRESS)
 
@@ -724,6 +740,7 @@ class RealGameScene(_BaseGameScene):
 
         elif self._state.all_satisfied():
             self._state.set_status(Statuses.TOTAL_SUCCESS)
+            self.replace_players_with_fadeout(delay=self._fadeout_duration)
             # TODO complete level / show replay or something
         else:
             active_satisfied = True
@@ -736,20 +753,38 @@ class RealGameScene(_BaseGameScene):
                 player_ent = self.get_world().get_player()
                 recording = player_ent.get_controller().get_recording()
                 if recording is not None:
-                    self._state.set_status(Statuses.WAITING)  # TODO PARTIAL_SUCCESS?
-                    self._state.active_player_succeeded(recording)
-                    self.setup_new_world(self._state.bp)
+                    self._state.set_status(Statuses.PARTIAL_SUCCESS)
+                    self.replace_players_with_fadeout(delay=self._fadeout_duration)
+
+                    self.setup_new_world_with_delay(self._state.bp, self._fadeout_duration, Statuses.WAITING,
+                                                    runnable=lambda: self._state.active_player_succeeded(recording))
                 else:
                     print("WARN: active player is satisfied but has no recording. hopefully we're in dev mode?")
 
         self._update_ui()
 
+    def replace_players_with_fadeout(self, delay=60):
+        for i in range(0, self._state.get_active_player_idx() + 1):
+            player_type = self._state.get_player_type(i)
+            player = self.get_world().get_player(must_be_active=False, with_type=player_type)
+            if player is not None:
+                player.spawn_fadeout_animation(delay)
+                self.get_world().remove_entity(player)
+
     def handle_esc_pressed(self):
         self.get_manager().set_next_scene(MainMenuScene())
+
+    def setup_new_world_with_delay(self, bp, delay, new_state, runnable=lambda: None):
+        self._queued_next_world = (bp, new_state, runnable)
+        self._next_world_countdown = delay
 
     def setup_new_world(self, bp):
         old_show_grid = False if self.get_world_view() is None else self.get_world_view()._show_grid
         super().setup_new_world(bp)
+
+        # assume we don't intentionally have another new world queued up
+        self._next_world_countdown = 0
+        self._queued_next_world = None
 
         # gotta place the players down
         world = self.get_world()

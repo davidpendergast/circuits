@@ -54,6 +54,9 @@ class World:
         self.camera_min_xy = camera_min_xy
         self.camera_max_xy = camera_max_xy
 
+    def has_entity(self, ent):
+        return ent.get_ent_id() in self._ent_id_to_ent
+
     def add_entity(self, ent, next_update=True):
         if ent is None or ent in self.entities:
             raise ValueError("can't add entity, either because it's None or it's already in world: {}".format(ent))
@@ -308,7 +311,8 @@ class World:
         if sensor_id not in self._sensor_states:
             return []
         else:
-            return self._sensor_states[sensor_id]
+            # the entity could have died and been removed since the sensor state was calculated
+            return [e for e in self._sensor_states[sensor_id] if self.has_entity(e)]
 
     def is_door_unlocked(self, toggle_idx):
         for e in self.all_entities():
