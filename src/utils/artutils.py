@@ -42,9 +42,9 @@ def rm_alpha(color):
         return color
 
 
-def add_alpha(color):
+def add_alpha(color, val=255):
     if len(color) == 3:
-        return (color[0], color[1], color[2], 255)
+        return (color[0], color[1], color[2], val)
     else:
         return color
 
@@ -334,17 +334,18 @@ def draw_with_transparency(src_sheet, src_rect, dest_sheet, dest_pos, alpha):
     :param alpha: a value from [0.0, 1.0] where 0.0 is fully transparent
     """
     draw_wtih_color_xform(src_sheet, src_rect, dest_sheet, dest_pos,
-                          lambda color: (color[0], color[1], color[2], color[3] * alpha))
+                          lambda color: (color[0], color[1], color[2], util.bound(color[3] * alpha, 0, 1)))
 
 
-def draw_wtih_color_xform(src_sheet, src_rect, dest_sheet, dest_pos, xform=lambda rgba: rgba):
+def draw_wtih_color_xform(src_sheet, src_rect, dest_sheet, dest_xy, xform=lambda rgba: rgba):
     for x in range(src_rect[0], src_rect[0] + src_rect[2]):
         for y in range(src_rect[1], src_rect[1] + src_rect[3]):
             orig_rgba = add_alpha(src_sheet.get_at((x, y)))
-            orig_rgba = colors.to_float(orig_rgba[0], orig_rgba[1], orig_rgba[2])
+            orig_rgba = colors.to_floatn(orig_rgba)
 
             new_rgba = xform(orig_rgba)
-            dest_pos = (dest_pos[0] + x - src_rect[0], dest_pos[1] + y - src_rect[1])
+            new_rgba = colors.to_intn(new_rgba)
+            dest_pos = (dest_xy[0] + x - src_rect[0], dest_xy[1] + y - src_rect[1])
             dest_sheet.set_at(dest_pos, new_rgba)
 
 

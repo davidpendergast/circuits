@@ -1814,7 +1814,7 @@ class PlayerIndicatorEntity(Entity):
 
         self._sprites = []
 
-    def get_sprites(self, player):
+    def get_sprites(self, player, proximity):
         outline_spr = spriteref.object_sheet().character_arrows[self.player_num]
         fill_spr = spriteref.object_sheet().character_arrow_fills[player.get_player_type().get_id()]
         return [outline_spr, fill_spr]
@@ -1837,17 +1837,25 @@ class PlayerIndicatorEntity(Entity):
 
             y_offs = 0.5 * (1 + math.cos(self.bob_tick / self.bob_period * 6.283) * (self.max_bob_height - self.min_bob_height)) + self.min_bob_height
 
-            models = self.get_sprites(player)
-            util.extend_or_empty_list_to_length(self._sprites, len(models) * len(xy_list),
-                                                lambda: sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER,
-                                                                                       depth=self._get_depth()))
-            for i in range(0, len(models) * len(xy_list)):
-                new_model = models[i % len(models)]
-                xy = xy_list[i // len(models)]
-                new_x = xy[0] - new_model.width() // 2
-                new_y = xy[1] - new_model.height() - y_offs
-                self._sprites[i] = self._sprites[i].update(new_x=new_x, new_y=new_y, new_model=new_model)
+            new_sprites = []
+            sprite_i = 0
+            for xy in xy_list:
+                proximity = util.dist(xy, player.get_center())
+                models = self.get_sprites(player, proximity)
 
+                for m in models:
+                    if sprite_i < len(self._sprites):
+                        spr = self._sprites[sprite_i]
+                        sprite_i += 1
+                    else:
+                        spr = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=self._get_depth())
+                    new_x = xy[0] - m.width() // 2
+                    new_y = xy[1] - m.height() - y_offs
+
+                    spr = spr.update(new_model=m, new_x=new_x, new_y=new_y)
+                    new_sprites.append(spr)
+
+            self._sprites = new_sprites
             self.bob_tick += 1
 
     def all_sprites(self):
@@ -1857,8 +1865,10 @@ class PlayerIndicatorEntity(Entity):
 
 class EndBlockIndicatorEntity(PlayerIndicatorEntity):
 
-    def get_sprites(self, player):
-        return [spriteref.object_sheet().goal_arrows[player.get_player_type().get_id()]]
+    def get_sprites(self, player, proximity):
+        max_dist = gs.get_instance().cell_size * 2
+        alpha = util.bound(proximity / max_dist, 0.333, 1)
+        return [spriteref.object_sheet().get_goal_arrow(player.get_player_type().get_id(), alpha=alpha)]
 
     def should_remove(self, player):
         return False  # ???
@@ -1869,7 +1879,8 @@ class EndBlockIndicatorEntity(PlayerIndicatorEntity):
     def get_target_pts(self, player):
         res = []
         for block in self.get_world().get_end_blocks(player.get_player_type()):
-            res.append((block.get_center()[0], block.get_y()))
+            pt = (block.get_center()[0], block.get_y())
+            res.append(pt)
         return res
 
 

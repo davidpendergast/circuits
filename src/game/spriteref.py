@@ -73,7 +73,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
     def __init__(self):
         spritesheets.SpriteSheet.__init__(self, "objects", "assets/circuits.png")
 
-        self.extra_space = (0, 256)
+        self.extra_space = (0, 512)
         self.extra_space_rect = None
         self.extra_space_xy = [0, 0]
         self.extra_space_row_h = 0
@@ -126,7 +126,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.character_arrows = []
         self.character_arrow_fills = {}  # player_id -> ImageModel
 
-        self.goal_arrows = {}  # player_id -> ImageModel
+        self.goal_arrows = {}  # player_id -> list of ImageModels (for transparency)
 
         self.player_orb_sprites = []  # list of (ImageModel, ImageModel, ImageModel)
 
@@ -141,14 +141,15 @@ class _ObjectSheet(spritesheets.SpriteSheet):
     def get_size(self, img_size):
         return (img_size[0] + self.extra_space[0], img_size[1] + self.extra_space[1])
 
-    def _next_extra_space_rect(self, size, offs=(0, 0)):
+    def _next_extra_space_rect(self, size):
         if self.extra_space_xy[0] + size[0] > self.extra_space_rect[2]:
             self.extra_space_xy[0] = 0
             self.extra_space_xy[1] += self.extra_space_row_h
             self.extra_space_row_h = size[1]
-        res = [self.extra_space_xy[0] + offs[0] + self.extra_space_rect[0],
-               self.extra_space_xy[1] + self.extra_space_rect[1] + offs[1], size[0], size[1]]
-        self.extra_space_row_h = max(self.extra_space_row_h, size[1])
+        res = [self.extra_space_xy[0] + self.extra_space_rect[0],
+               self.extra_space_xy[1] + self.extra_space_rect[1], size[0], size[1]]
+        # XXX without the +1, pixels can leak into other sprites. not sure why
+        self.extra_space_row_h = max(self.extra_space_row_h, size[1] + 1)
         self.extra_space_xy[0] += size[0]
         return res
 
@@ -163,6 +164,9 @@ class _ObjectSheet(spritesheets.SpriteSheet):
                 return self.get_player_sprites(player_id, player_state.get_fallback())
             else:
                 return []  # no sprites exist, apparently
+
+    def get_goal_arrow(self, player_id, alpha=1):
+        return util.index_into(self.goal_arrows[player_id], alpha)
 
     def get_player_sprite(self, player_id, player_state, frame) -> typing.Optional[sprites.ImageModel]:
         spr_list = self.get_player_sprites(player_id, player_state)
@@ -202,7 +206,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
 
-        self.extra_space_rect = [0, sheet.get_height(), sheet.get_width(), self.extra_space[1]]
+        self.extra_space_rect = [0 + start_pos[0],
+                                 sheet.get_height() + start_pos[1],
+                                 sheet.get_width(),
+                                 self.extra_space[1]]
         self.extra_space_xy = [0, 0]
 
         self.player_a[PlayerStates.IDLE] = [_img(0 + i * 16, 0, 16, 32, offs=start_pos) for i in range(0, 2)]
@@ -264,19 +271,27 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.character_arrow_fills[const.PLAYER_HEAVY] = _img(48, 440, 24, 24, offs=start_pos)
         self.character_arrow_fills[const.PLAYER_FLYING] = _img(72, 440, 24, 24, offs=start_pos)
 
-        self.goal_arrows[const.PLAYER_FAST] = _img(96, 424, 16, 16, offs=start_pos)
-        self.goal_arrows[const.PLAYER_SMALL] = _img(112, 424, 16, 16, offs=start_pos)
-        self.goal_arrows[const.PLAYER_HEAVY] = _img(128, 424, 16, 16, offs=start_pos)
-        self.goal_arrows[const.PLAYER_FLYING] = _img(144, 424, 16, 16, offs=start_pos)
+        self.goal_arrows[const.PLAYER_FAST] = self._make_transparent_sprites([96, 424, 16, 16], sheet, 10, atlas)
+        self.goal_arrows[const.PLAYER_SMALL] = self._make_transparent_sprites([112, 424, 16, 16], sheet, 10, atlas)
+        self.goal_arrows[const.PLAYER_HEAVY] = self._make_transparent_sprites([128, 424, 16, 16], sheet, 10, atlas)
+        self.goal_arrows[const.PLAYER_FLYING] = self._make_transparent_sprites([144, 424, 16, 16], sheet, 10, atlas)
 
-        self.phasing_sprites[(const.PLAYER_FAST, True)] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
-        self.phasing_sprites[(const.PLAYER_SMALL, True)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
-        self.phasing_sprites[(const.PLAYER_HEAVY, True)] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
-        self.phasing_sprites[(const.PLAYER_FLYING, True)] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=True)
-        self.phasing_sprites[(const.PLAYER_FAST, False)] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
-        self.phasing_sprites[(const.PLAYER_SMALL, False)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
-        self.phasing_sprites[(const.PLAYER_HEAVY, False)] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
-        self.phasing_sprites[(const.PLAYER_FLYING, False)] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, start_pos, fade_out=False)
+        self.phasing_sprites[(const.PLAYER_FAST, True)] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_SMALL, True)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_HEAVY, True)] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_FLYING, True)] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=True)
+        self.phasing_sprites[(const.PLAYER_FAST, False)] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=False)
+        self.phasing_sprites[(const.PLAYER_SMALL, False)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=False)
+        self.phasing_sprites[(const.PLAYER_HEAVY, False)] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=False)
+        self.phasing_sprites[(const.PLAYER_FLYING, False)] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=False)
+
+    def _make_transparent_sprites(self, base_rect, src_sheet, n, atlas):
+        result_models = []
+        for i in range(0, n):
+            dest_rect = self._next_extra_space_rect((base_rect[2], base_rect[3]))
+            artutils.draw_with_transparency(src_sheet, base_rect, atlas, dest_rect, (i + 1) / n)
+            result_models.append(_img(dest_rect[0], dest_rect[1], dest_rect[2], dest_rect[3]))
+        return result_models
 
     def _handle_rotated_player_pieces(self, base_rect, n_pieces, n_rots, atlas, start_pos):
         res = []
@@ -294,10 +309,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             res.append(rots_for_piece)
         return res
 
-    def _handle_phasing_sprites(self, base_rect, n_frames, atlas, start_pos, fade_out=True):
+    def _handle_phasing_sprites(self, base_rect, n_frames, atlas, fade_out=True):
         def get_pos(i):
             # hope this is only called once per img~
-            rect = self._next_extra_space_rect((base_rect[2], base_rect[3]), offs=start_pos)
+            rect = self._next_extra_space_rect((base_rect[2], base_rect[3]))
             return (rect[0], rect[1])
         raw_rects = artutils.draw_vertical_line_phasing_animation(atlas, base_rect, n_frames, atlas, get_pos,
                                                                   min_fade_dur=10, rand_seed=12345, fade_out=fade_out)

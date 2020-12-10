@@ -15,7 +15,7 @@ def to_float(r, g, b, a=None):
 
 
 def to_floatn(color):
-    return tuple(_bound(v / 256, 0, 1) for v in color)
+    return tuple(_bound(v / 255, 0, 1) for v in color)
 
 
 def to_int(r, g, b, a=None):
@@ -29,7 +29,7 @@ def to_int(r, g, b, a=None):
 
 
 def to_intn(color):
-    return tuple(_bound(v / 256, 0, 1) for v in color)
+    return tuple(_bound(v * 256, 0, 255) for v in color)
 
 
 PERFECT_WHITE = to_float(256, 256, 256)

@@ -707,6 +707,9 @@ class RealGameScene(_BaseGameScene):
         if self._world_view is not None:
             self._world_view.update()
 
+    def on_level_complete(self):
+        pass
+
     def update(self):
         if self._queued_next_world is not None:
             if self._next_world_countdown <= 0:
@@ -741,7 +744,7 @@ class RealGameScene(_BaseGameScene):
         elif self._state.all_satisfied():
             self._state.set_status(Statuses.TOTAL_SUCCESS)
             self.replace_players_with_fadeout(delay=self._fadeout_duration)
-            # TODO complete level / show replay or something
+            self.on_level_complete()
         else:
             active_satisfied = True
             for i in range(0, self._state.get_active_player_idx() + 1):
