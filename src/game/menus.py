@@ -31,9 +31,9 @@ class MainMenuScene(scenes.Scene):
         self._title_element = ui.SpriteElement()
 
         self._options_list = ui.OptionsList()
-        self._options_list.add_option("start", lambda: self.jump_to_scene(RealGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
-        self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
+        # self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene("testing")))
         self._options_list.add_option("options", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
         self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
@@ -416,6 +416,7 @@ class Statuses:
     FAIL_DELAY = Status("fail_delay", False, True, True)
     PARTIAL_SUCCESS = Status("partial_success", False, True, True, is_success=True)
     TOTAL_SUCCESS = Status("success", False, True, True, is_success=True)
+    EXIT_NOW_SUCCESSFULLY = Status("exit_success", False, False, False, is_success=True)
 
 
 class _GameState:
@@ -496,6 +497,9 @@ class _GameState:
             return 0
         else:
             return (self._total_ticks - self._time_elapsed) / self._total_ticks
+
+    def get_elapsed_ticks(self):
+        return self._time_elapsed
 
     def get_active_player_idx(self):
         return self._active_player_idx
@@ -686,10 +690,18 @@ class ProgressBarUi(ui.UiElement):
 
 class RealGameScene(_BaseGameScene):
 
-    def __init__(self, bp):
+    def __init__(self, bp, on_level_completion, on_level_exit):
+        """
+        :param bp: LevelBlueprint
+        :param on_level_completion: (time) -> None
+        :param on_level_exit: () -> None
+        """
         self._state = _GameState(bp)
 
         _BaseGameScene.__init__(self, bp=bp)
+
+        self._on_level_completion = on_level_completion
+        self._on_level_exit = on_level_exit
 
         self._top_panel_ui = None
         self._progress_bar_ui = None
@@ -707,8 +719,13 @@ class RealGameScene(_BaseGameScene):
         if self._world_view is not None:
             self._world_view.update()
 
-    def on_level_complete(self):
-        pass
+    def on_level_complete(self, time):
+        if self._on_level_completion is not None:
+            self._on_level_completion(time)
+
+    def on_level_exit(self):
+        if self._on_level_exit is not None:
+            self._on_level_exit()
 
     def update(self):
         if self._queued_next_world is not None:
@@ -726,6 +743,8 @@ class RealGameScene(_BaseGameScene):
             if player is not None and player.has_inputs_at_tick(-1):
                 print("INFO: player moved! starting level")
                 self._state.set_status(Statuses.IN_PROGRESS)
+        elif self._state.get_status() == Statuses.EXIT_NOW_SUCCESSFULLY:
+            self._on_level_completion(self._state.get_elapsed_ticks())
 
         super().update()
 
@@ -744,7 +763,7 @@ class RealGameScene(_BaseGameScene):
         elif self._state.all_satisfied():
             self._state.set_status(Statuses.TOTAL_SUCCESS)
             self.replace_players_with_fadeout(delay=self._fadeout_duration)
-            self.on_level_complete()
+            self._state.set_status(Statuses.EXIT_NOW_SUCCESSFULLY, delay=self._fadeout_duration)
         else:
             active_satisfied = True
             for i in range(0, self._state.get_active_player_idx() + 1):
@@ -862,8 +881,9 @@ class RealGameScene(_BaseGameScene):
 class DebugGameScene(RealGameScene):
 
     def __init__(self, bp, edit_scene):
-        RealGameScene.__init__(self, bp)
-
+        RealGameScene.__init__(self, bp,
+                               lambda time: self.get_manager().set_next_scene(DebugGameScene(bp, edit_scene)),
+                               lambda: self.get_manager().set_next_scene(self.edit_scene))
         self.edit_scene = edit_scene
 
     def update(self):

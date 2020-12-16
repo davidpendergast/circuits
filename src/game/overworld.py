@@ -498,6 +498,13 @@ class OverworldState:
         else:
             return (None, None)
 
+    def get_selected_level_id(self):
+        selected_node = self.get_selected_node()
+        if selected_node is not None and isinstance(selected_node, OverworldGrid.LevelNode):
+            return self.get_level_id_for_num(selected_node.get_level_num())
+        else:
+            return None
+
     def set_selected_node(self, node):
         if node is None:
             self.selected_cell = None
@@ -522,6 +529,15 @@ class OverworldState:
     def update_nodes(self):
         # TODO set nodes to locked / unlocked
         pass
+
+    def get_nodes_with_id(self, level_id):
+        res = []
+        for level_node in self.get_grid().all_nodes(cond=lambda n: n.is_level()):
+            node_num = level_node.get_level_num()
+            node_id = self.get_level_id_for_num(node_num)
+            if node_id == level_id:
+                res.append(level_node)
+        return res
 
     def find_initial_selection(self, came_from_exit_id=None):
         entry_node = None
@@ -576,7 +592,14 @@ class LevelNodeElement(ui.UiElement):
             full_sprites = spriteref.overworld_sheet().level_icon_full_gray_pieces
             empty_sprites = spriteref.overworld_sheet().level_icon_empty_gray_pieces
 
-        color = colors.PERFECT_RED if selected else colors.PERFECT_WHITE
+        if selected:
+            color = colors.PERFECT_RED
+        elif completed:
+            color = colors.PERFECT_WHITE  # XXX the sprites are drawn with off-white already
+        elif unlocked:
+            color = colors.LIGHT_GRAY
+        else:
+            color = colors.DARK_GRAY
 
         if idx in corners:
             player_type = corners[idx]
@@ -588,10 +611,12 @@ class LevelNodeElement(ui.UiElement):
             return empty_sprites[idx], color
 
     def _get_text_color(self, selected, completed, unlocked):
-        if not unlocked:
-            return colors.DARK_GRAY
-        else:
+        if completed:
             return colors.WHITE
+        elif unlocked:
+            return colors.LIGHT_GRAY
+        else:
+            return colors.DARK_GRAY
 
     def get_player_types(self):
         if self._cached_player_types is None:
@@ -754,6 +779,15 @@ class OverworldInfoPanelElement(ui.UiElement):
         return False
 
     def get_selected_level_time(self) -> sprites.TextBuilder:
+        level_id = self.state.get_selected_level_id()
+        if level_id is not None:
+            time = self.state.get_completion_time(level_id)
+            if time is not None:
+                time_str = util.ticks_to_time_string(time, fps=configs.target_fps, n_decimals=2)
+                res = sprites.TextBuilder()
+                res.add(time_str, color=colors.LIGHT_GRAY)
+                return res
+
         res = sprites.TextBuilder()
         res.add("--:--.--", color=colors.LIGHT_GRAY)
         return res
@@ -817,14 +851,13 @@ class OverworldInfoPanelElement(ui.UiElement):
             self.play_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, play_text.text,
                                                        color_lookup=play_text.colors, scale=1)
         self.play_text_sprite.update(new_text=play_text.text, new_color_lookup=play_text.colors)
-        #play_text_x = rect[0] + rect[2] // 2 - self.play_text_sprite.size()[0] // 2
         play_text_x = rect[0] + border_thickness[0] * 2
         play_text_y = rect[1] + rect[3] - border_thickness[1] * 2 - self.play_text_sprite.size()[1]
         self.play_text_sprite.update(new_x=play_text_x, new_y=play_text_y)
 
         level_time = self.get_selected_level_time()
         if self.time_text_sprite is None:
-            self.time_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc")
+            self.time_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", x_kerning=1)
         self.time_text_sprite.update(new_text=level_time.text, new_color_lookup=level_time.colors)
         time_text_x = rect[0] + rect[2] - border_thickness[0] * 2 - self.time_text_sprite.size()[0]
         time_text_y = rect[1] + rect[3] - border_thickness[1] * 2 - self.time_text_sprite.size()[1]
@@ -853,12 +886,16 @@ class OverworldInfoPanelElement(ui.UiElement):
 
 class OverworldScene(scenes.Scene):
 
-    def __init__(self, path):
+    def __init__(self, path, state=None):
         scenes.Scene.__init__(self)
-        blueprint = OverworldBlueprint.load_from_dir(path)
-        levels = blueprints.load_all_levels_from_dir(os.path.join(path, "levels"))
+        self._path_loaded_from = path
 
-        self.state = OverworldState(blueprint, levels)
+        if state is None:
+            bp = OverworldBlueprint.load_from_dir(path)
+            levels = blueprints.load_all_levels_from_dir(os.path.join(path, "levels"))
+            self.state = OverworldState(bp, levels)
+        else:
+            self.state = state
 
         self.bg_triangle_sprites = [[] for _ in range(0, 9)]
 
@@ -902,7 +939,7 @@ class OverworldScene(scenes.Scene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
             dy += 1
 
-        # TODO tab and shift-tab to jump to the next or prev level
+        # TODO tab and shift-tab to jump to the next or prev level?
 
         if dx != 0 or dy != 0:
             orig_node = self.state.get_selected_node()
@@ -926,16 +963,37 @@ class OverworldScene(scenes.Scene):
             if n is not None and n.is_enabled():
                 if isinstance(n, OverworldGrid.LevelNode):
                     level_id = self.state.get_level_id_for_num(n.get_level_num())
-                    level_bp = self.state.get_level_blueprint(level_id)
-                    if level_bp is not None:
-                        import src.game.menus as menus
-                        self.get_manager().set_next_scene(menus.RealGameScene(level_bp))
+                    self.start_level(level_id)
                 else:
                     # TODO activating other node types?
                     pass
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
             import src.game.menus as menus
             self.get_manager().set_next_scene(menus.MainMenuScene())
+
+    def start_level(self, level_id):
+        level_bp = self.state.get_level_blueprint(level_id)
+        menu_manager = self.get_manager()
+        state = self.state
+        path = self._path_loaded_from
+
+        def _return_to_overworld(time):
+            old_time = state.get_completion_time(level_id)
+            if time is not None and old_time is None or time < old_time:
+                state.set_completed(level_id, time)
+            new_scene = OverworldScene(path, state=state)
+
+            nodes = new_scene.state.get_nodes_with_id(level_id)
+            if len(nodes) > 0:
+                new_scene.state.set_selected_node(nodes[0])
+
+            menu_manager.set_next_scene(new_scene)
+
+        if level_bp is not None:
+            import src.game.menus as menus
+            self.get_manager().set_next_scene(menus.RealGameScene(level_bp,
+                                                                  lambda time: _return_to_overworld(time),
+                                                                  lambda: _return_to_overworld(None)))
 
     def _update_bg_triangles(self):
         size = renderengine.get_instance().get_game_size()
