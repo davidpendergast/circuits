@@ -303,10 +303,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.spike_tops_8 = _img(32, 384, 32, 4, offs=start_pos)
         self.all_spike_tops = [self.spike_tops_1, self.spike_tops_2, self.spike_tops_4, self.spike_tops_8]
 
-        self.spike_bottoms_1 = _img(32, 392, 4, 16, offs=start_pos)
-        self.spike_bottoms_2 = _img(32, 392, 8, 16, offs=start_pos)
-        self.spike_bottoms_4 = _img(32, 392, 16, 16, offs=start_pos)
-        self.spike_bottoms_8 = _img(32, 392, 32, 16, offs=start_pos)
+        self.spike_bottoms_1 = _img(32, 392, 4, 8, offs=start_pos)
+        self.spike_bottoms_2 = _img(32, 392, 8, 8, offs=start_pos)
+        self.spike_bottoms_4 = _img(32, 392, 16, 8, offs=start_pos)
+        self.spike_bottoms_8 = _img(32, 392, 32, 8, offs=start_pos)
         self.all_spike_bottoms = [self.spike_bottoms_1, self.spike_bottoms_2, self.spike_bottoms_4, self.spike_bottoms_8]
 
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):

@@ -1896,9 +1896,10 @@ class EndBlockIndicatorEntity(PlayerIndicatorEntity):
 
 class SpikeEntity(Entity):
 
-    def __init__(self, x, y, w, h, direction=(0, -1)):
+    def __init__(self, x, y, w, h, direction=(0, -1), color_id=0):
         Entity.__init__(self, x, y, w, h)
 
+        direction = util.tuplify(direction)
         if direction not in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             raise ValueError("invalid direction: {}".format(direction))
         self._direction = direction  # direction the spikes point
@@ -1912,6 +1913,8 @@ class SpikeEntity(Entity):
                                             name="pointy!!")
         self._sensor_id = player_collider.get_id()
         self._sensor_ent = SensorEntity(hit_box, player_collider, parent=self)
+
+        self._color_id = color_id
 
     def set_world(self, world):
         super().set_world(world)
@@ -1940,6 +1943,9 @@ class SpikeEntity(Entity):
         else:
             return self.get_w()
 
+    def get_color_id(self):
+        return self._color_id
+
     def update(self):
         ents_in_spikes = self.get_world().get_sensor_state(self._sensor_id)
         for e in ents_in_spikes:
@@ -1959,6 +1965,7 @@ class SpikeEntity(Entity):
         new_bot_sprites = []
 
         spike_height = self.get_spike_height()
+        color = self.get_color()
 
         for i in range(0, len(top_models)):
             top_spr = self._top_sprites[i]
@@ -1966,18 +1973,22 @@ class SpikeEntity(Entity):
             top_model = top_models[i]
             bot_model = bot_models[i]
 
-            bot_ratio = (1, (spike_height - top_model.height()) / bot_model.height())
+            bot_ratio = (1, max(0, spike_height - top_model.height() - 1) / bot_model.height())
             if self.is_horizontal():
                 rotation = 3 if self._direction[0] < 0 else 1
                 dxy = (0, top_model.width())
-                bot_offs = (top_model.height() if self._direction[0] < 0 else 0, 0)
+                bot_offs = (top_model.height() if self._direction[0] < 0 else 1, 0)
+                # bot_ratio = (max(0, spike_height - top_model.height() - 1) / bot_model.height(), 1)
+                top_offs = (0 if self._direction[0] < 0 else self.get_w() - top_model.height(), 0)
             else:
                 rotation = 0 if self._direction[1] < 0 else 2
                 dxy = (top_model.width(), 0)
-                bot_offs = (0, top_model.height() if self._direction[1] < 0 else 0)
-            new_top_sprites.append(top_spr.update(new_model=top_model, new_x=xpos, new_y=ypos, new_rotation=rotation))
+                bot_offs = (0, top_model.height() if self._direction[1] < 0 else 1)
+                top_offs = (0, 0 if self._direction[1] < 0 else self.get_h() - top_model.height())
+            new_top_sprites.append(top_spr.update(new_model=top_model, new_x=xpos + top_offs[0], new_y=ypos + top_offs[1],
+                                                  new_rotation=rotation, new_color=color))
             new_bot_sprites.append(bot_spr.update(new_model=bot_model, new_x=xpos + bot_offs[0], new_y=ypos + bot_offs[1],
-                                                  new_rotation=rotation, new_ratio=bot_ratio))
+                                                  new_rotation=rotation, new_ratio=bot_ratio, new_color=color))
 
             xpos += dxy[0]
             ypos += dxy[1]

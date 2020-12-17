@@ -129,6 +129,9 @@ class SpecType:
         else:
             return None
 
+    def get_minimum_size(self):
+        return (4, 4)
+
     def get_default_blob(self):
         res = {TYPE_ID: self.get_id()}
         subtypes = self.get_subtypes()
@@ -295,6 +298,9 @@ class StartBlockSpecType(SpecType):
         else:
             return super().get_default_value(k)
 
+    def get_minimum_size(self):
+        return (16, 16)
+
     def get_player_type(self, json_blob):
         return playertypes.PlayerTypes.get_type(json_blob[SUBTYPE_ID])
 
@@ -327,6 +333,9 @@ class EndBlockSpecType(SpecType):
         else:
             return super().get_default_value(k)
 
+    def get_minimum_size(self):
+        return (32, 16)
+
     def build_entities(self, json_blob):
         subtype = json_blob[SUBTYPE_ID]
         x = json_blob[X]
@@ -342,7 +351,8 @@ class EndBlockSpecType(SpecType):
 class SpikeSpecType(SpecType):
 
     def __init__(self):
-        SpecType.__init__(self, "spikes", required_keys=(SUBTYPE_ID, X, Y, W, H))
+        SpecType.__init__(self, "spikes", required_keys=(SUBTYPE_ID, X, Y, W, H),
+                          optional_keys={COLOR_ID: 0})
 
     def get_subtypes(self):
         return [(0, -1), (1, 0), (0, 1), (-1, 0)]  # direction the spikes point
@@ -353,8 +363,12 @@ class SpikeSpecType(SpecType):
         w = json_blob[W]
         h = json_blob[H]
         direction = json_blob[SUBTYPE_ID]
+        color_id = json_blob[COLOR_ID]
 
-        yield entities.SpikeEntity(x, y, w, h, direction)
+        yield entities.SpikeEntity(x, y, w, h, direction, color_id=color_id)
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
 
     def get_default_value(self, k):
         if k == W:
@@ -365,6 +379,9 @@ class SpikeSpecType(SpecType):
             return self.get_subtypes()[0]
         else:
             return super().get_default_value(k)
+
+    def get_minimum_size(self):
+        return (4, 8)
 
 
 class DoorBlockSpecType(SpecType):
@@ -385,6 +402,9 @@ class DoorBlockSpecType(SpecType):
         toggle_idx = int(json_blob[SUBTYPE_ID])
 
         yield entities.DoorBlock(x, y, w, h, toggle_idx)
+
+    def get_minimum_size(self):
+        return (16, 16)
 
 
 class KeySpecType(SpecType):
@@ -703,17 +723,30 @@ class SpecUtils:
 
     @staticmethod
     def resize(spec_blob, dxy, min_size=4):
+        min_w = min_size
+        min_h = min_size
+        if TYPE_ID in spec_blob and SUBTYPE_ID in spec_blob:
+            type_id = spec_blob[TYPE_ID]
+            try:
+                spec_type = SpecTypes.get(type_id)
+                min_size_internal = spec_type.get_minimum_size()
+                min_w = max(min_size_internal[0], min_w)
+                min_h = max(min_size_internal[1], min_h)
+            except Exception:
+                print("ERROR: failed to find minimum size of spec: {}".format(spec_blob))
+                traceback.print_exc()
+
         res = spec_blob.copy()
         if W in spec_blob:
             if res[W] < dxy[0]:
                 res[W] = dxy[0]
             else:
-                res[W] = max(min_size, int(res[W] + dxy[0]))
+                res[W] = max(min_w, int(res[W] + dxy[0]))
         if H in spec_blob:
             if res[H] < dxy[1]:
                 res[H] = dxy[1]
             else:
-                res[H] = max(min_size, int(res[H] + dxy[1]))
+                res[H] = max(min_h, int(res[H] + dxy[1]))
         return res
 
     @staticmethod
