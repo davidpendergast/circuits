@@ -102,7 +102,7 @@ class OptionSelectScene(scenes.Scene):
         if self.desc_text is None:
             self.desc_sprite = None
         else:
-            if self.desc_sprite is not None:
+            if self.desc_sprite is None:
                 self.desc_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self.desc_scale)
             wrapped_desc = sprites.TextSprite.wrap_text_to_fit(self.desc_text, screen_size[0] - self.desc_horz_inset * 2,
                                                                scale=self.desc_scale)
@@ -1350,13 +1350,14 @@ class LevelEditGameScene(_BaseGameScene):
 
     def _load_object_pallette(self):
         res = []
-        res.append(blueprints.SpecTypes.BLOCK.get_default_blob())
-        res.append(blueprints.SpecTypes.START_BLOCK.get_default_blob())
-        res.append(blueprints.SpecTypes.END_BLOCK.get_default_blob())
-        res.append(blueprints.SpecTypes.SLOPE_BLOCK_QUAD.get_default_blob())
-        res.append(blueprints.SpecTypes.MOVING_BLOCK.get_default_blob())
-        res.append(blueprints.SpecTypes.DOOR_BLOCK.get_default_blob())
-        res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())
+        res.append(blueprints.SpecTypes.BLOCK.get_default_blob())               # 1
+        res.append(blueprints.SpecTypes.START_BLOCK.get_default_blob())         # 2
+        res.append(blueprints.SpecTypes.END_BLOCK.get_default_blob())           # 3
+        res.append(blueprints.SpecTypes.SLOPE_BLOCK_QUAD.get_default_blob())    # 4
+        res.append(blueprints.SpecTypes.MOVING_BLOCK.get_default_blob())        # 5
+        res.append(blueprints.SpecTypes.DOOR_BLOCK.get_default_blob())          # 6
+        res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())           # 7
+        res.append(blueprints.SpecTypes.SPIKES.get_default_blob())              # 8
 
         return res
 

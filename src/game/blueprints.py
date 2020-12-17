@@ -339,6 +339,34 @@ class EndBlockSpecType(SpecType):
         yield entities.EndBlock(x, y, w, h, player_type, color_id=color_id)
 
 
+class SpikeSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "spikes", required_keys=(SUBTYPE_ID, X, Y, W, H))
+
+    def get_subtypes(self):
+        return [(0, -1), (1, 0), (0, 1), (-1, 0)]  # direction the spikes point
+
+    def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        direction = json_blob[SUBTYPE_ID]
+
+        yield entities.SpikeEntity(x, y, w, h, direction)
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 16
+        elif k == SUBTYPE_ID:
+            return self.get_subtypes()[0]
+        else:
+            return super().get_default_value(k)
+
+
 class DoorBlockSpecType(SpecType):
 
     def __init__(self):
@@ -447,6 +475,7 @@ class SpecTypes:
     PLAYER = PlayerSpecType()
     START_BLOCK = StartBlockSpecType()
     END_BLOCK = EndBlockSpecType()
+    SPIKES = SpikeSpecType()
 
     DOOR_BLOCK = DoorBlockSpecType()
     KEY_BLOCK = KeySpecType()

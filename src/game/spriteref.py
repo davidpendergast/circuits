@@ -138,6 +138,18 @@ class _ObjectSheet(spritesheets.SpriteSheet):
 
         self.phasing_sprites = {}  # player_id -> list of ImageModels
 
+        self.spike_tops_1 = None
+        self.spike_tops_2 = None
+        self.spike_tops_4 = None
+        self.spike_tops_8 = None
+        self.all_spike_tops = []
+
+        self.spike_bottoms_1 = None
+        self.spike_bottoms_2 = None
+        self.spike_bottoms_4 = None
+        self.spike_bottoms_8 = None
+        self.all_spike_bottoms = []
+
     def get_size(self, img_size):
         return (img_size[0] + self.extra_space[0], img_size[1] + self.extra_space[1])
 
@@ -284,6 +296,31 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.phasing_sprites[(const.PLAYER_SMALL, False)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=False)
         self.phasing_sprites[(const.PLAYER_HEAVY, False)] = self._handle_phasing_sprites(self.player_c[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=False)
         self.phasing_sprites[(const.PLAYER_FLYING, False)] = self._handle_phasing_sprites(self.player_d[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=False)
+
+        self.spike_tops_1 = _img(32, 384, 4, 4, offs=start_pos)
+        self.spike_tops_2 = _img(32, 384, 8, 4, offs=start_pos)
+        self.spike_tops_4 = _img(32, 384, 16, 4, offs=start_pos)
+        self.spike_tops_8 = _img(32, 384, 32, 4, offs=start_pos)
+        self.all_spike_tops = [self.spike_tops_1, self.spike_tops_2, self.spike_tops_4, self.spike_tops_8]
+
+        self.spike_bottoms_1 = _img(32, 392, 4, 16, offs=start_pos)
+        self.spike_bottoms_2 = _img(32, 392, 8, 16, offs=start_pos)
+        self.spike_bottoms_4 = _img(32, 392, 16, 16, offs=start_pos)
+        self.spike_bottoms_8 = _img(32, 392, 32, 16, offs=start_pos)
+        self.all_spike_bottoms = [self.spike_bottoms_1, self.spike_bottoms_2, self.spike_bottoms_4, self.spike_bottoms_8]
+
+    def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
+        all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms
+        res = []
+        while all_spikes[0].width() <= length:
+            for spr in reversed(all_spikes):
+                if spr.width() <= length:
+                    res.append(spr)
+                    length -= spr.width()
+                    break
+        if length > 0 and overflow_if_not_divisible:
+            res.append(all_spikes[0])
+        return res
 
     def _make_transparent_sprites(self, base_rect, src_sheet, n, atlas):
         result_models = []

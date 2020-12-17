@@ -268,6 +268,10 @@ class World:
         for ent in self.entities:
             ent.update_sprites()
 
+            # TODO kinda weird to do this here?
+            if ent.is_player():
+                ent.handle_death_if_necessary()
+
         if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
             self._tick += 1
 

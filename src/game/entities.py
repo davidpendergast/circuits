@@ -1150,6 +1150,8 @@ class PlayerEntity(Entity):
 
         self._has_ever_moved = False
 
+        self._death_reason = None  # if this gets set, the player will die and be removed at the end of that update cycle
+
         w_inset = int(self.get_w() * 0.2)  # 0.15
 
         h_inset_upper = int(self.get_h() * 0.15)
@@ -1583,20 +1585,27 @@ class PlayerEntity(Entity):
             return None
 
     def was_crushed(self):
-        self.do_death(DeathReason.CRUSHED)
+        self.set_death_reason(DeathReason.CRUSHED)
 
     def fell_out_of_bounds(self):
-        self.do_death(DeathReason.OUT_OF_BOUNDS)
+        self.set_death_reason(DeathReason.OUT_OF_BOUNDS)
 
-    def do_death(self, reason, silent=False):
-        player_id = self.get_player_type().get_id()
-        if not silent:
-            cx, cy = self.get_center()
-            for i in range(0, spriteref.object_sheet().num_broken_player_parts(player_id)):
-                self.get_world().add_entity(PlayerBodyPartParticle(cx, cy, player_id, i))
-        self.get_world().remove_entity(self)
-        # TODO tell gs or someone we died?
-        print("INFO: player {} {}.".format(player_id, reason))
+    def set_death_reason(self, reason):
+        self._death_reason = reason
+
+    def handle_death_if_necessary(self, silent=False):
+        if self._death_reason is not None:
+            player_id = self.get_player_type().get_id()
+            if not silent:
+                cx, cy = self.get_center()
+                for i in range(0, spriteref.object_sheet().num_broken_player_parts(player_id)):
+                    self.get_world().add_entity(PlayerBodyPartParticle(cx, cy, player_id, i))
+            self.get_world().remove_entity(self)
+            # TODO tell gs or someone we died?
+            print("INFO: player {} {}.".format(player_id, self._death_reason))
+            return True
+        else:
+            return False
 
     def spawn_fadeout_animation(self, duration):
         anim = PlayerFadeAnimation(self.get_center()[0], self.get_y() + self.get_h(),
@@ -1610,6 +1619,7 @@ class PlayerEntity(Entity):
 class DeathReason:
     CRUSHED = "was crushed"
     OUT_OF_BOUNDS = "fell out of bounds"
+    SPIKED = "was spiked"
     UNKNOWN = "was killed by the guardians"
 
 
@@ -1882,6 +1892,104 @@ class EndBlockIndicatorEntity(PlayerIndicatorEntity):
             pt = (block.get_center()[0], block.get_y())
             res.append(pt)
         return res
+
+
+class SpikeEntity(Entity):
+
+    def __init__(self, x, y, w, h, direction=(0, -1)):
+        Entity.__init__(self, x, y, w, h)
+
+        if direction not in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            raise ValueError("invalid direction: {}".format(direction))
+        self._direction = direction  # direction the spikes point
+
+        self._bot_sprites = []
+        self._top_sprites = []
+
+        hit_box = [0, 0, self.get_w(), self.get_h()]
+        player_collider = RectangleCollider(hit_box, CollisionMasks.SENSOR,
+                                            collides_with=CollisionMasks.ACTOR,
+                                            name="pointy!!")
+        self._sensor_id = player_collider.get_id()
+        self._sensor_ent = SensorEntity(hit_box, player_collider, parent=self)
+
+    def set_world(self, world):
+        super().set_world(world)
+        if world is not None:
+            world.add_entity(self._sensor_ent)
+
+    def about_to_remove_from_world(self):
+        super().about_to_remove_from_world()
+        self.get_world().remove_entity(self._sensor_ent)
+
+    def is_vertical(self):
+        return self._direction[0] == 0
+
+    def is_horizontal(self):
+        return self._direction[1] == 0
+
+    def get_length(self):
+        if self.is_vertical():
+            return self.get_w()
+        else:
+            return self.get_h()
+
+    def get_spike_height(self):
+        if self.is_vertical():
+            return self.get_h()
+        else:
+            return self.get_w()
+
+    def update(self):
+        ents_in_spikes = self.get_world().get_sensor_state(self._sensor_id)
+        for e in ents_in_spikes:
+            if isinstance(e, PlayerEntity):
+                e.set_death_reason(DeathReason.SPIKED)
+
+        top_models = spriteref.object_sheet().get_spikes_with_length(self.get_length(), tops=True, overflow_if_not_divisible=True)
+        bot_models = spriteref.object_sheet().get_spikes_with_length(self.get_length(), tops=False, overflow_if_not_divisible=True)
+
+        util.extend_or_empty_list_to_length(self._top_sprites, len(top_models), creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
+        util.extend_or_empty_list_to_length(self._bot_sprites, len(top_models), creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
+
+        xpos = self.get_x()
+        ypos = self.get_y()
+
+        new_top_sprites = []
+        new_bot_sprites = []
+
+        spike_height = self.get_spike_height()
+
+        for i in range(0, len(top_models)):
+            top_spr = self._top_sprites[i]
+            bot_spr = self._bot_sprites[i]
+            top_model = top_models[i]
+            bot_model = bot_models[i]
+
+            bot_ratio = (1, (spike_height - top_model.height()) / bot_model.height())
+            if self.is_horizontal():
+                rotation = 3 if self._direction[0] < 0 else 1
+                dxy = (0, top_model.width())
+                bot_offs = (top_model.height() if self._direction[0] < 0 else 0, 0)
+            else:
+                rotation = 0 if self._direction[1] < 0 else 2
+                dxy = (top_model.width(), 0)
+                bot_offs = (0, top_model.height() if self._direction[1] < 0 else 0)
+            new_top_sprites.append(top_spr.update(new_model=top_model, new_x=xpos, new_y=ypos, new_rotation=rotation))
+            new_bot_sprites.append(bot_spr.update(new_model=bot_model, new_x=xpos + bot_offs[0], new_y=ypos + bot_offs[1],
+                                                  new_rotation=rotation, new_ratio=bot_ratio))
+
+            xpos += dxy[0]
+            ypos += dxy[1]
+
+        self._bot_sprites = new_bot_sprites
+        self._top_sprites = new_top_sprites
+
+    def all_sprites(self):
+        for spr in self._top_sprites:
+            yield spr
+        for spr in self._bot_sprites:
+            yield spr
 
 
 class CollisionMask:
