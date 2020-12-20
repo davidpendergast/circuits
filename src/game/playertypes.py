@@ -133,7 +133,7 @@ class PlayerTypes:
     SMALL = PlayerType("B", 2, const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
                        move_speed=5.5, jump_height=2.1)
     HEAVY = PlayerType("C", 3, const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
-                       move_speed=5, jump_height=3.2,
+                       move_speed=5, jump_height=3.2, can_crouch=True,
                        anim_rate_overrides={
                            spriteref.PlayerStates.WALKING: 1
                        })
