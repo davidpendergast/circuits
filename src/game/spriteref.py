@@ -238,6 +238,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_b[PlayerStates.WALKING] = [_img(128 + i * 16, 48, 16, 16, offs=start_pos) for i in range(0, 6)]
 
         self.player_c[PlayerStates.IDLE] = [_img(0 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
+        self.player_c[PlayerStates.WALKING] = [_img(64 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 8)]
+        self.player_c[PlayerStates.AIRBORNE] = [_img(320 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
 
         self.player_d[PlayerStates.IDLE] = [_img(0 + i * 16, 96, 16, 32, offs=start_pos) for i in range(0, 8)]
         self.player_d[PlayerStates.WALKING] = [_img(0 + i * 16, 128, 16, 32, offs=start_pos) for i in range(0, 8)]
