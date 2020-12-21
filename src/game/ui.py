@@ -362,10 +362,21 @@ class TextEditElement(UiElement):
 
     CURSOR_CHAR = "_"
 
-    def __init__(self, text, scale=1, color=None, font=None, char_limit=24, outline_color=None):
+    ABC_CHARS_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ABC_CHARS_LOWER = "abcdefghijklmnopqrstuvwxyz"
+    ABC_CHARS = ABC_CHARS_UPPER + ABC_CHARS_LOWER
+    NUM_CHARS = "0123456789"
+    SPECIAL_CHARS = "`~!@#$%^&*()-_=+{}[]|:;\"'<>,.?/\\"
+
+    SIMPLE_CHARS = ABC_CHARS + NUM_CHARS + " _"
+    FILEPATH_CHARS = SIMPLE_CHARS + " _-./()"
+    ASCII_CHARS = SIMPLE_CHARS + SPECIAL_CHARS
+
+    def __init__(self, text, scale=1, color=None, font=None, char_limit=24, outline_color=None, allowed_chars=ASCII_CHARS):
         UiElement.__init__(self)
 
         self.text = text
+        self.allowed_chars = allowed_chars
 
         self.scale = scale
         self.color = color
@@ -414,7 +425,6 @@ class TextEditElement(UiElement):
 
     def _handle_inputs(self):
         edits = inputs.get_instance().all_pressed_ascii_keys()
-        allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz1234567890_./"
 
         text = self.text
         cursor_pos = self.cursor_pos
@@ -444,7 +454,7 @@ class TextEditElement(UiElement):
 
         if len(edits) > 0:
             text, cursor_pos = util.apply_ascii_edits_to_text(text, edits, cursor_pos=cursor_pos,
-                                                              max_len=self.char_limit, allowlist=allowed_chars)
+                                                              max_len=self.char_limit, allowlist=self.allowed_chars)
         self.text = text
         self.cursor_pos = cursor_pos
 

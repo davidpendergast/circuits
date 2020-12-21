@@ -1,13 +1,29 @@
 import configs
 
 
+_INSTANCE = None
+
+
+def create_instance(cur_scene) -> 'SceneManager':
+    global _INSTANCE
+    _INSTANCE = SceneManager(cur_scene)
+    return _INSTANCE
+
+
+def get_instance() -> 'SceneManager':
+    return _INSTANCE
+
+
 class Scene:
 
     def __init__(self):
-        self._manager = None  # SceneManager, gets set by SceneManager when the scene is active
+        pass
 
     def get_manager(self) -> 'SceneManager':
-        return self._manager
+        return get_instance()
+
+    def is_active(self):
+        return self.get_manager().get_active_scene() == self
 
     def jump_to_scene(self, next_scene):
         self.get_manager().set_next_scene(next_scene)
@@ -57,10 +73,6 @@ class SceneManager:
         if self._next_scene is not None:
             if self._next_scene_delay <= 0:
                 self._active_scene.about_to_become_inactive()
-                # XXX it's more convenient if dead menus still have a ref to the manager
-                # self._active_scene._manager = None
-
-                self._next_scene._manager = self
                 self._active_scene = self._next_scene
                 self._next_scene.became_active()
                 self._next_scene = None

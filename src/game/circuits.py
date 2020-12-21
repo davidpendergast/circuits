@@ -25,7 +25,6 @@ class CircuitsGame(game.Game):
 
     def __init__(self):
         game.Game.__init__(self)
-        self.scene_manager = None
 
     def initialize(self):
         if configs.is_dev:
@@ -113,7 +112,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.CUT, keybinds.Binding(pygame.K_x, mods=pygame.KMOD_CTRL))
         keybinds.get_instance().set_binding(const.SELECT_ALL, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_CTRL))
 
-        self.scene_manager = scenes.SceneManager(menus.MainMenuScene())
+        scenes.create_instance(menus.MainMenuScene())
 
     def get_sheets(self):
         return spriteref.initialize_sheets()
@@ -130,14 +129,14 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20, sort_sprites=True, use_color=True)
 
     def update(self):
-        self.scene_manager.update()
+        scenes.get_instance().update()
         gs.get_instance().update()
 
     def get_clear_color(self):
-        return self.scene_manager.get_clear_color()
+        return scenes.get_instance().get_clear_color()
 
     def all_sprites(self):
-        for spr in self.scene_manager.all_sprites():
+        for spr in scenes.get_instance().all_sprites():
             yield spr
 
 

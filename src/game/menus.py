@@ -179,7 +179,8 @@ class LevelEditorPauseMenu(OptionSelectScene):
 
 class TextEditScene(scenes.Scene):
 
-    def __init__(self, prompt_text, default_text="", on_cancel=None, on_accept=None, char_limit=32):
+    def __init__(self, prompt_text, default_text="", on_cancel=None, on_accept=None, char_limit=32,
+                 allowed_chars=ui.TextEditElement.ASCII_CHARS):
         """
         :param on_exit: lambda (MenuManager) -> None
         :param on_accept: lambda (MenuManager, final_text) -> None
@@ -189,7 +190,7 @@ class TextEditScene(scenes.Scene):
         self.prompt_element = ui.SpriteElement()
 
         self.text_box = ui.TextEditElement(default_text, scale=1, char_limit=char_limit,
-                                           outline_color=colors.LIGHT_GRAY)
+                                           outline_color=colors.LIGHT_GRAY, allowed_chars=allowed_chars)
 
         self.on_cancel = on_cancel
         self.on_accept = on_accept
@@ -923,7 +924,8 @@ class LevelMetaDataEditScene(OptionSelectScene):
 
         self.add_option("back", lambda: self._on_exit(self._base_bp), esc_option=True)
 
-    def _add_text_edit_option(self, name, attribute_id, bp, to_str=str, from_str=str, char_limit=32):
+    def _add_text_edit_option(self, name, attribute_id, bp, to_str=str, from_str=str, char_limit=32,
+                              allowed_chars=ui.TextEditElement.ASCII_CHARS):
         current_val = to_str(bp.get_attribute(attribute_id))
         def _action():
             edit_scene = TextEditScene(name,
@@ -934,7 +936,8 @@ class LevelMetaDataEditScene(OptionSelectScene):
                                                                   self._on_exit)),
                                        on_cancel=lambda manager: manager.set_next_scene(
                                            LevelMetaDataEditScene(self._base_bp, self._on_exit)),
-                                       char_limit=char_limit)
+                                       char_limit=char_limit,
+                                       allowed_chars=allowed_chars)
             self.jump_to_scene(edit_scene)
         self.add_option(name + current_val, _action)
 
@@ -958,7 +961,8 @@ class LevelMetaDataEditScene(OptionSelectScene):
                 res.append(playertypes.PlayerTypes.FAST.get_id())
             return res
 
-        self._add_text_edit_option(name, blueprints.PLAYERS, bp, to_str=_to_str, from_str=_to_player_ids, char_limit=4)
+        self._add_text_edit_option(name, blueprints.PLAYERS, bp, to_str=_to_str, from_str=_to_player_ids, char_limit=4,
+                                   allowed_chars="ABCDabcd")
 
 
 class LevelEditGameScene(_BaseGameScene):
@@ -1297,7 +1301,8 @@ class LevelEditGameScene(_BaseGameScene):
 
             self.jump_to_scene(TextEditScene("enter filename:", default_text=default_text,
                                              on_cancel=lambda mgr: mgr.set_next_scene(self),
-                                             on_accept=_do_accept))
+                                             on_accept=_do_accept,
+                                             allowed_chars=ui.TextEditElement.FILEPATH_CHARS))
             return
             # self.save_to_disk(prompt_for_location=True)
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE)):
