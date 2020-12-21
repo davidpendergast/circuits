@@ -57,6 +57,9 @@ class PlayerType:
     def get_name(self):
         return self._name
 
+    def get_letter(self):
+        return self.get_name()
+
     def can_walljump(self):
         return self._can_walljump
 
@@ -155,6 +158,6 @@ class PlayerTypes:
     @staticmethod
     def get_type(ident):
         for ptype in PlayerTypes._ALL_TYPES:
-            if ident == ptype.get_id():
+            if ident == ptype.get_id() or str(ident).upper() == ptype.get_letter().upper():
                 return ptype
         raise ValueError("unrecognized player type: {}".format(ident))

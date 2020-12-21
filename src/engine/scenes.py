@@ -57,7 +57,8 @@ class SceneManager:
         if self._next_scene is not None:
             if self._next_scene_delay <= 0:
                 self._active_scene.about_to_become_inactive()
-                self._active_scene._manager = None
+                # XXX it's more convenient if dead menus still have a ref to the manager
+                # self._active_scene._manager = None
 
                 self._next_scene._manager = self
                 self._active_scene = self._next_scene

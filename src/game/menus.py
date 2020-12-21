@@ -160,27 +160,36 @@ class LevelSelectForEditScene(OptionSelectScene):
             super().update()
 
 
-class ExitWithoutSavingMenu(OptionSelectScene):
+class LevelEditorPauseMenu(OptionSelectScene):
 
-    def __init__(self, on_cancel, on_quit, description=None):
-        super().__init__(title="really quit?", description=description)
+    def __init__(self, level_bp, on_cancel, on_quit, description=None, output_file=None):
+        """
+        :param level_bp: current LevelBlueprint
+        :param on_cancel: manager, LevelBlueprint -> None
+        :param on_quit: () -> None
+        """
+        super().__init__(title="editing {}".format(level_bp.name()), description=description)
+        self.add_option("resume", lambda: on_cancel(level_bp), esc_option=True)
+        self.add_option("edit metadata", lambda: self.jump_to_scene(
+            LevelMetaDataEditScene(level_bp, lambda new_bp: self.jump_to_scene(LevelEditGameScene(new_bp,
+                                   output_file=output_file if new_bp.level_id() == level_bp.level_id() else None)))))
         self.add_option("quit", on_quit)
-        self.add_option("back", on_cancel, esc_option=True)
         # self.add_option("save and quit", on_save_and_quit)  # TODO?
 
 
 class TextEditScene(scenes.Scene):
 
-    def __init__(self, prompt_text, default_text="", on_cancel=None, on_accept=None):
+    def __init__(self, prompt_text, default_text="", on_cancel=None, on_accept=None, char_limit=32):
         """
-        :param on_exit: lambda () -> None
-        :param on_accept: lambda (final_text) -> None
+        :param on_exit: lambda (MenuManager) -> None
+        :param on_accept: lambda (MenuManager, final_text) -> None
         """
         scenes.Scene.__init__(self)
         self.prompt_text = prompt_text
         self.prompt_element = ui.SpriteElement()
 
-        self.text_box = ui.TextEditElement(default_text, scale=1, char_limit=32, outline_color=colors.LIGHT_GRAY)
+        self.text_box = ui.TextEditElement(default_text, scale=1, char_limit=char_limit,
+                                           outline_color=colors.LIGHT_GRAY)
 
         self.on_cancel = on_cancel
         self.on_accept = on_accept
@@ -203,12 +212,12 @@ class TextEditScene(scenes.Scene):
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
             if self.on_cancel is not None:
-                self.on_cancel()
+                self.on_cancel(self.get_manager())
                 return
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
             if self.on_accept is not None:
-                self.on_accept(self.text_box.get_text())
+                self.on_accept(self.get_manager(), self.text_box.get_text())
                 return
 
     def all_sprites(self):
@@ -896,6 +905,62 @@ class DebugGameScene(RealGameScene):
         self.get_manager().set_next_scene(self.edit_scene)
 
 
+class LevelMetaDataEditScene(OptionSelectScene):
+
+    def __init__(self, bp: blueprints.LevelBlueprint, on_exit):
+        """
+        :param bp:
+        :param on_exit: LevelBlueprint -> None
+        """
+        OptionSelectScene.__init__(self, title="Edit Metadata")
+        self._base_bp = bp
+        self._on_exit = on_exit
+
+        self._add_text_edit_option("level name: ", blueprints.NAME, bp)
+        self._add_text_edit_option("description: ", blueprints.DESCRIPTION, bp)
+        self._add_text_edit_option("level ID: ", blueprints.LEVEL_ID, bp)
+        self._add_players_edit_option("Players: ", bp)
+
+        self.add_option("back", lambda: self._on_exit(self._base_bp), esc_option=True)
+
+    def _add_text_edit_option(self, name, attribute_id, bp, to_str=str, from_str=str, char_limit=32):
+        current_val = to_str(bp.get_attribute(attribute_id))
+        def _action():
+            edit_scene = TextEditScene(name,
+                                       default_text=current_val,
+                                       on_accept=lambda manager, final_text: manager.set_next_scene(
+                                           LevelMetaDataEditScene(self._base_bp.copy_with(
+                                               edits={attribute_id: from_str(final_text)}),
+                                                                  self._on_exit)),
+                                       on_cancel=lambda manager: manager.set_next_scene(
+                                           LevelMetaDataEditScene(self._base_bp, self._on_exit)),
+                                       char_limit=char_limit)
+            self.jump_to_scene(edit_scene)
+        self.add_option(name + current_val, _action)
+
+    def _add_players_edit_option(self, name, bp):
+        import src.game.playertypes as playertypes
+
+        def _to_str(player_ids):
+            res = []
+            for pid in player_ids:
+                res.append(playertypes.PlayerTypes.get_type(pid).get_letter())
+            return "".join(res)
+
+        def _to_player_ids(letters):
+            res = []
+            for letter in letters:
+                try:
+                    res.append(playertypes.PlayerTypes.get_type(letter.upper()).get_id())
+                except ValueError:
+                    print("ERROR: invalid player letter: {}".format(letter))
+            if len(res) == 0:
+                res.append(playertypes.PlayerTypes.FAST.get_id())
+            return res
+
+        self._add_text_edit_option(name, blueprints.PLAYERS, bp, to_str=_to_str, from_str=_to_player_ids, char_limit=4)
+
+
 class LevelEditGameScene(_BaseGameScene):
 
     def __init__(self, bp: blueprints.LevelBlueprint, output_file=None):
@@ -905,7 +970,7 @@ class LevelEditGameScene(_BaseGameScene):
         _BaseGameScene.__init__(self)
 
         self.orig_bp = bp
-        self.output_file = output_file if output_file is not None else "testing/saved_level.json"
+        self.output_file = output_file
 
         self.mouse_mode = NormalMouseMode(self)
 
@@ -1223,16 +1288,15 @@ class LevelEditGameScene(_BaseGameScene):
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_AS)):
             default_text = "" if self.output_file is None else self.output_file
-            manager = self.get_manager()
 
-            def _do_accept(filename):
+            def _do_accept(manager, filename):
                 # TODO validate the filename?
                 self.output_file = filename
                 self.save_to_disk(prompt_for_location=False)
                 manager.set_next_scene(self)
 
             self.jump_to_scene(TextEditScene("enter filename:", default_text=default_text,
-                                             on_cancel=lambda: manager.set_next_scene(self),
+                                             on_cancel=lambda mgr: mgr.set_next_scene(self),
                                              on_accept=_do_accept))
             return
             # self.save_to_disk(prompt_for_location=True)
@@ -1274,11 +1338,22 @@ class LevelEditGameScene(_BaseGameScene):
             desc = "you have unsaved changes."
         else:
             desc = None
+
         # TODO would be really pro to jump back to the level select screen with this level highlighted
         manager = self.get_manager()
-        self.jump_to_scene(ExitWithoutSavingMenu(lambda: manager.set_next_scene(self),
-                                                 lambda: manager.set_next_scene(LevelSelectForEditScene("testing")),
-                                                 description=desc))
+        current_bp = self.build_current_bp()
+        current_output_file = self.output_file
+        def _handle_new_bp(new_bp):
+            if new_bp != current_bp:
+                manager.set_next_scene(LevelEditGameScene(new_bp,
+                                                          current_output_file if new_bp.level_id() == current_bp.level_id() else None))
+            else:
+                manager.set_next_scene(self)
+        self.jump_to_scene(LevelEditorPauseMenu(current_bp,
+                                                _handle_new_bp,
+                                                lambda: manager.set_next_scene(LevelSelectForEditScene("testing")),
+                                                description=desc,
+                                                output_file=self.output_file))
 
     def adjust_edit_resolution(self, increase):
         if self.edit_resolution in self.resolution_options:

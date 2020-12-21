@@ -562,6 +562,12 @@ class LevelBlueprint:
             json_copy[key] = edits[key]
         return LevelBlueprint(json_copy)
 
+    def get_attribute(self, attrib_id):
+        if attrib_id in self.json_blob:
+            return self.json_blob[attrib_id]
+        else:
+            return None
+
     def description(self):
         return util.read_string(self.json_blob, DESCRIPTION, "???")
 
