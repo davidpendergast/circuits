@@ -55,8 +55,6 @@ class _GameLoop:
 
         sprite_atlas = spritesheets.create_instance()
 
-        self._game.initialize()
-
         for sheet in self._game.get_sheets():
             sprite_atlas.add_sheet(sheet)
 
@@ -75,6 +73,8 @@ class _GameLoop:
 
         px_scale = self._calc_pixel_scale(window.get_instance().get_display_size())
         render_eng.set_pixel_scale(px_scale)
+
+        self._game.initialize()
 
         if configs.is_dev:
             keybinds.get_instance().set_global_action(pygame.K_F1, "toggle profiling", lambda: self._toggle_profiling())

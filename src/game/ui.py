@@ -124,8 +124,9 @@ class UiElement:
 
     def depth_first_traverse(self, include_self=True):
         for c in self._children:
-            for element in c._children:
+            for element in c.depth_first_traverse(include_self=False):
                 yield element
+            yield c
         if include_self:
             yield self
 
@@ -139,6 +140,7 @@ class UiElement:
         return self.uid
 
 
+# TODO this class is actually pretty complicated to implement right, consider deleting?
 class ElementGroup(UiElement):
 
     def __init__(self):
@@ -159,13 +161,19 @@ class ElementGroup(UiElement):
         return []
 
 
-class OptionsList(ElementGroup):
+class OptionsList(UiElement):
 
-    def __init__(self):
-        ElementGroup.__init__(self)
+    LEFT_ALIGN = 0
+    CENTER_ALIGN = 1
+
+    def __init__(self, alignment=LEFT_ALIGN):
+        UiElement.__init__(self)
         self.selected_idx = 0
-        self.options = []  # list of (UiElement: element, str: text, lambda: do_action, lambda: is_enabled)
+        self.options = []  # list of (rect, str: text, lambda: do_action, lambda: is_enabled)
         self.y_spacing = 4
+        self.alignment = alignment
+
+        self._sprites = []
 
         # the option that'll fire when you press esc (AKA back)
         self._esc_option = None
@@ -174,57 +182,82 @@ class OptionsList(ElementGroup):
         self.insert_option(len(self.options), text, do_action, is_enabled=is_enabled, esc_option=esc_option)
 
     def insert_option(self, idx, text, do_action, is_enabled=lambda: True, esc_option=False):
-        element = SpriteElement()
-        opt = (element, text, do_action, is_enabled)
+        opt = ([0, 0, 0, 0], text, do_action, is_enabled)
         self.options.insert(idx, opt)
-        self.add_child(element)
         if esc_option:
             self._esc_option = opt
 
     def num_options(self):
         return len(self.options)
 
+    def get_size(self):
+        w = 0
+        h = 0
+        for opt in self.options:
+            opt_rect = opt[0]
+            w = max(opt_rect[2], w)
+            h = max(opt_rect[3], h)
+        return (w, h)
+
     def update(self):
         if len(self.options) == 0:
             return  # probably not initialized yet
 
-        # TODO - is this the place we should be doing this?
-        # TODO - it's fine for now I think
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_UP)):
-            self.selected_idx = (self.selected_idx - 1) % len(self.options)
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
-            self.selected_idx = (self.selected_idx + 1) % len(self.options)
+        if self.is_focused():
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_UP)):
+                self.selected_idx = (self.selected_idx - 1) % len(self.options)
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
+                self.selected_idx = (self.selected_idx + 1) % len(self.options)
 
-        did_activation = False
+            did_activation = False
 
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
-            if self._esc_option is not None:
-                did_activation = self._try_to_activate_option(self._esc_option)
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
+                if self._esc_option is not None:
+                    did_activation = self._try_to_activate_option(self._esc_option)
 
-        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
-            if not did_activation and 0 <= self.selected_idx < len(self.options):
-                did_activation = self._try_to_activate_option(self.options[self.selected_idx])
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
+                if not did_activation and 0 <= self.selected_idx < len(self.options):
+                    did_activation = self._try_to_activate_option(self.options[self.selected_idx])
 
         self.update_sprites()
 
     def update_sprites(self):
-        y = 0
+        util.extend_or_empty_list_to_length(self._sprites, len(self.options),
+                                            creator=lambda: sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc"))
+        max_w = 0
+        # first build the sprites
         for i in range(0, len(self.options)):
-            element, text, do_action, is_enabled = self.options[i]
+            spr = self._sprites[i]
+            rect, text, do_action, is_enabled = self.options[i]
             if not is_enabled():
-                element.set_color(colors.DARK_GRAY)
+                new_color = colors.DARK_GRAY
             elif i == self.selected_idx:
-                element.set_color(colors.PERFECT_RED)
+                new_color = colors.PERFECT_RED
             else:
-                element.set_color(colors.PERFECT_WHITE)
+                new_color = colors.PERFECT_WHITE
+            spr.update(new_text=text, new_color=new_color)
+            max_w = max(spr.size()[0], max_w)
 
-            text_spr = element.get_sprite()
-            if text_spr is None:
-                text_spr = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, text)
-                element.set_sprite(text_spr)
+        abs_xy = self.get_xy(absolute=True)
+        y = 0
+        # then figure out the final positions and move the sprites
+        for i in range(0, len(self.options)):
+            spr = self._sprites[i]
+            rect, text, do_action, is_enabled = self.options[i]
+            new_rect = [
+                0 if self.alignment == OptionsList.LEFT_ALIGN else int(max_w / 2 - spr.size()[0] / 2),
+                y,
+                spr.size()[0],
+                spr.size()[1]
+            ]
+            self.options[i] = (new_rect, text, do_action, is_enabled)
+            spr.update(new_x=abs_xy[0] + new_rect[0], new_y=abs_xy[1] + new_rect[1])
 
-            element.set_xy((0, y))
-            y += element.get_size()[1] + self.y_spacing
+            y += new_rect[3] + self.y_spacing
+
+    def all_sprites(self):
+        for spr in self._sprites:
+            yield spr
 
     def _try_to_activate_option(self, opt):
         element, text, do_action, is_enabled = opt
@@ -239,10 +272,10 @@ class OptionsList(ElementGroup):
         return False
 
 
-class MultiPageOptionsList(OptionsList):
+class MultiPageOptionsList(ElementGroup):
 
     def __init__(self, opts_per_page=8, next_text="next", prev_text="prev"):
-        OptionsList.__init__(self)
+        ElementGroup.__init__(self)
         self.pages = []
 
         self.opts_per_page = opts_per_page
@@ -250,18 +283,29 @@ class MultiPageOptionsList(OptionsList):
         self.prev_text = prev_text
         self.cur_page = 0
 
+        self.requested_page = None
+
+    def get_size(self):
+        max_w = 0
+        max_h = 0
+        for opt_list in self.pages:
+            max_w = max(max_w, opt_list.get_size()[0])
+            max_h = max(max_h, opt_list.get_size()[1])
+        return (max_w, max_h)
+
     def set_current_page(self, idx):
-        self.cur_page = idx
-        self._refresh_children()
+        self.requested_page = idx
 
     def _refresh_children(self):
         for i in range(0, len(self.pages)):
             if i == self.cur_page:
                 if not self.has_child(self.pages[i]):
                     self.add_child(self.pages[i])
+                self.pages[i].update_sprites()
             else:
                 if self.has_child(self.pages[i]):
                     self.remove_child(self.pages[i])
+            self.pages[i].update_sprites()
 
     def _add_new_page(self):
         if len(self.pages) == 0:
@@ -285,6 +329,18 @@ class MultiPageOptionsList(OptionsList):
         self._refresh_children()
         return self.pages[-1]
 
+    def get_current_page(self) -> OptionsList:
+        if 0 < self.cur_page < len(self.pages):
+            return self.pages[self.cur_page]
+        else:
+            return None
+
+    def update(self):
+        if self.requested_page is not None:
+            self.cur_page = self.requested_page
+            self.requested_page = None
+            self._refresh_children()
+
     def add_option(self, text, do_action, is_enabled=lambda: True, esc_option=False):
         if len(self.pages) == 0:
             last_page = self._add_new_page()
@@ -298,9 +354,6 @@ class MultiPageOptionsList(OptionsList):
         idx_to_add_at = last_page.num_options() if len(self.pages) == 1 else last_page.num_options() - 1
         last_page.insert_option(idx_to_add_at, text, do_action, is_enabled=is_enabled, esc_option=esc_option)
         self._refresh_children()
-
-    def insert_option(self, idx, text, do_action, is_enabled=lambda: True, esc_option=False):
-        raise NotImplementedError()
 
 
 class SpriteElement(UiElement):

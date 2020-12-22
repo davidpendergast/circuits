@@ -37,6 +37,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene("testing")))
         self._options_list.add_option("options", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
         self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
+        self._options_list.update_sprites()
 
     def update(self):
         self.update_sprites()
@@ -68,7 +69,7 @@ class MainMenuScene(scenes.Scene):
 
 class OptionSelectScene(scenes.Scene):
 
-    OPTS_PER_PAGE = 8
+    OPTS_PER_PAGE = 6
 
     def __init__(self, title=None, description=None):
         scenes.Scene.__init__(self)
@@ -111,11 +112,6 @@ class OptionSelectScene(scenes.Scene):
             desc_y = y_pos
             self.desc_sprite.update(new_x=desc_x, new_y=desc_y)
             y_pos += self.desc_sprite.size()[1] + self.vert_spacing
-
-        # XXX on the first frame of this menu existing, option_pages doesn't have sprites yet, so get_size()
-        # returns (0, 0), and unless we pre-generate the sprites here options_x will be in a funky place...
-        if self.option_pages.get_size() == (0, 0):
-            self.option_pages.update_self_and_kids()
 
         options_y = y_pos
         options_x = screen_size[0] // 2 - self.option_pages.get_size()[0] // 2
@@ -961,7 +957,10 @@ class LevelMetaDataEditScene(OptionSelectScene):
                 res.append(playertypes.PlayerTypes.FAST.get_id())
             return res
 
-        self._add_text_edit_option(name, blueprints.PLAYERS, bp, to_str=_to_str, from_str=_to_player_ids, char_limit=4,
+        self._add_text_edit_option(name, blueprints.PLAYERS, bp,
+                                   to_str=_to_str,
+                                   from_str=_to_player_ids,
+                                   char_limit=4,
                                    allowed_chars="ABCDabcd")
 
 
