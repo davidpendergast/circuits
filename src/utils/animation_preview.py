@@ -147,11 +147,14 @@ if __name__ == "__main__":
     pygame.init()
     clock = pygame.time.Clock()
 
-    screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE | pygame.DOUBLEBUF)
+    screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE)
 
     state = _State(_Config())
 
     running = True
+
+    next_resize = None
+    time_since_last_resize = 0
 
     while running:
         for event in pygame.event.get():
@@ -159,7 +162,8 @@ if __name__ == "__main__":
                 running = False
                 continue
             elif event.type == pygame.VIDEORESIZE:
-                screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE | pygame.DOUBLEBUF)
+                next_resize = event.size
+                time_since_last_resize = 0
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     state.toggle_paused()
@@ -173,6 +177,11 @@ if __name__ == "__main__":
                     state.inc_anim_rate(-4)
                 elif event.key == pygame.K_MINUS:
                     state.inc_anim_rate(4)
+
+        time_since_last_resize += 1
+        if next_resize is not None and time_since_last_resize > 10:
+            screen = pygame.display.set_mode(next_resize, pygame.RESIZABLE)
+            last_resize = None
 
         screen.fill(state.config.bg_color)
 
