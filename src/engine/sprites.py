@@ -19,6 +19,7 @@ def gen_unique_id():
 class SpriteTypes:
     IMAGE = "IMAGE"
     TRIANGLE = "TRIANGLE"
+    THREE_DEE = "THREE_DEE"
 
 
 class _Sprite:

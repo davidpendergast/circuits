@@ -6,6 +6,7 @@ import configs as configs
 
 import src.engine.game as game
 import src.engine.layers as layers
+import src.engine.threedee as threedee
 import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
 import src.engine.readme_writer as readme_writer
@@ -119,6 +120,7 @@ class CircuitsGame(game.Game):
 
     def get_layers(self):
         # TODO layer depth goes opposite to sprite depths???
+        yield threedee.Texture3DLayer(spriteref.THREEDEE_LAYER, 1)
         yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 3, sort_sprites=True)
 
         yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5, sort_sprites=True, use_color=True)

@@ -51,7 +51,7 @@ class _Layer:
         return self._use_color
 
     def accepts_sprite_type(self, sprite_type):
-        return False
+        raise NotImplementedError()
 
     def vertex_stride(self):
         raise NotImplementedError()
@@ -245,6 +245,8 @@ class PolygonLayer(ImageLayer):
 
     def color_stride(self):
         return 3 * 3
+
+
 
 
 

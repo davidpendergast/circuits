@@ -35,7 +35,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
         # self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene("testing")))
-        self._options_list.add_option("options", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
         self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
         self._options_list.update_sprites()
 
@@ -398,6 +398,7 @@ class _BaseGameScene(scenes.Scene):
 
 
 class Status:
+
     def __init__(self, ident, player_control, can_hard_reset, can_soft_reset, world_ticks_inc=True, is_success=False):
         self.ident = ident
         self.can_player_control = player_control
@@ -417,6 +418,7 @@ class Status:
 
 
 class Statuses:
+
     WAITING = Status("waiting", False, True, False, world_ticks_inc=False)
     IN_PROGRESS = Status("in_progress", True, True, True)
     FAIL_DELAY = Status("fail_delay", False, True, True)
@@ -1604,3 +1606,18 @@ class NormalMouseMode(MouseMode):
                 print("INFO: spawning object [{}] at mouse: {}".format(spawn_idx,
                                                                        self.scene.get_pallette_object(spawn_idx)))
                 self.scene.spawn_pallette_object_at(spawn_idx, edit_xy)
+
+
+class Test3DScene(scenes.Scene):
+
+    def __init__(self):
+        super().__init__()
+        self.ship_sprite3d = None
+
+    def update(self):
+        import src.engine.threedee as threedee
+        if self.ship_sprite3d is None:
+            self.ship_sprite3d = threedee.load_obj("assets/3d_scenes/ship.obj", spriteref.THREEDEE_LAYER)
+
+    def all_sprites(self):
+        yield self.ship_sprite3d

@@ -13,12 +13,17 @@ POLYGON_LAYER = "polygon_layer"
 POLYGON_UI_LAYER = "polygon_ui_layer"
 UI_FG_LAYER = "ui_fg_layer"
 UI_BG_LAYER = "ui_bg_layer"
+THREEDEE_LAYER = "3d_layer"
 
 
 def all_world_layers():
     yield BLOCK_LAYER
     yield ENTITY_LAYER
     yield POLYGON_LAYER
+
+
+def all_3d_layers():
+    yield THREEDEE_LAYER
 
 
 def _img(x, y, w, h, offs=(0, 0)):
