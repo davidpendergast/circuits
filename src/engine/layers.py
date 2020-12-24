@@ -4,6 +4,7 @@ import numpy
 
 import src.engine.sprites as sprites
 import src.utils.util as util
+import src.utils.matutils as matutils
 
 
 def assert_int(val):
@@ -196,9 +197,24 @@ class ImageLayer(_Layer):
     def render(self, engine):
         # split up like this to make it easier to find performance bottlenecks
         self._set_client_states(True, engine)
+        self._set_uniforms(engine)
         self._pass_attributes(engine)
         self._draw_elements()
         self._set_client_states(False, engine)
+
+    def _set_uniforms(self, engine):
+        model = numpy.identity(4, dtype=numpy.float32)
+        engine.set_model_matrix(model)
+
+        offs2d = self.get_offset()
+        scale = self.get_scale()
+        view = matutils.translation_matrix(util.mult(offs2d, -1))
+        matutils.scale_matrix((scale, scale), mat=view)
+        engine.set_view_matrix(view)
+
+        game_width, game_height = engine.get_game_size()
+        proj = matutils.ortho_matrix(0, game_width, game_height, 0, 1, -1)
+        engine.set_proj_matrix(proj)
 
     def _set_client_states(self, enable, engine):
         engine.set_vertices_enabled(enable)

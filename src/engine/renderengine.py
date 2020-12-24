@@ -190,7 +190,13 @@ class RenderEngine:
     def setup_shader(self):
         raise NotImplementedError()
 
-    def set_matrix_offset(self, x, y, scale=1):
+    def set_view_matrix(self, mat):
+        raise NotImplementedError()
+
+    def set_model_matrix(self, mat):
+        raise NotImplementedError()
+
+    def set_proj_matrix(self, mat):
         raise NotImplementedError()
 
     def resize_internal(self):
@@ -317,11 +323,6 @@ class RenderEngine:
 
             if layer.get_layer_id() in self.hidden_layers:
                 continue
-
-            offs = layer.get_offset()
-            scale = layer.get_scale()
-
-            self.set_matrix_offset(-offs[0], -offs[1], scale=scale)
             
             layer.render(self)
 
@@ -340,46 +341,23 @@ def get_instance() -> RenderEngine:
     return _SINGLETON
 
 
-def translation_matrix(x, y, scale=1):
-    res = numpy.identity(4, dtype=numpy.float32)
-    if scale != 1:
-        res.itemset((0, 0), float(scale))
-        res.itemset((1, 1), float(scale))
-    res.itemset((0, 3), float(x))
-    res.itemset((1, 3), float(y))
-    return res
-
-
-def ortho_matrix(left, right, bottom, top, near_val, far_val):
-    res = numpy.identity(4, dtype=numpy.float32)
-    res.itemset((0, 0), float(2 / (right - left)))
-    res.itemset((1, 1), float(2 / (top - bottom)))
-    res.itemset((2, 2), float(-2 / (far_val - near_val)))
-
-    t_x = -(right + left) / (right - left)
-    t_y = -(top + bottom) / (top - bottom)
-    t_z = -(far_val + near_val) / (far_val - near_val)
-    res.itemset((0, 3), float(t_x))
-    res.itemset((1, 3), float(t_y))
-    res.itemset((2, 3), float(t_z))
-
-    return res
-
-
 class RenderEngine130(RenderEngine):
 
     def __init__(self):
         super().__init__()
         self._tex_uniform_loc = None
         self._tex_size_uniform_loc = None
-        self._modelview_matrix_uniform_loc = None
+
+        self._model_matrix_uniform_loc = None
+        self._view_matrix_uniform_loc = None
         self._proj_matrix_uniform_loc = None
 
         self._position_attrib_loc = None
         self._texture_pos_attrib_loc = None
         self._color_attrib_loc = None
 
-        self._modelview_matrix = numpy.identity(4, dtype=numpy.float32)
+        self._model_matrix = numpy.identity(4, dtype=numpy.float32)
+        self._view_matrix = numpy.identity(4, dtype=numpy.float32)
         self._proj_matrix = numpy.identity(4, dtype=numpy.float32)
 
     def get_glsl_version(self):
@@ -391,7 +369,8 @@ class RenderEngine130(RenderEngine):
             # version 130
             in vec3 position;
             
-            uniform mat4 modelview;
+            uniform mat4 model;
+            uniform mat4 view;
             uniform mat4 proj;
             
             in vec2 vTexCoord;
@@ -404,7 +383,7 @@ class RenderEngine130(RenderEngine):
             {
                 texCoord = vTexCoord;
                 color = vColor;
-                gl_Position = proj * modelview * vec4(position.x, position.y, position.z, 1.0);
+                gl_Position = proj * model * view * vec4(position.x, position.y, position.z, 1.0);
             }
             ''',
             '''
@@ -448,9 +427,14 @@ class RenderEngine130(RenderEngine):
         self._assert_valid_var("texSize", self._tex_size_uniform_loc)
         printOpenGLError()
 
-        self._modelview_matrix_uniform_loc = glGetUniformLocation(prog_id, "modelview")
-        self._assert_valid_var("modelview", self._modelview_matrix_uniform_loc)
-        glUniformMatrix4fv(self._modelview_matrix_uniform_loc, 1, GL_TRUE, self._modelview_matrix)
+        self._model_matrix_uniform_loc = glGetUniformLocation(prog_id, "model")
+        self._assert_valid_var("model", self._model_matrix_uniform_loc)
+        glUniformMatrix4fv(self._model_matrix_uniform_loc, 1, GL_TRUE, self._model_matrix)
+        printOpenGLError()
+
+        self._view_matrix_uniform_loc = glGetUniformLocation(prog_id, "view")
+        self._assert_valid_var("view", self._view_matrix_uniform_loc)
+        glUniformMatrix4fv(self._view_matrix_uniform_loc, 1, GL_TRUE, self._view_matrix)
         printOpenGLError()
 
         self._proj_matrix_uniform_loc = glGetUniformLocation(prog_id, "proj")
@@ -471,25 +455,25 @@ class RenderEngine130(RenderEngine):
         glVertexAttrib3f(self._color_attrib_loc, 1.0, 1.0, 1.0)
         printOpenGLError()
 
-    def set_matrix_offset(self, x, y, scale=1):
-        self._modelview_matrix = numpy.identity(4, dtype=numpy.float32)
-        trans = translation_matrix(x, y, scale=scale)
-        numpy.matmul(self._modelview_matrix, trans, out=self._modelview_matrix, dtype=numpy.float32)
-
-        glUniformMatrix4fv(self._modelview_matrix_uniform_loc, 1, GL_TRUE, self._modelview_matrix)
+    def set_model_matrix(self, mat):
+        self._model_matrix = mat if mat is not None else numpy.identity(4, dtype=numpy.float32)
+        glUniformMatrix4fv(self._model_matrix_uniform_loc, 1, GL_TRUE, self._model_matrix)
         printOpenGLError()
 
-    def resize_internal(self):
-        game_width, game_height = self.get_game_size()
+    def set_view_matrix(self, mat):
+        self._view_matrix = mat if mat is not None else numpy.identity(4, dtype=numpy.float32)
+        glUniformMatrix4fv(self._view_matrix_uniform_loc, 1, GL_TRUE, self._view_matrix)
+        printOpenGLError()
 
-        self._proj_matrix = numpy.identity(4, dtype=numpy.float32)
-        ortho = ortho_matrix(0, game_width, game_height, 0, 1, -1)
-        numpy.matmul(self._proj_matrix, ortho, out=self._proj_matrix, dtype=numpy.float32)
-
+    def set_proj_matrix(self, mat):
+        self._proj_matrix = mat if mat is not None else numpy.identity(4, dtype=numpy.float32)
         glUniformMatrix4fv(self._proj_matrix_uniform_loc, 1, GL_TRUE, self._proj_matrix)
         printOpenGLError()
 
-        self.set_matrix_offset(0, 0)
+    def resize_internal(self):
+        self.set_proj_matrix(numpy.identity(4, dtype=numpy.float32))
+        self.set_view_matrix(numpy.identity(4, dtype=numpy.float32))
+        self.set_model_matrix(numpy.identity(4, dtype=numpy.float32))
 
         vp_width, vp_height = self._calc_optimal_vp_size(self.size, self.get_pixel_scale())
         glViewport(0, 0, vp_width, vp_height)
@@ -558,9 +542,10 @@ class RenderEngine120(RenderEngine130):
         return Shader(
             '''
             # version 120
-            attribute vec2 position;
+            attribute vec3 position;
             
-            uniform mat4 modelview;
+            uniform mat4 model;
+            uniform mat4 view;
             uniform mat4 proj;
             
             attribute vec2 vTexCoord;
@@ -573,7 +558,7 @@ class RenderEngine120(RenderEngine130):
             {
                 texCoord = vTexCoord;
                 color = vColor;
-                gl_Position = proj * modelview * vec4(position.x, position.y, 0.0, 1.0);
+                gl_Position = proj * model * view * vec4(position.x, position.y, position.z, 1.0);
             }
             ''',
             '''

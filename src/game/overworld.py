@@ -1008,7 +1008,7 @@ class OverworldScene(scenes.Scene):
         for i in range(0, 9):
             bp_tri_list = self.state.world_blueprint.bg_triangles[i]
             util.extend_or_empty_list_to_length(self.bg_triangle_sprites[i], len(bp_tri_list),
-                                                lambda: sprites.TriangleSprite(spriteref.POLYGON_LAYER))
+                                                lambda: sprites.TriangleSprite(spriteref.POLYGON_UI_LAYER))
             for j in range(0, len(bp_tri_list)):
                 p1 = util.add(anchors[i], bp_tri_list[j][0])
                 p2 = util.add(anchors[i], bp_tri_list[j][1])

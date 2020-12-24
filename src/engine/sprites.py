@@ -118,7 +118,7 @@ class TriangleSprite(_Sprite):
         vertices[i * 9 + 0] = p1[0]
         vertices[i * 9 + 1] = p1[1]
         vertices[i * 9 + 2] = 0      # TODO depth
-        
+
         vertices[i * 9 + 3] = p2[0]
         vertices[i * 9 + 4] = p2[1]
         vertices[i * 9 + 5] = 0
