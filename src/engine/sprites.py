@@ -115,12 +115,17 @@ class TriangleSprite(_Sprite):
         p2 = self.p2()
         p3 = self.p3()
 
-        vertices[i * 6 + 0] = p1[0]
-        vertices[i * 6 + 1] = p1[1]
-        vertices[i * 6 + 2] = p2[0]
-        vertices[i * 6 + 3] = p2[1]
-        vertices[i * 6 + 4] = p3[0]
-        vertices[i * 6 + 5] = p3[1]
+        vertices[i * 9 + 0] = p1[0]
+        vertices[i * 9 + 1] = p1[1]
+        vertices[i * 9 + 2] = 0      # TODO depth
+        
+        vertices[i * 9 + 3] = p2[0]
+        vertices[i * 9 + 4] = p2[1]
+        vertices[i * 9 + 5] = 0
+
+        vertices[i * 9 + 6] = p3[0]
+        vertices[i * 9 + 7] = p3[1]
+        vertices[i * 9 + 8] = 0
 
         if colors is not None:
             rgb = self.color()
@@ -262,14 +267,21 @@ class ImageSprite(_Sprite):
             w = h
             h = temp_w
 
-        vertices[i*8 + 0] = x
-        vertices[i*8 + 1] = y
-        vertices[i*8 + 2] = x
-        vertices[i*8 + 3] = y + h
-        vertices[i*8 + 4] = x + w
-        vertices[i*8 + 5] = y + h
-        vertices[i*8 + 6] = x + w
-        vertices[i*8 + 7] = y
+        vertices[i*12 + 0] = x
+        vertices[i*12 + 1] = y
+        vertices[i*12 + 2] = 0  # TODO depth
+
+        vertices[i*12 + 3] = x
+        vertices[i*12 + 4] = y + h
+        vertices[i*12 + 5] = 0
+
+        vertices[i*12 + 6] = x + w
+        vertices[i*12 + 7] = y + h
+        vertices[i*12 + 8] = 0
+
+        vertices[i*12 + 9] = x + w
+        vertices[i*12 + 10] = y
+        vertices[i*12 + 11] = 0
 
         if colors is not None:
             rgb = self.color()

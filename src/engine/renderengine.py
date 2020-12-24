@@ -389,7 +389,7 @@ class RenderEngine130(RenderEngine):
         return Shader(
             '''
             # version 130
-            in vec2 position;
+            in vec3 position;
             
             uniform mat4 modelview;
             uniform mat4 proj;
@@ -404,7 +404,7 @@ class RenderEngine130(RenderEngine):
             {
                 texCoord = vTexCoord;
                 color = vColor;
-                gl_Position = proj * modelview * vec4(position.x, position.y, 0.0, 1.0);
+                gl_Position = proj * modelview * vec4(position.x, position.y, position.z, 1.0);
             }
             ''',
             '''
@@ -523,7 +523,7 @@ class RenderEngine130(RenderEngine):
         printOpenGLError()
 
     def set_vertices(self, data):
-        glVertexAttribPointer(self._position_attrib_loc, 2, GL_FLOAT, GL_FALSE, 0, data)
+        glVertexAttribPointer(self._position_attrib_loc, 3, GL_FLOAT, GL_FALSE, 0, data)
         printOpenGLError()
 
     def set_texture_coords_enabled(self, val):

@@ -141,7 +141,7 @@ class ImageLayer(_Layer):
         return sprite_type == sprites.SpriteTypes.IMAGE
 
     def vertex_stride(self):
-        return 8
+        return 4 * 3
 
     def texture_stride(self):
         return 8
@@ -235,7 +235,7 @@ class PolygonLayer(ImageLayer):
         return sprite_type == sprites.SpriteTypes.TRIANGLE
 
     def vertex_stride(self):
-        return 6
+        return 3 * 3
 
     def texture_stride(self):
         return 6

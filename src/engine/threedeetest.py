@@ -3,12 +3,31 @@ from OpenGL.GL import *  # move this to line 1
 from OpenGL.GLU import *
 import pygame
 import math
+import numpy
 
-class ObjLoader(object):
 
-    def __init__(self, fileName):
+def load_texture(filename):
+    """ This fuctions will return the id for the texture"""
+    textureSurface = pygame.image.load(filename)
+    textureData = pygame.image.tostring(textureSurface, "RGBA", 1)
+    width = textureSurface.get_width()
+    height = textureSurface.get_height()
+    ID = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, ID)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData)
+    return ID
+
+
+class ObjData(object):
+
+    def __init__(self, fileName, texture_id):
+        self.texture_id = texture_id
         self.vertices = []
-        self.faces = []
+        self.triangle_faces = []
+        self.normals = []
+        self.texture_coords = []
         ##
         try:
             f = open(fileName)
@@ -22,8 +41,22 @@ class ObjLoader(object):
                     vertex = (round(vertex[0], 2), round(vertex[1], 2), round(vertex[2], 2))
                     self.vertices.append(vertex)
 
+                elif line[:2] == "vn":
+                    index1 = line.find(" ") + 1  # first number index;
+                    index2 = line.find(" ", index1 + 1)  # second number index;
+                    index3 = line.find(" ", index2 + 1)  # third number index;
+
+                    normal = (float(line[index1:index2]), float(line[index2:index3]), float(line[index3:-1]))
+                    normal = (round(normal[0], 2), round(normal[1], 2), round(normal[2], 2))
+                    self.normals.append(normal)
+
+                elif line[:2] == "vt":
+                    index1 = line.find(" ") + 1  # first number index;
+                    index2 = line.find(" ", index1 + 1)  # second number index;
+                    coords = (float(line[index1:index2]), float(line[index2:-1]))
+                    self.texture_coords.append(coords)
+
                 elif line[0] == "f":
-                    ##
                     i = line.find(" ") + 1
                     face = []
                     for item in range(line.count(" ")):
@@ -34,19 +67,18 @@ class ObjLoader(object):
                         face.append(tuple(int(j) for j in face_text.split("/")))
 
                         i = line.find(" ", i) + 1
-                    ##
-                    self.faces.append(tuple(face))
+                    self.triangle_faces.append(tuple(face))
 
             f.close()
         except IOError:
             print(".obj file not found.")
 
-    def render_scene(self):
-        if len(self.faces) > 0:
+    def render_wireframe(self):
+        if len(self.triangle_faces) > 0:
             ##
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
             glBegin(GL_TRIANGLES)
-            for face in self.faces:
+            for face in self.triangle_faces:
                 for f in face:
                     vertexDraw = self.vertices[int(f[0]) - 1]
                     if int(f[0]) % 3 == 1:
@@ -58,33 +90,106 @@ class ObjLoader(object):
                     glVertex3fv(vertexDraw)
             glEnd()
 
+    def render_texture(self, xform=None):
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, self.texture_id)
 
-class objItem(object):
+        if xform is not None:
+            glPushMatrix()
+            glMultMatrixf(xform)
 
-    def __init__(self):
+        glBegin(GL_TRIANGLES)
+        for face in self.triangle_faces:
+            for f in face:
+                vertex = self.vertices[int(f[0]) - 1]
+                texture = self.texture_coords[int(f[1]) - 1]
+                normal = self.normals[int(f[2]) - 1]
+                glTexCoord2fv(texture)
+                glNormal3fv(normal)
+                glVertex3fv(vertex)
+        glEnd()
+
+        if xform is not None:
+            glPopMatrix()
+
+        glDisable(GL_TEXTURE_2D)
+
+
+class Object3D:
+
+    def __init__(self, obj_data: ObjData):
+        self.model = obj_data
+
+        self.translation = [0, 0, 0]
+        self.rotation = [0.5, 0, 0]
+        self.scale = [1, 1, 1]
+
+    def get_xform(self):
+        # translation matrix
+        T = numpy.identity(4, dtype=numpy.float32)
+        T.itemset((3, 0), self.translation[0])
+        T.itemset((3, 1), self.translation[1])
+        T.itemset((3, 2), self.translation[2])
+
+        # rotation matrices
+        Rx = numpy.identity(4, dtype=numpy.float32)
+        Rx.itemset((1, 1), math.cos(self.rotation[0]))
+        Rx.itemset((2, 1), -math.sin(self.rotation[0]))
+        Rx.itemset((1, 2), math.sin(self.rotation[0]))
+        Rx.itemset((2, 2), math.cos(self.rotation[0]))
+
+        Ry = numpy.identity(4, dtype=numpy.float32)
+        Ry.itemset((0, 0), math.cos(self.rotation[1]))
+        Ry.itemset((2, 0), math.sin(self.rotation[1]))
+        Ry.itemset((0, 2), -math.sin(self.rotation[1]))
+        Ry.itemset((2, 2), math.cos(self.rotation[1]))
+
+        Rz = numpy.identity(4, dtype=numpy.float32)
+        Rz.itemset((0, 0), math.cos(self.rotation[2]))
+        Rz.itemset((1, 0), -math.sin(self.rotation[2]))
+        Rz.itemset((0, 1), math.sin(self.rotation[2]))
+        Rz.itemset((1, 1), math.cos(self.rotation[2]))
+
+        # scale matrix
+        S = numpy.identity(4, dtype=numpy.float32)
+        S.itemset((0, 0), self.scale[0])
+        S.itemset((1, 1), self.scale[1])
+        S.itemset((2, 2), self.scale[2])
+
+        return T.dot(Rx).dot(Ry).dot(Rz).dot(S)
+
+    def render_texture(self):
+        self.model.render_texture(self.get_xform())
+
+
+class Scene3D:
+
+    def __init__(self, texture_id):
         self.angle = 0
-        self.vertices = []
-        self.faces = []
         self.coordinates = [0, 0, -65]  # [x,y,z]
-        self.teddy = ObjLoader("assets/3d_scenes/ship.obj")
-        self.position = [0, 0, -50]
+        self.obj = Object3D(ObjData("assets/3d_scenes/ship.obj", texture_id))
 
     def render_scene(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glClearColor(0.902, 0.902, 1, 0.0)
+        glClearColor(0.1, 0.1, 0.1, 0.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         gluLookAt(0, 0, 0, math.sin(math.radians(self.angle)), 0, math.cos(math.radians(self.angle)) * -1, 0, 1, 0)
         glTranslatef(self.coordinates[0], self.coordinates[1], self.coordinates[2])
 
-    def move_forward(self):
-        self.coordinates[2] += 10 * math.cos(math.radians(self.angle))
-        self.coordinates[0] -= 10 * math.sin(math.radians(self.angle))
+        self.obj.rotation[0] += 0.01
+        self.obj.rotation[1] += 0.02
+        self.obj.rotation[2] += 0.03
+        self.obj.render_texture()
 
-    def move_back(self):
-        self.coordinates[2] -= 10 * math.cos(math.radians(self.angle))
-        self.coordinates[0] += 10 * math.sin(math.radians(self.angle))
+    def move_forward(self, n):
+        self.coordinates[2] += n * math.cos(math.radians(self.angle))
+        self.coordinates[0] -= n * math.sin(math.radians(self.angle))
+
+    def move_back(self, n):
+        self.coordinates[2] -= n * math.cos(math.radians(self.angle))
+        self.coordinates[0] += n * math.sin(math.radians(self.angle))
 
     def move_left(self, n):
         self.coordinates[0] += n * math.cos(math.radians(self.angle))
@@ -97,31 +202,27 @@ class objItem(object):
     def rotate(self, n):
         self.angle += n
 
-    def fullRotate(self):
-        for i in range(0, 36):
-            self.angle += 10
-            self.move_left(10)
-            self.render_scene()
-            self.teddy.render_scene()
-            pygame.display.flip()
 
 def main():
     pygame.init()
     pygame.display.set_mode((640, 480), pygame.DOUBLEBUF | pygame.OPENGL)
     pygame.display.set_caption("Teddy - Tugas Grafkom 1")
     clock = pygame.time.Clock()
+
     # Feature checker
     glDisable(GL_TEXTURE_2D)
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_BLEND)
     glEnable(GL_CULL_FACE)
-    #
+
     glMatrixMode(GL_PROJECTION)
     gluPerspective(45.0, float(800) / 600, .1, 1000.)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
-    objectTeddy = objItem()
+    texture_id = load_texture("assets/3d_textures/ship_texture.png")
+
+    scene = Scene3D(texture_id)
 
     done = False
     while not done:
@@ -129,25 +230,39 @@ def main():
             if event.type == pygame.QUIT:
                 done = True
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                    objectTeddy.move_left(10)
-                elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                    objectTeddy.move_right(10)
-                elif event.key == pygame.K_UP or event.key == pygame.K_w:
-                    objectTeddy.move_forward()
-                elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                    objectTeddy.move_back()
+                if event.key == pygame.K_LEFT:
+                    scene.move_left(10)
+                elif event.key == pygame.K_RIGHT:
+                    scene.move_right(10)
+                elif event.key == pygame.K_UP:
+                    scene.move_forward(10)
+                elif event.key == pygame.K_DOWN:
+                    scene.move_back(10)
                 elif event.key == pygame.K_1:
-                    objectTeddy.rotate(10)
-                    objectTeddy.move_left(10)
+                    scene.rotate(-10)
                 elif event.key == pygame.K_2:
-                    objectTeddy.rotate(-10)
-                    objectTeddy.move_right(10)
-                elif event.key == pygame.K_3:
-                    objectTeddy.fullRotate()
+                    scene.rotate(10)
 
-        objectTeddy.render_scene()
-        objectTeddy.teddy.render_scene()
+        move_speed = 2.5
+        rotate_speed = 2
+
+        held = pygame.key.get_pressed()
+        if held[pygame.K_e]:
+            scene.rotate(rotate_speed)
+        if held[pygame.K_q]:
+            scene.rotate(-rotate_speed)
+
+        if held[pygame.K_w]:
+            scene.move_forward(move_speed)
+        if held[pygame.K_a]:
+            scene.move_left(move_speed)
+        if held[pygame.K_s]:
+            scene.move_forward(-move_speed)
+        if held[pygame.K_d]:
+            scene.move_right(move_speed)
+
+        scene.render_scene()
+
         pygame.display.flip()
         clock.tick(30)
     pygame.quit()
