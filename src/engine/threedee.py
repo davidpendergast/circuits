@@ -1,55 +1,86 @@
+from OpenGL.GL import *
+
 import numpy
 
 import src.engine.layers as layers
 import src.engine.sprites as sprites
 import src.utils.util as util
+import src.utils.matutils as matutils
 
 
-class ThreeDeeLayer(layers._Layer):
+class ThreeDeeLayer(layers.ImageLayer):
 
-    def __init__(self, layer_id, layer_depth):
-        super().__init__(layer_id, layer_depth)
-        self._sprite_set = set()  # set of image ids
+    def __init__(self, layer_id, layer_depth, use_color=True):
+        super().__init__(layer_id, layer_depth, sort_sprites=False, use_color=use_color)
+
+        self.camera_position = (0, 0, 0)  # (0, 0, -65)
+        self.camera_direction = (0, 0, -1)  # ?
+        self.camera_up = (0, 1, 0)
 
     def accepts_sprite_type(self, sprite_type):
         return sprite_type == sprites.SpriteTypes.THREE_DEE
 
-    def vertex_stride(self):
-        pass
-
-    def texture_stride(self):
-        pass
-
-    def index_stride(self):
-        pass
-
-    def color_stride(self):
-        pass
-
-    def is_dirty(self):
-        pass
-
-    def get_num_sprites(self):
-        return len(self._sprite_set)
-
-    def update(self, sprite_id, last_mod_time):
-        pass
-
-    def remove(self, sprite_id):
-        pass
-
-    def rebuild(self, sprite_info_lookup):
-        pass
+    def populate_data_arrays(self, sprite_info_lookup):
+        pass  # we don't actually use these
 
     def render(self, engine):
-        pass
+        self.set_client_states(True, engine)
+        for sprite_id in self.images:
+            spr3d = engine.sprite_info_lookup[sprite_id].sprite
+            self._set_uniforms_for_sprite(engine, spr3d)
+            self._pass_attributes_and_draw(engine, spr3d)
+        self.set_client_states(False, engine)
 
-    def __contains__(self, sprite_id):
-        return sprite_id in self._sprite_set
+    def get_view_matrix(self):
+        m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, (0, 1, 0))
+        t = matutils.translation_matrix(self.camera_position)
+        return numpy.matmul(t, m)
+
+    def get_proj_matrix(self, engine):
+        w, h = engine.get_game_size()
+        fov_degrees = 45.0
+        return matutils.perspective_matrix(fov_degrees / 360 * 6.283, w / h, 0.1, 1000)
+
+    def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
+        model = spr_3d.get_xform()
+        engine.set_model_matrix(model)
+
+        view = self.get_view_matrix()
+        #offs2d = self.get_offset()
+        #scale = self.get_scale()
+        #view = matutils.translation_matrix(util.mult(offs2d, -1))
+        #matutils.scale_matrix((scale, scale), mat=view)
+        engine.set_view_matrix(view)
+
+        proj = self.get_proj_matrix(engine)
+        #game_width, game_height = engine.get_game_size()
+        #proj = matutils.ortho_matrix(0, game_width, game_height, 0, 1, -1)
+        engine.set_proj_matrix(proj)
+
+    def _pass_attributes_and_draw(self, engine: 'renderengine.RenderEngine', spr_3d: 'Sprite3D'):
+        self.vertices.resize(3 * len(spr_3d.model().get_vertices()), refcheck=False)
+        self.tex_coords.resize(2 * len(spr_3d.model().get_texture_coords()), refcheck=False)
+        self.indices.resize(3 * len(spr_3d.model().get_faces()), refcheck=False)
+
+        if self.is_color():
+            self.colors.resize(3 * len(spr_3d.model().get_vertices()), refcheck=False)
+
+        spr_3d.add_urself(self.vertices,
+                          self.tex_coords,
+                          self.colors,
+                          self.indices)
+
+        engine.set_vertices(self.vertices)
+        engine.set_texture_coords(self.tex_coords)
+
+        if self.is_color():
+            engine.set_colors(self.colors)
+
+        glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, self.indices)
 
 
 class Sprite3D(sprites.AbstractSprite):
-    def __init__(self, model, layer_id, position=(0, 0, 0), rotation=(0, 0, 0), scale=(1, 1, 1), color=(0, 0, 0), uid=None):
+    def __init__(self, model, layer_id, position=(0, 0, 0), rotation=(0, 0, 0), scale=(1, 1, 1), color=(1, 1, 1), uid=None):
         sprites.AbstractSprite.__init__(self, sprites.SpriteTypes.THREE_DEE, layer_id, uid=uid)
         self._model = model
 
@@ -59,12 +90,12 @@ class Sprite3D(sprites.AbstractSprite):
 
         self._color = color
 
-    def model(self):
+    def model(self) -> 'ThreeDeeModel':
         return self._model
 
     def get_xform(self):
-        # TODO hmmm
-        return numpy.identity(4, dtype=numpy.float32)
+        # TODO other stuff
+        return matutils.translation_matrix(self._position)
 
     def position(self):
         return self._position
@@ -99,7 +130,7 @@ class Sprite3D(sprites.AbstractSprite):
             did_change = True
             model = new_model
 
-        position = [self._position]
+        position = [v for v in self._position]
         if new_position is not None:
             new_x = new_position[0]
             new_y = new_position[1]
@@ -114,7 +145,7 @@ class Sprite3D(sprites.AbstractSprite):
             position[2] = new_z
             did_change = True
 
-        rotation = [self._rotation]
+        rotation = [v for v in self._rotation]
         if new_rotation is not None:
             new_xrot = new_rotation[0]
             new_yrot = new_rotation[1]
@@ -129,7 +160,7 @@ class Sprite3D(sprites.AbstractSprite):
             rotation[2] = new_zrot
             did_change = True
 
-        scale = [self._scale]
+        scale = [v for v in self._scale]
         if new_scale is not None:
             if isinstance(new_scale, (int, float)):
                 new_scale = (new_scale, new_scale, new_scale)
@@ -157,19 +188,31 @@ class Sprite3D(sprites.AbstractSprite):
             return Sprite3D(model, self.layer_id(), position=position, rotation=rotation,
                             scale=scale, color=color, uid=self.uid())
 
+    def add_urself(self, vertices, tex_coords, colors, indices):
+        for i in range(0, 3 * len(self.model().get_vertices())):
+            vertices[i] = self.model().get_vertices()[i // 3][i % 3]
+        for i in range(0, 2 * len(self.model().get_texture_coords())):
+            tex_coords[i] = self.model().get_texture_coords()[i // 2][i % 2]
+        if colors is not None:
+            rgb = self.color()
+            for i in range(0, 3 * len(self.model().get_vertices())):
+                colors[i] = rgb[i % 3]
+        for i in range(0, 3 * len(self.model().get_faces())):
+            indices[i] = self.model().get_faces()[i // 3][i % 3][0]  # TODO what about texture coords?
+
 
 class ThreeDeeModel:
 
     def __init__(self, model_id, model_path, map_texture_xy_to_atlas):
         self._model_id = model_id
 
-        self._vertices = []
-        self._triangle_faces = []
-        self._normals = []
-        self._native_texture_coords = []
+        self._vertices = []                 # list of (x, y, z)
+        self._triangle_faces = []           # list of tuples (3 x (vertex_idx, texture_idx, normal_idx))
+        self._normals = []                  # list of (x, y, z)
+        self._native_texture_coords = []    # list of (x, y)
 
         self._map_texture_xy_to_atlas = map_texture_xy_to_atlas
-        self._cached_atlas_coords = []
+        self._cached_atlas_coords = []      # list of (x, y)
 
         self._load_from_disk(model_path)
 

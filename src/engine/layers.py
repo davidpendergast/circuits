@@ -153,6 +153,26 @@ class ImageLayer(_Layer):
     def color_stride(self):
         return 4 * 3
 
+    def populate_data_arrays(self, sprite_info_lookup):
+        n_sprites = len(self.images)
+
+        # need refcheck to be false or else Pycharm's debugger can cause this to fail (due to holding a ref)
+        self.vertices.resize(self.vertex_stride() * n_sprites, refcheck=False)
+        self.tex_coords.resize(self.texture_stride() * n_sprites, refcheck=False)
+        self.indices.resize(self.index_stride() * n_sprites, refcheck=False)
+        if self.is_color():
+            self.colors.resize(self.color_stride() * n_sprites, refcheck=False)
+
+        # TODO - we only need to iterate over dirty indices here
+        for i in range(0, n_sprites):
+            sprite = sprite_info_lookup[self.images[i]].sprite
+            sprite.add_urself(
+                i,
+                self.vertices,
+                self.tex_coords,
+                self.colors,
+                self.indices)
+
     def rebuild(self, sprite_info_lookup):
         if len(self._to_remove) > 0:
             # this is all here to handle the case where you add and remove a sprite on the same frame
@@ -175,32 +195,15 @@ class ImageLayer(_Layer):
         if self.is_sorted():
             self.images.sort(key=lambda x: -sprite_info_lookup[x].sprite.depth())
 
-        n_sprites = len(self.images)
-
-        # need refcheck to be false or else Pycharm's debugger can cause this to fail (due to holding a ref)
-        self.vertices.resize(self.vertex_stride() * n_sprites, refcheck=False)
-        self.tex_coords.resize(self.texture_stride() * n_sprites, refcheck=False)
-        self.indices.resize(self.index_stride() * n_sprites, refcheck=False)
-        if self.is_color():
-            self.colors.resize(self.color_stride() * n_sprites, refcheck=False)
-
-        # TODO - we only need to iterate over dirty indices here
-        for i in range(0, n_sprites):
-            sprite = sprite_info_lookup[self.images[i]].sprite
-            sprite.add_urself(
-                i,
-                self.vertices,
-                self.tex_coords,
-                self.colors,
-                self.indices)
+        self.populate_data_arrays(sprite_info_lookup)
 
     def render(self, engine):
         # split up like this to make it easier to find performance bottlenecks
-        self._set_client_states(True, engine)
+        self.set_client_states(True, engine)
         self._set_uniforms(engine)
         self._pass_attributes(engine)
         self._draw_elements()
-        self._set_client_states(False, engine)
+        self.set_client_states(False, engine)
 
     def _set_uniforms(self, engine):
         model = numpy.identity(4, dtype=numpy.float32)
@@ -216,7 +219,7 @@ class ImageLayer(_Layer):
         proj = matutils.ortho_matrix(0, game_width, game_height, 0, 1, -1)
         engine.set_proj_matrix(proj)
 
-    def _set_client_states(self, enable, engine):
+    def set_client_states(self, enable, engine):
         engine.set_vertices_enabled(enable)
         engine.set_texture_coords_enabled(enable)
         if self.is_color():

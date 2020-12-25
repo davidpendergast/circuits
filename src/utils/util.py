@@ -102,11 +102,11 @@ def to_rads(degrees):
 
 
 def set_length(v, length):
-    mag = math.sqrt(v[0]*v[0] + v[1]*v[1])
-    if mag == 0:
-        return rand_vec(length)
+    cur_length = mag(v)
+    if cur_length == 0:
+        return rand_vec(length, size=len(v))
     else:
-        return mult(v, length / mag)
+        return mult(v, length / cur_length)
 
 
 def mag(v):
@@ -124,9 +124,21 @@ def dist_manhattan(v1, v2):
     return res
 
 
-def rand_vec(length=1):
-    angle = 6.2832 * random.random()
-    return [length*math.cos(angle), length*math.sin(angle)]
+def rand_vec(length=1, size=2):
+    if size == 1:
+        return [length * 1 if random.random() < 0.5 else -1]
+    elif size == 2:
+        theta = 6.2832 * random.random()
+        return [length * math.cos(theta),
+                length * math.sin(theta)]
+    elif size == 3:
+        theta = 6.2832 * random.random()
+        phi = 3.1415 * random.random()
+        return [length * math.sin(phi) * math.cos(theta),
+                length * math.sin(phi) * math.sin(theta),
+                length * math.cos(phi)]
+    else:
+        raise ValueError("todo - implement algorithm that finds a random point on an n-sphere")
 
 
 def rect_expand(rect, all_expand=0, left_expand=0, right_expand=0, up_expand=0, down_expand=0):

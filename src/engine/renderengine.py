@@ -134,6 +134,9 @@ class RenderEngine:
         self.ordered_layers = list(self.layers.values())
         self.ordered_layers.sort(key=lambda x: x.get_layer_depth())
 
+    def get_layer(self, layer_id):
+        return self.layers[layer_id]
+
     def hide_layer(self, layer_id):
         self.hidden_layers[layer_id] = None
 
@@ -267,7 +270,13 @@ class RenderEngine:
         glEnable(GL_TEXTURE_2D)
 
         glEnable(GL_BLEND)
+        # glEnable(GL_DEPTH_TEST)
+        # glEnable(GL_CULL_FACE)
+
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        # uncomment for wireframe mode
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
         self.raw_texture_data = (img_data, width, height)
 

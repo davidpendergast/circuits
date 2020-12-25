@@ -60,8 +60,12 @@ class _GameLoop:
 
         atlas_surface = sprite_atlas.create_atlas_surface()
 
+        # uncomment for fun
+        import src.utils.artutils as artutils
+        artutils.rainbowfill(atlas_surface)
+
         # uncomment to save out the full texture atlas
-        #pygame.image.save(atlas_surface, "texture_atlas.png")
+        pygame.image.save(atlas_surface, "texture_atlas.png")
 
         texture_data = pygame.image.tostring(atlas_surface, "RGBA", 1)
         width = atlas_surface.get_width()
@@ -206,7 +210,7 @@ class _GameLoop:
             pygame.display.flip()
 
             slo_mo_mode = configs.is_dev and input_state.is_held(pygame.K_TAB)
-            target_fps = configs.target_fps if not slo_mo_mode else configs.target_fps // 4
+            target_fps = configs.target_fps if not slo_mo_mode else configs.target_fps // 60 # 4
 
             self._wait_until_next_frame(target_fps)
 

@@ -1,5 +1,6 @@
 import pygame
 import random
+import math
 from collections import deque
 
 import src.utils.util as util
@@ -376,6 +377,45 @@ def apply_darkness(src_sheet, src_rect, dest_sheet, dest_xy, darkness, contrast_
 
                 rgb[i] = int(255 * new_val)
             dest_sheet.set_at((x, y), rgb)
+
+
+def hsv_to_rgb(h, s, v):
+    """
+    :param h: 0 <= h < 360
+    :param s: 0 <= s <= 1
+    :param v: 0 <= v <= 1
+    :return: (r, g, b) as floats
+    """
+    C = v * s
+    X = C * (1 - abs((h // 60) % 2 - 1))
+    m = v - C
+
+    if h < 60:
+        rgb_prime = (C, X, 0)
+    elif h < 120:
+        rgb_prime = (X, C, 0)
+    elif h < 180:
+        rgb_prime = (0, C, X)
+    elif h < 240:
+        rgb_prime = (0, X, C)
+    elif h < 300:
+        rgb_prime = (X, 0, C)
+    else:
+        rgb_prime = (C, 0, X)
+
+    return (rgb_prime[0] + m, rgb_prime[1] + m, rgb_prime[2] + m)
+
+
+def rainbowfill(surface, rect=None):
+    if rect is None:
+        rect = [0, 0, surface.get_width(), surface.get_height()]
+    for x in range(rect[0], rect[0] + rect[2]):
+        for y in range(rect[1], rect[1] + rect[3]):
+            pcnt_y = (y - rect[1]) / rect[3]
+            h = int(pcnt_y * 360)
+            rgb = hsv_to_rgb(h, 1, 1)
+            rgb_int = colors.to_intn(rgb)
+            surface.set_at((x, y), rgb_int)
 
 
 def _do_darkening_testing():

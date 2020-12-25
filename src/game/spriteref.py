@@ -682,10 +682,15 @@ class TextureSheetTypes:
 
 class ThreeDeeModels:
     SHIP = None
+    POINTY_BOX = None
 
     @staticmethod
     def load_models_from_disk():
-        ThreeDeeModels.SHIP = threedee.ThreeDeeModel("ship", "assets/models/ship.obj", _3D_TEXTURES["ship_texture"].get_xform_to_atlas())
+        ThreeDeeModels.SHIP = threedee.ThreeDeeModel("ship", "assets/models/ship.obj",
+                                                     lambda xy: _3D_TEXTURES["ship_texture"].get_xform_to_atlas()(xy))
+        ThreeDeeModels.POINTY_BOX = threedee.ThreeDeeModel("pointy_box", "assets/models/pointy_box.obj",
+                                                           lambda xy: _3D_TEXTURES["ship_texture"].get_xform_to_atlas()(xy))
+
 
 
 class CutsceneTypes:
