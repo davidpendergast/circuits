@@ -22,7 +22,7 @@ class SpriteTypes:
     THREE_DEE = "THREE_DEE"
 
 
-class _Sprite:
+class AbstractSprite:
 
     def __init__(self, sprite_type, layer_id, uid=None):
         self._sprite_type = sprite_type
@@ -55,13 +55,13 @@ class _Sprite:
                 yield spr
 
     def __repr__(self):
-        return "_Sprite({}, {}, {})".format(self.sprite_type(), self.layer_id(), self.uid())
+        return "{}}({}, {}, {})".format(type(self).__name__, self.sprite_type(), self.layer_id(), self.uid())
 
 
-class TriangleSprite(_Sprite):
+class TriangleSprite(AbstractSprite):
 
     def __init__(self, layer_id, p1=(0, 0), p2=(0, 0), p3=(0, 0), color=(1, 1, 1), depth=1, uid=None):
-        _Sprite.__init__(self, SpriteTypes.TRIANGLE, layer_id, uid=uid)
+        AbstractSprite.__init__(self, SpriteTypes.TRIANGLE, layer_id, uid=uid)
 
         # (._.)
         import src.engine.spritesheets as spritesheets
@@ -147,14 +147,14 @@ class TriangleSprite(_Sprite):
              self.points(), self.layer_id(), self.color(), self.depth(), self.uid())
     
 
-class ImageSprite(_Sprite):
+class ImageSprite(AbstractSprite):
 
     @staticmethod
     def new_sprite(layer_id, scale=1, depth=0):
         return ImageSprite(None, 0, 0, layer_id, scale=scale, depth=depth)
 
     def __init__(self, model, x, y, layer_id, scale=1, depth=1, xflip=False, rotation=0, color=(1, 1, 1), ratio=(1, 1), uid=None):
-        _Sprite.__init__(self, SpriteTypes.IMAGE, layer_id, uid=uid)
+        AbstractSprite.__init__(self, SpriteTypes.IMAGE, layer_id, uid=uid)
         self._model = model
         self._x = x
         self._y = y
@@ -360,10 +360,10 @@ class ImageModel:
         return "ImageModel({}, {}, {}, {})".format(self.x, self.y, self.w, self.h)
 
 
-class MultiSprite(_Sprite):
+class MultiSprite(AbstractSprite):
 
     def __init__(self, sprite_type, layer_id):
-        _Sprite.__init__(self, sprite_type, layer_id)
+        AbstractSprite.__init__(self, sprite_type, layer_id)
 
     def is_parent(self):
         return True

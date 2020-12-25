@@ -1,6 +1,7 @@
 import typing
 import src.engine.spritesheets as spritesheets
 import src.engine.sprites as sprites
+import src.engine.threedee as threedee
 import src.utils.util as util
 import src.utils.artutils as artutils
 
@@ -651,6 +652,42 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.border_double_thick = self._make_borders([24, 96, 24, 24], 6, offs=start_pos)
 
 
+class TextureSheet(spritesheets.SpriteSheet):
+
+    def __init__(self, sheet_id, filename):
+        spritesheets.SpriteSheet.__init__(self, sheet_id, filename)
+
+        self._texture_coord_to_atlas_coord = lambda xy: xy
+
+    def get_xform_to_atlas(self):
+        return self._texture_coord_to_atlas_coord
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos)
+        atlas_size = (atlas.get_width(), atlas.get_height())
+        sheet_rect = [start_pos[0], start_pos[1], sheet.get_width(), sheet.get_height()]
+
+        def _map_to_atlas(xy):
+            atlas_x = (sheet_rect[0] + xy[0] * sheet_rect[2]) / atlas_size[0]
+            atlas_y = (sheet_rect[1] + xy[1] * sheet_rect[3]) / atlas_size[1]
+            return (atlas_x, atlas_y)
+
+        self._texture_coord_to_atlas_coord = _map_to_atlas
+
+
+class TextureSheetTypes:
+    ALL_TYPES = []
+    SHIP = util.add_to_list(("ship_texture", "assets/textures/ship_texture.png"), ALL_TYPES)
+
+
+class ThreeDeeModels:
+    SHIP = None
+
+    @staticmethod
+    def load_models_from_disk():
+        ThreeDeeModels.SHIP = threedee.ThreeDeeModel("ship", "assets/models/ship.obj", _3D_TEXTURES["ship_texture"].get_xform_to_atlas())
+
+
 class CutsceneTypes:
     ALL_TYPES = []
 
@@ -669,7 +706,8 @@ _BLOCKS = None
 _OVERWORLD = None
 _UI = None
 
-_CUTSCENES = {}  # sheet_id -> Sheet
+_CUTSCENES = {}    # sheet_id -> Sheet
+_3D_TEXTURES = {}  # sheet_id -> TextureSheet
 
 
 def object_sheet() -> _ObjectSheet:
@@ -703,10 +741,15 @@ def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
     all_sheets = [_OBJECTS, _BLOCKS, _OVERWORLD, _UI]
 
     for sheet_id in CutsceneTypes.ALL_TYPES:
-        cutscene_sheet = spritesheets.SingleImageSheet(sheet_id)
-        _CUTSCENES[sheet_id] = cutscene_sheet
+        _CUTSCENES[sheet_id] = spritesheets.SingleImageSheet(sheet_id)
+        all_sheets.append(_CUTSCENES[sheet_id])
 
-        all_sheets.append(cutscene_sheet)
+    for id_and_file in TextureSheetTypes.ALL_TYPES:
+        sheet_id, filepath = id_and_file
+        _3D_TEXTURES[sheet_id] = TextureSheet(sheet_id, filepath)
+        all_sheets.append(_3D_TEXTURES[sheet_id])
+
+    ThreeDeeModels.load_models_from_disk()
 
     return all_sheets
 

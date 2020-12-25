@@ -1617,7 +1617,7 @@ class Test3DScene(scenes.Scene):
     def update(self):
         import src.engine.threedee as threedee
         if self.ship_sprite3d is None:
-            self.ship_sprite3d = threedee.load_obj("assets/3d_scenes/ship.obj", spriteref.THREEDEE_LAYER)
+            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER)
 
     def all_sprites(self):
         yield self.ship_sprite3d

@@ -120,7 +120,7 @@ class CircuitsGame(game.Game):
 
     def get_layers(self):
         # TODO layer depth goes opposite to sprite depths???
-        yield threedee.Texture3DLayer(spriteref.THREEDEE_LAYER, 1)
+        yield threedee.ThreeDeeLayer(spriteref.THREEDEE_LAYER, 1)
         yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 3, sort_sprites=True)
 
         yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5, sort_sprites=True, use_color=True)
