@@ -178,6 +178,10 @@ class Scene3D:
         gluLookAt(0, 0, 0, math.sin(math.radians(self.angle)), 0, math.cos(math.radians(self.angle)) * -1, 0, 1, 0)
         glTranslatef(self.coordinates[0], self.coordinates[1], self.coordinates[2])
 
+        mat = numpy.ndarray([4, 4], dtype=numpy.float32)
+        glGetFloatv(GL_MODELVIEW_MATRIX, mat)
+        print("GL_MODELVIEW_MATRIX={}".format(mat))
+
         self.obj.rotation[0] += 0.01
         self.obj.rotation[1] += 0.02
         self.obj.rotation[2] += 0.03
@@ -217,6 +221,11 @@ def main():
 
     glMatrixMode(GL_PROJECTION)
     gluPerspective(45.0, float(800) / 600, .1, 1000.)
+
+    mat = numpy.ndarray([4, 4], dtype=numpy.float32)
+    glGetFloatv(GL_PROJECTION_MATRIX, mat)
+    print("GL_PROJECTION_MATRIX={}".format(mat))
+
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 

@@ -61,8 +61,8 @@ class _GameLoop:
         atlas_surface = sprite_atlas.create_atlas_surface()
 
         # uncomment for fun
-        import src.utils.artutils as artutils
-        artutils.rainbowfill(atlas_surface)
+        # import src.utils.artutils as artutils
+        # artutils.rainbowfill(atlas_surface)
 
         # uncomment to save out the full texture atlas
         pygame.image.save(atlas_surface, "texture_atlas.png")

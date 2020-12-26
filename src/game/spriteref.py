@@ -7,6 +7,7 @@ import src.utils.artutils as artutils
 
 import src.game.const as const
 import src.game.colors as colors
+import configs
 
 BLOCK_LAYER = "block_layer"
 ENTITY_LAYER = "entity_layer"
@@ -657,19 +658,19 @@ class TextureSheet(spritesheets.SpriteSheet):
     def __init__(self, sheet_id, filename):
         spritesheets.SpriteSheet.__init__(self, sheet_id, filename)
 
-        self._texture_coord_to_atlas_coord = lambda xy: xy
+        self._texture_coord_to_atlas_coord = lambda xy: None
 
     def get_xform_to_atlas(self):
         return self._texture_coord_to_atlas_coord
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
-        super().draw_to_atlas(atlas, sheet, start_pos)
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
         atlas_size = (atlas.get_width(), atlas.get_height())
         sheet_rect = [start_pos[0], start_pos[1], sheet.get_width(), sheet.get_height()]
 
         def _map_to_atlas(xy):
-            atlas_x = (sheet_rect[0] + xy[0] * sheet_rect[2]) / atlas_size[0]
-            atlas_y = (sheet_rect[1] + xy[1] * sheet_rect[3]) / atlas_size[1]
+            atlas_x = (sheet_rect[0] + xy[0] * sheet_rect[2])
+            atlas_y = atlas_size[1] - (sheet_rect[1] + (1 - xy[1]) * sheet_rect[3])
             return (atlas_x, atlas_y)
 
         self._texture_coord_to_atlas_coord = _map_to_atlas
@@ -677,6 +678,7 @@ class TextureSheet(spritesheets.SpriteSheet):
 
 class TextureSheetTypes:
     ALL_TYPES = []
+    RAINBOW = util.add_to_list(("rainbow", "assets/textures/rainbow.png"), ALL_TYPES)
     SHIP = util.add_to_list(("ship_texture", "assets/textures/ship_texture.png"), ALL_TYPES)
 
 
@@ -685,13 +687,17 @@ class ThreeDeeModels:
     POINTY_BOX = None
 
     @staticmethod
+    def _get_xform_for_texture(texture_id):
+        if configs.rainbow_3d:
+            texture_id = "rainbow"
+        return lambda xy: _3D_TEXTURES[texture_id].get_xform_to_atlas()(xy)
+
+    @staticmethod
     def load_models_from_disk():
         ThreeDeeModels.SHIP = threedee.ThreeDeeModel("ship", "assets/models/ship.obj",
-                                                     lambda xy: _3D_TEXTURES["ship_texture"].get_xform_to_atlas()(xy))
+                                                     ThreeDeeModels._get_xform_for_texture("ship_texture"))
         ThreeDeeModels.POINTY_BOX = threedee.ThreeDeeModel("pointy_box", "assets/models/pointy_box.obj",
-                                                           lambda xy: _3D_TEXTURES["ship_texture"].get_xform_to_atlas()(xy))
-
-
+                                                           ThreeDeeModels._get_xform_for_texture("ship_texture"))
 
 class CutsceneTypes:
     ALL_TYPES = []

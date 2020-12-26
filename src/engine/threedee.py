@@ -1,6 +1,7 @@
 from OpenGL.GL import *
 
 import numpy
+import math
 
 import src.engine.layers as layers
 import src.engine.sprites as sprites
@@ -13,8 +14,8 @@ class ThreeDeeLayer(layers.ImageLayer):
     def __init__(self, layer_id, layer_depth, use_color=True):
         super().__init__(layer_id, layer_depth, sort_sprites=False, use_color=use_color)
 
-        self.camera_position = (0, 0, 0)  # (0, 0, -65)
-        self.camera_direction = (0, 0, -1)  # ?
+        self.camera_position = (0, 0, 0)
+        self.camera_direction = (0, 0, -1)
         self.camera_up = (0, 1, 0)
 
     def accepts_sprite_type(self, sprite_type):
@@ -26,41 +27,63 @@ class ThreeDeeLayer(layers.ImageLayer):
     def render(self, engine):
         self.set_client_states(True, engine)
         for sprite_id in self.images:
-            spr3d = engine.sprite_info_lookup[sprite_id].sprite
-            self._set_uniforms_for_sprite(engine, spr3d)
-            self._pass_attributes_and_draw(engine, spr3d)
+            spr_3d = engine.sprite_info_lookup[sprite_id].sprite
+            self._set_uniforms_for_sprite(engine, spr_3d)
+            # self._set_fixed_uniforms(engine, spr_3d)
+            self._pass_attributes_and_draw(engine, spr_3d)
         self.set_client_states(False, engine)
 
     def get_view_matrix(self):
-        m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, (0, 1, 0))
+        m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, self.camera_up)
+        # m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, (0, 0, -1))
         t = matutils.translation_matrix(self.camera_position)
         return numpy.matmul(t, m)
 
     def get_proj_matrix(self, engine):
-        w, h = engine.get_game_size()
-        fov_degrees = 45.0
-        return matutils.perspective_matrix(fov_degrees / 360 * 6.283, w / h, 0.1, 1000)
+        #w, h = engine.get_game_size()
+        #fov_degrees = 60 * h / w
+        #return matutils.perspective_matrix(fov_degrees / 360 * 6.283, w / h, 0.5, 1000000)
+        proj = numpy.array(
+            [[1.8106601, 0., 0., 0., ],
+             [0., 2.4142137, 0., 0., ],
+             [0., 0., -1.0002, -1., ],
+             [0., 0., -0.20002, 0.]], dtype=numpy.float32).transpose()
+        return proj
 
     def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
         model = spr_3d.get_xform()
+        #print("model={}".format(model))
         engine.set_model_matrix(model)
 
         view = self.get_view_matrix()
-        #offs2d = self.get_offset()
-        #scale = self.get_scale()
-        #view = matutils.translation_matrix(util.mult(offs2d, -1))
-        #matutils.scale_matrix((scale, scale), mat=view)
+        #print("view={}".format(view))
         engine.set_view_matrix(view)
 
         proj = self.get_proj_matrix(engine)
-        #game_width, game_height = engine.get_game_size()
-        #proj = matutils.ortho_matrix(0, game_width, game_height, 0, 1, -1)
+        #print("proj={}".format(proj))
         engine.set_proj_matrix(proj)
+
+    def _set_fixed_uniforms(self, engine, spr_3d):
+        model = spr_3d.get_xform()
+        proj = numpy.array(
+            [[ 1.8106601,  0.,         0.,         0.,       ],
+             [ 0.,         2.4142137,  0.,         0.,       ],
+             [ 0.,         0.,        -1.0002,    -1.,       ],
+             [ 0.,         0.,        -0.20002,    0.       ]], dtype=numpy.float32).transpose()
+        view = numpy.array(
+            [[  1.,   0.,   0.,   0.],
+             [  0.,   1.,   0.,   0.],
+             [  0.,   0.,   1.,   0.],
+             [  0.,   0., -65.,   1.]], dtype=numpy.float32).transpose()
+        engine.set_model_matrix(model)
+        engine.set_view_matrix(view)
+        engine.set_proj_matrix(proj)
+
 
     def _pass_attributes_and_draw(self, engine: 'renderengine.RenderEngine', spr_3d: 'Sprite3D'):
         self.vertices.resize(3 * len(spr_3d.model().get_vertices()), refcheck=False)
         self.tex_coords.resize(2 * len(spr_3d.model().get_texture_coords()), refcheck=False)
-        self.indices.resize(3 * len(spr_3d.model().get_faces()), refcheck=False)
+        self.indices.resize(len(spr_3d.model().get_indices()), refcheck=False)
 
         if self.is_color():
             self.colors.resize(3 * len(spr_3d.model().get_vertices()), refcheck=False)
@@ -94,8 +117,38 @@ class Sprite3D(sprites.AbstractSprite):
         return self._model
 
     def get_xform(self):
-        # TODO other stuff
-        return matutils.translation_matrix(self._position)
+        # translation matrix
+        T = numpy.identity(4, dtype=numpy.float32)
+        T.itemset((3, 0), self._position[0])
+        T.itemset((3, 1), self._position[1])
+        T.itemset((3, 2), self._position[2])
+
+        # rotation matrices
+        Rx = numpy.identity(4, dtype=numpy.float32)
+        Rx.itemset((1, 1), math.cos(self._rotation[0]))
+        Rx.itemset((2, 1), -math.sin(self._rotation[0]))
+        Rx.itemset((1, 2), math.sin(self._rotation[0]))
+        Rx.itemset((2, 2), math.cos(self._rotation[0]))
+
+        Ry = numpy.identity(4, dtype=numpy.float32)
+        Ry.itemset((0, 0), math.cos(self._rotation[1]))
+        Ry.itemset((2, 0), math.sin(self._rotation[1]))
+        Ry.itemset((0, 2), -math.sin(self._rotation[1]))
+        Ry.itemset((2, 2), math.cos(self._rotation[1]))
+
+        Rz = numpy.identity(4, dtype=numpy.float32)
+        Rz.itemset((0, 0), math.cos(self._rotation[2]))
+        Rz.itemset((1, 0), -math.sin(self._rotation[2]))
+        Rz.itemset((0, 1), math.sin(self._rotation[2]))
+        Rz.itemset((1, 1), math.cos(self._rotation[2]))
+
+        # scale matrix
+        S = numpy.identity(4, dtype=numpy.float32)
+        S.itemset((0, 0), self._scale[0])
+        S.itemset((1, 1), self._scale[1])
+        S.itemset((2, 2), self._scale[2])
+
+        return T.dot(Rx).dot(Ry).dot(Rz).dot(S)
 
     def position(self):
         return self._position
@@ -197,8 +250,8 @@ class Sprite3D(sprites.AbstractSprite):
             rgb = self.color()
             for i in range(0, 3 * len(self.model().get_vertices())):
                 colors[i] = rgb[i % 3]
-        for i in range(0, 3 * len(self.model().get_faces())):
-            indices[i] = self.model().get_faces()[i // 3][i % 3][0]  # TODO what about texture coords?
+        for i in range(0, len(self.model().get_indices())):
+            indices[i] = self.model().get_indices()[i]
 
 
 class ThreeDeeModel:
@@ -207,9 +260,9 @@ class ThreeDeeModel:
         self._model_id = model_id
 
         self._vertices = []                 # list of (x, y, z)
-        self._triangle_faces = []           # list of tuples (3 x (vertex_idx, texture_idx, normal_idx))
         self._normals = []                  # list of (x, y, z)
         self._native_texture_coords = []    # list of (x, y)
+        self._indices = []                  # list of ints, one for each corner of each triangle
 
         self._map_texture_xy_to_atlas = map_texture_xy_to_atlas
         self._cached_atlas_coords = []      # list of (x, y)
@@ -222,8 +275,8 @@ class ThreeDeeModel:
     def get_vertices(self):
         return self._vertices
 
-    def get_faces(self):
-        return self._triangle_faces
+    def get_indices(self):
+        return self._indices
 
     def get_normals(self):
         return self._normals
@@ -234,8 +287,12 @@ class ThreeDeeModel:
         return self._cached_atlas_coords
 
     def _load_from_disk(self, model_path):
-        self._cached_atlas_coords = []
         try:
+            raw_vertices = []
+            raw_normals = []
+            raw_native_texture_coords = []
+            triangle_faces = []
+
             safe_path = util.resource_path(model_path)
             with open(safe_path) as f:
                 for line in f:
@@ -243,26 +300,39 @@ class ThreeDeeModel:
                     if line.startswith("v "):
                         xyz = line[2:].split(" ")
                         vertex = (float(xyz[0]), float(xyz[1]), float(xyz[2]))
-                        self._vertices.append(vertex)
+                        raw_vertices.append(vertex)
 
                     elif line.startswith("vn "):
                         xyz = line[3:].split(" ")
                         normal_vec = (float(xyz[0]), float(xyz[1]), float(xyz[2]))
-                        self._normals.append(normal_vec)
+                        raw_normals.append(normal_vec)
 
                     elif line.startswith("vt "):
                         xy = line[3:].split(" ")
                         texture_coords = (float(xy[0]), float(xy[1]))
-                        self._native_texture_coords.append(texture_coords)
+                        raw_native_texture_coords.append(texture_coords)
 
                     elif line.startswith("f "):
                         corners = []
                         for corner in line[2:].split(" "):
                             vtn = corner.split("/")  # vertex, texture, normal
-                            vertex_idx = int(vtn[0])
-                            texture_idx = int(vtn[1]) if len(vtn) > 1 and len(vtn[1]) > 0 else 0
-                            normal_idx = int(vtn[2]) if len(vtn) > 2 and len(vtn[2]) > 0 else 0
+                            vertex_idx = int(vtn[0]) - 1
+                            texture_idx = int(vtn[1]) - 1 if len(vtn) > 1 and len(vtn[1]) > 0 else -1
+                            normal_idx = int(vtn[2]) - 1 if len(vtn) > 2 and len(vtn[2]) > 0 else -1
                             corners.append((vertex_idx, texture_idx, normal_idx))
-                        self._triangle_faces.append(tuple(corners))
+                        triangle_faces.append(tuple(corners))
+
+            for tri in triangle_faces:
+                for c in reversed(tri):  # TODO use the normals
+                    v_idx, t_idx, norm_idx = c
+                    vertex_xyz = raw_vertices[v_idx]
+                    texture_xy = raw_native_texture_coords[t_idx] if t_idx >= 0 else None
+                    norm_xyz = raw_normals[norm_idx] if norm_idx >= 0 else None
+                    index = len(self._indices)  # TODO can probably condense this a bit
+
+                    self._vertices.append(vertex_xyz)
+                    self._native_texture_coords.append(texture_xy)
+                    self._normals.append(norm_xyz)
+                    self._indices.append(index)
         except IOError:
             print("ERROR: failed to load model: {}".format(model_path))

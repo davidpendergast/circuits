@@ -35,3 +35,8 @@ is_dev = os.path.exists(".gitignore")  # yikes
 key_repeat_delay = 30  # keys held for longer than this many ticks will start to be typed repeatedly
 key_repeat_period = 5  # after the delay has passed, the key will be typed every X ticks until released
 
+
+""" 3D Debug """
+rainbow_3d = False
+wireframe_3d = False
+

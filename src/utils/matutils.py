@@ -100,6 +100,6 @@ def get_matrix_looking_at(eye_xyz, target_xyz, up_vec):
     res = numpy.array([[s[0], s[1], s[2], 0],
                        [u[0], u[1], u[2], 0],
                        [-f[0], -f[1], -f[2], 0],
-                       [0, 0, 0, 1]])
+                       [0, 0, 0, 1]], dtype=numpy.float32)
     return res
 

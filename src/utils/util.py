@@ -134,11 +134,17 @@ def rand_vec(length=1, size=2):
     elif size == 3:
         theta = 6.2832 * random.random()
         phi = 3.1415 * random.random()
-        return [length * math.sin(phi) * math.cos(theta),
-                length * math.sin(phi) * math.sin(theta),
-                length * math.cos(phi)]
+        return spherical_to_cartesian(length, theta, phi)
     else:
         raise ValueError("todo - implement algorithm that finds a random point on an n-sphere")
+
+
+def spherical_to_cartesian(r, theta, phi):
+    return [
+        r * math.sin(phi) * math.cos(theta),
+        r * math.sin(phi) * math.sin(theta),
+        r * math.cos(phi)
+    ]
 
 
 def rect_expand(rect, all_expand=0, left_expand=0, right_expand=0, up_expand=0, down_expand=0):

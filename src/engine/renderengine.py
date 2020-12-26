@@ -270,13 +270,13 @@ class RenderEngine:
         glEnable(GL_TEXTURE_2D)
 
         glEnable(GL_BLEND)
-        # glEnable(GL_DEPTH_TEST)
-        # glEnable(GL_CULL_FACE)
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_CULL_FACE)
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         # uncomment for wireframe mode
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        # glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
         self.raw_texture_data = (img_data, width, height)
 
@@ -392,7 +392,7 @@ class RenderEngine130(RenderEngine):
             {
                 texCoord = vTexCoord;
                 color = vColor;
-                gl_Position = proj * model * view * vec4(position.x, position.y, position.z, 1.0);
+                gl_Position = proj * view * model * vec4(position.x, position.y, position.z, 1.0);
             }
             ''',
             '''
@@ -567,7 +567,7 @@ class RenderEngine120(RenderEngine130):
             {
                 texCoord = vTexCoord;
                 color = vColor;
-                gl_Position = proj * model * view * vec4(position.x, position.y, position.z, 1.0);
+                gl_Position = proj * view * model * vec4(position.x, position.y, position.z, 1.0);
             }
             ''',
             '''

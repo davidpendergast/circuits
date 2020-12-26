@@ -1615,53 +1615,72 @@ class Test3DScene(scenes.Scene):
     def __init__(self):
         super().__init__()
         self.ship_sprite3d = None
-        self.ticks = 470
+        self.text_info_sprite = None
 
-    def update(self):
-        import src.engine.threedee as threedee
-        if self.ship_sprite3d is None:
-            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER)
-        r = 100
-        x = r * math.cos(self.ticks / 100)
-        y = r * math.sin(self.ticks / 75)
-        z = r * math.sin(self.ticks / 50)
-        self.ship_sprite3d = self.ship_sprite3d.update(new_position=(x, y, z))
+        self.cam_walk_speed = 0.75
+        self.cam_turn_speed = 0.025
 
-        #print("INFO: {} ship at {}".format(self.ticks, (x, y, z)))
-        # elf.ticks += 1
+        self.cam_angle_xy = 0
+        self.cam_lift_angle_z = 0
+        self.cam_pos = (0, 0, -65)
 
-        cam_speed = 0.01
+    def handle_camera_move(self):
+        import pygame
+        cam_rotate = inputs.get_instance().is_held_four_way(left=pygame.K_LEFT,
+                                                            right=pygame.K_RIGHT,
+                                                            up=pygame.K_UP,
+                                                            down=pygame.K_DOWN)
+        self.cam_angle_xy += cam_rotate[0] * self.cam_turn_speed
+        self.cam_lift_angle_z += util.bound(cam_rotate[1] * self.cam_turn_speed, -3.14153 / 3, 3.14153 / 3)
+        camera_dir = util.spherical_to_cartesian(1, self.cam_angle_xy, 3.14153 / 2 + self.cam_lift_angle_z)
 
         layer = renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER)
+        layer.camera_direction = camera_dir
 
-        cam_rotate = inputs.get_instance().is_held_four_way(left=keybinds.get_instance().get_keys(const.MOVE_CAMERA_LEFT),
-                                                            right=keybinds.get_instance().get_keys(const.MOVE_CAMERA_RIGHT),
-                                                            up=keybinds.get_instance().get_keys(const.MOVE_CAMERA_UP),
-                                                            down=keybinds.get_instance().get_keys(const.MOVE_CAMERA_DOWN))
-        cam_rot_speed = 0.01
-        cam_dir_x = layer.camera_direction[0]
-        cam_dir_y = layer.camera_direction[1]
-        cam_dir_z = layer.camera_direction[2]
-        if cam_rotate[0] != 0:
-            cam_dir_x, cam_dir_z = util.rotate((cam_dir_x, cam_dir_z), cam_rotate[0] * cam_rot_speed)
-        if cam_rotate[1] != 0:
-            cam_dir_z, cam_dir_y = util.rotate((cam_dir_z, cam_dir_y), cam_rotate[1] * cam_rot_speed)
-        layer.camera_direction = (cam_dir_x, cam_dir_y, cam_dir_z)
-
-        cam_move_xy = inputs.get_instance().is_held_four_way(left=keybinds.get_instance().get_keys(const.MOVE_LEFT),
-                                                             right=keybinds.get_instance().get_keys(const.MOVE_RIGHT),
-                                                             up=keybinds.get_instance().get_keys(const.JUMP),
-                                                             down=keybinds.get_instance().get_keys(const.CROUCH))
+        cam_move = inputs.get_instance().is_held_four_way(left=pygame.K_a,
+                                                          right=pygame.K_d,
+                                                          up=pygame.K_w,
+                                                          down=pygame.K_s)
 
         cam_x, cam_y, cam_z = layer.camera_position
-        cam_x += cam_move_xy[0] * cam_speed
-        if inputs.get_instance().shift_is_held():
-            cam_z += cam_move_xy[1] * cam_speed
-        else:
-            cam_y += cam_move_xy[1] * cam_speed
+        cam_x += cam_move[1] * math.cos(self.cam_angle_xy) * self.cam_walk_speed
+        cam_y += cam_move[1] * math.sin(self.cam_angle_xy) * self.cam_walk_speed
+
+        cam_x += cam_move[0] * math.cos(self.cam_angle_xy + 3.14153 / 2) * self.cam_walk_speed
+        cam_y += cam_move[0] * math.sin(self.cam_angle_xy + 3.14153 / 2) * self.cam_walk_speed
 
         layer.camera_position = (cam_x, cam_y, cam_z)
 
+    def update(self):
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
+            self.jump_to_scene(MainMenuScene())
+            return
+
+        import src.engine.threedee as threedee
+        if self.ship_sprite3d is None:
+            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER, rotation=(0.5, 0, 0))
+        rot = list(self.ship_sprite3d.rotation())
+        rot[0] += 0.01
+        rot[1] += 0.02
+        rot[2] += 0.03
+        self.ship_sprite3d = self.ship_sprite3d.update(new_rotation=rot)
+
+        if self.text_info_sprite is None:
+            self.text_info_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc")
+
+        # self.handle_camera_move()
+
+        layer = renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER)
+        layer.camera_position = self.cam_pos
+
+        cam_x, cam_y, cam_z = layer.camera_position
+        dir_x, dir_y, dir_z = layer.camera_direction
+        text = "pos=({:.2f}, {:.2f}, {:.2f})\ndir=({:.2f}, {:.2f}, {:.2f})".format(
+            cam_x, cam_y, cam_z, dir_x, dir_y, dir_z
+        )
+        self.text_info_sprite.update(new_text=text)
+
     def all_sprites(self):
         yield self.ship_sprite3d
+        yield self.text_info_sprite
 

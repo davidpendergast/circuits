@@ -387,7 +387,7 @@ def hsv_to_rgb(h, s, v):
     :return: (r, g, b) as floats
     """
     C = v * s
-    X = C * (1 - abs((h // 60) % 2 - 1))
+    X = C * (1 - abs((h / 60) % 2 - 1))
     m = v - C
 
     if h < 60:
@@ -406,13 +406,17 @@ def hsv_to_rgb(h, s, v):
     return (rgb_prime[0] + m, rgb_prime[1] + m, rgb_prime[2] + m)
 
 
-def rainbowfill(surface, rect=None):
+def rainbowfill(surface, rect=None, rainbow_height=None):
     if rect is None:
         rect = [0, 0, surface.get_width(), surface.get_height()]
     for x in range(rect[0], rect[0] + rect[2]):
         for y in range(rect[1], rect[1] + rect[3]):
-            pcnt_y = (y - rect[1]) / rect[3]
-            h = int(pcnt_y * 360)
+            if rainbow_height is None:
+                pcnt_y = (y - rect[1]) / rect[3]
+            else:
+                pcnt_y = ((y - rect[1]) % rainbow_height) / rainbow_height
+
+            h = pcnt_y * 360
             rgb = hsv_to_rgb(h, 1, 1)
             rgb_int = colors.to_intn(rgb)
             surface.set_at((x, y), rgb_int)
