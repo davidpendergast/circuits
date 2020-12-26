@@ -275,9 +275,6 @@ class RenderEngine:
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        # uncomment for wireframe mode
-        # glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-
         self.raw_texture_data = (img_data, width, height)
 
         self.set_texture_internal()

@@ -1620,9 +1620,11 @@ class Test3DScene(scenes.Scene):
         self.cam_walk_speed = 0.75
         self.cam_turn_speed = 0.025
 
-        self.cam_angle_xy = 0
-        self.cam_lift_angle_z = 0
+        self.cam_angle_xz = -3.1415 / 2
+        self.cam_lift_angle_y = 0
+
         self.cam_pos = (0, 0, -65)
+        self.cam_dir = (0, 0, -1)  # this I don't understand
 
     def handle_camera_move(self):
         import pygame
@@ -1630,26 +1632,28 @@ class Test3DScene(scenes.Scene):
                                                             right=pygame.K_RIGHT,
                                                             up=pygame.K_UP,
                                                             down=pygame.K_DOWN)
-        self.cam_angle_xy += cam_rotate[0] * self.cam_turn_speed
-        self.cam_lift_angle_z += util.bound(cam_rotate[1] * self.cam_turn_speed, -3.14153 / 3, 3.14153 / 3)
-        camera_dir = util.spherical_to_cartesian(1, self.cam_angle_xy, 3.14153 / 2 + self.cam_lift_angle_z)
+        self.cam_angle_xz += cam_rotate[0] * self.cam_turn_speed
 
-        layer = renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER)
-        layer.camera_direction = camera_dir
+        new_cam_lift_angle_y = self.cam_lift_angle_y + cam_rotate[1] * self.cam_turn_speed
+        new_cam_lift_angle_y = util.bound(new_cam_lift_angle_y, -3.14153 / 3, 3.14153 / 3)
+        self.cam_lift_angle_y = new_cam_lift_angle_y
+
+        camera_dir = util.spherical_to_cartesian(1, self.cam_angle_xz, 3.14153 / 2 + self.cam_lift_angle_y)
+        self.cam_dir = (camera_dir[0], camera_dir[2], camera_dir[1])  # swap y and z axis~
 
         cam_move = inputs.get_instance().is_held_four_way(left=pygame.K_a,
                                                           right=pygame.K_d,
                                                           up=pygame.K_w,
                                                           down=pygame.K_s)
 
-        cam_x, cam_y, cam_z = layer.camera_position
-        cam_x += cam_move[1] * math.cos(self.cam_angle_xy) * self.cam_walk_speed
-        cam_y += cam_move[1] * math.sin(self.cam_angle_xy) * self.cam_walk_speed
+        cam_x, cam_y, cam_z = self.cam_pos
+        cam_x += cam_move[1] * math.cos(self.cam_angle_xz) * self.cam_walk_speed
+        cam_z += cam_move[1] * math.sin(self.cam_angle_xz) * self.cam_walk_speed
 
-        cam_x += cam_move[0] * math.cos(self.cam_angle_xy + 3.14153 / 2) * self.cam_walk_speed
-        cam_y += cam_move[0] * math.sin(self.cam_angle_xy + 3.14153 / 2) * self.cam_walk_speed
+        cam_x += cam_move[0] * math.cos(self.cam_angle_xz - 3.14153 / 2) * self.cam_walk_speed
+        cam_z += cam_move[0] * math.sin(self.cam_angle_xz - 3.14153 / 2) * self.cam_walk_speed
 
-        layer.camera_position = (cam_x, cam_y, cam_z)
+        self.cam_pos = (cam_x, cam_y, cam_z)
 
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
@@ -1668,10 +1672,11 @@ class Test3DScene(scenes.Scene):
         if self.text_info_sprite is None:
             self.text_info_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc")
 
-        # self.handle_camera_move()
+        self.handle_camera_move()
 
         layer = renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER)
         layer.camera_position = self.cam_pos
+        layer.camera_direction = self.cam_dir
 
         cam_x, cam_y, cam_z = layer.camera_position
         dir_x, dir_y, dir_z = layer.camera_direction

@@ -7,6 +7,7 @@ import src.engine.layers as layers
 import src.engine.sprites as sprites
 import src.utils.util as util
 import src.utils.matutils as matutils
+import configs
 
 
 class ThreeDeeLayer(layers.ImageLayer):
@@ -29,58 +30,39 @@ class ThreeDeeLayer(layers.ImageLayer):
         for sprite_id in self.images:
             spr_3d = engine.sprite_info_lookup[sprite_id].sprite
             self._set_uniforms_for_sprite(engine, spr_3d)
-            # self._set_fixed_uniforms(engine, spr_3d)
             self._pass_attributes_and_draw(engine, spr_3d)
         self.set_client_states(False, engine)
 
+    def set_client_states(self, enable, engine):
+        super().set_client_states(enable, engine)
+
+        if configs.wireframe_3d:
+            if enable:
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            else:
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
     def get_view_matrix(self):
         m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, self.camera_up)
-        # m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, (0, 0, -1))
         t = matutils.translation_matrix(self.camera_position)
-        return numpy.matmul(t, m)
+        return numpy.matmul(m, t)
 
     def get_proj_matrix(self, engine):
-        #w, h = engine.get_game_size()
-        #fov_degrees = 60 * h / w
-        #return matutils.perspective_matrix(fov_degrees / 360 * 6.283, w / h, 0.5, 1000000)
-        proj = numpy.array(
-            [[1.8106601, 0., 0., 0., ],
-             [0., 2.4142137, 0., 0., ],
-             [0., 0., -1.0002, -1., ],
-             [0., 0., -0.20002, 0.]], dtype=numpy.float32).transpose()
-        return proj
+        w, h = engine.get_game_size()
+        fovy_degrees = 45
+        return matutils.perspective_matrix(fovy_degrees / 360 * 6.283, w / h, 0.5, 1000000)
 
     def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
         model = spr_3d.get_xform()
-        #print("model={}".format(model))
         engine.set_model_matrix(model)
 
         view = self.get_view_matrix()
-        #print("view={}".format(view))
         engine.set_view_matrix(view)
 
         proj = self.get_proj_matrix(engine)
-        #print("proj={}".format(proj))
         engine.set_proj_matrix(proj)
 
-    def _set_fixed_uniforms(self, engine, spr_3d):
-        model = spr_3d.get_xform()
-        proj = numpy.array(
-            [[ 1.8106601,  0.,         0.,         0.,       ],
-             [ 0.,         2.4142137,  0.,         0.,       ],
-             [ 0.,         0.,        -1.0002,    -1.,       ],
-             [ 0.,         0.,        -0.20002,    0.       ]], dtype=numpy.float32).transpose()
-        view = numpy.array(
-            [[  1.,   0.,   0.,   0.],
-             [  0.,   1.,   0.,   0.],
-             [  0.,   0.,   1.,   0.],
-             [  0.,   0., -65.,   1.]], dtype=numpy.float32).transpose()
-        engine.set_model_matrix(model)
-        engine.set_view_matrix(view)
-        engine.set_proj_matrix(proj)
-
-
-    def _pass_attributes_and_draw(self, engine: 'renderengine.RenderEngine', spr_3d: 'Sprite3D'):
+    def _pass_attributes_and_draw(self, engine, spr_3d: 'Sprite3D'):
         self.vertices.resize(3 * len(spr_3d.model().get_vertices()), refcheck=False)
         self.tex_coords.resize(2 * len(spr_3d.model().get_texture_coords()), refcheck=False)
         self.indices.resize(len(spr_3d.model().get_indices()), refcheck=False)
@@ -328,7 +310,9 @@ class ThreeDeeModel:
                     vertex_xyz = raw_vertices[v_idx]
                     texture_xy = raw_native_texture_coords[t_idx] if t_idx >= 0 else None
                     norm_xyz = raw_normals[norm_idx] if norm_idx >= 0 else None
-                    index = len(self._indices)  # TODO can probably condense this a bit
+                    # TODO can probably condense this a bit (only have one index per unique (vertex, texture, normal))
+                    # TODO would that ever matter for most models? probably not?
+                    index = len(self._indices)
 
                     self._vertices.append(vertex_xyz)
                     self._native_texture_coords.append(texture_xy)

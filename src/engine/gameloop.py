@@ -210,7 +210,7 @@ class _GameLoop:
             pygame.display.flip()
 
             slo_mo_mode = configs.is_dev and input_state.is_held(pygame.K_TAB)
-            target_fps = configs.target_fps if not slo_mo_mode else configs.target_fps // 60 # 4
+            target_fps = configs.target_fps if not slo_mo_mode else configs.target_fps // 4
 
             self._wait_until_next_frame(target_fps)
 

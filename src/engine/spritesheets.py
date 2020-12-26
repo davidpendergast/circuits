@@ -317,12 +317,6 @@ class SpriteAtlas:
         atlas_surface = pygame.Surface(atlas_size, pygame.SRCALPHA, 32)
         atlas_surface.fill((255, 255, 255, 0))
 
-        # TODO just for testing
-        #to_fill = artutils.maze_fill(atlas_surface, [(255, 255, 255)], (0, 0))
-        #for pt in to_fill:
-        #    atlas_surface.set_at(pt, (255, 0, 0, 255))
-        #artutils.rainbowfill(atlas_surface, rainbow_height=None)
-
         for s_id in all_sheets:
             pos = positions[s_id]
             img = loaded_images[s_id]

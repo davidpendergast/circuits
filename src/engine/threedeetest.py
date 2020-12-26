@@ -121,7 +121,7 @@ class Object3D:
         self.model = obj_data
 
         self.translation = [0, 0, 0]
-        self.rotation = [0.5, 0, 0]
+        self.rotation = [0, 0, 0]
         self.scale = [1, 1, 1]
 
     def get_xform(self):
@@ -182,9 +182,9 @@ class Scene3D:
         glGetFloatv(GL_MODELVIEW_MATRIX, mat)
         print("GL_MODELVIEW_MATRIX={}".format(mat))
 
-        self.obj.rotation[0] += 0.01
-        self.obj.rotation[1] += 0.02
-        self.obj.rotation[2] += 0.03
+        #self.obj.rotation[0] += 0.01
+        #self.obj.rotation[1] += 0.02
+        #self.obj.rotation[2] += 0.03
         self.obj.render_texture()
 
     def move_forward(self, n):
@@ -229,7 +229,7 @@ def main():
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
-    texture_id = load_texture("assets/3d_textures/ship_texture.png")
+    texture_id = load_texture("assets/textures/ship_texture.png")
 
     scene = Scene3D(texture_id)
 
