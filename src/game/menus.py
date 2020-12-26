@@ -1662,15 +1662,43 @@ class Test3DScene(scenes.Scene):
 
         import src.engine.threedee as threedee
         if self.ship_sprite3d is None:
-            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER, rotation=(0.5, 0, 0))
+            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER, rotation=(0, 0, 0))
+
+        import pygame
+
+        mult = -1 if inputs.get_instance().shift_is_held() else 1
+
         rot = list(self.ship_sprite3d.rotation())
-        rot[0] += 0.01
-        rot[1] += 0.02
-        rot[2] += 0.03
-        self.ship_sprite3d = self.ship_sprite3d.update(new_rotation=rot)
+        if inputs.get_instance().is_held(pygame.K_r):
+            rot[0] += mult * 0.01
+            rot[1] += mult * 0.02
+            rot[2] += mult * 0.03
+
+        scale = list(self.ship_sprite3d.scale())
+        pos = list(self.ship_sprite3d.position())
+
+        if inputs.get_instance().ctrl_is_held():
+            scale_inc = mult * 0.05
+            if inputs.get_instance().is_held(pygame.K_x):
+                scale[0] += scale_inc
+            if inputs.get_instance().is_held(pygame.K_y):
+                scale[1] += scale_inc
+            if inputs.get_instance().is_held(pygame.K_z):
+                scale[2] += scale_inc
+        else:
+            pos_inc = mult * 0.2
+            if inputs.get_instance().is_held(pygame.K_x):
+                pos[0] += pos_inc
+            if inputs.get_instance().is_held(pygame.K_y):
+                pos[1] += pos_inc
+            if inputs.get_instance().is_held(pygame.K_z):
+                pos[2] += pos_inc
+
+        self.ship_sprite3d = self.ship_sprite3d.update(new_position=pos, new_rotation=rot, new_scale=scale)
 
         if self.text_info_sprite is None:
-            self.text_info_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc")
+            self.text_info_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=0.5, color=colors.LIGHT_GRAY,
+                                                       font_lookup=spritesheets.get_default_font(mono=True, small=False))
 
         self.handle_camera_move()
 
@@ -1680,8 +1708,16 @@ class Test3DScene(scenes.Scene):
 
         cam_x, cam_y, cam_z = layer.camera_position
         dir_x, dir_y, dir_z = layer.camera_direction
-        text = "pos=({:.2f}, {:.2f}, {:.2f})\ndir=({:.2f}, {:.2f}, {:.2f})".format(
-            cam_x, cam_y, cam_z, dir_x, dir_y, dir_z
+        text = "camera_pos= ({:.2f}, {:.2f}, {:.2f})\n" \
+               "camera_dir= ({:.2f}, {:.2f}, {:.2f})\n\n" \
+               "ship_pos=   ({:.2f}, {:.2f}, {:.2f})\n" \
+               "ship_rot=   ({:.2f}, {:.2f}, {:.2f})\n" \
+               "ship_scale= ({:.2f}, {:.2f}, {:.2f})".format(
+            cam_x, cam_y, cam_z,
+            dir_x, dir_y, dir_z,
+            pos[0], pos[1], pos[2],
+            rot[0], rot[1], rot[2],
+            scale[0], scale[1], scale[2]
         )
         self.text_info_sprite.update(new_text=text)
 

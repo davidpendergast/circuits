@@ -101,9 +101,10 @@ class Sprite3D(sprites.AbstractSprite):
     def get_xform(self):
         # translation matrix
         T = numpy.identity(4, dtype=numpy.float32)
-        T.itemset((3, 0), self._position[0])
-        T.itemset((3, 1), self._position[1])
+        T.itemset((3, 0), -self._position[0])  # don't ask why this is negative
+        T.itemset((3, 1), -self._position[1])
         T.itemset((3, 2), self._position[2])
+        T = T.transpose()  # this is weird T_T
 
         # rotation matrices
         Rx = numpy.identity(4, dtype=numpy.float32)
@@ -111,23 +112,26 @@ class Sprite3D(sprites.AbstractSprite):
         Rx.itemset((2, 1), -math.sin(self._rotation[0]))
         Rx.itemset((1, 2), math.sin(self._rotation[0]))
         Rx.itemset((2, 2), math.cos(self._rotation[0]))
+        # Rx = Rx.transpose()
 
         Ry = numpy.identity(4, dtype=numpy.float32)
         Ry.itemset((0, 0), math.cos(self._rotation[1]))
         Ry.itemset((2, 0), math.sin(self._rotation[1]))
         Ry.itemset((0, 2), -math.sin(self._rotation[1]))
         Ry.itemset((2, 2), math.cos(self._rotation[1]))
+        # Ry = Ry.transpose()
 
         Rz = numpy.identity(4, dtype=numpy.float32)
         Rz.itemset((0, 0), math.cos(self._rotation[2]))
         Rz.itemset((1, 0), -math.sin(self._rotation[2]))
         Rz.itemset((0, 1), math.sin(self._rotation[2]))
         Rz.itemset((1, 1), math.cos(self._rotation[2]))
+        # Rz = Rz.transpose()
 
         # scale matrix
         S = numpy.identity(4, dtype=numpy.float32)
         S.itemset((0, 0), self._scale[0])
-        S.itemset((1, 1), self._scale[1])
+        S.itemset((1, 1), -self._scale[1])  # don't ask why this is negative either
         S.itemset((2, 2), self._scale[2])
 
         return T.dot(Rx).dot(Ry).dot(Rz).dot(S)
@@ -305,7 +309,7 @@ class ThreeDeeModel:
                         triangle_faces.append(tuple(corners))
 
             for tri in triangle_faces:
-                for c in reversed(tri):  # TODO use the normals
+                for c in tri:  # TODO use the normals
                     v_idx, t_idx, norm_idx = c
                     vertex_xyz = raw_vertices[v_idx]
                     texture_xy = raw_native_texture_coords[t_idx] if t_idx >= 0 else None
