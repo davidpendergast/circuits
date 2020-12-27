@@ -685,6 +685,7 @@ class TextureSheetTypes:
 class ThreeDeeModels:
     SHIP = None
     POINTY_BOX = None
+    AXIS = None
 
     @staticmethod
     def _get_xform_for_texture(texture_id):
@@ -698,6 +699,8 @@ class ThreeDeeModels:
                                                      ThreeDeeModels._get_xform_for_texture("ship_texture"))
         ThreeDeeModels.POINTY_BOX = threedee.ThreeDeeModel("pointy_box", "assets/models/pointy_box.obj",
                                                            ThreeDeeModels._get_xform_for_texture("ship_texture"))
+        ThreeDeeModels.AXIS = threedee.ThreeDeeModel("axis", "assets/models/axis.obj",
+                                                     ThreeDeeModels._get_xform_for_texture("ship_texture"))
 
 class CutsceneTypes:
     ALL_TYPES = []

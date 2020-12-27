@@ -36,10 +36,15 @@ class ThreeDeeLayer(layers.ImageLayer):
     def set_client_states(self, enable, engine):
         super().set_client_states(enable, engine)
 
-        if configs.wireframe_3d:
-            if enable:
+        if enable:
+            glEnable(GL_DEPTH_TEST)
+            glEnable(GL_CULL_FACE)
+            if configs.wireframe_3d:
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            else:
+        else:
+            glDisable(GL_DEPTH_TEST)
+            glDisable(GL_CULL_FACE)
+            if configs.wireframe_3d:
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
     def get_view_matrix(self):
@@ -111,9 +116,9 @@ class Sprite3D(sprites.AbstractSprite):
     def get_xform(self):
         # translation matrix
         T = numpy.identity(4, dtype=numpy.float32)
-        T.itemset((3, 0), -self._position[0])  # don't ask why this is negative
+        T.itemset((3, 0), -self._position[0])
         T.itemset((3, 1), -self._position[1])
-        T.itemset((3, 2), self._position[2])
+        T.itemset((3, 2), -self._position[2])
         T = T.transpose()  # this is weird T_T
 
         # rotation matrices

@@ -1668,7 +1668,7 @@ class Test3DScene(scenes.Scene):
             self.track_ship = not self.track_ship
 
         if self.track_ship:
-            dir_vec = util.set_length(util.sub(self.ship_sprite3d.position(), self.cam_pos), -1)
+            dir_vec = util.negate(util.sub(self.ship_sprite3d.position(), self.cam_pos))
             _, theta, phi = util.cartesian_to_spherical((dir_vec[0], dir_vec[2], dir_vec[1]))
             self.cam_angle_xz = theta
             self.cam_angle_y = util.bound(math.pi - phi, self.cam_angle_y_bounds[0], self.cam_angle_y_bounds[1])
@@ -1688,7 +1688,7 @@ class Test3DScene(scenes.Scene):
 
         import src.engine.threedee as threedee
         if self.ship_sprite3d is None:
-            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER)
+            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.AXIS, spriteref.THREEDEE_LAYER)
 
         import pygame
 
