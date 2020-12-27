@@ -96,10 +96,19 @@ def get_matrix_looking_at(eye_xyz, target_xyz, up_vec):
     f = util.set_length(F, 1)
     up_norm = util.set_length(up_vec, 1)
     s = util.cross_prod(f, up_norm)
-    u = util.cross_prod(s, f)
+    u = util.cross_prod(util.set_length(s, 1), f)
     res = numpy.array([[s[0], s[1], s[2], 0],
                        [u[0], u[1], u[2], 0],
                        [-f[0], -f[1], -f[2], 0],
                        [0, 0, 0, 1]], dtype=numpy.float32)
     return res
 
+def get_matrix_looking_at2(eye_xyz, target_xyz, up_vec):
+    n = util.set_length(util.sub(eye_xyz, target_xyz), 1)
+    u = util.set_length(util.cross_prod(up_vec, n), 1)
+    v = util.cross_prod(n, u)
+    res = numpy.array([[u[0], u[1], u[2], util.dot_prod(util.negate(u), eye_xyz)],
+                       [v[0], v[1], v[2], util.dot_prod(util.negate(v), eye_xyz)],
+                       [n[0], n[1], n[2], util.dot_prod(util.negate(n), eye_xyz)],
+                       [0, 0, 0, 1]], dtype=numpy.float32)
+    return res

@@ -17,7 +17,7 @@ class ThreeDeeLayer(layers.ImageLayer):
 
         self.camera_position = (0, 0, 0)
         self.camera_direction = (0, 0, -1)
-        self.camera_up = (0, 1, 0)
+        self.camera_fov = 35
 
     def accepts_sprite_type(self, sprite_type):
         return sprite_type == sprites.SpriteTypes.THREE_DEE
@@ -43,14 +43,24 @@ class ThreeDeeLayer(layers.ImageLayer):
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
     def get_view_matrix(self):
-        m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, self.camera_up)
+        m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, self.get_camera_up())
         t = matutils.translation_matrix(self.camera_position)
-        return numpy.matmul(m, t)
+        res = numpy.matmul(m, t)
+        res.itemset((1, 1), -res.item((1, 1)))  # WHY
+        return res
+        #return numpy.array([
+        #    [ 0.7492038,   0.2582737,   0.6099085,   0.        ],
+        #    [ 0.,          0.92083967, -0.3899415,   0.        ],
+        #    [-0.66233957,  0.29214567,  0.6898965,   0.,        ],
+        #    [ 2.964132,   -4.156894,   -9.816427,    1.        ]], dtype=numpy.float32).transpose()
 
     def get_proj_matrix(self, engine):
         w, h = engine.get_game_size()
-        fovy_degrees = 45
-        return matutils.perspective_matrix(fovy_degrees / 360 * 6.283, w / h, 0.5, 1000000)
+        return matutils.perspective_matrix(self.camera_fov / 360 * 6.283, w / h, 0.5, 1000000)
+
+    def get_camera_up(self):
+        return (0, 1, 0)
+        # return util.rotate_towards(self.camera_direction, (0, 1, 0), -math.pi / 2)
 
     def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
         model = spr_3d.get_xform()
@@ -131,7 +141,7 @@ class Sprite3D(sprites.AbstractSprite):
         # scale matrix
         S = numpy.identity(4, dtype=numpy.float32)
         S.itemset((0, 0), self._scale[0])
-        S.itemset((1, 1), -self._scale[1])  # don't ask why this is negative either
+        S.itemset((1, 1), self._scale[1])
         S.itemset((2, 2), self._scale[2])
 
         return T.dot(Rx).dot(Ry).dot(Rz).dot(S)

@@ -88,6 +88,20 @@ def angle_between(v1, v2):
         return v1_dot_v2 / (mag1 * mag2)
 
 
+def rotate_towards(v1, v2, rad):
+    if angle_between(v1, v2) == 0:
+        return v1
+    else:
+        # https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
+        k = set_length(cross_prod(v1, v2), 1)
+        v1_cos_theta = mult(v1, math.cos(rad))
+        k_cross_v1_sin_theta = mult(cross_prod(k, v1), math.sin(rad))
+        k_k_dot_v1 = mult(k, dot_prod(k, v1))
+
+        t = add(v1_cos_theta, k_cross_v1_sin_theta)
+        return add(t, mult(k_k_dot_v1, (1 - math.cos(rad))))
+
+
 def cardinal_direction_between(from_xy, to_xy):
     """example: (0, 0) to (5, -6) would give (1, -1)"""
     return tuple(signum(v) for v in sub(to_xy, from_xy))
@@ -145,6 +159,16 @@ def spherical_to_cartesian(r, theta, phi):
         r * math.sin(phi) * math.sin(theta),
         r * math.cos(phi)
     ]
+
+
+def cartesian_to_spherical(v):
+    r = mag(v)
+    if r == 0:
+        return (0, 0, 0)
+    else:
+        phi = math.atan2(mag((v[0], v[1])), v[2])
+        theta = math.atan2(v[1], v[0])
+        return (r, theta, phi)
 
 
 def rect_expand(rect, all_expand=0, left_expand=0, right_expand=0, up_expand=0, down_expand=0):

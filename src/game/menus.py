@@ -1621,26 +1621,17 @@ class Test3DScene(scenes.Scene):
         self.cam_turn_speed = 0.025
 
         self.cam_angle_xz = -3.1415 / 2
-        self.cam_lift_angle_y = 0
+        self.cam_angle_y = 3.1415 / 2  # 0 is straight up
+        self.cam_angle_y_bounds = (3.14153 / 3, 2 * 3.14153 / 3)
 
         self.cam_pos = (0, 0, -65)
-        self.cam_dir = (0, 0, -1)  # this I don't understand
+        self.cam_dir = (0, 0, -1)
+        self.cam_fov = 24
+
+        self.track_ship = False
 
     def handle_camera_move(self):
         import pygame
-        cam_rotate = inputs.get_instance().is_held_four_way(left=pygame.K_LEFT,
-                                                            right=pygame.K_RIGHT,
-                                                            up=pygame.K_UP,
-                                                            down=pygame.K_DOWN)
-        self.cam_angle_xz += cam_rotate[0] * self.cam_turn_speed
-
-        new_cam_lift_angle_y = self.cam_lift_angle_y + cam_rotate[1] * self.cam_turn_speed
-        new_cam_lift_angle_y = util.bound(new_cam_lift_angle_y, -3.14153 / 3, 3.14153 / 3)
-        self.cam_lift_angle_y = new_cam_lift_angle_y
-
-        camera_dir = util.spherical_to_cartesian(1, self.cam_angle_xz, 3.14153 / 2 + self.cam_lift_angle_y)
-        self.cam_dir = (camera_dir[0], camera_dir[2], camera_dir[1])  # swap y and z axis~
-
         cam_move = inputs.get_instance().is_held_four_way(left=pygame.K_a,
                                                           right=pygame.K_d,
                                                           up=pygame.K_w,
@@ -1653,7 +1644,42 @@ class Test3DScene(scenes.Scene):
         cam_x += cam_move[0] * math.cos(self.cam_angle_xz - 3.14153 / 2) * self.cam_walk_speed
         cam_z += cam_move[0] * math.sin(self.cam_angle_xz - 3.14153 / 2) * self.cam_walk_speed
 
+        cam_move_y = inputs.get_instance().is_held_four_way(up=pygame.K_SPACE, down=pygame.K_c)
+        cam_y += -cam_move_y[1] * self.cam_walk_speed
+
         self.cam_pos = (cam_x, cam_y, cam_z)
+
+    def handle_camera_rotate(self):
+        import pygame
+        cam_rotate = inputs.get_instance().is_held_four_way(left=pygame.K_LEFT,
+                                                            right=pygame.K_RIGHT,
+                                                            up=pygame.K_UP,
+                                                            down=pygame.K_DOWN)
+
+        self.cam_angle_xz += cam_rotate[0] * self.cam_turn_speed
+
+        new_cam_angle_y = self.cam_angle_y + cam_rotate[1] * self.cam_turn_speed
+        new_cam_angle_y = util.bound(new_cam_angle_y, self.cam_angle_y_bounds[0], self.cam_angle_y_bounds[1])
+        self.cam_angle_y = new_cam_angle_y
+
+        if cam_rotate != (0, 0):
+            self.track_ship = False
+        elif inputs.get_instance().was_pressed(pygame.K_t):
+            self.track_ship = not self.track_ship
+
+        if self.track_ship:
+            dir_vec = util.set_length(util.sub(self.ship_sprite3d.position(), self.cam_pos), -1)
+            _, theta, phi = util.cartesian_to_spherical((dir_vec[0], dir_vec[2], dir_vec[1]))
+            self.cam_angle_xz = theta
+            self.cam_angle_y = util.bound(math.pi - phi, self.cam_angle_y_bounds[0], self.cam_angle_y_bounds[1])
+
+        camera_dir = util.spherical_to_cartesian(1, self.cam_angle_xz, self.cam_angle_y)
+        self.cam_dir = (camera_dir[0], camera_dir[2], camera_dir[1])  # swap y and z axis~
+
+        if inputs.get_instance().is_held(pygame.K_f):
+            fov_change_speed = 1
+            mult = -1 if inputs.get_instance().shift_is_held() else 1
+            self.cam_fov = util.bound(self.cam_fov + mult * fov_change_speed, 10, 180)
 
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
@@ -1662,7 +1688,7 @@ class Test3DScene(scenes.Scene):
 
         import src.engine.threedee as threedee
         if self.ship_sprite3d is None:
-            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER, rotation=(0, 0, 0))
+            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.SHIP, spriteref.THREEDEE_LAYER)
 
         import pygame
 
@@ -1701,25 +1727,36 @@ class Test3DScene(scenes.Scene):
                                                        font_lookup=spritesheets.get_default_font(mono=True, small=False))
 
         self.handle_camera_move()
+        self.handle_camera_rotate()
 
         layer = renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER)
         layer.camera_position = self.cam_pos
         layer.camera_direction = self.cam_dir
+        layer.camera_fov = self.cam_fov
 
         cam_x, cam_y, cam_z = layer.camera_position
         dir_x, dir_y, dir_z = layer.camera_direction
         text = "camera_pos= ({:.2f}, {:.2f}, {:.2f})\n" \
-               "camera_dir= ({:.2f}, {:.2f}, {:.2f})\n\n" \
+               "camera_dir= ({:.2f}, {:.2f}, {:.2f}) xz_angle={:.2f}, y_tilt={:.2f}\n" \
+               "camera_fov= {} \n\n" \
                "ship_pos=   ({:.2f}, {:.2f}, {:.2f})\n" \
                "ship_rot=   ({:.2f}, {:.2f}, {:.2f})\n" \
-               "ship_scale= ({:.2f}, {:.2f}, {:.2f})".format(
+               "ship_scale= ({:.2f}, {:.2f}, {:.2f})\n" \
+               "tracking=   {}".format(
             cam_x, cam_y, cam_z,
-            dir_x, dir_y, dir_z,
+            dir_x, dir_y, dir_z, self.cam_angle_xz, self.cam_angle_y,
+            layer.camera_fov,
             pos[0], pos[1], pos[2],
             rot[0], rot[1], rot[2],
-            scale[0], scale[1], scale[2]
+            scale[0], scale[1], scale[2],
+            self.track_ship
         )
         self.text_info_sprite.update(new_text=text)
+
+        if inputs.get_instance().was_pressed(pygame.K_m):
+            print("proj={}".format(layer.get_proj_matrix(renderengine.get_instance())))
+            print("view={}".format(layer.get_view_matrix()))
+            print("model={}".format(self.ship_sprite3d.get_xform()))
 
     def all_sprites(self):
         yield self.ship_sprite3d
