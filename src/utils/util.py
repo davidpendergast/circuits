@@ -49,8 +49,8 @@ def sub(v1, v2):
     return tuple(i[0] - i[1] for i in zip(v1, v2))
 
 
-def negate(v):
-    return tuple(-x for x in v)
+def negate(v, components=None):
+    return tuple(-v[i] if (components is None or i in components) else v[i] for i in range(0, len(v)))
 
 
 def mult(v, a):

@@ -1615,7 +1615,7 @@ class Test3DScene(scenes.Scene):
     def __init__(self):
         super().__init__()
         self.ship_model = spriteref.ThreeDeeModels.SHIP
-        self.ship_sprites = [None] * 5
+        self.ship_sprites = [None] * 50
         self.text_info_sprite = None
 
         self.cam_walk_speed = 0.75   # units per tick
@@ -1642,12 +1642,11 @@ class Test3DScene(scenes.Scene):
         cam_x += cam_move[1] * xz_dir[0] * self.cam_walk_speed
         cam_z += cam_move[1] * xz_dir[1] * self.cam_walk_speed
 
-        right_xz_dir = util.rotate(xz_dir, -math.pi / 2)
+        right_xz_dir = util.rotate(xz_dir, math.pi / 2)
         cam_x += cam_move[0] * right_xz_dir[0] * self.cam_walk_speed
         cam_z += cam_move[0] * right_xz_dir[1] * self.cam_walk_speed
 
-        # up is negative and down is positive~, hence it is correct to negate this value here
-        cam_move_y = -inputs.get_instance().is_held_four_way(up=pygame.K_SPACE, down=pygame.K_c)[1]
+        cam_move_y = inputs.get_instance().is_held_four_way(up=pygame.K_SPACE, down=pygame.K_c)[1]
         cam_y += cam_move_y * self.cam_walk_speed
 
         self.cam_pos = (cam_x, cam_y, cam_z)
@@ -1671,7 +1670,7 @@ class Test3DScene(scenes.Scene):
         if cam_rotate[1] != 0:
             orig_xz = (new_cam_dir[0], new_cam_dir[2])
             xz_vs_y = (util.mag(orig_xz), new_cam_dir[1])
-            xz_vs_y = util.rotate(xz_vs_y, -cam_rotate[1] * self.cam_turn_speed)
+            xz_vs_y = util.rotate(xz_vs_y, cam_rotate[1] * self.cam_turn_speed)
 
             # enforce max upward / downward angles
             if xz_vs_y[1] > 0 and util.angle_between((1, 0), xz_vs_y) > self.max_y_angle:
@@ -1757,7 +1756,7 @@ class Test3DScene(scenes.Scene):
 
         pos = self.ship_sprites[0].position()
         rot = self.ship_sprites[0].rotation()
-        scael = self.ship_sprites[0].scale()
+        scale = self.ship_sprites[0].scale()
         cam_x, cam_y, cam_z = layer.camera_position
         dir_x, dir_y, dir_z = layer.camera_direction
         text = "camera_pos= ({:.2f}, {:.2f}, {:.2f})\n" \

@@ -122,9 +122,9 @@ class InputState:
             x += 1
         y = 0
         if up is not None and self.is_held(up):
-            y -= 1
-        if down is not None and self.is_held(down):
             y += 1
+        if down is not None and self.is_held(down):
+            y -= 1
         return (x, y)
 
     def was_pressed_four_way(self, left=None, right=None, up=None, down=None):

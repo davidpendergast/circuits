@@ -25,12 +25,29 @@ class ThreeDeeLayer(layers.ImageLayer):
     def populate_data_arrays(self, sprite_info_lookup):
         pass  # we don't actually use these
 
-    def render(self, engine):
-        self.set_client_states(True, engine)
+    def get_sprites_grouped_by_model_id(self, engine):
+        res = {}  # model_id -> list of Sprite3D
         for sprite_id in self.images:
             spr_3d = engine.sprite_info_lookup[sprite_id].sprite
-            self._set_uniforms_for_sprite(engine, spr_3d)
-            self._pass_attributes_and_draw(engine, spr_3d)
+            if spr_3d.model().get_model_id() not in res:
+                res[spr_3d.model().get_model_id()] = []
+            res[spr_3d.model().get_model_id()].append(spr_3d)
+        return res
+
+    def render(self, engine):
+        self.set_client_states(True, engine)
+        self._set_uniforms_for_scene(engine)
+
+        model_ids_to_sprites = self.get_sprites_grouped_by_model_id(engine)
+        for model_id in model_ids_to_sprites:
+            # only pass model data (vertices, tex_coords, indices) once per unique model in the scene
+            model = model_ids_to_sprites[model_id][0].model()
+            self._pass_attributes_for_model(engine, model)
+
+            # draw each sprite with that model, using the same data data, but different uniforms
+            for spr_3d in model_ids_to_sprites[model_id]:
+                self._set_uniforms_for_sprite(engine, spr_3d)
+                glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, self.indices)
         self.set_client_states(False, engine)
 
     def set_client_states(self, enable, engine):
@@ -48,16 +65,15 @@ class ThreeDeeLayer(layers.ImageLayer):
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
     def get_view_matrix(self):
-        m = matutils.get_matrix_looking_at((0, 0, 0), self.camera_direction, self.get_camera_up())
-        t = matutils.translation_matrix(self.camera_position)
-        res = numpy.matmul(m, t)
-        res.itemset((1, 1), -res.item((1, 1)))  # WHY
-        return res
-        #return numpy.array([
-        #    [ 0.7492038,   0.2582737,   0.6099085,   0.        ],
-        #    [ 0.,          0.92083967, -0.3899415,   0.        ],
-        #    [-0.66233957,  0.29214567,  0.6898965,   0.,        ],
-        #    [ 2.964132,   -4.156894,   -9.816427,    1.        ]], dtype=numpy.float32).transpose()
+        # XXX I'm not sure why we have to flip the y components like this. It's either reversing errors introduced
+        # elsewhere, or fixing a discrepancy between the world coordinate system and GL's internal coordinate system.
+        # Either way though, the scene renders upside down without it, so... we flip
+        target_pt = util.add(self.camera_position, util.negate(self.camera_direction, components=(1,)))
+        m = matutils.get_matrix_looking_at2(self.camera_position, target_pt, self.get_camera_up())
+
+        y_flipped = numpy.identity(4, dtype=numpy.float32)
+        y_flipped.itemset((1, 1), -1)
+        return y_flipped.dot(m)
 
     def get_proj_matrix(self, engine):
         w, h = engine.get_game_size()
@@ -65,38 +81,29 @@ class ThreeDeeLayer(layers.ImageLayer):
 
     def get_camera_up(self):
         return (0, 1, 0)
-        # return util.rotate_towards(self.camera_direction, (0, 1, 0), -math.pi / 2)
 
-    def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
-        model = spr_3d.get_xform()
-        engine.set_model_matrix(model)
-
+    def _set_uniforms_for_scene(self, engine):
         view = self.get_view_matrix()
         engine.set_view_matrix(view)
 
         proj = self.get_proj_matrix(engine)
         engine.set_proj_matrix(proj)
 
-    def _pass_attributes_and_draw(self, engine, spr_3d: 'Sprite3D'):
-        self.vertices.resize(3 * len(spr_3d.model().get_vertices()), refcheck=False)
-        self.tex_coords.resize(2 * len(spr_3d.model().get_texture_coords()), refcheck=False)
-        self.indices.resize(len(spr_3d.model().get_indices()), refcheck=False)
+    def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
+        model = spr_3d.get_xform()
+        engine.set_model_matrix(model)
 
-        if self.is_color():
-            self.colors.resize(3 * len(spr_3d.model().get_vertices()), refcheck=False)
+    def _pass_attributes_for_model(self, engine, model_3d):
+        self.vertices.resize(3 * len(model_3d.get_vertices()), refcheck=False)
+        self.tex_coords.resize(2 * len(model_3d.get_texture_coords()), refcheck=False)
+        self.indices.resize(len(model_3d.get_indices()), refcheck=False)
 
-        spr_3d.add_urself(self.vertices,
+        model_3d.add_urself(self.vertices,
                           self.tex_coords,
-                          self.colors,
                           self.indices)
 
         engine.set_vertices(self.vertices)
         engine.set_texture_coords(self.tex_coords)
-
-        if self.is_color():
-            engine.set_colors(self.colors)
-
-        glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, self.indices)
 
 
 class Sprite3D(sprites.AbstractSprite):
@@ -243,16 +250,8 @@ class Sprite3D(sprites.AbstractSprite):
                             scale=scale, color=color, uid=self.uid())
 
     def add_urself(self, vertices, tex_coords, colors, indices):
-        for i in range(0, 3 * len(self.model().get_vertices())):
-            vertices[i] = self.model().get_vertices()[i // 3][i % 3]
-        for i in range(0, 2 * len(self.model().get_texture_coords())):
-            tex_coords[i] = self.model().get_texture_coords()[i // 2][i % 2]
-        if colors is not None:
-            rgb = self.color()
-            for i in range(0, 3 * len(self.model().get_vertices())):
-                colors[i] = rgb[i % 3]
-        for i in range(0, len(self.model().get_indices())):
-            indices[i] = self.model().get_indices()[i]
+        # TODO color?
+        self.model().add_urself(vertices, tex_coords, indices)
 
 
 class ThreeDeeModel:
@@ -286,6 +285,14 @@ class ThreeDeeModel:
         if len(self._cached_atlas_coords) == 0:
             self._cached_atlas_coords = [self._map_texture_xy_to_atlas(xy) for xy in self._native_texture_coords]
         return self._cached_atlas_coords
+
+    def add_urself(self, vertices, tex_coords, indices):
+        for i in range(0, 3 * len(self.get_vertices())):
+            vertices[i] = self.get_vertices()[i // 3][i % 3]
+        for i in range(0, 2 * len(self.get_texture_coords())):
+            tex_coords[i] = self.get_texture_coords()[i // 2][i % 2]
+        for i in range(0, len(self.get_indices())):
+            indices[i] = self.get_indices()[i]
 
     def _load_from_disk(self, model_path):
         try:
