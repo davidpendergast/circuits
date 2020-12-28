@@ -1614,7 +1614,8 @@ class Test3DScene(scenes.Scene):
 
     def __init__(self):
         super().__init__()
-        self.ship_sprite3d = None
+        self.ship_model = spriteref.ThreeDeeModels.SHIP
+        self.ship_sprites = [None] * 5
         self.text_info_sprite = None
 
         self.cam_walk_speed = 0.75
@@ -1668,7 +1669,7 @@ class Test3DScene(scenes.Scene):
             self.track_ship = not self.track_ship
 
         if self.track_ship:
-            dir_vec = util.negate(util.sub(self.ship_sprite3d.position(), self.cam_pos))
+            dir_vec = util.negate(util.sub(self.ship_sprites[0].position(), self.cam_pos))
             _, theta, phi = util.cartesian_to_spherical((dir_vec[0], dir_vec[2], dir_vec[1]))
             self.cam_angle_xz = theta
             self.cam_angle_y = util.bound(math.pi - phi, self.cam_angle_y_bounds[0], self.cam_angle_y_bounds[1])
@@ -1687,40 +1688,44 @@ class Test3DScene(scenes.Scene):
             return
 
         import src.engine.threedee as threedee
-        if self.ship_sprite3d is None:
-            self.ship_sprite3d = threedee.Sprite3D(spriteref.ThreeDeeModels.AXIS, spriteref.THREEDEE_LAYER)
+        for i in range(0, len(self.ship_sprites)):
+            if self.ship_sprites[i] is None:
+                self.ship_sprites[i] = threedee.Sprite3D(self.ship_model, spriteref.THREEDEE_LAYER,
+                                                         position=(i * 30, 0, 0))
 
         import pygame
 
         mult = -1 if inputs.get_instance().shift_is_held() else 1
 
-        rot = list(self.ship_sprite3d.rotation())
-        if inputs.get_instance().is_held(pygame.K_r):
-            rot[0] += mult * 0.01
-            rot[1] += mult * 0.02
-            rot[2] += mult * 0.03
+        for i in range(0, len(self.ship_sprites)):
+            ship_sprite = self.ship_sprites[i]
+            rot = list(ship_sprite.rotation())
+            if inputs.get_instance().is_held(pygame.K_r):
+                rot[0] += mult * 0.01
+                rot[1] += mult * 0.02
+                rot[2] += mult * 0.03
 
-        scale = list(self.ship_sprite3d.scale())
-        pos = list(self.ship_sprite3d.position())
+            scale = list(ship_sprite.scale())
+            pos = list(ship_sprite.position())
 
-        if inputs.get_instance().ctrl_is_held():
-            scale_inc = mult * 0.05
-            if inputs.get_instance().is_held(pygame.K_x):
-                scale[0] += scale_inc
-            if inputs.get_instance().is_held(pygame.K_y):
-                scale[1] += scale_inc
-            if inputs.get_instance().is_held(pygame.K_z):
-                scale[2] += scale_inc
-        else:
-            pos_inc = mult * 0.2
-            if inputs.get_instance().is_held(pygame.K_x):
-                pos[0] += pos_inc
-            if inputs.get_instance().is_held(pygame.K_y):
-                pos[1] += pos_inc
-            if inputs.get_instance().is_held(pygame.K_z):
-                pos[2] += pos_inc
+            if inputs.get_instance().ctrl_is_held():
+                scale_inc = mult * 0.05
+                if inputs.get_instance().is_held(pygame.K_x):
+                    scale[0] += scale_inc
+                if inputs.get_instance().is_held(pygame.K_y):
+                    scale[1] += scale_inc
+                if inputs.get_instance().is_held(pygame.K_z):
+                    scale[2] += scale_inc
+            else:
+                pos_inc = mult * 0.2
+                if inputs.get_instance().is_held(pygame.K_x):
+                    pos[0] += pos_inc
+                if inputs.get_instance().is_held(pygame.K_y):
+                    pos[1] += pos_inc
+                if inputs.get_instance().is_held(pygame.K_z):
+                    pos[2] += pos_inc
 
-        self.ship_sprite3d = self.ship_sprite3d.update(new_position=pos, new_rotation=rot, new_scale=scale)
+            self.ship_sprites[i] = ship_sprite.update(new_position=pos, new_rotation=rot, new_scale=scale)
 
         if self.text_info_sprite is None:
             self.text_info_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=0.5, color=colors.LIGHT_GRAY,
@@ -1734,6 +1739,9 @@ class Test3DScene(scenes.Scene):
         layer.camera_direction = self.cam_dir
         layer.camera_fov = self.cam_fov
 
+        pos = self.ship_sprites[0].position()
+        rot = self.ship_sprites[0].rotation()
+        scael = self.ship_sprites[0].scale()
         cam_x, cam_y, cam_z = layer.camera_position
         dir_x, dir_y, dir_z = layer.camera_direction
         text = "camera_pos= ({:.2f}, {:.2f}, {:.2f})\n" \
@@ -1756,9 +1764,10 @@ class Test3DScene(scenes.Scene):
         if inputs.get_instance().was_pressed(pygame.K_m):
             print("proj={}".format(layer.get_proj_matrix(renderengine.get_instance())))
             print("view={}".format(layer.get_view_matrix()))
-            print("model={}".format(self.ship_sprite3d.get_xform()))
+            print("model={}".format(self.ship_sprites[0].get_xform()))
 
     def all_sprites(self):
-        yield self.ship_sprite3d
+        for spr in self.ship_sprites:
+            yield spr
         yield self.text_info_sprite
 

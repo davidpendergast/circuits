@@ -337,5 +337,6 @@ class ThreeDeeModel:
                     self._native_texture_coords.append(texture_xy)
                     self._normals.append(norm_xyz)
                     self._indices.append(index)
+            print("INFO: loaded model ({} faces): {}".format(len(triangle_faces), model_path))
         except IOError:
             print("ERROR: failed to load model: {}".format(model_path))

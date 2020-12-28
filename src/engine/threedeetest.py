@@ -176,17 +176,17 @@ class Scene3D:
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        #look_dir = (math.sin(math.radians(self.angle)), 0.4, math.cos(math.radians(self.angle)) * -1)
-        # coords = self.coordinates
+        look_dir = (math.sin(math.radians(self.angle)), 0, math.cos(math.radians(self.angle)) * -1)
+        coords = self.coordinates
 
-        look_dir = (-0.61, 0.39, -0.69)
-        coords = (-4.84, 0, -9.95)
+        # look_dir = (-0.61, 0.39, -0.69)
+        # coords = (-4.84, 0, -9.95)
         gluLookAt(0, 0, 0, look_dir[0], look_dir[1], look_dir[2], 0, 1, 0)
         glTranslatef(coords[0], coords[1], coords[2])
 
         mat = numpy.ndarray([4, 4], dtype=numpy.float32)
         glGetFloatv(GL_MODELVIEW_MATRIX, mat)
-        print("GL_MODELVIEW_MATRIX={}".format(mat))
+        # print("GL_MODELVIEW_MATRIX={}".format(mat))
 
         #self.obj.rotation[0] += 0.01
         #self.obj.rotation[1] += 0.02
