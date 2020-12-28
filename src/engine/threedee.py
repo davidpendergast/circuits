@@ -12,8 +12,8 @@ import configs
 
 class ThreeDeeLayer(layers.ImageLayer):
 
-    def __init__(self, layer_id, layer_depth, use_color=True):
-        super().__init__(layer_id, layer_depth, sort_sprites=False, use_color=use_color)
+    def __init__(self, layer_id, layer_depth):
+        super().__init__(layer_id, layer_depth, sort_sprites=False, use_color=False)
 
         self.camera_position = (0, 0, 0)
         self.camera_direction = (0, 0, -1)
@@ -99,8 +99,8 @@ class ThreeDeeLayer(layers.ImageLayer):
         self.indices.resize(len(model_3d.get_indices()), refcheck=False)
 
         model_3d.add_urself(self.vertices,
-                          self.tex_coords,
-                          self.indices)
+                            self.tex_coords,
+                            self.indices)
 
         engine.set_vertices(self.vertices)
         engine.set_texture_coords(self.tex_coords)
@@ -115,7 +115,7 @@ class Sprite3D(sprites.AbstractSprite):
         self._rotation = rotation   # rotation of the model in each plane w.r.t. the origin
         self._scale = scale         # scale of the model in each axis
 
-        self._color = color
+        self._color = color  # not used currently
 
     def model(self) -> 'ThreeDeeModel':
         return self._model
@@ -247,10 +247,6 @@ class Sprite3D(sprites.AbstractSprite):
         else:
             return Sprite3D(model, self.layer_id(), position=position, rotation=rotation,
                             scale=scale, color=color, uid=self.uid())
-
-    def add_urself(self, vertices, tex_coords, colors, indices):
-        # TODO color?
-        self.model().add_urself(vertices, tex_coords, indices)
 
 
 class ThreeDeeModel:
