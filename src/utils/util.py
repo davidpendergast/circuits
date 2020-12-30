@@ -78,15 +78,19 @@ def rotate(v, rad):
     return (v[0]*cos - v[1]*sin, v[0]*sin + v[1]*cos)
 
 
-def angle_between(v1, v2):
+def angle_between(v1, v2, signed=False, vn=(0, 0, 1)):
     v1_dot_v2 = dot_prod(v1, v2)
     mag1 = mag(v1)
     mag2 = mag(v2)
     if mag1 == 0 or mag2 == 0:
         return 0
     else:
-        return v1_dot_v2 / (mag1 * mag2)
-
+        angle = math.acos(v1_dot_v2 / (mag1 * mag2))
+        if signed:
+            cross = cross_prod(v1, v2)
+            if dot_prod(cross, vn) <= 0:
+                angle = -angle
+        return angle
 
 def rotate_towards(v1, v2, rad):
     if angle_between(v1, v2) == 0:

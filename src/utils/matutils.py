@@ -19,6 +19,7 @@ def scale_matrix(xyz_scale, mat=None):
 
 
 def xrot_matrix(xrot):
+    """returns: A matrix that rotates about the x-axis, from positive z towards positive y."""
     Rx = numpy.identity(4, dtype=numpy.float32)
     Rx.itemset((1, 1), math.cos(xrot))
     Rx.itemset((2, 1), -math.sin(xrot))
@@ -28,15 +29,17 @@ def xrot_matrix(xrot):
 
 
 def yrot_matrix(yrot):
+    """returns: A matrix that rotates about the y-axis, from positive z towards positive x."""
     Ry = numpy.identity(4, dtype=numpy.float32)
-    Ry.itemset((0, 0), math.cos(yrot))
-    Ry.itemset((2, 0), math.sin(yrot))
-    Ry.itemset((0, 2), -math.sin(yrot))
-    Ry.itemset((2, 2), math.cos(yrot))
+    Ry.itemset((0, 0), math.cos(-yrot))  # need to be negative for reasons unknown
+    Ry.itemset((2, 0), math.sin(-yrot))
+    Ry.itemset((0, 2), -math.sin(-yrot))
+    Ry.itemset((2, 2), math.cos(-yrot))
     return Ry
 
 
 def zrot_matrix(zrot):
+    """returns: A matrix that rotates about the z-axis, from positive x towards positive y."""
     Rz = numpy.identity(4, dtype=numpy.float32)
     Rz.itemset((0, 0), math.cos(zrot))
     Rz.itemset((1, 0), -math.sin(zrot))
@@ -45,16 +48,21 @@ def zrot_matrix(zrot):
     return Rz
 
 
-def rotation_matrix(xyz_rot, mat=None):
-    res = mat if mat is not None else numpy.identity(4, dtype=numpy.float32)
+def rotation_matrix(xyz_rot, axis_order=(2, 1, 0)):
+    """
+        x = pitch
+        y = yaw
+        z = roll
+    """
     Rx = xrot_matrix(xyz_rot[0] if len(xyz_rot) >= 1 else 0)
     Ry = yrot_matrix(xyz_rot[1] if len(xyz_rot) >= 2 else 0)
     Rz = zrot_matrix(xyz_rot[2] if len(xyz_rot) >= 3 else 0)
-    Rxyz = Rx.dot(Ry).dot(Rz)
-    for i in range(0, 9):
-        ij = (i % 3, i // 3)
-        res.itemset(ij, Rxyz[ij[0]][ij[1]])
-    return res
+
+    mats = [Rx, Ry, Rz]
+    M1 = mats[axis_order[0]]
+    M2 = mats[axis_order[1]]
+    M3 = mats[axis_order[2]]
+    return M3.dot(M2).dot(M1)
 
 
 def ortho_matrix(left, right, bottom, top, near_val, far_val):
@@ -103,6 +111,7 @@ def get_matrix_looking_at(eye_xyz, target_xyz, up_vec):
                        [0, 0, 0, 1]], dtype=numpy.float32)
     return res
 
+
 def get_matrix_looking_at2(eye_xyz, target_xyz, up_vec):
     n = util.set_length(util.sub(eye_xyz, target_xyz), 1)
     u = util.set_length(util.cross_prod(up_vec, n), 1)
@@ -112,3 +121,48 @@ def get_matrix_looking_at2(eye_xyz, target_xyz, up_vec):
                        [n[0], n[1], n[2], util.dot_prod(util.negate(n), eye_xyz)],
                        [0, 0, 0, 1]], dtype=numpy.float32)
     return res
+
+
+def rotation_about_vector(u, rads):
+    # Rodrigues rotation formula:
+    u = util.set_length(u, 1)
+    I = numpy.identity(4, dtype=numpy.float32)
+    W = numpy.array([[    0, -u[2],  u[1], 0],
+                     [ u[2],     0, -u[0], 0],
+                     [-u[1],  u[0],     0, 0],
+                     [    0,     0,     0, 1]], dtype=numpy.float32)
+    M = I + math.sin(rads) * W + (2 * math.sin(rads / 2) ** 2) * W.dot(W)
+
+    M.itemset((3, 3), 1)
+    return M
+
+
+# yoinked from https://www.learnopencv.com/rotation-matrix-to-euler-angles/
+def get_xyz_rotations(R):
+    """
+    :param R: a rotation matrix.
+    :return: the x, y, z rotations of the matrix.
+    """
+    sy = math.sqrt(R[0, 0] * R[0, 0] + R[1, 0] * R[1, 0])
+    if sy <= 0.00001:
+        x = math.atan2(-R[1, 2], R[1, 1])
+        y = math.atan2(-R[2, 0], sy)
+        z = 0
+    else:
+        x = math.atan2(R[2, 1], R[2, 2])
+        y = math.atan2(-R[2, 0], sy)
+        z = math.atan2(R[1, 0], R[0, 0])
+    return (x, y, z)
+
+
+def rotate_to_direction(v1, v2, up_vec):
+    """
+    :param v1: base unit vector
+    :param v2: target unit vector
+    :param axial_rot: rotation along the axis of the target vector.
+    :return: A rotation matrix that brings v1 to v2, with an optional axial rotation as well.
+    """
+    z_rot = util.angle_between((v1[0], v1[1]), (v2[0], v2[1]))
+    y_rot = util.angle_between((v1[0], v1[2]), (v2[0], v2[2]))
+    x_rot = util.angle_between((v1[0], v1[2]), (v2[0], v2[2]))
+

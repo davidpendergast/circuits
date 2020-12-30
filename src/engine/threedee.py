@@ -90,7 +90,7 @@ class ThreeDeeLayer(layers.ImageLayer):
         engine.set_proj_matrix(proj)
 
     def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
-        model = spr_3d.get_xform()
+        model = spr_3d.get_xform(camera_pos=self.camera_position)
         engine.set_model_matrix(model)
 
     def _pass_attributes_for_model(self, engine, model_3d):
@@ -107,6 +107,7 @@ class ThreeDeeLayer(layers.ImageLayer):
 
 
 class Sprite3D(sprites.AbstractSprite):
+
     def __init__(self, model, layer_id, position=(0, 0, 0), rotation=(0, 0, 0), scale=(1, 1, 1), color=(1, 1, 1), uid=None):
         sprites.AbstractSprite.__init__(self, sprites.SpriteTypes.THREE_DEE, layer_id, uid=uid)
         self._model = model
@@ -120,42 +121,26 @@ class Sprite3D(sprites.AbstractSprite):
     def model(self) -> 'ThreeDeeModel':
         return self._model
 
-    def get_xform(self):
+    def get_xform(self, camera_pos=(0, 0, 0)):
+        pos = self.position()
+        scale = self.scale()
+
         # translation matrix
         T = numpy.identity(4, dtype=numpy.float32)
-        T.itemset((3, 0), self._position[0])
-        T.itemset((3, 1), self._position[1])
-        T.itemset((3, 2), self._position[2])
+        T.itemset((3, 0), pos[0])
+        T.itemset((3, 1), pos[1])
+        T.itemset((3, 2), pos[2])
         T = T.transpose()  # this is weird T_T
 
-        # rotate about the x-axis, from positive z towards positive y
-        Rx = numpy.identity(4, dtype=numpy.float32)
-        Rx.itemset((1, 1), math.cos(self._rotation[0]))
-        Rx.itemset((2, 1), -math.sin(self._rotation[0]))
-        Rx.itemset((1, 2), math.sin(self._rotation[0]))
-        Rx.itemset((2, 2), math.cos(self._rotation[0]))
-
-        # rotate about the y-axis, from positive z towards positive x
-        Ry = numpy.identity(4, dtype=numpy.float32)
-        Ry.itemset((0, 0), math.cos(-self._rotation[1]))
-        Ry.itemset((2, 0), math.sin(-self._rotation[1]))
-        Ry.itemset((0, 2), -math.sin(-self._rotation[1]))
-        Ry.itemset((2, 2), math.cos(-self._rotation[1]))
-
-        # rotate about the z-axis, from positive x towards positive y
-        Rz = numpy.identity(4, dtype=numpy.float32)
-        Rz.itemset((0, 0), math.cos(self._rotation[2]))
-        Rz.itemset((1, 0), -math.sin(self._rotation[2]))
-        Rz.itemset((0, 1), math.sin(self._rotation[2]))
-        Rz.itemset((1, 1), math.cos(self._rotation[2]))
+        R = self.get_rotation_matrix(camera_pos=camera_pos)
 
         # scale matrix
         S = numpy.identity(4, dtype=numpy.float32)
-        S.itemset((0, 0), self._scale[0])
-        S.itemset((1, 1), self._scale[1])
-        S.itemset((2, 2), self._scale[2])
+        S.itemset((0, 0), scale[0])
+        S.itemset((1, 1), scale[1])
+        S.itemset((2, 2), scale[2])
 
-        return T.dot(Rx).dot(Ry).dot(Rz).dot(S)
+        return T.dot(R).dot(S)
 
     def position(self):
         return self._position
@@ -171,6 +156,13 @@ class Sprite3D(sprites.AbstractSprite):
 
     def rotation(self):
         return self._rotation
+
+    def get_rotation_matrix(self, camera_pos=(0, 0, 0)):
+        rot = self.get_effective_rotation(camera_pos=camera_pos)
+        return matutils.rotation_matrix(rot, axis_order=(0, 1, 2))
+
+    def get_effective_rotation(self, camera_pos=(0, 0, 0)):
+        return self.rotation()
 
     def scale(self):
         return self._scale
@@ -247,6 +239,67 @@ class Sprite3D(sprites.AbstractSprite):
         else:
             return Sprite3D(model, self.layer_id(), position=position, rotation=rotation,
                             scale=scale, color=color, uid=self.uid())
+
+
+class BillboardSprite3D(Sprite3D):
+
+    def __init__(self, model, layer_id, horz_billboard=True, vert_billboard=False,
+                 position=(0, 0, 0), rotation=(0, 0, 0), scale=(1, 1, 1), color=(1, 1, 1), uid=None):
+        super().__init__(model, layer_id, position=position, rotation=rotation, scale=scale, color=color, uid=uid)
+        self._horz_billboard = horz_billboard
+        self._vert_billboard = vert_billboard
+
+    def get_effective_rotation(self, camera_pos=(0, 0, 0)):
+        xrot, yrot, zrot = self.rotation()
+
+        towards_camera = util.set_length(util.sub(camera_pos, self.position()), 1)
+
+        do_billboard = True
+
+        if do_billboard and self._vert_billboard:
+            xz_vs_y = (util.mag((towards_camera[0], towards_camera[2])), towards_camera[1])
+            pitch_correction = util.angle_between((1, 0), xz_vs_y, signed=True)
+            xrot += pitch_correction
+
+        if do_billboard and self._horz_billboard:
+            yaw_correction = -util.angle_between((0, 1), (towards_camera[0], towards_camera[2]), signed=True)
+            yrot += yaw_correction
+
+        return (xrot, yrot, zrot)
+
+    def update(self, new_model=None,
+               new_x=None, new_y=None, new_z=None, new_position=None,
+               new_xrot=None, new_yrot=None, new_zrot=None, new_rotation=None,
+               new_xscale=None, new_yscale=None, new_zscale=None, new_scale=None,
+               new_color=None, new_horz_billboard=None, new_vert_billboard=None):  # XXX just ignore this i know it's bad
+        res = super().update(new_model, new_x=new_x, new_y=new_y, new_z=new_z, new_position=new_position,
+               new_xrot=new_xrot, new_yrot=new_yrot, new_zrot=new_zrot, new_rotation=new_rotation,
+               new_xscale=new_xscale, new_yscale=new_yscale, new_zscale=new_zscale, new_scale=new_scale,
+               new_color=new_color)
+
+        did_change = False
+        horz_billboard = self._horz_billboard
+        if new_horz_billboard is not None and new_horz_billboard != self._horz_billboard:
+            horz_billboard = new_horz_billboard
+            did_change = True
+        vert_billboard = self._vert_billboard
+        if new_vert_billboard is not None and new_vert_billboard != self._vert_billboard:
+            vert_billboard = new_vert_billboard
+            did_change = True
+
+        did_change |= (res.model() != self.model() or
+                       res.position() != self.position() or
+                       res.rotation() != self.rotation() or
+                       res.scale() != self.scale() or
+                       res.color() != self.color())
+
+        if did_change:
+            return BillboardSprite3D(res.model(), self.layer_id(),
+                                     horz_billboard=horz_billboard, vert_billboard=vert_billboard,
+                                     position=res.position(), rotation=res.rotation(), scale=res.scale(),
+                                     color=res.color(), uid=self.uid())
+        else:
+            return self
 
 
 class ThreeDeeModel:

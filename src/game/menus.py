@@ -1615,7 +1615,7 @@ class Test3DScene(scenes.Scene):
     def __init__(self):
         super().__init__()
         self.ship_model = spriteref.ThreeDeeModels.SHIP
-        self.ship_sprites = [None] * 50
+        self.ship_sprites = [None] * 30
         self.text_info_sprite = None
 
         self.cam_walk_speed = 0.75   # units per tick
@@ -1662,7 +1662,7 @@ class Test3DScene(scenes.Scene):
 
         # rotate camera left or right
         if cam_rotate[0] != 0:
-            mat = matutils.yrot_matrix(self.cam_turn_speed * cam_rotate[0])
+            mat = matutils.yrot_matrix(-self.cam_turn_speed * cam_rotate[0])
             rotated_dir = mat.dot([new_cam_dir[0], new_cam_dir[1], new_cam_dir[2], 0])
             new_cam_dir = (float(rotated_dir[0]), float(rotated_dir[1]), float(rotated_dir[2]))
 
@@ -1705,8 +1705,10 @@ class Test3DScene(scenes.Scene):
         import src.engine.threedee as threedee
         for i in range(0, len(self.ship_sprites)):
             if self.ship_sprites[i] is None:
-                self.ship_sprites[i] = threedee.Sprite3D(self.ship_model, spriteref.THREEDEE_LAYER,
-                                                         position=(i * 30, 0, 0))
+                self.ship_sprites[i] = threedee.BillboardSprite3D(self.ship_model, spriteref.THREEDEE_LAYER,
+                                                                  position=(i * 30, 0, 0),
+                                                                  vert_billboard=i % 2 == 0,
+                                                                  horz_billboard=i % 3 == 0)
 
         import pygame
 
@@ -1714,11 +1716,16 @@ class Test3DScene(scenes.Scene):
 
         for i in range(0, len(self.ship_sprites)):
             ship_sprite = self.ship_sprites[i]
+
             rot = list(ship_sprite.rotation())
-            if inputs.get_instance().is_held(pygame.K_r):
-                rot[0] += mult * 0.01
-                rot[1] += mult * 0.02
-                rot[2] += mult * 0.03
+
+            rot_speed = 0.03
+            if inputs.get_instance().is_held(pygame.K_r):  # roll
+                rot[2] += mult * rot_speed
+            if inputs.get_instance().is_held(pygame.K_p):  # pitch
+                rot[0] += mult * rot_speed
+            if inputs.get_instance().is_held(pygame.K_o):  # 'o' stands for dOor which is the mnemonic for yaw
+                rot[1] += mult * rot_speed
 
             scale = list(ship_sprite.scale())
             pos = list(ship_sprite.position())
@@ -1755,7 +1762,7 @@ class Test3DScene(scenes.Scene):
         layer.camera_fov = self.cam_fov
 
         pos = self.ship_sprites[0].position()
-        rot = self.ship_sprites[0].rotation()
+        rot = self.ship_sprites[0].get_effective_rotation(camera_pos=layer.camera_position)
         scale = self.ship_sprites[0].scale()
         cam_x, cam_y, cam_z = layer.camera_position
         dir_x, dir_y, dir_z = layer.camera_direction
