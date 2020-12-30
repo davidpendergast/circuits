@@ -1617,9 +1617,11 @@ class Test3DScene(scenes.Scene):
         self.ship_model = spriteref.ThreeDeeModels.SHIP
         self.ship_sprites = [None] * 30
         self.text_info_sprite = None
+        self.sun_sprite = None
 
         self.cam_walk_speed = 0.75   # units per tick
         self.cam_turn_speed = 0.025  # radians per tick
+        self.cam_turn_speed_slow = 0.005
 
         self.max_y_angle = 0.9 * math.pi / 2
         self.min_y_angle = -0.9 * math.pi / 2
@@ -1657,12 +1659,13 @@ class Test3DScene(scenes.Scene):
                                                             right=pygame.K_RIGHT,
                                                             up=pygame.K_UP,
                                                             down=pygame.K_DOWN)
-
         new_cam_dir = self.cam_dir
+
+        turn_speed = self.cam_turn_speed if not inputs.get_instance().shift_is_held() else self.cam_turn_speed_slow
 
         # rotate camera left or right
         if cam_rotate[0] != 0:
-            mat = matutils.yrot_matrix(-self.cam_turn_speed * cam_rotate[0])
+            mat = matutils.yrot_matrix(-turn_speed * cam_rotate[0])
             rotated_dir = mat.dot([new_cam_dir[0], new_cam_dir[1], new_cam_dir[2], 0])
             new_cam_dir = (float(rotated_dir[0]), float(rotated_dir[1]), float(rotated_dir[2]))
 
@@ -1670,7 +1673,7 @@ class Test3DScene(scenes.Scene):
         if cam_rotate[1] != 0:
             orig_xz = (new_cam_dir[0], new_cam_dir[2])
             xz_vs_y = (util.mag(orig_xz), new_cam_dir[1])
-            xz_vs_y = util.rotate(xz_vs_y, cam_rotate[1] * self.cam_turn_speed)
+            xz_vs_y = util.rotate(xz_vs_y, cam_rotate[1] * turn_speed)
 
             # enforce max upward / downward angles
             if xz_vs_y[1] > 0 and util.angle_between((1, 0), xz_vs_y) > self.max_y_angle:
@@ -1709,6 +1712,11 @@ class Test3DScene(scenes.Scene):
                                                                   position=(i * 30, 0, 0),
                                                                   vert_billboard=i % 2 == 0,
                                                                   horz_billboard=i % 3 == 0)
+        if self.sun_sprite is None:
+            self.sun_sprite = threedee.BillboardSprite3D(spriteref.ThreeDeeModels.SUN_FLAT, spriteref.THREEDEE_LAYER,
+                                                         position=(0, 0, 10000), scale=(1000, 1000, 1000),
+                                                         vert_billboard=True,
+                                                         horz_billboard=True)
 
         import pygame
 
@@ -1791,5 +1799,6 @@ class Test3DScene(scenes.Scene):
     def all_sprites(self):
         for spr in self.ship_sprites:
             yield spr
+        yield self.sun_sprite
         yield self.text_info_sprite
 

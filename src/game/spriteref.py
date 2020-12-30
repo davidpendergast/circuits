@@ -680,12 +680,14 @@ class TextureSheetTypes:
     ALL_TYPES = []
     RAINBOW = util.add_to_list(("rainbow", "assets/textures/rainbow.png"), ALL_TYPES)
     SHIP = util.add_to_list(("ship_texture", "assets/textures/ship_texture.png"), ALL_TYPES)
+    SUN_FLAT = util.add_to_list(("sun_texture_flat", "assets/textures/sun_flat.png"), ALL_TYPES)
 
 
 class ThreeDeeModels:
     SHIP = None
     POINTY_BOX = None
     AXIS = None
+    SUN_FLAT = None
 
     @staticmethod
     def _get_xform_for_texture(texture_id):
@@ -701,6 +703,9 @@ class ThreeDeeModels:
                                                            ThreeDeeModels._get_xform_for_texture("ship_texture"))
         ThreeDeeModels.AXIS = threedee.ThreeDeeModel("axis", "assets/models/axis.obj",
                                                      ThreeDeeModels._get_xform_for_texture("ship_texture"))
+        ThreeDeeModels.SUN_FLAT = threedee.ThreeDeeModel("sun_flat", "assets/models/sun_flat.obj",
+                                                         ThreeDeeModels._get_xform_for_texture("sun_texture_flat"))
+
 
 class CutsceneTypes:
     ALL_TYPES = []
