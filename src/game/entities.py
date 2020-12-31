@@ -1405,7 +1405,17 @@ class PlayerEntity(Entity):
                     accel += self._ground_reverse_dir_bonus_accel
                 accel += self._ground_accel
             else:
-                accel += self._air_accel
+                # XXX this boost here is actually a very delicate solution to a subtle bug. If the player is airborne
+                # and holding left or right, and lands perfectly on the corner of a block, they can get stuck
+                # (until they release the key) as their horizontal and vertical velocities repeatedly loop
+                # from 0.15 -> 0.3 -> 0.6 -> 0.15 -> and so on. Without the 2x multiplier, the x and y velocity loops
+                # have the same period and thus the collision resolver always resolves the horizontal and vertical
+                # collisions on the same frame (resetting both vels to 0) and shifting the player back to the spot.
+                # This "fix" makes the x_vel increase slightly faster to prevent the loop from occurring.
+                # (A keen observer may notice that the player can still get "stuck" in this way for a couple frames
+                # if they land exactly on a corner. I think it's almost beneficial though because it lets the player
+                # know that they made the jump by exactly one pixel. Like a phantom hit).
+                accel += self._air_accel if abs(self.get_x_vel()) >= 1 else self._air_accel * 2
 
             x_accel = dx * accel
 

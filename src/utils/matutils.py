@@ -65,6 +65,21 @@ def rotation_matrix(xyz_rot, axis_order=(2, 1, 0)):
     return M3.dot(M2).dot(M1)
 
 
+def get_xyz_rot_to_face_direction(direction, do_yaw=True, do_pitch=True, up_vec=(0, 1, 0)):
+    # TODO roll stuff
+    xrot, yrot, zrot = (0, 0, 0)
+    if do_pitch:
+        xz_vs_y = (util.mag((direction[0], direction[2])), direction[1])
+        pitch_correction = util.angle_between((1, 0), xz_vs_y, signed=True)
+        xrot += pitch_correction
+
+    if do_yaw:
+        yaw_correction = -util.angle_between((0, 1), (direction[0], direction[2]), signed=True)
+        yrot += yaw_correction
+
+    return (xrot, yrot, zrot)
+
+
 def ortho_matrix(left, right, bottom, top, near_val, far_val):
     res = numpy.identity(4, dtype=numpy.float32)
     res.itemset((0, 0), float(2 / (right - left)))

@@ -250,22 +250,11 @@ class BillboardSprite3D(Sprite3D):
         self._vert_billboard = vert_billboard
 
     def get_effective_rotation(self, camera_pos=(0, 0, 0)):
-        xrot, yrot, zrot = self.rotation()
-
         towards_camera = util.set_length(util.sub(camera_pos, self.position()), 1)
-
-        do_billboard = True
-
-        if do_billboard and self._vert_billboard:
-            xz_vs_y = (util.mag((towards_camera[0], towards_camera[2])), towards_camera[1])
-            pitch_correction = util.angle_between((1, 0), xz_vs_y, signed=True)
-            xrot += pitch_correction
-
-        if do_billboard and self._horz_billboard:
-            yaw_correction = -util.angle_between((0, 1), (towards_camera[0], towards_camera[2]), signed=True)
-            yrot += yaw_correction
-
-        return (xrot, yrot, zrot)
+        rot_to_camera = matutils.get_xyz_rot_to_face_direction(towards_camera,
+                                                               do_pitch=self._vert_billboard,
+                                                               do_yaw=self._horz_billboard)
+        return util.add(self.rotation(), rot_to_camera)
 
     def update(self, new_model=None,
                new_x=None, new_y=None, new_z=None, new_position=None,
