@@ -623,8 +623,6 @@ class LevelNodeElement(ui.UiElement):
             level_bp = self.state.get_level_blueprint(self.level_id)
             self._cached_player_types = level_bp.get_player_types() if level_bp is not None else []
 
-            # TODO rm, debug
-            self._cached_player_types = random.choices([t for t in playertypes.PlayerTypes.all_types()], k=3)
         return self._cached_player_types
 
     def update(self):

@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_fast"],
-    "description": "This level is the whole idea.",
+    "description": "A true test of inginuity.",
     "entities": [
         {"color_id": 2, "h": 192, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 192, "x": 64, "y": 224},
