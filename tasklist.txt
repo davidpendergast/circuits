@@ -79,3 +79,20 @@ General:
 	- like nuclear throne, still image, text_bg, and text move slowly with parallax
 Art:
     [ ] Animations for player D
+
+Thoughts:
+   the good:
+   - the physics engine works quite well
+   - the level editor is pretty slick
+   - the 3D stuff is a nice addition to the engine, but its questionably appropriate in this game
+   the bad:
+   - the async gameplay does not feel very good
+   - it's hard to design good puzzles for it
+   - it's really clunky trying to coordinate the actors
+   - the visuals are pretty ugly (colors especially)
+   - single-screen puzzles feel quite cramped
+ 
+How to proceed:
+  - ditch the syncronous gameplay, instead let you switch between characters mid-level? (like yoshi's island 2)
+  - redo the environment graphics?
+

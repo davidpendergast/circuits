@@ -45,6 +45,8 @@ CYCLE_SELECTION_COLOR_BACKWARD = "cycle_selection_color_backward"
 CYCLE_SELECTION_ART_FORWARD = "cycle_selection_art_forward"
 CYCLE_SELECTION_ART_BACKWARD = "cycle_selection_art_backward"
 
+TOGGLE_SELECTION_INVERTED = "toggle_selection_inverted"
+
 ADD_POINT = "add_pt"
 REMOVE_POINT = "remove_pt"
 CLEAR_POINTS = "clear_pts"

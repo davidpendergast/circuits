@@ -37,6 +37,8 @@ DURATION = "duration"   # int
 X_DIR = "x_dir"         # int: -1, 0, or 1
 Y_DIR = "y_dir"         # int: -1, 0, or 1
 
+INVERTED = "inverted"   # bool
+
 
 _ALL_SPEC_TYPES = {}
 
@@ -388,7 +390,7 @@ class DoorBlockSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "door_block", required_keys=(SUBTYPE_ID, X, Y, W, H),
-                          optional_keys={ART_ID: 0})
+                          optional_keys={ART_ID: 0, INVERTED: False})
 
     def get_subtypes(self):
         return [0, 1, 2, 3]
@@ -398,10 +400,11 @@ class DoorBlockSpecType(SpecType):
         y = json_blob[Y]
         w = json_blob[W]
         h = json_blob[H]
+        inverted = json_blob[INVERTED]
 
         toggle_idx = int(json_blob[SUBTYPE_ID])
 
-        yield entities.DoorBlock(x, y, w, h, toggle_idx)
+        yield entities.DoorBlock(x, y, w, h, toggle_idx, inverted=inverted)
 
     def get_minimum_size(self):
         return (16, 16)
@@ -858,6 +861,28 @@ class SpecUtils:
                 print("ERROR: failed to cycle spec art: {}".format(spec_blob))
                 traceback.print_exc()
         return res
+
+    @staticmethod
+    def toggle_inverted(spec_blob):
+        res = spec_blob.copy()
+        if TYPE_ID in spec_blob:
+            type_id = spec_blob[TYPE_ID]
+            try:
+                spec_type = SpecTypes.get(type_id)
+                if INVERTED in spec_blob:
+                    cur_val = spec_blob[INVERTED]
+                elif INVERTED in spec_type.optional_keys:
+                    cur_val = spec_type.optional_keys[INVERTED]
+                else:
+                    return res  # doesn't support inversion
+
+                res[INVERTED] = not cur_val
+
+            except Exception:
+                print("ERROR: failed to toggle inversion: {}".format(spec_blob))
+                traceback.print_exc()
+        return res
+
 
 def get_test_blueprint_0() -> LevelBlueprint:
     cs = gs.get_instance().cell_size

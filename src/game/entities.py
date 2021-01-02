@@ -615,16 +615,17 @@ class MovingBlockEntity(BlockEntity):
 
 class DoorBlock(BlockEntity):
 
-    def __init__(self, x, y, w, h, toggle_idx):
+    def __init__(self, x, y, w, h, toggle_idx, inverted=False):
         BlockEntity.__init__(self, x, y, w, h)
         self._toggle_idx = toggle_idx
         self._is_solid = True
+        self._inverted = inverted
 
     def get_toggle_idx(self):
         return self._toggle_idx
 
     def update(self):
-        should_be_solid = not self.get_world().is_door_unlocked(self._toggle_idx)
+        should_be_solid = (not self.get_world().is_door_unlocked(self._toggle_idx)) ^ self._inverted
         if self._is_solid != should_be_solid:
             if should_be_solid:
                 # TODO kill any player within bounds after becoming solid
@@ -713,6 +714,8 @@ class KeyEntity(Entity):
         bob_prog = (1 + math.cos(2 * 3.141529 * self._bob_tick_count / self._bob_tick_period)) / 2
         bob_height = int(self._bob_height_min + (self._bob_height_max - self._bob_height_min) * bob_prog)
 
+        color = self.get_color()
+
         if self.is_satisfied():
             bob_height = 0
         else:
@@ -720,14 +723,16 @@ class KeyEntity(Entity):
 
         self._icon_sprite = self._icon_sprite.update(new_model=key_model,
                                                      new_x=rect[0] + rect[2] // 2 - key_model.width() // 2,
-                                                     new_y=rect[1] + rect[3] - bob_height - key_model.height())
+                                                     new_y=rect[1] + rect[3] - bob_height - key_model.height(),
+                                                     new_color=color)
         self._bob_tick_count += 1
 
         if self._base_sprite is None:
             self._base_sprite = sprites.ImageSprite.new_sprite(spriteref.ENTITY_LAYER, depth=-3)
         self._base_sprite = self._base_sprite.update(new_model=base_model,
                                                      new_x=rect[0] + rect[2] // 2 - base_model.width() // 2,
-                                                     new_y=rect[1] + rect[3] - base_model.height())
+                                                     new_y=rect[1] + rect[3] - base_model.height(),
+                                                     new_color=color)
 
 
 class StartBlock(BlockEntity):

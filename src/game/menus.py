@@ -1183,6 +1183,10 @@ class LevelEditGameScene(_BaseGameScene):
         cycle_func = lambda s: blueprints.SpecUtils.cycle_art(s, steps)
         self._mutate_selected_specs(cycle_func)
 
+    def toggle_selection_inverted(self):
+        toggle_func = lambda s: blueprints.SpecUtils.toggle_inverted(s)
+        self._mutate_selected_specs(toggle_func)
+
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
 
@@ -1586,6 +1590,10 @@ class NormalMouseMode(MouseMode):
             left=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_ART_BACKWARD))[0]
         if cycle_art_steps != 0:
             self.scene.cycle_selection_art(cycle_art_steps)
+
+        toggle_inverted = inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SELECTION_INVERTED))
+        if toggle_inverted:
+            self.scene.toggle_selection_inverted()
 
         if mouse_xy is not None and edit_xy is not None:
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CLEAR_POINTS)):
