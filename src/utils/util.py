@@ -1252,6 +1252,147 @@ def apply_ascii_edits_to_text(text, ascii_edits, cursor_pos=-1, max_len=None, al
     return (pre_text + post_text, cursor_pos)
 
 
+class SpacialHashMap:
+
+    def __init__(self, cellsize):
+        self._cellsize = cellsize
+
+        self._cell_to_keys = {}   # cell_xy -> set of keys
+        self._key_to_cells = {}   # key -> set of cell_xy
+        self._key_to_values = {}  # key -> (rect, value)
+
+    def get_cell_at(self, xy):
+        grid_x = xy[0] // self._cellsize
+        grid_y = xy[1] // self._cellsize
+        return (grid_x, grid_y)
+
+    def all_cells_in_rect(self, rect, include_empty=True):
+        xy1 = (rect[0], rect[1])
+        xy2 = (rect[0] + rect[2], rect[1] + rect[3])
+        cell_min = self.get_cell_at(xy1)
+        cell_max = self.get_cell_at(xy2)
+
+        for grid_y in range(cell_min[1], cell_max[1] + 1):
+            for grid_x in range(cell_min[0], cell_max[0] + 1):
+                grid_xy = (grid_x, grid_y)
+                if include_empty or grid_xy in self._cell_to_keys:
+                    yield grid_xy
+
+    def get_cell_rect(self, grid_xy):
+        return [self._cellsize * grid_xy[0], self._cellsize * grid_xy[1], self._cellsize, self._cellsize]
+
+    def put(self, key, rect, value=None):
+        if key in self._key_to_values:
+            old_rect, old_value = self._key_to_values[key]
+            if old_rect != rect:
+                self.remove(key)
+            else:
+                # just updating the value, no need to rehash
+                self._key_to_values[key] = (old_rect, value)
+                return
+
+        self._key_to_values[key] = (rect, value)
+        for grid_xy in self.all_cells_in_rect(rect):
+            self._add_key_to_cell(key, grid_xy)
+            self._add_cell_to_key(key, grid_xy)
+
+    def __contains__(self, key):
+        return key in self._key_to_values
+
+    def remove(self, key):
+        if key in self._key_to_values:
+            del self._key_to_values[key]
+        if key in self._key_to_cells:
+            for xy in self._key_to_cells[key]:
+                self._rm_key_from_cell(key, xy)
+            del self._key_to_cells[key]
+
+    def get_rect(self, key):
+        if key in self._key_to_values:
+            return self._key_to_values[key][0]
+        else:
+            return None
+
+    def get_value(self, key):
+        if key in self._key_to_values:
+            return self._key_to_values[key][1]
+        else:
+            return None
+
+    def __len__(self):
+        """returns: the number of items in the map."""
+        return len(self._key_to_values)
+
+    def all_items_in_cell(self, cell_xy):
+        """yields: (key, rect, value) for each item in the specified cell."""
+        if cell_xy in self._cell_to_keys:
+            for key in self._cell_to_keys[cell_xy]:
+                yield (key, self._key_to_values[key][0], self._key_to_values[key][1])
+
+    def all_items_at_point(self, pt):
+        """yields: (key, rect, value) for each item containing the specified point."""
+        grid_xy = self.get_cell_at(pt)
+        for item in self.all_items_in_cell(grid_xy):
+            key, rect, val = item
+            if rect_contains(rect, pt):
+                yield item
+
+    def all_items_in_rect(self, target_rect):
+        """yields: (key, rect, value) for each item intersecting the specified rect."""
+        seen = set()  # holds the keys of items we've already processed
+        for grid_xy in self.all_cells_in_rect(target_rect, include_empty=False):
+            for item in self.all_items_in_cell(grid_xy):
+                key, rect, val = item
+                if key in seen:
+                    continue
+                else:
+                    seen.add(key)
+                    if rects_intersect(target_rect, rect):
+                        yield item
+
+    def _rm_key_from_cell(self, key, xy):
+        if xy in self._cell_to_keys:
+            keys = self._cell_to_keys[xy]
+            if key in keys:
+                keys.remove(key)
+                if len(keys) == 0:
+                    del self._cell_to_keys[xy]
+
+    def _rm_cell_from_key(self, key, xy):
+        if key in self._key_to_cells:
+            cells = self._key_to_cells[key]
+            cells.remove(xy)
+            if len(cells) == 0:
+                del self._key_to_cells[key]
+
+    def _add_key_to_cell(self, key, xy):
+        if xy not in self._cell_to_keys:
+            self._cell_to_keys[xy] = set()
+        self._cell_to_keys[xy].add(key)
+
+    def _add_cell_to_key(self, key, xy):
+        if key not in self._key_to_cells:
+            self._key_to_cells[key] = set()
+        self._key_to_cells[key].add(xy)
+
+    def __repr__(self):
+        return "{}:[num_items={}, num_cells={}]".format(type(self).__name__, len(self), len(self._cell_to_keys))
+
+    def pretty_print(self):
+        all_cells = []
+        for c_xy in self._cell_to_keys:
+            all_cells.append(c_xy)
+        all_cells.sort()
+
+        for c_xy in all_cells:
+            print("[Cell {}: {}]:".format(c_xy, self.get_cell_rect(c_xy)))
+            for key in self._cell_to_keys[c_xy]:
+                rect = self.get_rect(key)
+                val = self.get_value(key)
+                print("\t({}, {}, {})".format(key, rect, val))
+            print()
+
+
 class _HashableWrapper:
     """You can make mutable objects hashable with this handy wrapper. Is this a good idea? No."""
 
@@ -1313,6 +1454,14 @@ def checksum(blob, m=982451653, strict=True):
 
 
 if __name__ == "__main__":
+    hashmap = SpacialHashMap(10)
+    hashmap.put("rect1", [0, 0, 15, 15], value="A")
+    hashmap.put("rect2", [10, 10, 20, 20], value="B")
+    hashmap.pretty_print()
+    print([x for x in hashmap.all_items_at_point((0, 5))])
+
+
+if __name__ == "__main__" and False:
     sizes = [(5, 5), (2, 3), (7, 2), (1, 5), (9, 4), (3, 16), (3, 3), (3, 4)]
     packed, bound = pack_rects_into_smallest_rect(sizes)
     print("sizes={}".format(sizes))

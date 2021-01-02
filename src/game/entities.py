@@ -353,6 +353,10 @@ class Entity:
     def is_actor(self):
         return self.is_player()
 
+    def get_light_sources(self):
+        """returns: list of ((x, y), radius, (r, g, b))"""
+        return []
+
     def __eq__(self, other):
         if isinstance(other, Entity):
             return self._ent_id == other._ent_id
@@ -1113,6 +1117,8 @@ class PlaybackPlayerController(PlayerController):
 
 class PlayerEntity(Entity):
 
+    LIGHT_RADIUS = 10 * gs.get_instance().cell_size
+
     def __init__(self, x, y, player_type: playertypes.PlayerType, controller=None, align_to_cells=True):
         cs = gs.get_instance().cell_size
         w = int(cs * player_type.get_size()[0])
@@ -1549,6 +1555,9 @@ class PlayerEntity(Entity):
 
     def get_debug_color(self):
         return colors.PERFECT_BLUE
+
+    def get_light_sources(self):
+        return [(self.get_center(), PlayerEntity.LIGHT_RADIUS, colors.PERFECT_WHITE)]
 
     def get_player_state(self):
         """returns: (state, anim_rate)"""
