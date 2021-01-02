@@ -19,10 +19,10 @@
 "lvl_2": "switches",
 "lvl_3": "sleepwalk",
 "lvl_4": "trust",
-"lvl_5": "maze",
+"lvl_5": "acrobatics",
 "lvl_6": "maze",
-"lvl_7": "door_and_key",
-"lvl_8": "door_and_key",
+"lvl_7": "diversion",
+"lvl_8": "spike_test",
 "lvl_9": "door_and_key",
 "bg_triangles": {
     "top": [],

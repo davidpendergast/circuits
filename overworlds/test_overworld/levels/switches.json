@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_small"],
-    "description": "???",
+    "description": "This might be a little tricky.",
     "entities": [
         {"color_id": 1, "h": 32, "type": "block", "w": 48, "x": 48, "y": 80},
         {"color_id": 1, "h": 240, "type": "block", "w": 16, "x": 0, "y": 0},
@@ -46,11 +46,11 @@
             "h": 8,
             "loop": true,
             "points": [
-                [256, 96]
+                [176, 96]
             ],
             "type": "moving_block",
             "w": 32,
-            "x": 176,
+            "x": 256,
             "y": 96
         },
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 80, "x": 208, "y": 48},
@@ -120,11 +120,11 @@
             "h": 8,
             "loop": true,
             "points": [
-                [176.0, 192.0]
+                [80, 192]
             ],
             "type": "moving_block",
             "w": 16,
-            "x": 80,
+            "x": 176,
             "y": 192
         },
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 64, "x": 192, "y": 224}

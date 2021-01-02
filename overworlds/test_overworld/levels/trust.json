@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_fast"],
-    "description": "They'll have to work to together to solve this one.",
+    "description": "You're still holding the switch, right?",
     "entities": [
         {"h": 240, "type": "block", "w": 16, "x": 0, "y": 0},
         {"h": 16, "type": "block", "w": 48, "x": 64, "y": 224},

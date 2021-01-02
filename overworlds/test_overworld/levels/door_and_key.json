@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_small"],
-    "description": "Warming up.",
+    "description": "Help both characters reach their destinations.",
     "entities": [
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 32, "y": 80},
         {"color_id": 1, "h": 192, "type": "block", "w": 16, "x": 0, "y": 48},
