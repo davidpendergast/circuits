@@ -1,6 +1,27 @@
 import src.engine.globaltimer as globaltimer
 
 
+class SaveData:
+
+    COMPLETED_LEVELS = "completed_levels"
+
+    def __init__(self, filepath):
+        self.filepath = filepath
+        self.json_blob = {
+            SaveData.COMPLETED_LEVELS: {}  # level_id -> completion time (in ticks)
+        }
+
+    def load_from_disk(self) -> 'SaveData':
+        # TODO implement
+        return self
+
+    def save_to_disk(self, filepath=None):
+        pass  # TODO
+
+    def completed_levels(self) -> dict:
+        return self.json_blob[SaveData.COMPLETED_LEVELS]
+
+
 class GlobalState:
 
     def __init__(self):
@@ -12,6 +33,8 @@ class GlobalState:
 
         self._tick_count = 0
 
+        self._save_data = SaveData("save_data.txt").load_from_disk()
+
     def tick_count(self):
         return self._tick_count
 
@@ -20,6 +43,9 @@ class GlobalState:
 
     def update(self):
         self._tick_count += 1
+
+    def save_data(self) -> SaveData:
+        return self._save_data
 
 
 _INSTANCE = GlobalState()

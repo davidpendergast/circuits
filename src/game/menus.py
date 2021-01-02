@@ -817,7 +817,7 @@ class RealGameScene(_BaseGameScene):
             self.get_world().add_entity(anim)
 
     def handle_esc_pressed(self):
-        self.get_manager().set_next_scene(MainMenuScene())
+        self.on_level_exit()
 
     def setup_new_world_with_delay(self, bp, delay, new_state, runnable=lambda: None):
         self._queued_next_world = (bp, new_state, runnable)

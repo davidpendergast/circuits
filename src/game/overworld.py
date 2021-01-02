@@ -437,8 +437,6 @@ class OverworldState:
         self.world_blueprint = world_blueprint
         self.level_blueprints = level_blueprints
 
-        self.completed_levels = {}  # level_id -> completion time (in ticks)
-
         self.update_nodes()
 
         self.selected_cell = self.find_initial_selection(came_from_exit_id=came_from)
@@ -473,7 +471,7 @@ class OverworldState:
         return 1
 
     def is_complete(self, level_id):
-        return level_id in self.completed_levels
+        return level_id in gs.get_instance().save_data().completed_levels()
 
     def is_selected_at(self, xy):
         if self.selected_cell is None:
@@ -516,15 +514,16 @@ class OverworldState:
         return True
 
     def get_completion_time(self, level_id):
-        if level_id in self.completed_levels:
-            return self.completed_levels[level_id]
+        completed_levels = gs.get_instance().save_data().completed_levels()
+        if level_id in completed_levels:
+            return completed_levels[level_id]
         else:
             return None
 
     def set_completed(self, level_id, time):
         cur_time = self.get_completion_time(level_id)
         if cur_time is None or cur_time > time:
-            self.completed_levels[level_id] = time
+            gs.get_instance().save_data().completed_levels()[level_id] = time
 
     def update_nodes(self):
         # TODO set nodes to locked / unlocked
@@ -977,7 +976,7 @@ class OverworldScene(scenes.Scene):
 
         def _return_to_overworld(time):
             old_time = state.get_completion_time(level_id)
-            if time is not None and old_time is None or time < old_time:
+            if time is not None and (old_time is None or time < old_time):
                 state.set_completed(level_id, time)
             new_scene = OverworldScene(path, state=state)
 
