@@ -32,6 +32,21 @@ def to_intn(color):
     return tuple(_bound(v * 256, 0, 255) for v in color)
 
 
+def darken(float_color, darkness):
+    rgb = (_bound((1 - darkness) * float_color[0], 0, 1),
+           _bound((1 - darkness) * float_color[1], 0, 1),
+           _bound((1 - darkness) * float_color[2], 0, 1))
+
+    if len(float_color) >= 4:
+        return (rgb[0], rgb[1], rgb[2], float_color[3])
+    else:
+        return rgb
+
+
+def lighten(float_color, lightness):
+    return darken(float_color, -lightness)
+
+
 PERFECT_WHITE = to_float(256, 256, 256)
 
 PERFECT_LIGHT_GRAY = to_float(196, 196, 196)  # <--- skeletrisTM grays
