@@ -383,6 +383,25 @@ class AbstractBlockEntity(Entity):
     def get_color_id(self):
         return 0
 
+    def get_color(self, ignore_override=False, include_lighting=True):
+        base_color = super().get_color(ignore_override=ignore_override)
+        if not ignore_override and self.get_color_override() is not None:
+            return base_color
+        elif not include_lighting:
+            return base_color
+        else:
+            w = self.get_world()
+            if w is not None:
+                p = w.get_player()
+                if p is not None:
+                    max_dist = gs.get_instance().cell_size * 10
+                    dist = min(max_dist, util.dist(p.get_center(), self.get_center()))
+                    color = util.linear_interp(colors.lighten(base_color, 0.333),
+                                               colors.darken(base_color, 0.333),
+                                               (dist / max_dist) ** 2)
+                    return colors.to_floatn(colors.to_intn(color))
+            return base_color
+
     def all_sprites(self):
         for spr in self.all_debug_sprites():
             yield spr
