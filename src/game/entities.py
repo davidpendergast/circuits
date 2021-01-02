@@ -395,16 +395,19 @@ class AbstractBlockEntity(Entity):
             return base_color
         else:
             w = self.get_world()
+            dark_color = colors.darken(base_color, 0.333)
+            bright_color = colors.lighten(base_color, 0.333)
             if w is not None:
-                p = w.get_player()
-                if p is not None:
-                    max_dist = gs.get_instance().cell_size * 10
-                    dist = min(max_dist, util.dist(p.get_center(), self.get_center()))
-                    color = util.linear_interp(colors.lighten(base_color, 0.333),
-                                               colors.darken(base_color, 0.333),
-                                               (dist / max_dist) ** 2)
-                    return colors.to_floatn(colors.to_intn(color))
-            return base_color
+                light_sources = w.all_light_sources_at_pt(self.get_center(), check_circle_collision=False)
+                max_dist_factor = 0
+                for l in light_sources:
+                    light_center, radius, color, strength = l
+                    dist_factor = min(1, (1 - (util.dist(light_center, self.get_center()) / radius) ** 2) * strength)
+                    max_dist_factor = max(max_dist_factor, dist_factor)
+
+                color = util.linear_interp(dark_color, bright_color, max_dist_factor)
+                return colors.to_floatn(colors.to_intn(color))
+            return dark_color
 
     def all_sprites(self):
         for spr in self.all_debug_sprites():
@@ -781,6 +784,9 @@ class StartBlock(BlockEntity):
     def get_facing_dir(self):
         return self._facing_dir
 
+    def get_light_sources(self):
+        return [(self.get_center(), 3 * gs.get_instance().cell_size, colors.PERFECT_WHITE, 0.5)]
+
     def get_main_model(self):
         cs = gs.get_instance().cell_size
         size = (self.get_w() // cs, self.get_h() // cs)
@@ -856,6 +862,9 @@ class EndBlock(CompositeBlockEntity):
 
     def get_player_type(self):
         return self._player_type
+
+    def get_light_sources(self):
+        return [(self.get_center(), 3 * gs.get_instance().cell_size, colors.PERFECT_WHITE, 0.5)]
 
     def get_main_model(self):
         cs = gs.get_instance().cell_size
@@ -1557,7 +1566,7 @@ class PlayerEntity(Entity):
         return colors.PERFECT_BLUE
 
     def get_light_sources(self):
-        return [(self.get_center(), PlayerEntity.LIGHT_RADIUS, colors.PERFECT_WHITE)]
+        return [(self.get_center(), PlayerEntity.LIGHT_RADIUS, colors.PERFECT_WHITE, 1.0)]
 
     def get_player_state(self):
         """returns: (state, anim_rate)"""
@@ -1833,6 +1842,23 @@ class PlayerFadeAnimation(Entity):
 
     def get_player_type(self):
         return self.player_type
+
+    def get_fade_pcnt(self):
+        if self.fade_out:
+            return self.ticks_active / self.duration
+        else:
+            return 1 - (self.ticks_active / self.duration)
+
+    def get_player_center(self):
+        size_in_cells = self.player_type.get_size()
+        size = (int(size_in_cells[0] * gs.get_instance().cell_size),
+                int(size_in_cells[1] * gs.get_instance().cell_size))
+        bottom_center = (self.get_center()[0], self.get_y() + self.get_h())
+        return (bottom_center[0], bottom_center[1] - size[1] // 2)
+
+    def get_light_sources(self):
+        strength = 1 - self.get_fade_pcnt()
+        return [(self.get_player_center(), PlayerEntity.LIGHT_RADIUS, colors.PERFECT_WHITE, strength)]
 
     def update(self):
         if self.ticks_active >= self.duration:

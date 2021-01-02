@@ -346,6 +346,10 @@ def shift_bounding_rect_to(v_list, pos=(0, 0)):
     return [(v[0] - rect[0] + pos[0], v[1] - rect[1] + pos[1]) for v in v_list]
 
 
+def circle_contains(center, radius, pt):
+    return dist(center, pt) <= radius
+
+
 def dot_prod(p1, p2):
     if isinstance(p1, int) or isinstance(p1, float):
         return p1 * p2
@@ -1261,16 +1265,16 @@ class SpacialHashMap:
         self._key_to_cells = {}   # key -> set of cell_xy
         self._key_to_values = {}  # key -> (rect, value)
 
-    def get_cell_at(self, xy):
+    def _get_cell_at(self, xy):
         grid_x = xy[0] // self._cellsize
         grid_y = xy[1] // self._cellsize
         return (grid_x, grid_y)
 
-    def all_cells_in_rect(self, rect, include_empty=True):
+    def _all_cells_in_rect(self, rect, include_empty=True):
         xy1 = (rect[0], rect[1])
         xy2 = (rect[0] + rect[2], rect[1] + rect[3])
-        cell_min = self.get_cell_at(xy1)
-        cell_max = self.get_cell_at(xy2)
+        cell_min = self._get_cell_at(xy1)
+        cell_max = self._get_cell_at(xy2)
 
         for grid_y in range(cell_min[1], cell_max[1] + 1):
             for grid_x in range(cell_min[0], cell_max[0] + 1):
@@ -1278,7 +1282,7 @@ class SpacialHashMap:
                 if include_empty or grid_xy in self._cell_to_keys:
                     yield grid_xy
 
-    def get_cell_rect(self, grid_xy):
+    def _get_cell_rect(self, grid_xy):
         return [self._cellsize * grid_xy[0], self._cellsize * grid_xy[1], self._cellsize, self._cellsize]
 
     def put(self, key, rect, value=None):
@@ -1292,7 +1296,7 @@ class SpacialHashMap:
                 return
 
         self._key_to_values[key] = (rect, value)
-        for grid_xy in self.all_cells_in_rect(rect):
+        for grid_xy in self._all_cells_in_rect(rect):
             self._add_key_to_cell(key, grid_xy)
             self._add_cell_to_key(key, grid_xy)
 
@@ -1307,15 +1311,15 @@ class SpacialHashMap:
                 self._rm_key_from_cell(key, xy)
             del self._key_to_cells[key]
 
-    def get_rect(self, key):
-        if key in self._key_to_values:
-            return self._key_to_values[key][0]
-        else:
-            return None
+    def clear(self):
+        self._cell_to_keys.clear()
+        self._key_to_cells.clear()
+        self._key_to_values.clear()
 
-    def get_value(self, key):
+    def get(self, key):
+        """returns: (rect, value) for the given key, or None if the key is not mapped."""
         if key in self._key_to_values:
-            return self._key_to_values[key][1]
+            return (self._key_to_values[key][0], self._key_to_values[key][1])
         else:
             return None
 
@@ -1323,7 +1327,7 @@ class SpacialHashMap:
         """returns: the number of items in the map."""
         return len(self._key_to_values)
 
-    def all_items_in_cell(self, cell_xy):
+    def _all_items_in_cell(self, cell_xy):
         """yields: (key, rect, value) for each item in the specified cell."""
         if cell_xy in self._cell_to_keys:
             for key in self._cell_to_keys[cell_xy]:
@@ -1331,8 +1335,8 @@ class SpacialHashMap:
 
     def all_items_at_point(self, pt):
         """yields: (key, rect, value) for each item containing the specified point."""
-        grid_xy = self.get_cell_at(pt)
-        for item in self.all_items_in_cell(grid_xy):
+        grid_xy = self._get_cell_at(pt)
+        for item in self._all_items_in_cell(grid_xy):
             key, rect, val = item
             if rect_contains(rect, pt):
                 yield item
@@ -1340,8 +1344,8 @@ class SpacialHashMap:
     def all_items_in_rect(self, target_rect):
         """yields: (key, rect, value) for each item intersecting the specified rect."""
         seen = set()  # holds the keys of items we've already processed
-        for grid_xy in self.all_cells_in_rect(target_rect, include_empty=False):
-            for item in self.all_items_in_cell(grid_xy):
+        for grid_xy in self._all_cells_in_rect(target_rect, include_empty=False):
+            for item in self._all_items_in_cell(grid_xy):
                 key, rect, val = item
                 if key in seen:
                     continue
@@ -1385,10 +1389,9 @@ class SpacialHashMap:
         all_cells.sort()
 
         for c_xy in all_cells:
-            print("[Cell {}: {}]:".format(c_xy, self.get_cell_rect(c_xy)))
+            print("[Cell {}: {}]:".format(c_xy, self._get_cell_rect(c_xy)))
             for key in self._cell_to_keys[c_xy]:
-                rect = self.get_rect(key)
-                val = self.get_value(key)
+                rect, val = self.get(key)
                 print("\t({}, {}, {})".format(key, rect, val))
             print()
 

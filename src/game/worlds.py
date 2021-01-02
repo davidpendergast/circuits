@@ -30,6 +30,8 @@ class World:
         self._entities_to_cells = {}  # ent -> set of cells (x, y) it's inside
         self._cells_to_entities = {}   # (x, y) - set of entities inside
 
+        self._light_sources = util.SpacialHashMap(gs.get_instance().cell_size * 5)
+
         self.camera_min_xy = [None, None]
         self.camera_max_xy = [None, None]
 
@@ -187,6 +189,15 @@ class World:
             y = block_rect[1] - player.get_h()
             return (x, y)
 
+    def all_light_sources_at_pt(self, pt, check_circle_collision=True):
+        """yields: ((x, y), radius, color, strength) for each light source that may reach the given position."""
+        for item in self._light_sources.all_items_at_point(pt):
+            center, radius, color, strength = item[2]
+            if check_circle_collision:
+                if not util.circle_contains(center, radius, pt):
+                    continue
+            yield (center, radius, color, strength)
+
     def get_tick(self):
         return self._tick
 
@@ -264,6 +275,18 @@ class World:
             for i in invalids:
                 i.set_vel((0, 0))
                 i.was_crushed()
+
+        self._light_sources.clear()
+        for ent in self.entities:
+            n = 0
+            for light_src in ent.get_light_sources():
+                if not isinstance(light_src, tuple) or len(light_src) != 4:
+                    raise ValueError("Invalid light source on entity {}: {}".format(ent, light_src))
+                else:
+                    xy, radius, color, strength = light_src
+                    self._light_sources.put("{}_{}".format(ent.get_ent_id(), n),
+                                            [xy[0] - radius, xy[1] - radius, radius * 2, radius * 2],
+                                            (xy, radius, color, strength))
 
         for ent in self.entities:
             ent.update_sprites()
