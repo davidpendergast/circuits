@@ -10,7 +10,7 @@
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 32, "x": 352, "y": 208},
         {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 352, "y": 192},
         {"h": 16, "subtype": "player_small", "type": "end_block", "w": 32, "x": 112, "y": 224},
-        {"color_id": 1, "h": 48, "type": "block", "w": 480, "x": 0, "y": 0},
+        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 0, "y": 0},
         {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 288, "y": 224},
         {"art_id": 2, "color_id": 2, "h": 32, "type": "block", "w": 16, "x": 384, "y": 176},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 16, "y": 80},
@@ -31,10 +31,10 @@
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 16, "y": 192},
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 48, "y": 192},
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 48, "x": 16, "y": 208},
-        {"subtype": 0, "type": "key", "x": 64, "y": 184},
+        {"subtype": 0, "type": "key", "x": 288, "y": 216},
         {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 48, "x": 144, "y": 176},
-        {"subtype": 1, "type": "key", "x": 288, "y": 208},
-        {"art_id": 0, "h": 16, "inverted": true, "subtype": 0, "type": "door_block", "w": 32, "x": 264, "y": 96},
+        {"subtype": 1, "type": "key", "x": 224, "y": 176},
+        {"art_id": 0, "h": 16, "inverted": true, "subtype": 0, "type": "door_block", "w": 32, "x": 272, "y": 96},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 224, "y": 128},
         {
             "color_id": 2,
@@ -74,7 +74,7 @@
             "x": 320,
             "y": 120
         },
-        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 56, "x": 352, "y": 128},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 352, "y": 128},
         {
             "color_id": 2,
             "h": 8,
@@ -89,7 +89,7 @@
             "h": 8,
             "subtype": [0, -1],
             "type": "spikes",
-            "w": 8,
+            "w": 16,
             "x": 384,
             "y": 120
         },
@@ -103,11 +103,10 @@
             "x": 464,
             "y": 48
         },
-        {"art_id": 0, "color_id": 1, "h": 96, "type": "block", "w": 32, "x": 320, "y": 144},
-        {"art_id": 0, "h": 32, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 432, "y": 176},
-        {"art_id": 0, "h": 32, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 400, "y": 176},
-        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 392, "y": 112},
-        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 224, "y": 112},
+        {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 32, "x": 320, "y": 176},
+        {"art_id": 0, "h": 32, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 416, "y": 192},
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 400, "y": 96},
+        {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 224, "y": 96},
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 128, "y": 176},
         {
             "art_id": 1,
@@ -153,7 +152,13 @@
         },
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 272, "y": 128},
         {"art_id": 0, "color_id": 2, "h": 32, "type": "block", "w": 16, "x": 384, "y": 208},
-        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 80, "y": 224}
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 80, "y": 224},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0},
+        {"art_id": 0, "h": 16, "inverted": true, "subtype": 0, "type": "door_block", "w": 32, "x": 240, "y": 96},
+        {"art_id": 0, "h": 16, "inverted": true, "subtype": 0, "type": "door_block", "w": 32, "x": 304, "y": 96},
+        {"art_id": 0, "h": 16, "inverted": true, "subtype": 0, "type": "door_block", "w": 32, "x": 368, "y": 96},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 320, "y": 144}
     ],
     "level_id": "trust",
     "name": "Trust",

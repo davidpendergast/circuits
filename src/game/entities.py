@@ -676,10 +676,8 @@ class DoorBlock(BlockEntity):
         return spriteref.object_sheet().get_toggle_block_sprite(self.get_toggle_idx(), w, h, self.is_solid())
 
     def get_light_sources(self):
-        if self.is_solid():
-            return [(self.get_center(), gs.get_instance().cell_size * 5, colors.WHITE, 0.75)]
-        else:
-            return []
+        strength = 0.75 if self.is_solid() else 0.5
+        return [(self.get_center(), gs.get_instance().cell_size * 5, colors.WHITE, strength)]
 
 
 class KeyEntity(Entity):

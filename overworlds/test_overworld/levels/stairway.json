@@ -66,8 +66,29 @@
             "y": 192
         },
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 16, "y": 160},
-        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 16, "y": 128},
-        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 16, "y": 96}
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 40, "y": 128},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 16, "y": 96},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 144,
+            "y": 48
+        },
+        {"art_id": 0, "color_id": 1, "h": 40, "type": "block", "w": 8, "x": 48, "y": 96},
+        {
+            "art_id": 2,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 56,
+            "y": 96
+        }
     ],
     "level_id": "stairway",
     "name": "Stairway",

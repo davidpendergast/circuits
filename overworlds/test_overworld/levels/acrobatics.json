@@ -5,9 +5,9 @@
         {"color_id": 1, "h": 240, "type": "block", "w": 16, "x": 0, "y": 0},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 32, "x": 16, "x_dir": 1, "y": 192},
         {"color_id": 1, "h": 48, "type": "block", "w": 368, "x": 16, "y": 0},
-        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 48, "x": 16, "y": 208},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 48, "x": 16, "y": 208},
         {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 128, "x": 64, "y": 208},
-        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 192, "y": 208},
+        {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 192, "y": 208},
         {
             "art_id": 1,
             "color_id": 1,
@@ -26,14 +26,14 @@
             "h": 8,
             "loop": true,
             "points": [
-                [288, 80],
-                [288, 176],
-                [208, 176]
+                [288, 96],
+                [288, 192],
+                [208, 192]
             ],
             "type": "moving_block",
             "w": 32,
             "x": 208,
-            "y": 80
+            "y": 96
         },
         {
             "art_id": -1,
@@ -42,14 +42,14 @@
             "h": 8,
             "loop": true,
             "points": [
-                [288, 176],
-                [208, 176],
-                [208, 80]
+                [288, 192],
+                [208, 192],
+                [208, 96]
             ],
             "type": "moving_block",
             "w": 32,
             "x": 288,
-            "y": 80
+            "y": 96
         },
         {
             "art_id": -1,
@@ -58,14 +58,14 @@
             "h": 8,
             "loop": true,
             "points": [
-                [208, 176],
-                [208, 80],
-                [288, 80]
+                [208, 192],
+                [208, 96],
+                [288, 96]
             ],
             "type": "moving_block",
             "w": 32,
             "x": 288,
-            "y": 176
+            "y": 192
         },
         {
             "art_id": -1,
@@ -74,18 +74,18 @@
             "h": 8,
             "loop": true,
             "points": [
-                [208, 80],
-                [288, 80],
-                [288, 176]
+                [208, 96],
+                [288, 96],
+                [288, 192]
             ],
             "type": "moving_block",
             "w": 32,
             "x": 208,
-            "y": 176
+            "y": 192
         },
-        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 320, "y": 80},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 320, "y": 96},
         {
-            "art_id": 0,
+            "art_id": 2,
             "color_id": 1,
             "h": 32,
             "subtype": [2, 0, "horizontal"],
@@ -96,19 +96,7 @@
         },
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 80, "x": 96, "y": 192},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 48, "y": 192},
-        {"art_id": 0, "color_id": 1, "h": 96, "type": "block", "w": 16, "x": 320, "y": 144},
-        {
-            "art_id": 1,
-            "color_id": 1,
-            "h": 32,
-            "subtype": [2, 0, "vertical"],
-            "type": "sloped_2x2_block",
-            "w": 32,
-            "x": 320,
-            "y": 112
-        },
-        {"art_id": 0, "color_id": 1, "h": 56, "type": "block", "w": 8, "x": 208, "y": 184},
-        {"art_id": 0, "color_id": 1, "h": 56, "type": "block", "w": 8, "x": 312, "y": 184},
+        {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 16, "x": 320, "y": 160},
         {
             "art_id": 0,
             "color_id": 1,
@@ -117,7 +105,7 @@
             "type": "sloped_2x2_block",
             "w": 32,
             "x": 352,
-            "y": 80
+            "y": 96
         },
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 416, "y": 144},
         {
@@ -201,9 +189,9 @@
             "x": 736,
             "y": 128
         },
-        {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 32, "x": 768, "y": 128},
-        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 80, "x": 800, "y": 112},
-        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 80, "x": 800, "y": 200},
+        {"art_id": 0, "color_id": 1, "h": 40, "type": "block", "w": 32, "x": 768, "y": 128},
+        {"art_id": 0, "color_id": 1, "h": 24, "type": "block", "w": 80, "x": 800, "y": 112},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 120, "x": 760, "y": 200},
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 48, "x": 928, "y": 200},
         {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 928, "y": 112},
         {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 8, "x": 900, "y": 48},
@@ -237,9 +225,8 @@
             "type": "sloped_2x2_block",
             "w": 32,
             "x": 800,
-            "y": 144
+            "y": 136
         },
-        {"art_id": 0, "color_id": 1, "h": 24, "type": "block", "w": 16, "x": 800, "y": 176},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 1056, "y": 128},
         {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 48, "x": 1024, "y": 144},
         {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 112, "x": 768, "y": 208},
@@ -289,7 +276,7 @@
         {"color_id": 1, "h": 48, "type": "block", "w": 368, "x": 1120, "y": 0},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 1024, "y": 128},
         {
-            "art_id": 0,
+            "art_id": 1,
             "color_id": 0,
             "duration": 90,
             "h": 32,
@@ -317,7 +304,7 @@
             "y": 192
         },
         {
-            "art_id": -1,
+            "art_id": 0,
             "color_id": 0,
             "duration": 90,
             "h": 8,
@@ -343,7 +330,7 @@
         },
         {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 1456, "y": 176},
         {
-            "art_id": -1,
+            "art_id": 0,
             "color_id": 0,
             "duration": 90,
             "h": 8,
@@ -387,8 +374,8 @@
         {"color_id": 1, "h": 48, "type": "block", "w": 368, "x": 1488, "y": 0},
         {"color_id": -1, "h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 2032, "y": 144},
         {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 16, "x": 1984, "y": 160},
-        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 240, "x": 1856, "y": 0},
-        {"art_id": 0, "color_id": 1, "h": 240, "type": "block", "w": 16, "x": 2096, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 256, "x": 1856, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 192, "type": "block", "w": 16, "x": 2096, "y": 48},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 1984, "y": 144},
         {
             "art_id": 1,
@@ -418,7 +405,127 @@
         },
         {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 1456, "y": 208},
         {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 2080, "y": 160},
-        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 96, "x": 2000, "y": 192}
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 96, "x": 2000, "y": 192},
+        {
+            "art_id": 1,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 1408,
+            "y": 96
+        },
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 48, "x": 1440, "y": 96},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 0, "vertical"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 1488,
+            "y": 96
+        },
+        {
+            "art_id": 2,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 0, "vertical"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 1504,
+            "y": 64
+        },
+        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 1520, "y": 48},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 1472, "y": 64},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 1456, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 32, "x": 1376, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 48, "x": 1408, "y": 48},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 1456, "y": 64},
+        {
+            "color_id": 0,
+            "h": 32,
+            "subtype": [-1, 0],
+            "type": "spikes",
+            "w": 8,
+            "x": 760,
+            "y": 208
+        },
+        {
+            "color_id": 0,
+            "h": 8,
+            "subtype": [-1, 0],
+            "type": "spikes",
+            "w": 8,
+            "x": 760,
+            "y": 160
+        },
+        {"art_id": 0, "color_id": 1, "h": 40, "type": "block", "w": 8, "x": 208, "y": 200},
+        {"art_id": 0, "color_id": 1, "h": 40, "type": "block", "w": 8, "x": 312, "y": 200},
+        {
+            "art_id": 2,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 0, "vertical"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 320,
+            "y": 128
+        },
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 1776, "y": 176},
+        {
+            "color_id": 0,
+            "h": 8,
+            "subtype": [0, -1],
+            "type": "spikes",
+            "w": 16,
+            "x": 1776,
+            "y": 168
+        },
+        {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 1696, "y": 96},
+        {
+            "color_id": 0,
+            "h": 32,
+            "subtype": [-1, 0],
+            "type": "spikes",
+            "w": 8,
+            "x": 1688,
+            "y": 96
+        },
+        {"art_id": 0, "color_id": 1, "h": 24, "type": "block", "w": 8, "x": 1712, "y": 96},
+        {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 8, "x": 1720, "y": 48},
+        {
+            "art_id": 1,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 1688,
+            "y": 64
+        },
+        {"art_id": 0, "color_id": 1, "h": 40, "type": "block", "w": 16, "x": 1728, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 16, "x": 1872, "y": 48},
+        {
+            "color_id": 0,
+            "h": 8,
+            "subtype": [0, 1],
+            "type": "spikes",
+            "w": 16,
+            "x": 1872,
+            "y": 112
+        },
+        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 1872, "y": 96},
+        {
+            "color_id": 0,
+            "h": 32,
+            "subtype": [-1, 0],
+            "type": "spikes",
+            "w": 8,
+            "x": 1976,
+            "y": 168
+        }
     ],
     "level_id": "acrobatics",
     "name": "Acrobatics",
