@@ -158,6 +158,9 @@ class World:
     def handle_debug_commands(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_PLAYER_TYPE)):
             self._do_debug_player_type_toggle()
+        if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SHOW_LIGHTING)):
+            showing = gs.get_instance().settings().get(gs.Settings.SHOW_LIGHTING)
+            gs.get_instance().settings().set(gs.Settings.SHOW_LIGHTING, not showing)
 
     def get_blueprint(self):
         return self._orig_blueprint
@@ -189,12 +192,20 @@ class World:
             y = block_rect[1] - player.get_h()
             return (x, y)
 
-    def all_light_sources_at_pt(self, pt, check_circle_collision=True):
+    def all_light_sources_at_pt(self, pt, exact=True):
         """yields: ((x, y), radius, color, strength) for each light source that may reach the given position."""
         for item in self._light_sources.all_items_at_point(pt):
             center, radius, color, strength = item[2]
-            if check_circle_collision:
+            if exact:
                 if not util.circle_contains(center, radius, pt):
+                    continue
+            yield (center, radius, color, strength)
+
+    def all_light_sources_in_rect(self, rect, exact=True):
+        for item in self._light_sources.all_items_in_rect(rect):
+            center, radius, color, strength = item[2]
+            if exact:
+                if not util.dist_from_point_to_rect(center, rect) <= radius:
                     continue
             yield (center, radius, color, strength)
 

@@ -375,6 +375,19 @@ def dist_from_point_to_line(p, l1, l2):
     return mag(vector_from_point_to_line(p, l1, l2))
 
 
+def dist_from_point_to_rect(p, rect):
+    if rect_contains(rect, p):
+        return 0
+    elif rect[0] <= p[0] <= rect[0] + rect[2]:
+        # it's directly above or below the rect
+        return min(abs(rect[1] - p[1]), abs(rect[1] + rect[3] - p[1]))
+    elif rect[1] <= p[1] <= rect[1] + rect[3]:
+        # it's directly left or right of the rect
+        return min(abs(rect[0] - p[0]), abs(rect[0] + rect[2] - p[0]))
+    else:
+        return min([mag(sub(p, c)) for c in all_rect_corners(rect)])
+
+
 def vector_from_point_to_line(p, l1, l2):
     if l1 == l2:
         return sub(p, l1)  # kind of a lie

@@ -391,18 +391,21 @@ class AbstractBlockEntity(Entity):
         base_color = super().get_color(ignore_override=ignore_override)
         if not ignore_override and self.get_color_override() is not None:
             return base_color
-        elif not include_lighting:
+        elif not include_lighting or not gs.get_instance().settings().get(gs.Settings.SHOW_LIGHTING):
             return base_color
         else:
             w = self.get_world()
             dark_color = colors.darken(base_color, 0.333)
             bright_color = colors.lighten(base_color, 0.333)
             if w is not None:
-                light_sources = w.all_light_sources_at_pt(self.get_center(), check_circle_collision=False)
+                light_sources = w.all_light_sources_at_pt(self.get_center(), exact=False)
+                # light_sources = w.all_light_sources_in_rect(self.get_rect(), exact=False)
                 max_dist_factor = 0
                 for l in light_sources:
                     light_center, radius, color, strength = l
-                    dist_factor = min(1, (1 - (util.dist(light_center, self.get_center()) / radius) ** 2) * strength)
+                    # dist = util.dist_from_point_to_rect(light_center, self.get_rect())
+                    dist = util.dist(light_center, self.get_center())
+                    dist_factor = min(1, (1 - (dist / radius) ** 2) * strength)
                     max_dist_factor = max(max_dist_factor, dist_factor)
 
                 color = util.linear_interp(dark_color, bright_color, max_dist_factor)
@@ -671,6 +674,12 @@ class DoorBlock(BlockEntity):
     def get_main_model(self):
         w, h = self.get_size()
         return spriteref.object_sheet().get_toggle_block_sprite(self.get_toggle_idx(), w, h, self.is_solid())
+
+    def get_light_sources(self):
+        if self.is_solid():
+            return [(self.get_center(), gs.get_instance().cell_size * 5, colors.WHITE, 0.75)]
+        else:
+            return []
 
 
 class KeyEntity(Entity):
@@ -1126,7 +1135,7 @@ class PlaybackPlayerController(PlayerController):
 
 class PlayerEntity(Entity):
 
-    LIGHT_RADIUS = 10 * gs.get_instance().cell_size
+    LIGHT_RADIUS = 8 * gs.get_instance().cell_size
 
     def __init__(self, x, y, player_type: playertypes.PlayerType, controller=None, align_to_cells=True):
         cs = gs.get_instance().cell_size

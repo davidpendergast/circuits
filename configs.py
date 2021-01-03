@@ -36,6 +36,10 @@ key_repeat_delay = 30  # keys held for longer than this many ticks will start to
 key_repeat_period = 5  # after the delay has passed, the key will be typed every X ticks until released
 
 
+""" Debug Stuff"""
+level_edit_dir = os.path.join("overworlds", "test_overworld", "levels")
+
+
 """ 3D Debug """
 rainbow_3d = False
 wireframe_3d = False

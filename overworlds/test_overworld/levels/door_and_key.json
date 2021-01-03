@@ -3,14 +3,13 @@
     "description": "The journey begins.",
     "entities": [
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 32, "y": 80},
-        {"color_id": 1, "h": 192, "type": "block", "w": 16, "x": 0, "y": 48},
-        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 96, "y": 112},
+        {"color_id": 1, "h": 112, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 2, "h": 16, "type": "block", "w": 64, "x": 64, "y": 224},
         {"color_id": 1, "h": 32, "type": "block", "w": 80, "x": 16, "y": 96},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 224},
         {"h": 16, "subtype": "player_small", "type": "start_block", "w": 16, "x": 16, "x_dir": 1, "y": 80},
         {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 32, "x": 224, "y": 176},
-        {"color_id": 1, "h": 48, "type": "block", "w": 480, "x": 0, "y": 0},
+        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 0, "y": 0},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 288, "y": 224},
         {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 16, "y": 224},
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 16, "x": 16, "y": 192},
@@ -66,25 +65,9 @@
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 48, "x": 416, "y": 48},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 464, "y": 48},
         {"art_id": 0, "h": 16, "subtype": 1, "type": "door_block", "w": 32, "x": 256, "y": 176},
-        {"subtype": 1, "type": "key", "x": 64, "y": 64},
+        {"subtype": 1, "type": "key", "x": 176, "y": 128},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 256, "y": 48},
-        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 128, "y": 232},
-        {
-            "art_id": -1,
-            "color_id": 0,
-            "duration": 90,
-            "h": 8,
-            "loop": true,
-            "points": [
-                [128.0, 224.0],
-                [128.0, 224.0],
-                [128.0, 128.0]
-            ],
-            "type": "moving_block",
-            "w": 32,
-            "x": 128,
-            "y": 128
-        },
+        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 128, "y": 224},
         {"color_id": -1, "h": 16, "subtype": "player_small", "type": "end_block", "w": 32, "x": 432, "y": 192},
         {
             "art_id": 2,
@@ -182,7 +165,13 @@
             "y": 128
         },
         {"art_id": 2, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 448, "y": 128},
-        {"art_id": 0, "color_id": 2, "h": 64, "type": "block", "w": 16, "x": 16, "y": 128}
+        {"art_id": 0, "color_id": 2, "h": 64, "type": "block", "w": 16, "x": 16, "y": 128},
+        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0},
+        {"color_id": 1, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 16, "x": 0, "y": 160},
+        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 96, "y": 112},
+        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 128, "y": 112},
+        {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 144}
     ],
     "level_id": "door_and_key",
     "name": "Door and Key",

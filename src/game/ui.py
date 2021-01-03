@@ -323,7 +323,7 @@ class MultiPageOptionsList(ElementGroup):
             new_page = OptionsList()
             self.pages.append(new_page)
 
-            prev_page.insert_option(len(prev_page.num_options()) - 1, self.next_text, lambda: self.set_current_page(n))
+            prev_page.insert_option(prev_page.num_options() - 1, self.next_text, lambda: self.set_current_page(n))
             new_page.add_option(self.prev_text, lambda: self.set_current_page(n - 1))
 
         self._refresh_children()

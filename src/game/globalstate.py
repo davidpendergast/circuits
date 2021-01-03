@@ -1,25 +1,56 @@
 import src.engine.globaltimer as globaltimer
 
 
-class SaveData:
-
-    COMPLETED_LEVELS = "completed_levels"
+class SaveAndLoadJsonBlob:
 
     def __init__(self, filepath):
         self.filepath = filepath
-        self.json_blob = {
-            SaveData.COMPLETED_LEVELS: {}  # level_id -> completion time (in ticks)
-        }
+        self.json_blob = {}
+        self.set_defaults()
 
-    def load_from_disk(self) -> 'SaveData':
+    def load_from_disk(self) -> 'SaveAndLoadJsonBlob':
         # TODO implement
         return self
 
     def save_to_disk(self, filepath=None):
         pass  # TODO
 
+    def set_defaults(self):
+        pass
+
+
+class SaveData(SaveAndLoadJsonBlob):
+
+    COMPLETED_LEVELS = "completed_levels"
+
+    def __init__(self, filepath):
+        super().__init__(filepath)
+
+    def set_defaults(self):
+        self.json_blob[SaveData.COMPLETED_LEVELS] = {}  # level_id -> completion time (in ticks)
+
     def completed_levels(self) -> dict:
         return self.json_blob[SaveData.COMPLETED_LEVELS]
+
+
+class Settings(SaveAndLoadJsonBlob):
+
+    SHOW_LIGHTING = "show_lighting"
+
+    def __init__(self, filepath):
+        super().__init__(filepath)
+
+    def set_defaults(self):
+        self.json_blob[Settings.SHOW_LIGHTING] = True
+
+    def get(self, attrib):
+        if attrib in self.json_blob:
+            return self.json_blob[attrib]
+        else:
+            return None
+
+    def set(self, attrib, val):
+        self.json_blob[attrib] = val
 
 
 class GlobalState:
@@ -34,6 +65,7 @@ class GlobalState:
         self._tick_count = 0
 
         self._save_data = SaveData("save_data.txt").load_from_disk()
+        self._settings = Settings("settings.txt").load_from_disk()
 
     def tick_count(self):
         return self._tick_count
@@ -46,6 +78,9 @@ class GlobalState:
 
     def save_data(self) -> SaveData:
         return self._save_data
+
+    def settings(self) -> Settings:
+        return self._settings
 
 
 _INSTANCE = GlobalState()

@@ -36,7 +36,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
         # self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
-        self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene("testing")))
+        self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dir)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
         self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
         self._options_list.update_sprites()
