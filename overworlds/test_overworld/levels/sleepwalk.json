@@ -6,11 +6,11 @@
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 48, "x": 48, "y": 224},
         {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 48, "x": 48, "y": 96},
-        {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 80, "x_dir": 1, "y": 176},
+        {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 96, "x_dir": 1, "y": 224},
         {"h": 16, "subtype": "player_small", "type": "start_block", "w": 16, "x": 16, "x_dir": 1, "y": 80},
-        {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 16, "y": 224},
+        {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 16, "y": 176},
         {"h": 16, "subtype": "player_small", "type": "end_block", "w": 32, "x": 96, "y": 112},
-        {"color_id": 1, "h": 48, "type": "block", "w": 480, "x": 0, "y": 0},
+        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 0, "y": 0},
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 64, "x": 320, "y": 224},
         {"art_id": 0, "color_id": 2, "h": 80, "type": "block", "w": 32, "x": 448, "y": 160},
         {"art_id": 0, "color_id": 2, "h": 48, "type": "block", "w": 32, "x": 384, "y": 192},
@@ -88,8 +88,6 @@
         },
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 224, "y": 48},
         {"art_id": 0, "color_id": 2, "h": 96, "type": "block", "w": 16, "x": 0, "y": 144},
-        {"art_id": 0, "color_id": 2, "h": 64, "type": "block", "w": 8, "x": 72, "y": 128},
-        {"art_id": 0, "color_id": 2, "h": 32, "type": "block", "w": 8, "x": 56, "y": 128},
         {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 176, "y": 64},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 128, "y": 112},
         {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 96},
@@ -97,7 +95,7 @@
         {"subtype": 0, "type": "key", "x": 144, "y": 64},
         {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 368, "y": 48},
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 400, "y": 176},
-        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 112, "x": 96, "y": 224},
+        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 96, "x": 112, "y": 224},
         {"art_id": 2, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 208, "y": 224},
         {"art_id": 0, "color_id": 2, "h": 32, "type": "block", "w": 48, "x": 400, "y": 144},
         {
@@ -111,17 +109,20 @@
             "y": 192
         },
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 24, "x": 248, "y": 192},
+        {"art_id": 0, "color_id": 2, "h": 48, "type": "block", "w": 8, "x": 48, "y": 176},
         {
-            "art_id": 0,
+            "art_id": 2,
             "color_id": 2,
             "h": 32,
-            "subtype": [2, 2, "horizontal"],
+            "subtype": [0, 0, "horizontal"],
             "type": "sloped_2x2_block",
             "w": 32,
-            "x": 40,
-            "y": 160
+            "x": 16,
+            "y": 208
         },
-        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 24, "x": 16, "y": 160}
+        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 16, "y": 192},
+        {"color_id": 1, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0}
     ],
     "level_id": "sleepwalk",
     "name": "Sleepwalking",
