@@ -159,6 +159,9 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.spike_bottoms_8 = None
         self.all_spike_bottoms = []
 
+        self.info_exclamation = (None, None)
+        self.info_question = (None, None)
+
     def get_size(self, img_size):
         return (img_size[0] + self.extra_space[0], img_size[1] + self.extra_space[1])
 
@@ -321,6 +324,9 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.spike_bottoms_8 = _img(32, 392, 32, 8, offs=start_pos)
         self.all_spike_bottoms = [self.spike_bottoms_1, self.spike_bottoms_2, self.spike_bottoms_4, self.spike_bottoms_8]
 
+        self.info_exclamation = (_img(160, 416, 8, 16, offs=start_pos), _img(160, 438, 8, 2, offs=start_pos))
+        self.info_question = (_img(168, 416, 8, 16, offs=start_pos), _img(168, 438, 8, 2, offs=start_pos))
+
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
         all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms
         res = []
@@ -443,14 +449,14 @@ class _BlockSheet(spritesheets.SpriteSheet):
         def _make_blocks(size, x, y, n=1, offs=(0, 0)):
             return [_img(x + i * 16 * size[0], y, 16 * size[0], 16 * size[1], offs=offs) for i in range(0, n)]
 
-        self.blocks[(1, 1)] = _make_blocks((1, 1), 16, 0, n=2, offs=start_pos)
+        self.blocks[(1, 1)] = _make_blocks((1, 1), 16, 0, n=7, offs=start_pos)
         self.blocks[(2, 1)] = _make_blocks((2, 1), 0, 16, n=2, offs=start_pos)
         self.blocks[(3, 1)] = _make_blocks((3, 1), 0, 32, n=2, offs=start_pos)
 
         self.blocks[(2, 0.5)] = _make_blocks((2, 0.5), 0, 48, n=1, offs=start_pos)
 
         self.blocks[(1, 2)] = _make_blocks((1, 2), 0, 64, n=2, offs=start_pos)
-        self.blocks[(2, 2)] = _make_blocks((2, 2), 0, 96, n=1, offs=start_pos)
+        self.blocks[(2, 2)] = _make_blocks((2, 2), 0, 96, n=3, offs=start_pos)
         self.blocks[(3, 2)] = _make_blocks((3, 2), 0, 128, n=1, offs=start_pos)
 
         self.quad_blocks = _make_blocks((2, 2), 0, 160, n=3, offs=start_pos)

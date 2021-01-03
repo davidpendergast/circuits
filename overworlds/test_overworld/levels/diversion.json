@@ -73,8 +73,7 @@
             "y": 96
         },
         {"art_id": 2, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 16, "y": 112},
-        {"subtype": 1, "type": "key", "x": 236, "y": 108},
-        {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 224, "y": 112},
+        {"subtype": 1, "type": "key", "x": 232, "y": 96},
         {"art_id": 0, "h": 32, "inverted": false, "subtype": 0, "type": "door_block", "w": 16, "x": 400, "y": 112},
         {
             "art_id": 2,
@@ -130,7 +129,8 @@
             "y": 48
         },
         {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 128, "y": 48},
-        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 128, "y": 64}
+        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 128, "y": 64},
+        {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 224, "y": 112}
     ],
     "level_id": "diversion",
     "name": "Diversion",

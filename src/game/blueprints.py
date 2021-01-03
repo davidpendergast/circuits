@@ -38,6 +38,7 @@ X_DIR = "x_dir"         # int: -1, 0, or 1
 Y_DIR = "y_dir"         # int: -1, 0, or 1
 
 INVERTED = "inverted"   # bool
+TEXT = "text"           # str
 
 
 _ALL_SPEC_TYPES = {}
@@ -386,6 +387,32 @@ class SpikeSpecType(SpecType):
         return (4, 8)
 
 
+class InfoSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "info", required_keys=(SUBTYPE_ID, X, Y, TEXT, POINTS),
+                          optional_keys={COLOR_ID: 0})
+
+    def get_subtypes(self):
+        return ["exclam", "question"]
+
+    def get_default_value(self, k):
+        if k == TEXT:
+            return "Info text will appear here.\nRemember to watch your step!"
+        else:
+            return super().get_default_value(k)
+
+    def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        x = json_blob[X]
+        y = json_blob[Y]
+        subtype = json_blob[SUBTYPE_ID]
+        text = json_blob[TEXT]
+        points = json_blob[POINTS]
+        color_id = json_blob[COLOR_ID]
+
+        yield entities.InfoEntity(x, y, points, text, color_id=color_id, info_type=subtype)
+
+
 class DoorBlockSpecType(SpecType):
 
     def __init__(self):
@@ -423,7 +450,7 @@ class KeySpecType(SpecType):
         y = json_blob[Y]
         toggle_idx = int(json_blob[SUBTYPE_ID])
 
-        yield entities.KeyEntity.make_at_cell(x // 16, y // 16, toggle_idx)
+        yield entities.KeyEntity.make_at_cell(x / 16, y / 16, toggle_idx)
 
 
 class MovingBlockSpecType(SpecType):
@@ -460,7 +487,7 @@ class MovingBlockSpecType(SpecType):
             return super().get_default_value(k)
 
     def get_art_ids(self, spec):
-        size = (spec[W] // gs.get_instance().cell_size, spec[H] // gs.get_instance().cell_size)
+        size = (spec[W] / gs.get_instance().cell_size, spec[H] / gs.get_instance().cell_size)
         n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
         return [i for i in range(0, n_block_sprites)]
 
@@ -499,6 +526,7 @@ class SpecTypes:
     START_BLOCK = StartBlockSpecType()
     END_BLOCK = EndBlockSpecType()
     SPIKES = SpikeSpecType()
+    INFO = InfoSpecType()
 
     DOOR_BLOCK = DoorBlockSpecType()
     KEY_BLOCK = KeySpecType()

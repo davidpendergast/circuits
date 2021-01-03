@@ -35,6 +35,7 @@ ACTOR_GROUP = 10
 
 
 # depths
+WORLD_UI_DEPTH = -5
 PLAYER_DEPTH = 0
 PARTICLE_DEPTH = 2
 BLOCK_DEPTH = 10
@@ -580,6 +581,20 @@ class CompositeBlockEntity(AbstractBlockEntity):
             self._debug_sprites[main_body_key][i] = spr
 
 
+def _update_point_sprites_for_editor(show, sprite_list, points, size):
+    if not show:
+        sprite_list.clear()
+    else:
+        util.extend_or_empty_list_to_length(sprite_list, len(points),
+                                            creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
+        for i in range(0, len(points)):
+            pt = points[i]
+            pt_sprite = sprite_list[i]
+            sprite_list[i] = pt_sprite.update(new_rect=[pt[0], pt[1], size[0], size[1]],
+                                              new_outline=1, new_color=colors.PERFECT_YELLOW,
+                                              new_depth=-500)
+
+
 class MovingBlockEntity(BlockEntity):
 
     def __init__(self, w, h, pts, period=90, loop=True, art_id=0, color_id=0):
@@ -621,18 +636,7 @@ class MovingBlockEntity(BlockEntity):
         super().update()
 
     def update_sprites(self):
-        if not self.is_selected_in_editor():
-            self._point_sprites_for_editor.clear()
-        else:
-            util.extend_or_empty_list_to_length(self._point_sprites_for_editor, len(self._pts),
-                                                creator=lambda: sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER))
-            block_size = self.get_size()
-            for i in range(0, len(self._pts)):
-                pt = self._pts[i]
-                pt_sprite = self._point_sprites_for_editor[i]
-                self._point_sprites_for_editor[i] = pt_sprite.update(new_rect=[pt[0], pt[1], block_size[0], block_size[1]],
-                                                                     new_outline=1, new_color=colors.PERFECT_YELLOW,
-                                                                     new_depth=-500)
+        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprites_for_editor, self._pts, self.get_size())
         super().update_sprites()
 
     def all_sprites(self):
@@ -685,7 +689,7 @@ class KeyEntity(Entity):
     @staticmethod
     def make_at_cell(grid_x, grid_y, toggle_idx):
         cs = gs.get_instance().cell_size
-        return KeyEntity(cs * grid_x + cs // 4, cs * grid_y, toggle_idx)
+        return KeyEntity(int(cs * grid_x + cs // 4), int(cs * grid_y), toggle_idx)
 
     def __init__(self, x, y, toggle_idx):
         cs = gs.get_instance().cell_size
@@ -2076,6 +2080,109 @@ class SpikeEntity(Entity):
         for spr in self._top_sprites:
             yield spr
         for spr in self._bot_sprites:
+            yield spr
+
+
+class InfoEntity(Entity):
+
+    EXCLAM = "exclam"
+    QUESTION = "question"
+
+    def __init__(self, x, y, points, text, color_id=0, info_type="exclam"):
+        cs = gs.get_instance().cell_size
+        Entity.__init__(self, x, y, w=cs, h=cs)
+        self._points = points
+
+        self._text = text
+        self._color_id = color_id
+        self._info_type = info_type
+
+        self._base_sprite = None
+        self._top_sprite = None
+        self._text_sprite = None
+        self._text_bg_sprite = None
+
+        self._activation_radius = 3 * cs // 4
+        self._is_showing = False
+
+        self._ticks_overlapping_player = 0
+        self._activation_thresh = 10
+
+        self._point_sprite_list_for_editor = []
+
+    def _get_sprites(self):
+        """returns: (top_sprite, base_sprite)"""
+        if self._info_type == InfoEntity.EXCLAM:
+            return spriteref.object_sheet().info_exclamation
+        elif self._info_type == InfoEntity.QUESTION:
+            return spriteref.object_sheet().info_question
+
+    def get_color_id(self):
+        return self._color_id
+
+    def update(self):
+        self._ticks_overlapping_player = max(0, self._ticks_overlapping_player - 1)
+
+        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprite_list_for_editor,
+                                         self._points, (8, 8))
+
+        w = self.get_world()
+        if w is not None:
+            p = w.get_player(must_be_active=True)
+            if p is not None:
+                if util.dist(p.get_center(), self.get_center()) <= self._activation_radius:
+                    self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
+
+        self._is_showing = self._ticks_overlapping_player >= self._activation_thresh
+
+        if len(self._points) == 0:
+            pt = self.get_xy()
+        else:
+            pt = self._points[0]
+
+        if not self._is_showing:
+            self._text_sprite = None
+            self._text_bg_sprite = None
+        else:
+            if self._text_sprite is None:
+                self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, self._text, depth=WORLD_UI_DEPTH,
+                                                       font_lookup=spriteref.spritesheets.get_default_font(small=True))
+                self._text_sprite.update(new_x=pt[0], new_y=pt[1], new_text=self._text)
+
+            text_rect = self._text_sprite.get_rect()
+            bg_rect = util.rect_expand(text_rect, all_expand=0)
+            if self._text_bg_sprite is None:
+                self._text_bg_sprite = sprites.BorderBoxSprite(spriteref.ENTITY_LAYER, bg_rect,
+                                                               all_borders=spriteref.overworld_sheet().border_thin)
+            self._text_bg_sprite.update(new_rect=bg_rect)
+
+        top_model, base_model = self._get_sprites()
+        if self._base_sprite is None:
+            self._base_sprite = sprites.ImageSprite(base_model, 0, 0, spriteref.ENTITY_LAYER)
+        cx = self.get_center()[0]
+        bot_y = self.get_y() + self.get_h()
+        self._base_sprite = self._base_sprite.update(new_model=base_model,
+                                                     new_x=cx - base_model.width() // 2,
+                                                     new_y=bot_y - base_model.height(),
+                                                     new_depth=PLAYER_DEPTH + 1,
+                                                     new_color=self.get_color())
+
+        cs = gs.get_instance().cell_size
+        if self._top_sprite is None:
+            self._top_sprite = sprites.ImageSprite(top_model, 0, 0, spriteref.ENTITY_LAYER)
+        self._top_sprite = self._top_sprite.update(new_model=top_model,
+                                                   new_x=cx - top_model.width() // 2,
+                                                   new_y=bot_y - base_model.height() - cs // 8 - top_model.height(),
+                                                   new_depth=PLAYER_DEPTH + 1,
+                                                   new_color=self.get_color())
+
+    def all_sprites(self):
+        yield self._text_sprite
+        yield self._text_bg_sprite
+        yield self._base_sprite
+        yield self._top_sprite
+
+        for spr in self._point_sprite_list_for_editor:
             yield spr
 
 

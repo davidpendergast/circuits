@@ -1363,7 +1363,7 @@ class LevelEditGameScene(_BaseGameScene):
                 manager.set_next_scene(self)
         self.jump_to_scene(LevelEditorPauseMenu(current_bp,
                                                 _handle_new_bp,
-                                                lambda: manager.set_next_scene(LevelSelectForEditScene("testing")),
+                                                lambda: manager.set_next_scene(LevelSelectForEditScene(configs.level_edit_dir)),
                                                 description=desc,
                                                 output_file=self.output_file))
 
@@ -1445,6 +1445,7 @@ class LevelEditGameScene(_BaseGameScene):
         res.append(blueprints.SpecTypes.DOOR_BLOCK.get_default_blob())          # 6
         res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())           # 7
         res.append(blueprints.SpecTypes.SPIKES.get_default_blob())              # 8
+        res.append(blueprints.SpecTypes.INFO.get_default_blob())                # 9
 
         return res
 
