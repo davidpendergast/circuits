@@ -963,6 +963,12 @@ def get_test_blueprint_1() -> LevelBlueprint:
     return LevelBlueprint(json_blob)
 
 
+def get_template_blueprint() -> LevelBlueprint:
+    level = load_level_from_file(util.resource_path("template_level.json"))
+    level.loaded_from_file = None
+    return level
+
+
 def get_test_blueprint_2() -> LevelBlueprint:
     json_blob = {
         LEVEL_ID: "_all_quads",

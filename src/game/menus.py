@@ -141,7 +141,7 @@ class LevelSelectForEditScene(OptionSelectScene):
         sorted_ids = [k for k in self.all_levels]
         sorted_ids.sort()
 
-        self.add_option("create new", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())))
+        self.add_option("create new", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_template_blueprint())))
 
         for level_id in sorted_ids:
             level_bp = self.all_levels[level_id]
