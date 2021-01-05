@@ -10,7 +10,7 @@
         {"art_id": 0, "color_id": 2, "h": 48, "type": "block", "w": 32, "x": 288, "y": 96},
         {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 400, "y": 112},
         {"h": 16, "subtype": "player_small", "type": "end_block", "w": 32, "x": 352, "y": 192},
-        {"color_id": 1, "h": 48, "type": "block", "w": 480, "x": 0, "y": 0},
+        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 0, "y": 0},
         {"art_id": 2, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 288, "y": 224},
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 16, "y": 192},
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 48, "x": 16, "y": 208},
@@ -94,7 +94,9 @@
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 248, "y": 88},
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 248, "y": 104},
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 248, "y": 120},
-        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 48, "x": 208, "y": 232}
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 48, "x": 208, "y": 232},
+        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0},
+        {"color_id": 1, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0}
     ],
     "level_id": "pillars",
     "name": "Pillars",

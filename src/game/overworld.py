@@ -1017,5 +1017,5 @@ class OverworldScene(scenes.Scene):
 
 
 if __name__ == "__main__":
-    blueprint = OverworldBlueprint.load_from_dir("overworlds/test_overworld")
+    blueprint = OverworldBlueprint.load_from_dir("overworlds/overworld_1")
     print(blueprint)

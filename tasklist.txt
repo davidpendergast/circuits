@@ -55,7 +55,6 @@ puzzle archetypes:
     - coordination (need to act in-sync with a past ghost)
     
 Level editor:    
-    [ ] (P1) add / remove points to moving blocks
     [ ] (P1) increase / decrease duration for specs
     [x] (P1) let you choose which level to edit
     [ ] (P3) let you edit metadata of levels / specs

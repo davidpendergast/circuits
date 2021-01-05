@@ -173,7 +173,7 @@
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 128, "y": 112},
         {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 144}
     ],
-    "level_id": "door_and_key",
-    "name": "Door and Key",
+    "level_id": "arrival",
+    "name": "Arrival",
     "time_limit": 3600
 }
