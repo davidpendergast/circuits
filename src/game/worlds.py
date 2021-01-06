@@ -70,6 +70,9 @@ class World:
             self._ent_id_to_ent[ent.get_ent_id()] = ent
             ent.set_world(self)
 
+            for subent in ent.all_sub_entities():
+                self.add_entity(subent, next_update=False)
+
     def remove_entity(self, ent, next_update=True):
         if ent is None:
             return
@@ -81,6 +84,10 @@ class World:
             self._unhash(ent)
             del self._ent_id_to_ent[ent.get_ent_id()]
             ent.set_world(None)
+
+            for subent in ent.all_sub_entities():
+                if subent.get_world() == self:  # make sure it hasn't died already
+                    self.remove_entity(subent, next_update=False)
 
     def rehash_entity(self, ent):
         rect = ent.get_rect()
@@ -580,7 +587,11 @@ class CollisionResolver:
                                                             entities.CollisionMasks.SLOPE_BLOCK_HORZ,
                                                             entities.CollisionMasks.SLOPE_BLOCK_VERT), any=True)
                 cares_about_actors = c.collides_with_mask(entities.CollisionMasks.ACTOR)
-                for b in world.all_entities_in_rect(c_rect, cond=lambda _e: (cares_about_blocks and _e.is_block()) or (cares_about_actors and _e.is_actor())):
+                cares_about_breaking = c.collides_with_mask(entities.CollisionMasks.BREAKING)
+                for b in world.all_entities_in_rect(c_rect,
+                                                    cond=lambda _e: ((cares_about_blocks and _e.is_block())
+                                                                     or (cares_about_actors and _e.is_actor()))
+                                                                     or (cares_about_breaking and _e.is_breaking())):
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders()):
                         c_state.append(b)
 

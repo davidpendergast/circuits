@@ -14,7 +14,7 @@ class PlayerType:
                  move_speed=7.5,
                  jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
                  can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
-                 anim_rate_overrides=None, should_ever_xflip=True):
+                 anim_rate_overrides=None, should_ever_xflip=True, breaks_blocks=False):
         self._name = name
         self._color_id = color_id
         self._id = id_num
@@ -33,6 +33,7 @@ class PlayerType:
         self._can_crouch = can_crouch
         self._can_grab = can_grab
         self._can_be_grabbed = can_be_grabbed
+        self._breaks_blocks = breaks_blocks
 
         self._should_ever_xflip = should_ever_xflip
 
@@ -74,6 +75,9 @@ class PlayerType:
 
     def can_be_grabbed(self):
         return self._can_be_grabbed
+
+    def can_break_blocks(self):
+        return self._breaks_blocks
 
     def get_size(self):
         """returns: size of player in cells"""
@@ -136,7 +140,7 @@ class PlayerTypes:
     SMALL = PlayerType("B", 2, const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
                        move_speed=5.5, jump_height=2.1)
     HEAVY = PlayerType("C", 3, const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
-                       move_speed=5, jump_height=3.2, can_crouch=True,
+                       move_speed=5, jump_height=3.2, can_crouch=True, breaks_blocks=True,
                        anim_rate_overrides={
                            spriteref.PlayerStates.WALKING: 1
                        })

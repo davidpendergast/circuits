@@ -1,6 +1,7 @@
 
 import math
 import random
+import typing
 
 import src as src  # for typing~
 
@@ -101,6 +102,10 @@ class Entity:
     def about_to_remove_from_world(self):
         pass
 
+    def all_sub_entities(self):
+        """All the entities that should be added/removed to World along with this one."""
+        return []
+
     def get_rect(self, raw=False):
         xy = self.get_xy(raw=raw)
         size = self.get_size()
@@ -160,6 +165,10 @@ class Entity:
 
     def is_dynamic(self):
         """whether this entity's movement is controlled by the physics system"""
+        return False
+
+    def is_breaking(self):
+        """whether this entity has any BREAKING colliders, or whether it possibly could"""
         return False
 
     def get_physics_group(self):
@@ -236,7 +245,7 @@ class Entity:
     def update_frame_of_reference_parent(self):
         pass
 
-    def all_colliders(self, solid=None, sensor=None, enabled=True):
+    def all_colliders(self, solid=None, sensor=None, enabled=True) -> typing.Iterable['PolygonCollider']:
         for c in self._colliders:
             if enabled is not None and enabled != c.is_enabled():
                 continue
@@ -248,6 +257,9 @@ class Entity:
 
     def set_colliders(self, colliders):
         self._colliders = [c for c in colliders]
+
+    def add_collider(self, collider):
+        self._colliders.append(collider)
 
     def was_crushed(self):
         pass
@@ -420,6 +432,9 @@ class AbstractBlockEntity(Entity):
     def get_physics_group(self):
         return ENVIRONMENT_GROUP
 
+    def is_breakable(self):
+        return False
+
 
 class BlockEntity(AbstractBlockEntity):
     """basic rectangular block."""
@@ -476,6 +491,37 @@ class BlockEntity(AbstractBlockEntity):
         else:
             for spr in super().all_debug_sprites():
                 yield spr
+
+
+class BreakableBlockEntity(BlockEntity):
+
+    def __init__(self, x, y, w, h, art_id=0, color_id=0):
+        super().__init__(x, y, w, h, art_id=art_id, color_id=color_id)
+
+        for c in self.all_colliders():
+            if c.get_mask() == CollisionMasks.BLOCK:
+                c.set_mask(CollisionMasks.BREAKABLE)
+
+        breaking_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR,
+                                            collides_with=(CollisionMasks.BREAKING,))
+        self._breaking_sensor_id = breaking_sensor.get_id()
+        self._sensor_ent = SensorEntity([0, 0, w, h], breaking_sensor, parent=self)
+
+    def all_sub_entities(self):
+        yield self._sensor_ent
+
+    def is_breakable(self):
+        return True
+
+    def update(self):
+        super().update()
+
+        w = self.get_world()
+        if w is not None:
+            if len(w.get_sensor_state(self._breaking_sensor_id)) > 0:
+                w.remove_entity(self)
+                print("INFO: breakable block broke! {}".format(self))
+                # TODO sound, animation
 
 
 class SensorEntity(Entity):
@@ -711,14 +757,8 @@ class KeyEntity(Entity):
         self.player_sensor_id = player_collider.get_id()
         self._sensor_ent = SensorEntity([0, 0, cs // 2, cs], player_collider, parent=self)
 
-    def set_world(self, world):
-        super().set_world(world)
-        if world is not None:
-            world.add_entity(self._sensor_ent)
-
-    def about_to_remove_from_world(self):
-        super().about_to_remove_from_world()
-        self.get_world().remove_entity(self._sensor_ent)
+    def all_sub_entities(self):
+        yield self._sensor_ent
 
     def is_satisfied(self):
         return self._player_colliding_tick_count >= self._player_collide_thresh
@@ -841,14 +881,8 @@ class EndBlock(CompositeBlockEntity):
         self._player_stationary_in_sensor_limit = 10
         self._sensor_ent = SensorEntity([2, 0, 28, dip_h + 2], level_end_collider, parent=self)
 
-    def set_world(self, world):
-        super().set_world(world)
-        if world is not None:
-            world.add_entity(self._sensor_ent)
-
-    def about_to_remove_from_world(self):
-        super().about_to_remove_from_world()
-        self.get_world().remove_entity(self._sensor_ent)
+    def all_sub_entities(self):
+        yield self._sensor_ent
 
     def update(self):
         actors_in_sensor = self.get_world().get_sensor_state(self._level_end_sensor_id)
@@ -1199,6 +1233,7 @@ class PlayerEntity(Entity):
         self._holding_right = False
 
         self._has_ever_moved = False
+        self._was_breaking_last_frame = False
 
         self._death_reason = None  # if this gets set, the player will die and be removed at the end of that update cycle
 
@@ -1298,10 +1333,15 @@ class PlayerEntity(Entity):
 
         self.foot_slope_sensor_id = foot_slope_sensor.get_id()
 
+        # this is just so that breakable things can sense us
+        self.breaking_collider = RectangleCollider([0, 0, w, h], CollisionMasks.BREAKING, collides_with=None)
+        self.breaking_collider.set_enabled(False)
+
         self.set_colliders([vert_env_collider, horz_env_collider,
                             self.foot_sensor, self.left_sensor, self.right_sensor,  self.snap_down_sensor,
                             slope_collider_main_horz, slope_collider_main_top,
-                            foot_slope_env_collider, foot_slope_sensor])
+                            foot_slope_env_collider, foot_slope_sensor,
+                            self.breaking_collider])
 
         if align_to_cells:
             cell_w = math.ceil(w / cs)
@@ -1312,6 +1352,8 @@ class PlayerEntity(Entity):
             self.set_xy((aligned_x, aligned_y))
         else:
             self.set_xy((x, y))
+
+        self._adjust_colliders_for_breaking(self._was_breaking_last_frame)
 
     def get_player_type(self):
         return self._player_type
@@ -1324,6 +1366,19 @@ class PlayerEntity(Entity):
 
     def is_active(self):
         return self._controller.is_active()
+
+    def is_breaking(self):
+        return self.get_player_type().can_break_blocks() and not self.is_grounded()
+
+    def _adjust_colliders_for_breaking(self, breaking):
+        self.breaking_collider.set_enabled(breaking)
+        for c in self.all_colliders():
+            if c.collides_with_masks((CollisionMasks.BLOCK,)):
+                new_collides_with = [m for m in c.get_collides_with() if m != CollisionMasks.BREAKABLE]
+                if not breaking:
+                    # if we're breaking, we want to move through breaking blocks, so we can break them
+                    new_collides_with.append(CollisionMasks.BREAKABLE)
+                c.set_collides_with(new_collides_with)
 
     def is_dynamic(self):
         return True
@@ -1353,6 +1408,11 @@ class PlayerEntity(Entity):
             self._dir_facing = -1
         elif self.get_x_vel() > 0.1:
             self._dir_facing = 1
+
+        currently_breaking = self.is_breaking()
+        if currently_breaking != self._was_breaking_last_frame:
+            self._was_breaking_last_frame = currently_breaking
+            self._adjust_colliders_for_breaking(currently_breaking)
 
     def is_grounded(self):
         return self.is_on_flat_ground() or self.is_on_sloped_ground()
@@ -1996,14 +2056,8 @@ class SpikeEntity(Entity):
 
         self._color_id = color_id
 
-    def set_world(self, world):
-        super().set_world(world)
-        if world is not None:
-            world.add_entity(self._sensor_ent)
-
-    def about_to_remove_from_world(self):
-        super().about_to_remove_from_world()
-        self.get_world().remove_entity(self._sensor_ent)
+    def all_sub_entities(self):
+        yield self._sensor_ent
 
     def is_vertical(self):
         return self._direction[0] == 0
@@ -2210,11 +2264,13 @@ class CollisionMask:
 class CollisionMasks:
 
     BLOCK = CollisionMask("block", render_depth=20)
+    BREAKABLE = CollisionMask("breakable_block", render_depth=20)
 
     SLOPE_BLOCK_HORZ = CollisionMask("slope_block_horz", render_depth=25)
     SLOPE_BLOCK_VERT = CollisionMask("slope_block_vert", render_depth=25)
 
     ACTOR = CollisionMask("actor", render_depth=10)
+    BREAKING = CollisionMask("breaking", render_depth=10)
 
     SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, render_depth=10)
 
@@ -2290,8 +2346,17 @@ class PolygonCollider:
     def get_mask(self):
         return self._mask
 
+    def set_mask(self, val):
+        self._mask = val
+
     def get_resolution_hint(self):
         return self._resolution_hint
+
+    def set_collides_with(self, other_masks):
+        self._collides_with = util.listify(other_masks)
+
+    def get_collides_with(self):
+        return self._collides_with
 
     def collides_with(self, other: 'PolygonCollider'):
         return self.collides_with_mask(other.get_mask())

@@ -172,7 +172,10 @@ class BlockSpecType(SpecType):
         art_id = json_blob[ART_ID]
         color_id = json_blob[COLOR_ID]
 
-        yield entities.BlockEntity(x, y, w, h, art_id=art_id, color_id=color_id)
+        if w > 4 and h > 4:
+            yield entities.BlockEntity(x, y, w, h, art_id=art_id, color_id=color_id)
+        else:
+            yield entities.BreakableBlockEntity(x, y, w, h, art_id=art_id, color_id=color_id)
 
     def get_color_ids(self, spec):
         return [0, 1, 2, 3, 4]
