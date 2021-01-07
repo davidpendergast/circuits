@@ -128,6 +128,9 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             const.PLAYER_FLYING: [],
         }
 
+        self.thin_block_broken_pieces_horz = []
+        self.thin_block_broken_pieces_vert = []
+
         self.toggle_block_bases = []
         self.toggle_block_icons = []
         self._toggle_blocks = {}
@@ -263,6 +266,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_broken_pieces[const.PLAYER_SMALL] = self._handle_rotated_player_pieces([624, 32, 8, 8], 7, 8, atlas, start_pos)
         self.player_broken_pieces[const.PLAYER_HEAVY] = self._handle_rotated_player_pieces([624, 64, 8, 8], 8, 8, atlas, start_pos)
         self.player_broken_pieces[const.PLAYER_FLYING] = self._handle_rotated_player_pieces([624, 96, 8, 8], 6, 8, atlas, start_pos)
+
+        temp = self._handle_rotated_player_pieces([624, 128, 8, 8], 2, 8, atlas, start_pos)
+        self.thin_block_broken_pieces_horz = temp[0]
+        self.thin_block_broken_pieces_vert = temp[1]
 
         self.toggle_block_bases = []
         self.toggle_block_icons = []

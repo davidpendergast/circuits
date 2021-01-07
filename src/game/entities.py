@@ -513,15 +513,42 @@ class BreakableBlockEntity(BlockEntity):
     def is_breakable(self):
         return True
 
+    def _add_broken_particles(self):
+        model_size = spriteref.object_sheet().thin_block_broken_pieces_horz[0].size()
+        particles = []
+        if self.get_w() >= self.get_h():
+            # horizontal
+            for i in range(0, self.get_w() // model_size[0] + 1):
+                xy = (self.get_x() + i * model_size[0],
+                      self.get_y() + self.get_h() // 2 - model_size[1] // 2)
+                particles.append(RotatingParticleEntity(xy[0], xy[1],
+                                                        spriteref.object_sheet().thin_block_broken_pieces_horz,
+                                                        color=self.get_color(),
+                                                        duration=45))
+        else:
+            # vertical
+            for i in range(0, self.get_h() // model_size[1] + 1):
+                xy = (self.get_x() + model_size[0] // 2,
+                      self.get_y() + i * model_size[1])
+                particles.append(RotatingParticleEntity(xy[0], xy[1],
+                                                        spriteref.object_sheet().thin_block_broken_pieces_vert,
+                                                        color=self.get_color(),
+                                                        duration=45))
+        w = self.get_world()
+        if w is not None:
+            for p in particles:
+                w.add_entity(p)
+
     def update(self):
         super().update()
 
         w = self.get_world()
         if w is not None:
             if len(w.get_sensor_state(self._breaking_sensor_id)) > 0:
+                self._add_broken_particles()
                 w.remove_entity(self)
                 print("INFO: breakable block broke! {}".format(self))
-                # TODO sound, animation
+                # TODO sound
 
 
 class SensorEntity(Entity):
@@ -1748,12 +1775,13 @@ class DeathReason:
 
 class ParticleEntity(Entity):
 
-    def __init__(self, x, y, w, h, vel, duration=-1, initial_phasing=-1):
+    def __init__(self, x, y, w, h, vel, duration=-1, initial_phasing=-1, color=colors.PERFECT_WHITE):
         Entity.__init__(self, x, y, w, h)
         self._x_vel = vel[0]
         self._y_vel = vel[1]
         self._initial_phasing = initial_phasing
         self._duration = duration
+        self._color = color
         self._ticks_alive = 0
 
         self._gravity = 0.15
@@ -1850,6 +1878,12 @@ class ParticleEntity(Entity):
         elif self._x_vel > 0.1:
             self._x_flip = False
 
+    def get_color(self, ignore_override=False):
+        if ignore_override or self.get_color_override() is None:
+            return self._color
+        else:
+            return self.get_color_override()
+
     def update_sprites(self):
         model = self.get_sprite()
         if model is None and self._img is not None:
@@ -1863,7 +1897,8 @@ class ParticleEntity(Entity):
             self._img = self._img.update(new_model=model,
                                          new_x=new_x,
                                          new_y=new_y,
-                                         new_xflip=self._x_flip)
+                                         new_xflip=self._x_flip,
+                                         new_color=self.get_color())
 
     def all_sprites(self):
         for spr in super().all_sprites():
@@ -1872,19 +1907,22 @@ class ParticleEntity(Entity):
             yield self._img
 
 
-class PlayerBodyPartParticle(ParticleEntity):
+class RotatingParticleEntity(ParticleEntity):
 
-    def __init__(self, x, y, player_id, part_idx):
+    def __init__(self, x, y, rotated_sprites, duration=60 * 2, initial_vel=None, initial_phasing=20,
+                 color=colors.PERFECT_WHITE):
+        if initial_vel is None:
+            initial_vel = (-0.75 + 1.5 * random.random(), -(1.5 + 1 * random.random()))
+
         cs = gs.get_instance().cell_size
-        initial_vel = (-0.75 + 1.5 * random.random(), -(1.5 + 1 * random.random()))
-        ParticleEntity.__init__(self, x, y, cs // 5, cs // 5, initial_vel, duration=60 * 5, initial_phasing=20)
-
-        self.player_id = player_id
-        self.part_idx = part_idx
+        ParticleEntity.__init__(self, x, y, cs // 5, cs // 5, initial_vel,
+                                duration=duration, initial_phasing=initial_phasing, color=color)
 
         self.rotation = random.random()
         self.rotation_vel = 0.05 + random.random() * 0.1
         self.rotation_decay = 0.985
+
+        self.rotated_sprites = rotated_sprites
 
     def update(self):
         super().update()
@@ -1894,6 +1932,19 @@ class PlayerBodyPartParticle(ParticleEntity):
         else:
             self.rotation -= self.rotation_vel
             self.rotation_vel *= self.rotation_decay
+
+    def get_sprite(self):
+        return util.index_into(self.rotated_sprites, self.rotation, wrap=True)
+
+
+class PlayerBodyPartParticle(RotatingParticleEntity):
+
+    def __init__(self, x, y, player_id, part_idx):
+        initial_vel = (-0.75 + 1.5 * random.random(), -(1.5 + 1 * random.random()))
+        super().__init__(x, y, [], duration=60 * 5, initial_vel=initial_vel)
+
+        self.player_id = player_id
+        self.part_idx = part_idx
 
     def get_sprite(self):
         return spriteref.object_sheet().get_broken_player_sprite(self.player_id, self.part_idx, rotation=self.rotation)
