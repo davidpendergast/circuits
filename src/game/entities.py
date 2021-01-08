@@ -516,24 +516,19 @@ class BreakableBlockEntity(BlockEntity):
     def _add_broken_particles(self):
         model_size = spriteref.object_sheet().thin_block_broken_pieces_horz[0].size()
         particles = []
+        positions = []
         if self.get_w() >= self.get_h():
-            # horizontal
+            anims = spriteref.object_sheet().thin_block_broken_pieces_horz
             for i in range(0, self.get_w() // model_size[0] + 1):
-                xy = (self.get_x() + i * model_size[0],
-                      self.get_y() + self.get_h() // 2 - model_size[1] // 2)
-                particles.append(RotatingParticleEntity(xy[0], xy[1],
-                                                        spriteref.object_sheet().thin_block_broken_pieces_horz,
-                                                        color=self.get_color(),
-                                                        duration=45))
+                positions.append((self.get_x() + i * model_size[0], self.get_y() + self.get_h() // 2 - model_size[1] // 2))
         else:
-            # vertical
+            anims = spriteref.object_sheet().thin_block_broken_pieces_vert
             for i in range(0, self.get_h() // model_size[1] + 1):
-                xy = (self.get_x() + model_size[0] // 2,
-                      self.get_y() + i * model_size[1])
-                particles.append(RotatingParticleEntity(xy[0], xy[1],
-                                                        spriteref.object_sheet().thin_block_broken_pieces_vert,
-                                                        color=self.get_color(),
-                                                        duration=45))
+                positions.append((self.get_x() + model_size[0] // 2, self.get_y() + i * model_size[1]))
+
+        for xy in positions:
+            particles.append(RotatingParticleEntity(xy[0], xy[1], anims, color=self.get_color(), duration=45))
+            
         w = self.get_world()
         if w is not None:
             for p in particles:
