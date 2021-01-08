@@ -527,8 +527,8 @@ class BreakableBlockEntity(BlockEntity):
                 positions.append((self.get_x() + model_size[0] // 2, self.get_y() + i * model_size[1]))
 
         for xy in positions:
-            particles.append(RotatingParticleEntity(xy[0], xy[1], anims, color=self.get_color(), duration=45))
-            
+            particles.append(RotatingParticleEntity(xy[0], xy[1], anims, color=self.get_color(), duration=45, initial_phasing=60))
+
         w = self.get_world()
         if w is not None:
             for p in particles:

@@ -36,7 +36,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/overworld_1")))
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
         # self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
-        self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dir)))
+        self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
         self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
         self._options_list.update_sprites()
@@ -134,9 +134,22 @@ class OptionSelectScene(scenes.Scene):
 
 class LevelSelectForEditScene(OptionSelectScene):
 
-    def __init__(self, dirpath):
+    def __init__(self, dirpaths):
+        """
+        :param dirpaths: map of name -> path
+        """
         OptionSelectScene.__init__(self, "create level")
-        self.all_levels = blueprints.load_all_levels_from_dir(dirpath)  # level_id -> LevelBlueprint
+
+        self.all_levels = {}
+
+        level_names = {}
+
+        for key in dirpaths:
+            dirpath = dirpaths[key]
+            levels_in_dir = blueprints.load_all_levels_from_dir(dirpath)
+            for level_id in levels_in_dir:
+                level_names[level_id] = "{}: {}".format(key, level_id)
+                self.all_levels[level_id] = levels_in_dir[level_id]
 
         sorted_ids = [k for k in self.all_levels]
         sorted_ids.sort()
@@ -149,7 +162,7 @@ class LevelSelectForEditScene(OptionSelectScene):
             def _action(bp=level_bp):  # lambdas in loops, yikes
                 self.jump_to_scene(LevelEditGameScene(bp, output_file=bp.loaded_from_file))
 
-            self.add_option(level_id, _action)
+            self.add_option(level_names[level_id], _action)
 
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
@@ -1363,7 +1376,7 @@ class LevelEditGameScene(_BaseGameScene):
                 manager.set_next_scene(self)
         self.jump_to_scene(LevelEditorPauseMenu(current_bp,
                                                 _handle_new_bp,
-                                                lambda: manager.set_next_scene(LevelSelectForEditScene(configs.level_edit_dir)),
+                                                lambda: manager.set_next_scene(LevelSelectForEditScene(configs.level_edit_dirs)),
                                                 description=desc,
                                                 output_file=self.output_file))
 

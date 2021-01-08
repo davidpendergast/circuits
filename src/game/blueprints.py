@@ -694,6 +694,8 @@ def load_level_from_file(filepath) -> LevelBlueprint:
 
 
 def load_all_levels_from_dir(path):
+    """returns: map from level_id -> level blueprint"""
+
     res = {}  # level_id -> LevelBlueprint
     try:
         for file in os.listdir(path):
