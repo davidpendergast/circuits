@@ -54,6 +54,9 @@ class OverworldGrid:
         def is_endpoint(self):
             return False
 
+        def is_exit(self):
+            return False
+
     class LevelNode(OverworldNode):
 
         def __init__(self, xy, n):
@@ -126,18 +129,21 @@ class OverworldGrid:
         def is_valid_exit_text(text) -> bool:
             return OverworldGrid.ExitNode.get_exit_id_from_text(text) is not None
 
-        def __init__(self, xy, exit_id):
+        def __init__(self, xy, exit_text):
             OverworldGrid.OverworldNode.__init__(self, xy)
-            self._exit_id = exit_id
-
-        def is_exit(self):
-            return True
+            self._exit_id = OverworldGrid.ExitNode.get_exit_id_from_text(exit_text)
 
         def is_endpoint(self):
             return True
 
+        def is_exit(self):
+            return True
+
         def get_exit_id(self):
             return self._exit_id
+
+        def __repr__(self):
+            return "e{}".format(self._exit_id)
 
     class GameStartNode(OverworldNode):
 
@@ -154,6 +160,9 @@ class OverworldGrid:
         def is_selectable(self):
             return False
 
+        def __repr__(self):
+            return "s"
+
     class GameEndNode(OverworldNode):
 
         @staticmethod
@@ -165,6 +174,12 @@ class OverworldGrid:
 
         def is_end(self):
             return True
+
+        def is_selectable(self):
+            return False
+
+        def __repr__(self):
+            return "f"
 
     def __init__(self, w, h):
         self.grid = util.Grid(w, h)
@@ -410,6 +425,15 @@ class OverworldPack:
             if exit_num in exit_mapping:
                 dest_id = exit_mapping[exit_num]
                 return self.get_overworld_with_id(dest_id)
+        return None
+
+    def get_exit_leading_to(self, start_overworld, dest_overworld) -> int:
+        if start_overworld.ref_id in self.connections:
+            exit_mapping = self.connections[start_overworld.ref_id]
+            for exit_num in exit_mapping:
+                if exit_mapping[exit_num] == dest_overworld.ref_id:
+                    return exit_num
+        return None
 
     def _find_starting_overworld(self) -> 'OverworldBlueprint':
         for ow_id in self.overworlds:
@@ -476,6 +500,21 @@ class OverworldBlueprint:
                     if node is not None and isinstance(node, OverworldGrid.LevelNode):
                         levels[node.n] = util.read_string(json_blob, "lvl_{}".format(node.n), default=None)
 
+            color_mapping = {  # TODO this should not be here
+                "light_gray": colors.LIGHT_GRAY,
+                "dark_gray": colors.DARK_GRAY,
+                "green": colors.GREEN,
+                "dark_green": colors.DARK_GREEN,
+                "tan": colors.TAN,
+                "dark_tan": colors.DARK_TAN,
+                "purple": colors.PURPLE,
+                "dark_purple": colors.DARK_PURPLE,
+                "blue": colors.BLUE,
+                "dark_blue": colors.DARK_BLUE,
+                "black": colors.PERFECT_BLACK,
+                "white": colors.WHITE
+            }
+
             bg_triangles = [[] for _ in range(0, 9)]
             if "bg_triangles" in json_blob:
                 def get_triangles(tri_list):
@@ -486,10 +525,8 @@ class OverworldBlueprint:
                         p3 = (int(tup[2][0]), int(tup[2][1]))
                         color = tup[3]
                         if isinstance(color, str):
-                            if color == "light_gray":
-                                color = colors.LIGHT_GRAY
-                            elif color == "dark_gray":
-                                color = colors.DARK_GRAY
+                            if color in color_mapping:
+                                color = color_mapping[color]
                             else:
                                 print("WARN: Unrecognized color: {}".format(color))
                                 color = colors.WHITE
@@ -530,6 +567,9 @@ class OverworldBlueprint:
 
         self.directory = directory
 
+    def get_grid(self) -> OverworldGrid:
+        return self.grid
+
     def has_start_node(self):
         return self.grid.get_game_start_node_if_present() is not None
 
@@ -548,7 +588,7 @@ class OverworldState:
     def __init__(self, overworld_pack: OverworldPack, came_from=None):
         self.overworld_pack = overworld_pack
 
-        self.world_blueprint = self.overworld_pack.get_start()
+        self.current_overworld = self.overworld_pack.get_start()
 
         """level_blueprints level_id -> level_blueprint"""
         self.level_blueprints = {}
@@ -562,7 +602,21 @@ class OverworldState:
         self.selected_cell = self.find_initial_selection(came_from_exit_id=came_from)
 
     def get_grid(self) -> OverworldGrid:
-        return self.world_blueprint.grid
+        return self.current_overworld.get_grid()
+
+    def activate_exit_node(self, exit_num):
+        new_overworld = self.overworld_pack.get_neighbor(self.current_overworld, exit_num)
+        if new_overworld is not None:
+            entry_num = self.overworld_pack.get_exit_leading_to(new_overworld, self.current_overworld)
+            self.set_current_overworld(new_overworld, entry_num=entry_num)
+
+    def set_current_overworld(self, overworld, entry_num=None):
+        new_overworld = self.overworld_pack.get_overworld_with_id(overworld.ref_id)
+        if new_overworld is not None:
+            self.current_overworld = new_overworld
+            self.selected_cell = self.find_initial_selection(came_from_exit_id=entry_num)
+        else:
+            print("WARN: unrecognized overworld_id: {}".format(overworld.ref_id))
 
     def get_level_blueprint(self, level_id) -> blueprints.LevelBlueprint:
         if level_id in self.level_blueprints:
@@ -571,8 +625,8 @@ class OverworldState:
             return None
 
     def get_level_id_for_num(self, n) -> str:
-        if n in self.world_blueprint.levels:
-            return self.world_blueprint.levels[n]
+        if n in self.current_overworld.levels:
+            return self.current_overworld.levels[n]
         else:
             return None
 
@@ -587,7 +641,7 @@ class OverworldState:
                 return None
 
     def get_world_num(self):
-        # TODO put this in the spec file
+        # TODO figure out a better way to display the active sector
         return 1
 
     def is_complete(self, level_id):
@@ -697,6 +751,11 @@ class LevelNodeElement(ui.UiElement):
 
         self._cached_player_types = None
 
+    def set_node(self, level_id, node):
+        self.level_id = level_id
+        self.level_num = node.n
+        self._cached_player_types = None
+
     def _get_icon_img_and_color_at(self, idx, selected, completed, unlocked, players_in_level):
         corners = {
             0: playertypes.PlayerTypes.FAST,
@@ -774,7 +833,7 @@ class LevelNodeElement(ui.UiElement):
         t_xy = (xy[0] + size[0] // 2 - self.number_sprite.size()[0] // 2,
                 xy[1] + size[1] // 2 - self.number_sprite.size()[1] // 2)
         t_color = self._get_text_color(selected, completed, unlocked)
-        self.number_sprite = self.number_sprite.update(new_x=t_xy[0], new_y=t_xy[1],
+        self.number_sprite = self.number_sprite.update(new_x=t_xy[0], new_y=t_xy[1], new_text=str(self.level_num),
                                                        new_color=t_color, new_depth=0, new_scale=1)
 
     def all_sprites(self):
@@ -793,6 +852,7 @@ class OverworldGridElement(ui.UiElement):
     def __init__(self, state: OverworldState):
         ui.UiElement.__init__(self)
         self.state = state
+
         self.level_nodes = {}        # xy -> LevelNodeElement
         self.connector_sprites = {}  # xy -> ImageSprite
 
@@ -800,17 +860,30 @@ class OverworldGridElement(ui.UiElement):
         self.unlocked_color = colors.WHITE
 
     def update(self):
+        sprites_to_clear = set()
+        for xy in self.connector_sprites:
+            sprites_to_clear.add(xy)
+        level_nodes_to_clear = set()
+        for xy in self.level_nodes:
+            level_nodes_to_clear.add(xy)
+
         for xy in self.state.get_grid().grid.indices(ignore_missing=True):
             node = self.state.get_grid().get_node(xy)
             if isinstance(node, OverworldGrid.LevelNode):
+                if xy in level_nodes_to_clear:
+                    level_nodes_to_clear.remove(xy)
+                level_id = self.state.get_level_id_for_num(node.n)
                 if xy not in self.level_nodes:
-                    level_id = self.state.get_level_id_for_num(node.n)
                     self.level_nodes[xy] = LevelNodeElement(xy, level_id, node.n, self.state)
                     self.add_child(self.level_nodes[xy])
+                self.level_nodes[xy].set_node(level_id, node)
+
                 ele = self.level_nodes[xy]
                 ele.set_xy((xy[0] * 24, xy[1] * 24))
                 ele.update()
             elif node.is_connector() or node.is_endpoint():
+                if xy in sprites_to_clear:
+                    sprites_to_clear.remove(xy)
                 if xy not in self.connector_sprites:
                     self.connector_sprites[xy] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, depth=5)
                 connections = self.state.get_grid().get_connected_directions(xy)
@@ -821,6 +894,11 @@ class OverworldGridElement(ui.UiElement):
                 y = self.get_xy(absolute=True)[1] + xy[1] * 24
                 self.connector_sprites[xy] = self.connector_sprites[xy].update(new_model=spr, new_color=color,
                                                                                new_x=x, new_y=y)
+        for xy in sprites_to_clear:
+            del self.connector_sprites[xy]
+        for xy in level_nodes_to_clear:
+            self.remove_child(self.level_nodes[xy])
+            del self.level_nodes[xy]
 
     def all_sprites(self):
         for xy in self.connector_sprites:
@@ -1063,9 +1141,11 @@ class OverworldScene(scenes.Scene):
                 new_node = self.state.get_grid().get_connected_node_in_dir(orig_node.get_xy(), (dx, dy),
                                                                            selectable_only=True, enabled_only=True)
                 if new_node is not None:
-                    # TODO if it's an exit node, do exit sequence?
-                    # TODO or maybe it would be better to show some info about where it goes?
-                    self.state.set_selected_node(new_node)
+                    if new_node.is_exit():
+                        # TODO some kind of effect here?
+                        self.state.activate_exit_node(new_node.get_exit_id())
+                    else:
+                        self.state.set_selected_node(new_node)
                 else:
                     # TODO play sound
                     pass
@@ -1121,7 +1201,7 @@ class OverworldScene(scenes.Scene):
         ]
 
         for i in range(0, 9):
-            bp_tri_list = self.state.world_blueprint.bg_triangles[i]
+            bp_tri_list = self.state.current_overworld.bg_triangles[i]
             util.extend_or_empty_list_to_length(self.bg_triangle_sprites[i], len(bp_tri_list),
                                                 lambda: sprites.TriangleSprite(spriteref.POLYGON_UI_LAYER))
             for j in range(0, len(bp_tri_list)):

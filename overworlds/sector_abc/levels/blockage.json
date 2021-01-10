@@ -12,14 +12,13 @@
         {"color_id": 3, "h": 96, "type": "block", "w": 16, "x": 0, "y": 144},
         {"art_id": 0, "color_id": 2, "h": 48, "type": "block", "w": 80, "x": 0, "y": 0},
         {"art_id": 0, "color_id": 2, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0},
-        {"art_id": 0, "h": 16, "inverted": false, "subtype": 0, "type": "door_block", "w": 32, "x": 256, "y": 168},
-        {"art_id": 0, "color_id": 0, "h": 4, "type": "block", "w": 64, "x": 240, "y": 188},
+        {"art_id": 0, "h": 16, "inverted": false, "subtype": 0, "type": "door_block", "w": 32, "x": 256, "y": 176},
+        {"art_id": 0, "color_id": 0, "h": 4, "type": "block", "w": 64, "x": 240, "y": 196},
         {"art_id": 0, "color_id": 3, "h": 48, "type": "block", "w": 32, "x": 208, "y": 176},
-        {"art_id": 2, "color_id": 3, "h": 16, "type": "block", "w": 32, "x": 208, "y": 160},
-        {"art_id": 1, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 240, "y": 168},
-        {"art_id": 0, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 288, "y": 168},
+        {"art_id": 2, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 208, "y": 160},
+        {"art_id": 1, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 240, "y": 176},
+        {"art_id": 0, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 288, "y": 176},
         {"art_id": 0, "color_id": 2, "h": 32, "type": "block", "w": 64, "x": 304, "y": 160},
-        {"subtype": 0, "type": "key", "x": 368, "y": 112},
         {
             "art_id": 2,
             "color_id": 3,
@@ -81,7 +80,7 @@
         },
         {"color_id": -1, "h": 16, "subtype": "player_heavy", "type": "end_block", "w": 32, "x": 416, "y": 112},
         {
-            "art_id": 0,
+            "art_id": 1,
             "color_id": 0,
             "duration": 90,
             "h": 8,
@@ -90,8 +89,8 @@
                 [80, 192]
             ],
             "type": "moving_block",
-            "w": 16,
-            "x": 160,
+            "w": 32,
+            "x": 144,
             "y": 192
         },
         {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 24, "x": 128, "y": 128},
@@ -118,7 +117,6 @@
             "y": 104
         },
         {"subtype": 0, "type": "key", "x": 80, "y": 88},
-        {"art_id": 0, "color_id": 0, "h": 80, "type": "block", "w": 4, "x": 352, "y": 48},
         {"color_id": -1, "h": 16, "subtype": "player_heavy", "type": "start_block", "w": 16, "x": 32, "x_dir": 0, "y": 88},
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 16, "x": 16, "y": 88},
         {
@@ -141,7 +139,10 @@
             "x": 256,
             "y": 48
         },
-        {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 48, "x": 208, "y": 48}
+        {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 48, "x": 208, "y": 48},
+        {"art_id": 0, "color_id": 0, "h": 4, "type": "block", "w": 80, "x": 224, "y": 160},
+        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 304, "y": 192},
+        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 24, "x": 72, "y": 120}
     ],
     "level_id": "blockage",
     "name": "Blockage",
