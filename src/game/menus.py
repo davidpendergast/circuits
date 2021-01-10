@@ -33,9 +33,8 @@ class MainMenuScene(scenes.Scene):
         self._title_element = ui.SpriteElement()
 
         self._options_list = ui.OptionsList()
-        self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/overworld_1")))
+        self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene.create_new_from_path("overworlds")))
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
-        # self._options_list.add_option("load", lambda: self.jump_to_scene(overworld.OverworldScene("overworlds/test_overworld")))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
         self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
@@ -160,7 +159,7 @@ class LevelSelectForEditScene(OptionSelectScene):
             level_bp = self.all_levels[level_id]
 
             def _action(bp=level_bp):  # lambdas in loops, yikes
-                self.jump_to_scene(LevelEditGameScene(bp, output_file=bp.loaded_from_file))
+                self.jump_to_scene(LevelEditGameScene(bp, output_file=bp.directory))
 
             self.add_option(level_names[level_id], _action)
 

@@ -557,10 +557,10 @@ DESCRIPTION = "description"     # level flavor text
 
 class LevelBlueprint:
 
-    def __init__(self, json_blob):
+    def __init__(self, json_blob, directory=None):
         self.json_blob = json_blob
 
-        self.loaded_from_file = None
+        self.directory = directory
         self._cached_entities = None  # list of (blob, spec)
 
     @staticmethod
@@ -685,7 +685,7 @@ class LevelBlueprint:
 def load_level_from_file(filepath) -> LevelBlueprint:
     try:
         json_blob = util.load_json_from_path(filepath)
-        return LevelBlueprint(json_blob)
+        return LevelBlueprint(json_blob, directory=filepath)
 
     except Exception:
         print("ERROR: failed to load level: {}".format(filepath))
@@ -703,7 +703,7 @@ def load_all_levels_from_dir(path):
                 filepath = os.path.join(path, file)
                 level = load_level_from_file(filepath)
                 if level is not None:
-                    level.loaded_from_file = filepath
+                    level.directory = filepath
                     res[level.level_id()] = level
                     print("INFO: loaded level \"{}\" from file: {}".format(level.level_id(), filepath))
     except Exception:
@@ -998,7 +998,7 @@ def get_test_blueprint_1() -> LevelBlueprint:
 
 def get_template_blueprint() -> LevelBlueprint:
     level = load_level_from_file(util.resource_path("template_level.json"))
-    level.loaded_from_file = None
+    level.directory = None
     return level
 
 

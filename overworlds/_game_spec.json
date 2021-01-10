@@ -1,0 +1,13 @@
+{
+"name": "Standard",
+"ref_id": "standard",
+"author": "Ghast",
+"overworlds": ["sector_ab", "sector_a", "sector_abc"],
+"connections": {
+    "sector_ab": {
+        "e1": ["sector_ab_bonus", "e0"],
+        "e0": ["sector_a", "e0"],
+        "e2": ["sector_abc", "e0"]
+    }
+}
+}

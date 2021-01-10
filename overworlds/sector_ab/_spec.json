@@ -1,6 +1,6 @@
 {
-"name": "Baby Steps",
-"ref_id": "test_1", 
+"name": "Sector AB",
+"ref_id": "sector_ab", 
 "author": "Ghast",
 "data_stride": 2,
 "data":[
@@ -13,7 +13,7 @@
     ". . . . . | . . ",
     ". . . * ~ * . . ",
     ". . . 9 . . . . ",
-    ". . . f . . . . "
+    ". . . e2. . . . "
 ],
 "lvl_1": "arrival",
 "lvl_2": "pillars",

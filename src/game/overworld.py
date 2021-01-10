@@ -316,6 +316,109 @@ class OverworldGrid:
         return self.grid.to_string()
 
 
+class OverworldPack:
+
+    @staticmethod
+    def load_from_dir(path):
+        try:
+            print("INFO: loading overworld pack from {}".format(path))
+
+            json_blob = util.load_json_from_path(os.path.join(path, "_game_spec.json"))
+            name = util.read_string(json_blob, "name", "Unnamed World")
+            ident = str(json_blob["ref_id"])
+            author = util.read_string(json_blob, "author", "Unknown")
+            overworlds = {}
+
+            overworld_ids = [str(ov_id) for ov_id in json_blob["overworlds"]]
+            for overworld_id in overworld_ids:
+                ov_path = os.path.join(path, overworld_id)
+                loaded_overworld = OverworldBlueprint.load_from_dir(ov_path)
+                if loaded_overworld is not None:
+                    overworlds[overworld_id] = loaded_overworld
+
+            connections = {}
+            if "connections" in json_blob:
+                for ov_id in overworld_ids:
+                    if ov_id in json_blob["connections"]:
+                        for exit_id in json_blob["connections"][ov_id]:
+                            if exit_id[0] == "e":
+                                exit_num = int(exit_id[1:])
+                                connected_overworld_id = json_blob["connections"][ov_id][exit_id][0]
+                                connected_exit_id = json_blob["connections"][ov_id][exit_id][1]
+
+                                if connected_exit_id[0] == "e":
+                                    connected_exit_num = int(connected_exit_id[1:])
+                                    if ov_id in overworlds and connected_overworld_id in overworlds:
+                                        if ov_id not in connections:
+                                            connections[ov_id] = {}
+                                        connections[ov_id][exit_num] = connected_overworld_id
+
+                                        if connected_overworld_id not in connections:
+                                            connections[connected_overworld_id] = {}
+                                        connections[connected_overworld_id][connected_exit_num] = ov_id
+                                    else:
+                                        if ov_id not in overworlds:
+                                            print("WARN: cannot connect overworld because id is unrecognized: {}".format(ov_id))
+                                        if connected_overworld_id not in overworlds:
+                                            print("WARN: cannot connect overworld because id is unrecognized: {}".format(connected_overworld_id))
+                                else:
+                                    print("WARN: unrecognized exit id: {}".format(connected_exit_id))
+                            else:
+                                print("WARN: unrecognized exit id: {}".format(exit_id))
+
+            return OverworldPack(ident, name, author, overworlds, connections, path)
+
+        except Exception:
+            print("ERROR: failed to load overworld \"{}\"".format(path))
+            traceback.print_exc()
+            return None
+
+    def __init__(self, ref_id, name, author, overworlds, connections, directory):
+        """
+        :param ref_id: id of the pack
+        :param name: name of the pack
+        :param author: author of the pack
+        :param overworlds: map from overworld_id -> OverworldBlueprint
+        :param connections: map from overworld_id -> (map from exit_num -> overworld_id)
+        """
+        self.ref_id = ref_id
+        self.name = name
+        self.author = author
+        self.overworlds = overworlds
+        self.connections = connections
+
+        self.directory = directory
+
+        self._starting_world = self._find_starting_overworld()
+
+    def get_start(self) -> 'OverworldBlueprint':
+        return self._starting_world
+
+    def get_overworld_with_id(self, ref_id) -> 'OverworldBlueprint':
+        if ref_id in self.overworlds:
+            return self.overworlds[ref_id]
+        else:
+            return None
+
+    def all_overworlds(self):
+        for ov_id in self.overworlds:
+            yield self.overworlds[ov_id]
+
+    def get_neighbor(self, overworld: 'OverworldBlueprint', exit_num: int) -> 'OverworldBlueprint':
+        if overworld.ref_id in self.connections:
+            exit_mapping = self.connections[overworld.ref_id]
+            if exit_num in exit_mapping:
+                dest_id = exit_mapping[exit_num]
+                return self.get_overworld_with_id(dest_id)
+
+    def _find_starting_overworld(self) -> 'OverworldBlueprint':
+        for ow_id in self.overworlds:
+            if self.overworlds[ow_id].has_start_node():
+                return self.overworlds[ow_id]
+        print("WARN: overworld pack {} has no starting node.".format(self.name))
+        return None
+
+
 class OverworldBlueprint:
 
     @staticmethod
@@ -405,20 +508,30 @@ class OverworldBlueprint:
                     print("ERROR: failed to load bg_triangles")
                     traceback.print_exc()
 
-            return OverworldBlueprint(ident, name, author, grid, levels, bg_triangles)
+            return OverworldBlueprint(ident, name, author, grid, levels, bg_triangles, path)
 
-        except Exception as e:
+        except Exception:
             print("ERROR: failed to load overworld \"{}\"".format(path))
             traceback.print_exc()
             return None
 
-    def __init__(self, ref_id, name, author, grid, level_lookup, bg_triangles):
+    def __init__(self, ref_id, name, author, grid, level_lookup, bg_triangles, directory):
+        """
+        :param grid: an OverworldGrid
+        :param level_lookup: map of level_num -> level_id
+        :param bg_triangles: list of (p1, p2, p3, color)
+        """
         self.name = name
         self.ref_id = ref_id
         self.author = author
         self.grid = grid
         self.levels = level_lookup
         self.bg_triangles = bg_triangles
+
+        self.directory = directory
+
+    def has_start_node(self):
+        return self.grid.get_game_start_node_if_present() is not None
 
     def __repr__(self):
         return "\n".join([
@@ -432,10 +545,17 @@ class OverworldBlueprint:
 
 class OverworldState:
 
-    def __init__(self, world_blueprint: OverworldBlueprint, level_blueprints, came_from=None):
+    def __init__(self, overworld_pack: OverworldPack, came_from=None):
+        self.overworld_pack = overworld_pack
+
+        self.world_blueprint = self.overworld_pack.get_start()
+
         """level_blueprints level_id -> level_blueprint"""
-        self.world_blueprint = world_blueprint
-        self.level_blueprints = level_blueprints
+        self.level_blueprints = {}
+        for overworld_bp in overworld_pack.all_overworlds():
+            level_dir = os.path.join(overworld_bp.directory, "levels")
+            loaded_levels = blueprints.load_all_levels_from_dir(level_dir)
+            self.level_blueprints.update(loaded_levels)
 
         self.update_nodes()
 
@@ -883,16 +1003,15 @@ class OverworldInfoPanelElement(ui.UiElement):
 
 class OverworldScene(scenes.Scene):
 
-    def __init__(self, path, state=None):
-        scenes.Scene.__init__(self)
-        self._path_loaded_from = path
+    @staticmethod
+    def create_new_from_path(path):
+        pack = OverworldPack.load_from_dir(path)
+        state = OverworldState(pack)
+        return OverworldScene(state)
 
-        if state is None:
-            bp = OverworldBlueprint.load_from_dir(path)
-            levels = blueprints.load_all_levels_from_dir(os.path.join(path, "levels"))
-            self.state = OverworldState(bp, levels)
-        else:
-            self.state = state
+    def __init__(self, state):
+        scenes.Scene.__init__(self)
+        self.state = state
 
         self.bg_triangle_sprites = [[] for _ in range(0, 9)]
 
@@ -972,13 +1091,12 @@ class OverworldScene(scenes.Scene):
         level_bp = self.state.get_level_blueprint(level_id)
         menu_manager = self.get_manager()
         state = self.state
-        path = self._path_loaded_from
 
         def _return_to_overworld(time):
             old_time = state.get_completion_time(level_id)
             if time is not None and (old_time is None or time < old_time):
                 state.set_completed(level_id, time)
-            new_scene = OverworldScene(path, state=state)
+            new_scene = OverworldScene(state)
 
             nodes = new_scene.state.get_nodes_with_id(level_id)
             if len(nodes) > 0:
