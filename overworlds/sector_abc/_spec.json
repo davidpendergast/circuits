@@ -16,6 +16,8 @@
     ". . . . e2. . . "
 ],
 "lvl_1": "fragility",
+"lvl_2": "scaffolding",
+"lvl_3": "chimney",
 "lvl_8": "blockage",
 "bg_triangles": {
     "top": [],
