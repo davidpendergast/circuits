@@ -20,39 +20,53 @@ vertical slice:
  [x] overworld
     [x] can select levels in a grid connected by paths, with branches and stuff
     [x] some kind of spaceship graphics (or rocks)
-        - design basically ripped from baba (where all my good ideas come from)
-        - should be extremely modular
- - in levels 
+        [x] design basically ripped from baba (where all my good ideas come from)
+        [x] should be extremely modular
+    - levels should be locked until adjacent levels are beaten
+    - it should clearly show when levels are beaten
+    - some kind of generated graphic for each level
+ [x] in levels 
     [x] platforming phyiscs
     [x] play alongside your "ghosts"
-    - mixture of longer, traditional single-robot platforming challenges
-        and multi-robot coordination puzzles
- - level editor
-    - save / load levels as json
-    - create / move / modify objects in the game
-    - toggle between play mode and edit mode
-    - some kind of in-editor console where you can modify stuff more directly
-    ui:
-      - creation sidepanel
-        - select objects to create from grid
-      - metadata sidepanel
-        - edit level name, etc. (json text editor)
-      - modification sidepanel
-        - edit json attributes selected object (in world)
+    [x] something interesting for C to do (breaking floors)
+ [x] level editor
+    [x] save / load levels as json
+    [x] create / move / modify objects in the game
+    [x] toggle between play mode and edit mode
+    [x] some kind of in-editor console where you can modify stuff more directly
+ - progress should save
+ - music (royalty-free 'placeholder' is fine)
+ - sound effects
+ - content
+    [x] finish AB levels and overworld
+    - finish C levels and overworld
+    - finish D levels and overworld
+    - descriptions for each level (a story of some kind?)
  - credits
     (to make it a complete game~)
  
 
 puzzle archetypes:
-    - resource exchanges (delivering something to a future ghost)
+    - resource exchanges (delivering something to a future ghost, or altering the environment to help a future ghost)
     - path alteration (changing the behavior of a past ghost by altering the environment)
         - ghost objectification (picking up another ghost, using to acomplish something else entirely)
+	    - REJECTED unless I can figure out how to do this without an action key
         - ghost nullification (stopping another ghost from doing something)
-    - option-selects (using route that will have different outcomes depending on the actions of a future ghost)
+    - option-selects (using a route that will have different outcomes depending on the actions of a future ghost)
     - traditional platforming challenges (running, jumping, climbing trees)
     - resource allocation (should I use this now, or leave it for a future ghost)
         - should i prevent a past ghost from using a resource
     - coordination (need to act in-sync with a past ghost)
+    - ghost avoidance (staying out of the way of a past ghost, so as to not knock them off their path)
+    	- and the flip-side, avoiding taking a path that will force a future ghost to interrupt it
+
+ideas for mechanics:
+    - killing other robots if you touch them
+    - a robot that leaves a trail of spikes or corrupts blocks in some way (making it so other robots can't touch them)
+    - picking up other robots, throwing them
+    - freezing other robots
+    - swapping positions with other robots
+    - teleporters with a limited number of uses
     
 Level editor:    
     [ ] (P1) increase / decrease duration for specs
@@ -60,26 +74,20 @@ Level editor:
     [ ] (P3) let you edit metadata of levels / specs
     
 General:
-    [x] UI for editing text
-    [x] (P1) moving camera in levels (horizontal only?)
-        - should encompass the active player + ghosts if possible 
-    [x] locks and doors
-    [ ] completing levels
     [ ] failing levels
 	- just keep it running but say R to restart or something?
 	- or 
-    [ ] animation when you reach the finish
-    [ ] animation when you spawn
-    [ ] kill blocks
     [ ] scene transitions of some kind
         - "player A go!"
 	- "level complete!"
 	- "you died!"
 	- like nuclear throne, still image, text_bg, and text move slowly with parallax
 Art:
-    [ ] Animations for player D
+    - more blocks
+    - or use that big brain of yours to generate blocks
 
-Thoughts:
+
+Old Thoughts (1/3/21):
    the good:
    - the physics engine works quite well
    - the level editor is pretty slick
@@ -94,4 +102,9 @@ Thoughts:
 How to proceed:
   - ditch the syncronous gameplay, instead let you switch between characters mid-level? (like yoshi's island 2)
   - redo the environment graphics?
+
+New thoughts 1/11/21:
+  - graphics and gameplay actually seems better now (lighting helped a lot).
+  - and puzzles are coming together easier.
+  - full speed ahead with original plan
 
