@@ -1003,7 +1003,7 @@ class BorderBoxSprite(MultiSprite):
                  top_left=None, top=None, top_right=None,
                  left=None, center=None, right=None,
                  bottom_left=None, bottom=None, bottom_right=None,
-                 all_borders=None,
+                 all_borders=None, hollow_center=False,
                  scale=1, color=(1, 1, 1), depth=0, bg_color=None):
         """
         rect: the inner rectangle of the box
@@ -1021,7 +1021,7 @@ class BorderBoxSprite(MultiSprite):
         self._top_right_model = all_borders[2] if all_borders is not None else top_right
 
         self._left_model = all_borders[3] if all_borders is not None else left
-        self._center_model = all_borders[4] if all_borders is not None else center
+        self._center_model = (all_borders[4] if all_borders is not None else center) if not hollow_center else None
         self._right_model = all_borders[5] if all_borders is not None else right
 
         self._bottom_left_model = all_borders[6] if all_borders is not None else bottom_left

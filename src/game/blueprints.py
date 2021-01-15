@@ -258,10 +258,7 @@ class SlopedQuadBlockSpecType(SpecType):
         n_block_sprites = spriteref.block_sheet().num_quad_block_sprites()
         return [i for i in range(0, n_block_sprites)]
 
-    def build_entities(self, json_blob):
-        x = json_blob[X]
-        y = json_blob[Y]
-
+    def get_triangle_and_rect(self, json_blob, with_xy_offset=False):
         subtype = json_blob[SUBTYPE_ID]
 
         cs = gs.get_instance().cell_size
@@ -280,6 +277,20 @@ class SlopedQuadBlockSpecType(SpecType):
                 rect = [cs, 0, cs, 2 * cs]
             else:
                 rect = [0, 0, cs, 2 * cs]
+
+        if with_xy_offset:
+            x = json_blob[X]
+            y = json_blob[Y]
+            triangle = [(p[0] + x, p[1] + y) for p in triangle]
+            rect = [rect[0] + x, rect[1] + y, rect[2], rect[3]]
+
+        return triangle, rect
+
+    def build_entities(self, json_blob):
+        x = json_blob[X]
+        y = json_blob[Y]
+
+        triangle, rect = self.get_triangle_and_rect(json_blob, with_xy_offset=False)
 
         rect_colliders = entities.BlockEntity.build_colliders_for_rect(rect)
         tri_colliders = entities.SlopeBlockEntity.build_colliders_for_points(triangle)
@@ -751,6 +762,18 @@ class SpecUtils:
         if Y in spec_blob:
             res[Y] = int(xy[1])
         return res
+
+    @staticmethod
+    def get_preview_color(spec_blob):
+        color = (0.5, 0.5, 0.5)
+        try:
+            if SUBTYPE_ID in spec_blob and any([c == spec_blob[SUBTYPE_ID] for c in const.ALL_PLAYER_IDS]):
+                color = spriteref.get_color(playertypes.PlayerTypes.get_type(spec_blob[SUBTYPE_ID]).get_color_id())
+            elif COLOR_ID in spec_blob:
+                color = spriteref.get_color(spec_blob[COLOR_ID])
+        except Exception:
+            traceback.print_exc()
+        return color
 
     @staticmethod
     def move(spec_blob, dxy, and_points=True):

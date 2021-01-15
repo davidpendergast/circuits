@@ -1,5 +1,6 @@
 
 import pygame
+
 import os
 
 import configs as configs
@@ -129,7 +130,7 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5, sort_sprites=True, use_color=True)
         yield layers.ImageLayer(spriteref.ENTITY_LAYER, 10, sort_sprites=True, use_color=True)
 
-        yield layers.PolygonLayer(spriteref.POLYGON_UI_LAYER, 15, sort_sprites=True)
+        yield layers.PolygonLayer(spriteref.POLYGON_UI_LAYER, 100, sort_sprites=True)  # TODO change this back to 15
         yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19, sort_sprites=True, use_color=True)
         yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20, sort_sprites=True, use_color=True)
 

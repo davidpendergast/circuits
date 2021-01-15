@@ -186,6 +186,12 @@ def rect_contains(rect, v):
     return rect[0] <= v[0] < rect[0] + rect[2] and rect[1] <= v[1] < rect[1] + rect[3]
 
 
+def constrain_point_to_rect(rect, p):
+    px = bound(p[0], rect[0], rect[0] + rect[2] - 1)
+    py = bound(p[1], rect[1], rect[1] + rect[3] - 1)
+    return (px, py)
+
+
 def rect_center(rect):
     return (int(rect[0] + rect[2] / 2),
             int(rect[1] + rect[3] / 2))
