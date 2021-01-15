@@ -68,6 +68,7 @@ ideas for mechanics:
     - swapping positions with other robots
     - teleporters with a limited number of uses
     - a boulder-type block that C can push
+    - lasers that kill player, but can be blocked
     
 Level editor:    
     [ ] (P1) increase / decrease duration for specs
@@ -85,10 +86,9 @@ Art:
     - more blocks
     - or use that big brain of yours to generate blocks
 
-Level Brainstorming:
-    - C will break some platforms during their run, so I better predict which ones and avoid using them
-        - lilypads.json (first attempt)
-    - C needs to bust through or avoid some platforms to avoid being pushed off a moving platform
+Performance:
+    - breakable blocks cause lag spikes
+    - large levels are laggy
 
 
 Old Thoughts (1/3/21):
