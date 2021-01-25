@@ -57,6 +57,9 @@ class OverworldGrid:
         def is_exit(self):
             return False
 
+        def is_start(self):
+            return False
+
     class LevelNode(OverworldNode):
 
         def __init__(self, xy, n):
@@ -587,8 +590,8 @@ class OverworldState:
 
     def __init__(self, overworld_pack: OverworldPack, came_from=None):
         self.overworld_pack = overworld_pack
-
         self.current_overworld = self.overworld_pack.get_start()
+        self.requested_overworld = None  # (OverworldBlueprint, entry_num)
 
         """level_blueprints level_id -> level_blueprint"""
         self.level_blueprints = {}
@@ -604,17 +607,28 @@ class OverworldState:
     def get_grid(self) -> OverworldGrid:
         return self.current_overworld.get_grid()
 
-    def activate_exit_node(self, exit_num):
+    def get_overworld(self) -> OverworldBlueprint:
+        return self.current_overworld
+
+    def next_requested_overworld(self):
+        """returns: (OverworldBlueprint, entry_num)"""
+        return self.requested_overworld
+
+    def activate_exit_node(self, exit_num, instantly=False):
         new_overworld = self.overworld_pack.get_neighbor(self.current_overworld, exit_num)
         if new_overworld is not None:
             entry_num = self.overworld_pack.get_exit_leading_to(new_overworld, self.current_overworld)
-            self.set_current_overworld(new_overworld, entry_num=entry_num)
+            if instantly:
+                self.set_current_overworld(new_overworld, entry_num=entry_num)
+            else:
+                self.requested_overworld = (new_overworld, entry_num)
 
     def set_current_overworld(self, overworld, entry_num=None):
         new_overworld = self.overworld_pack.get_overworld_with_id(overworld.ref_id)
         if new_overworld is not None:
             self.current_overworld = new_overworld
             self.selected_cell = self.find_initial_selection(came_from_exit_id=entry_num)
+            self.requested_overworld = None
         else:
             print("WARN: unrecognized overworld_id: {}".format(overworld.ref_id))
 
@@ -991,7 +1005,7 @@ class _EntityPreview():
                               blueprints.SpecTypes.START_BLOCK, blueprints.SpecTypes.END_BLOCK,
                               blueprints.SpecTypes.DOOR_BLOCK):
             util.extend_or_empty_list_to_length(self.sprites, 1,
-                                                creator=lambda: sprites.RectangleSprite(spriteref.POLYGON_UI_LAYER))
+                                                creator=lambda: sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER))
             world_rect = blueprints.SpecUtils.get_rect(self.blob)
 
             if util.rects_intersect(world_rect, vis_rect_in_level):
@@ -1005,9 +1019,9 @@ class _EntityPreview():
         elif self.spec_type == blueprints.SpecTypes.SLOPE_BLOCK_QUAD:
             util.extend_or_empty_list_to_length(self.sprites, 2, creator=lambda: None)
             if self.sprites[0] is None:
-                self.sprites[0] = sprites.RectangleSprite(spriteref.POLYGON_UI_LAYER)
+                self.sprites[0] = sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER)
             if self.sprites[1] is None:
-                self.sprites[1] = sprites.TriangleSprite(spriteref.POLYGON_UI_LAYER)
+                self.sprites[1] = sprites.TriangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER)
 
             world_triangle, world_rect = self.spec_type.get_triangle_and_rect(self.blob, with_xy_offset=True)
             triangle_right = any([p[0] > world_rect[0] + world_rect[2] for p in world_triangle])
@@ -1196,17 +1210,48 @@ class OverworldScene(scenes.Scene):
         self.grid_ui_element = OverworldGridElement(self.state)
         self.info_panel_element = OverworldInfoPanelElement(self.state)
 
+        self.fade_overlay = None
+
+        self.fade_ticks = 0
+        self.fade_duration = 30
+        self.fading_in = None
+        self.start_fading_in()
+
+        self._overworld_after_fade_out = None
+        self._entry_num_after_fade_out = None
+
+    def start_fading_in(self):
+        self.fading_in = True
+        self.fade_ticks = self.fade_duration  # start at max fade, and reduce
+        return self
+
+    def fade_out_and_into(self, next_overworld, entry_num):
+        self.fading_in = False
+        self.fade_ticks = 0
+        self._overworld_after_fade_out = next_overworld
+        self._entry_num_after_fade_out = entry_num
+
+    def _get_fade_prog(self):
+        if self.fading_in is None:
+            return 0
+        else:
+            return util.bound(self.fade_ticks / self.fade_duration, 0, 1)
+
     def all_sprites(self):
         for spr in self.grid_ui_element.all_sprites_from_self_and_kids():
             yield spr
         for spr in self.info_panel_element.all_sprites_from_self_and_kids():
             yield spr
+        if self.fade_overlay is not None:
+            yield self.fade_overlay
         for l in self.bg_triangle_sprites:
             for spr in l:
                 yield spr
 
     def update(self):
-        self.handle_inputs()
+        if self.fading_in is not False:
+            # lock inputs while we're fading out
+            self.handle_inputs()
 
         screen_size = renderengine.get_instance().get_game_size()
         grid_size = self.grid_ui_element.get_size()
@@ -1217,6 +1262,39 @@ class OverworldScene(scenes.Scene):
         info_xy = (screen_size[0] - self.info_panel_element.get_size()[0], 0)
         self.info_panel_element.set_xy(info_xy)
         self.info_panel_element.update_self_and_kids()
+
+        if self.fading_in is None and self.state.next_requested_overworld() is not None:
+            ow, num = self.state.next_requested_overworld()
+            self.fade_out_and_into(ow, num)
+
+        fade_prog = self._get_fade_prog()
+        if fade_prog == 0:
+            self.fade_overlay = None
+        else:
+            model = spritesheets.get_instance().get_sheet(spritesheets.WhiteSquare.SHEET_ID).get_sprite(opacity=fade_prog)
+            if self.fade_overlay is None:
+                self.fade_overlay = sprites.ImageSprite(model, 0, 0, layer_id=spriteref.UI_FG_LAYER,
+                                                        depth=-1000, color=colors.PERFECT_BLACK)
+            ratio = (self.info_panel_element.get_xy(absolute=True)[0] / model.width(),
+                     screen_size[1] / model.height())
+            self.fade_overlay = self.fade_overlay.update(new_model=model, new_ratio=ratio)
+
+        if self.fading_in is not None:
+            if self.fading_in:
+                self.fade_ticks -= 1
+                if self.fade_ticks <= 0:
+                    self.fading_in = None
+            else:
+                self.fade_ticks += 1
+                if self.fade_ticks >= self.fade_duration:
+                    if self._overworld_after_fade_out is not None:
+                        self.state.set_current_overworld(self._overworld_after_fade_out,
+                                                         entry_num=self._entry_num_after_fade_out)
+                        self._overworld_after_fade_out = None
+                        self._entry_num_after_fade_out = None
+                        self.start_fading_in()
+                    else:
+                        self.fading_in = None
 
         self._update_bg_triangles()
 
@@ -1242,7 +1320,6 @@ class OverworldScene(scenes.Scene):
                                                                            selectable_only=True, enabled_only=True)
                 if new_node is not None:
                     if new_node.is_exit():
-                        # TODO some kind of effect here?
                         self.state.activate_exit_node(new_node.get_exit_id())
                     else:
                         self.state.set_selected_node(new_node)
@@ -1294,16 +1371,24 @@ class OverworldScene(scenes.Scene):
         size = renderengine.get_instance().get_game_size()
         size = (size[0] - self.info_panel_element.get_size()[0], size[1])
 
+        fade_pcnt = self._get_fade_prog()
+
         anchors = [
             (0, 0), (size[0] // 2, 0), (size[0], 0),
             (0, size[1] // 2), (size[0] // 2, size[1] // 2), (size[0], size[1] // 2),
             (0, size[1]), (size[0] // 2, size[1]), (size[0], size[1])
         ]
 
+        max_zoom_dist = 300
+        center_pt = (size[0] // 2, size[1] // 2)
+        for i in range(0, len(anchors)):
+            v = util.set_length(util.sub(anchors[i], center_pt), max_zoom_dist * (fade_pcnt ** 2))
+            anchors[i] = util.round_vec(util.add(anchors[i], v))
+
         for i in range(0, 9):
             bp_tri_list = self.state.current_overworld.bg_triangles[i]
             util.extend_or_empty_list_to_length(self.bg_triangle_sprites[i], len(bp_tri_list),
-                                                lambda: sprites.TriangleSprite(spriteref.POLYGON_UI_LAYER))
+                                                lambda: sprites.TriangleSprite(spriteref.POLYGON_UI_BG_LAYER))
             for j in range(0, len(bp_tri_list)):
                 p1 = util.add(anchors[i], bp_tri_list[j][0])
                 p2 = util.add(anchors[i], bp_tri_list[j][1])

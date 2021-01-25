@@ -159,24 +159,34 @@ class DefaultFontSmall(FontSheet):
 
 
 class WhiteSquare(SpriteSheet):
-    """this is used by triangle sprites..."""
+    """A white square, with several levels of opacity."""
 
     SHEET_ID = "white_square"
+    _OPACITY_LEVELS = 16
+    _SIZE = (32, 32)
 
     def __init__(self):
         SpriteSheet.__init__(self, WhiteSquare.SHEET_ID, None)
 
-        self.white_box = None
+        self.white_boxes = []
+
+    def get_sprite(self, opacity=1.0):
+        return util.index_into(self.white_boxes, 1 - opacity, wrap=False)
 
     def get_size(self, img_size):
-        return (32, 32)
+        return (WhiteSquare._SIZE[0] * WhiteSquare._OPACITY_LEVELS,
+                WhiteSquare._SIZE[1])
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
-        w, h = self.get_size((0, 0))
-        rect = [start_pos[0], start_pos[1], w, h]
-        pygame.draw.rect(atlas, (255, 255, 255), rect)
-
-        self.white_box = sprites.ImageModel(0, 0, w, h, offset=start_pos)
+        self.white_boxes.clear()
+        for i in range(0, WhiteSquare._OPACITY_LEVELS):
+            rect = [start_pos[0] + i * WhiteSquare._SIZE[0],
+                    start_pos[1],
+                    WhiteSquare._SIZE[0],
+                    WhiteSquare._SIZE[1]]
+            alpha = int(255 * (1 - i / (WhiteSquare._OPACITY_LEVELS - 1)))
+            pygame.draw.rect(atlas, (255, 255, 255, alpha), rect)
+            self.white_boxes.append(sprites.ImageModel(rect[0], rect[1], rect[2], rect[3]))
 
 
 class SingleImageSheet(SpriteSheet):
