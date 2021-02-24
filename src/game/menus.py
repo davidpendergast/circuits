@@ -24,7 +24,9 @@ import src.game.overworld as overworld
 import src.game.ui as ui
 import src.engine.spritesheets as spritesheets
 import src.game.worlds as worlds
-
+import src.engine.threedee as threedee
+import src.engine.threedeecine as threedeecine
+import src.game.cinematics as cinematics
 
 class MainMenuScene(scenes.Scene):
 
@@ -37,6 +39,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
+        self._options_list.add_option("movie", lambda: self.jump_to_scene(cinematics.CinematicScene3D(cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.INTRO), lambda: MainMenuScene())))
         self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
         self._options_list.update_sprites()
 
@@ -1786,25 +1789,25 @@ class Test3DScene(scenes.Scene):
         self.handle_camera_rotate()
 
         layer = renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER)
-        layer.camera_position = self.cam_pos
-        layer.camera_direction = self.cam_dir
-        layer.camera_fov = self.cam_fov
+        layer.camera.set_position(self.cam_pos)
+        layer.camera.set_direction(self.cam_dir)
+        layer.camera.set_fov(self.cam_fov)
 
         pos = self.ship_sprites[0].position()
-        rot = self.ship_sprites[0].get_effective_rotation(camera_pos=layer.camera_position)
+        rot = self.ship_sprites[0].get_effective_rotation(camera_pos=layer.camera.get_position())
         scale = self.ship_sprites[0].scale()
-        cam_x, cam_y, cam_z = layer.camera_position
-        dir_x, dir_y, dir_z = layer.camera_direction
-        text = "camera_pos= ({:.2f}, {:.2f}, {:.2f})\n" \
-               "camera_dir= ({:.2f}, {:.2f}, {:.2f})\n" \
-               "camera_fov= {} \n\n" \
+        cam_x, cam_y, cam_z = layer.camera.get_position()
+        dir_x, dir_y, dir_z = layer.camera.get_direction()
+        text = "camera.pos= ({:.2f}, {:.2f}, {:.2f})\n" \
+               "camera.dir= ({:.2f}, {:.2f}, {:.2f})\n" \
+               "camera.fov= {} \n\n" \
                "ship_pos=   ({:.2f}, {:.2f}, {:.2f})\n" \
                "ship_rot=   ({:.2f}, {:.2f}, {:.2f})\n" \
                "ship_scale= ({:.2f}, {:.2f}, {:.2f})\n" \
                "tracking=   {}".format(
             cam_x, cam_y, cam_z,
             dir_x, dir_y, dir_z,
-            layer.camera_fov,
+            layer.camera.get_fov(),
             pos[0], pos[1], pos[2],
             rot[0], rot[1], rot[2],
             scale[0], scale[1], scale[2],

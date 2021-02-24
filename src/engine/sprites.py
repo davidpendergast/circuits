@@ -55,7 +55,7 @@ class AbstractSprite:
                 yield spr
 
     def __repr__(self):
-        return "{}}({}, {}, {})".format(type(self).__name__, self.sprite_type(), self.layer_id(), self.uid())
+        return "{}({}, {}, {})".format(type(self).__name__, self.sprite_type(), self.layer_id(), self.uid())
 
 
 class TriangleSprite(AbstractSprite):

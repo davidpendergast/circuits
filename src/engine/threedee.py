@@ -10,14 +10,49 @@ import src.utils.matutils as matutils
 import configs
 
 
+class Camera3D:
+
+    def __init__(self, position=(0, 0, 0), direction=(0, 0, -1), fov=35):
+        self._position = position
+        self._direction = direction
+        self._fov = fov
+
+    def get_position(self):
+        return self._position
+
+    def set_position(self, position):
+        self._position = position
+
+    def get_direction(self):
+        return self._direction
+
+    def get_snapshot(self) -> 'Camera3D':
+        """returns a copy of this camera"""
+        return Camera3D(position=self.get_position(),
+                        direction=self.get_direction(),
+                        fov=self.get_fov())
+
+    def set_direction(self, direction):
+        self._direction = direction
+
+    def get_fov(self):
+        return self._fov
+
+    def set_fov(self, fov):
+        self._fov = fov
+
+    def update(self):
+        pass
+
+
 class ThreeDeeLayer(layers.ImageLayer):
 
     def __init__(self, layer_id, layer_depth):
         super().__init__(layer_id, layer_depth, sort_sprites=False, use_color=False)
+        self.camera = Camera3D()
 
-        self.camera_position = (0, 0, 0)
-        self.camera_direction = (0, 0, -1)
-        self.camera_fov = 35
+    def set_camera(self, cam):
+        self.camera = cam.get_snapshot()
 
     def accepts_sprite_type(self, sprite_type):
         return sprite_type == sprites.SpriteTypes.THREE_DEE
@@ -68,8 +103,8 @@ class ThreeDeeLayer(layers.ImageLayer):
         # XXX I'm not sure why we have to flip the y components like this. It's either reversing errors introduced
         # elsewhere, or fixing a discrepancy between the world coordinate system and GL's internal coordinate system.
         # Either way though, the scene renders upside down without it, so... we flip
-        target_pt = util.add(self.camera_position, util.negate(self.camera_direction, components=(1,)))
-        m = matutils.get_matrix_looking_at2(self.camera_position, target_pt, self.get_camera_up())
+        target_pt = util.add(self.camera.get_position(), util.negate(self.camera.get_direction(), components=(1,)))
+        m = matutils.get_matrix_looking_at2(self.camera.get_position(), target_pt, self.get_camera_up())
 
         y_flipped = numpy.identity(4, dtype=numpy.float32)
         y_flipped.itemset((1, 1), -1)
@@ -77,7 +112,7 @@ class ThreeDeeLayer(layers.ImageLayer):
 
     def get_proj_matrix(self, engine):
         w, h = engine.get_game_size()
-        return matutils.perspective_matrix(self.camera_fov / 360 * 6.283, w / h, 0.5, 1000000)
+        return matutils.perspective_matrix(self.camera.get_fov() / 360 * 6.283, w / h, 0.5, 1000000)
 
     def get_camera_up(self):
         return (0, 1, 0)
@@ -90,7 +125,7 @@ class ThreeDeeLayer(layers.ImageLayer):
         engine.set_proj_matrix(proj)
 
     def _set_uniforms_for_sprite(self, engine, spr_3d: 'Sprite3D'):
-        model = spr_3d.get_xform(camera_pos=self.camera_position)
+        model = spr_3d.get_xform(camera_pos=self.camera.get_position())
         engine.set_model_matrix(model)
 
     def _pass_attributes_for_model(self, engine, model_3d):

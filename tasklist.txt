@@ -24,7 +24,7 @@ vertical slice:
         [x] should be extremely modular
     - levels should be locked until adjacent levels are beaten
     - it should clearly show when levels are beaten
-    - some kind of generated graphic for each level
+    [x] some kind of generated graphic for each level
  [x] in levels 
     [x] platforming phyiscs
     [x] play alongside your "ghosts"
