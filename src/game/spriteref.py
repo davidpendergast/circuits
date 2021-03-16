@@ -136,6 +136,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.toggle_block_icons = []
         self._toggle_blocks = {}
 
+        self.pushable_blocks = {}  # (w, h, color_id) -> list of ImageModel
+
         self.character_arrows = []
         self.character_arrow_fills = {}  # player_id -> ImageModel
 
@@ -272,10 +274,6 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.thin_block_broken_pieces_horz = temp[0]
         self.thin_block_broken_pieces_vert = temp[1]
 
-        self.toggle_block_bases = []
-        self.toggle_block_icons = []
-        self._toggle_blocks = {}  # (idx, w, h, solid) -> ImageModel
-
         self.player_orb_sprites = [(_img(32, 368 + i * 8, 8, 8, offs=start_pos),
                                     _img(40, 368 + i * 8, 8, 8, offs=start_pos),
                                     _img(48, 368 + i * 8, 8, 8, offs=start_pos)) for i in range(0, 2)]
@@ -285,6 +283,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.particles_bubbles_small = [_img(56 + i * 3, 381, 3, 3, offs=start_pos) for i in range(0, 2)]
         self.particles_bubbles_medium = [_img(56 + i * 4, 376, 4, 4, offs=start_pos) for i in range(0, 2)]
         self.particles_bubbles_large = [_img(64 + i * 5, 376, 5, 5, offs=start_pos) for i in range(0, 2)]
+
+        self.toggle_block_bases = []
+        self.toggle_block_icons = []
+        self._toggle_blocks = {}  # (idx, w, h, solid) -> ImageModel
 
         tb_xy = (0, 224)
         for i in range(0, 4):
@@ -298,6 +300,12 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             self._toggle_blocks[(i, 32, 16, False)] = _img(tb_xy[0] + 32, tb_xy[1] + 16 + 32 * i, 32, 16, offs=start_pos)
             self._toggle_blocks[(i, 16, 32, False)] = _img(tb_xy[0] + 80, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
             self._toggle_blocks[(i, 32, 32, False)] = _img(tb_xy[0] + 128, tb_xy[1] + 32 * i, 32, 32, offs=start_pos)
+
+        self.pushable_blocks = {}
+        for i in range(0, 5):
+            self.pushable_blocks[(1, 1, (i + 1) % 5)] = _img(160, 224 + i * 32, 16, 16, offs=start_pos)
+            self.pushable_blocks[(2, 2, (i + 1) % 5)] = _img(176, 224 + i * 32, 24, 24, offs=start_pos)
+            self.pushable_blocks[(3, 3, (i + 1) % 5)] = _img(200, 224 + i * 32, 32, 32, offs=start_pos)
 
         for i in range(0, 4):
             self.character_arrows.append(_img(24 * i, 416, 24, 24, offs=start_pos))
@@ -347,6 +355,13 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         if length > 0 and overflow_if_not_divisible:
             res.append(all_spikes[0])
         return res
+
+    def get_pushable_block_sprite(self, size, color_id):
+        key = (size[0], size[1], color_id if color_id >= 0 else 0)
+        if key in self.pushable_blocks:
+            return self.pushable_blocks[key]
+        else:
+            return None
 
     def _make_transparent_sprites(self, base_rect, src_sheet, n, atlas):
         result_models = []

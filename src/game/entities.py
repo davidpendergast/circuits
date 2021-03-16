@@ -93,6 +93,9 @@ class Entity:
     def get_color_override(self):
         return self._color_override
 
+    def is_color_baked_into_sprites(self):
+        return False
+
     def set_selected_in_editor(self, val):
         self._is_selected_in_editor = val
 
@@ -342,7 +345,7 @@ class Entity:
         """return: the tint applied to this entity's sprites"""
         if not ignore_override and self.get_color_override() is not None:
             return self.get_color_override()
-        elif self.get_color_id() is not None:
+        elif self.get_color_id() is not None and not self.is_color_baked_into_sprites():
             return spriteref.get_color(self.get_color_id())
         else:
             return colors.PERFECT_WHITE
@@ -399,6 +402,9 @@ class AbstractBlockEntity(Entity):
 
     def get_color_id(self):
         return 0
+
+    def is_color_baked_into_sprites(self):
+        return False
 
     def get_color(self, ignore_override=False, include_lighting=True):
         base_color = super().get_color(ignore_override=ignore_override)
@@ -544,6 +550,23 @@ class BreakableBlockEntity(BlockEntity):
                 w.remove_entity(self)
                 print("INFO: breakable block broke! {}".format(self))
                 # TODO sound
+
+
+class PushableBlockEntity(BlockEntity):
+
+    def __init__(self, x, y, w, h, color_id=0):
+        super().__init__(x, y, w, h, color_id=color_id)
+
+    def is_color_baked_into_sprites(self):
+        return True
+
+    def get_main_model(self):
+        if self._art_id is not None:
+            x_size = self.get_w() / gs.get_instance().cell_size
+            y_size = self.get_h() / gs.get_instance().cell_size
+            return spriteref.object_sheet().get_pushable_block_sprite((x_size, y_size), self.get_color_id())
+        else:
+            return super().get_main_model()
 
 
 class SensorEntity(Entity):
