@@ -480,6 +480,9 @@ class _GameState:
             self._next_status = status
             self._next_status_countdown = delay
 
+    def is_waiting(self):
+        return self.get_status() == Statuses.WAITING
+
     def status_changed_this_frame(self):
         return self._status_elapsed_time <= 1
 

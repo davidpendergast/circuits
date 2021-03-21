@@ -48,6 +48,13 @@ class World:
     def get_game_state(self) -> 'src.menus._GameState':
         return self._game_state
 
+    def is_waiting(self):
+        state = self.get_game_state()
+        if state is None:
+            return True
+        else:
+            return state.is_waiting()
+
     def set_safe_zones(self, safe_zones, kill_zones=()):
         self.safe_zones = safe_zones
         self.kill_zones = util.listify(kill_zones)
@@ -265,8 +272,8 @@ class World:
             new_sensor_states = CollisionResolver.calc_sensor_states(self, actor_ents)
             self._sensor_states.update(new_sensor_states)
 
-            for actor in actor_ents:
-                actor.update_frame_of_reference_parent()
+        for dyna in dyna_ents:
+            dyna.update_frame_of_reference_parent()
 
         if len(self.safe_zones) > 0 or len(self.kill_zones) > 0:
             if entities.ACTOR_GROUP in phys_groups:
@@ -570,6 +577,10 @@ class CollisionResolver:
     def _is_colliding_with_any_blocks(world, ent, collider, xy) -> bool:
         collider_rect = collider.get_rect(offs=xy)
         for b in world.all_entities_in_rect(collider_rect, cond=lambda _e: _e.is_block()):
+            if b.is_frame_of_reference_child_of(ent):
+                # you can't really collide with your own children because they'll always move
+                # when you move
+                continue
             for b_collider in b.all_colliders(solid=True):
                 if collider.is_colliding_with(xy, b_collider, b.get_xy()):
                     return True
