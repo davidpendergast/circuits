@@ -1,5 +1,6 @@
 
 import typing
+import collections
 
 import configs
 import src.utils.util as util
@@ -21,7 +22,7 @@ class World:
 
         self._game_state = None
 
-        self._sensor_states = {}  # sensor_id -> list of entities
+        self._sensor_states = {}  # sensor_id -> OrderedDict of entities
 
         # regular hashing
         self._ent_id_to_ent = {}  # ent_id -> entity
@@ -273,7 +274,7 @@ class World:
             self._sensor_states.update(new_sensor_states)
 
         for dyna in dyna_ents:
-            dyna.update_frame_of_reference_parent()
+            dyna.update_frame_of_reference_parents()
 
         if len(self.safe_zones) > 0 or len(self.kill_zones) > 0:
             if entities.ACTOR_GROUP in phys_groups:
@@ -423,6 +424,9 @@ class CollisionResolver:
             raw_requested_next_positions[ent] = ent.calc_next_xy(raw=True)
 
             next_positions[ent] = requested_next_positions[ent]
+
+        # solve collisions from the bottom up
+        dyna_ents.sort(reverse=False, key=lambda e: start_positions[e][1])
 
         CollisionResolver._solve_all_collisions(world, dyna_ents, start_positions, next_positions)
 
@@ -592,7 +596,7 @@ class CollisionResolver:
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             for c in ent.all_colliders(sensor=True):
-                c_state = []
+                c_state = collections.OrderedDict()
                 c_rect = c.get_rect(offs=ent_xy)
                 cares_about_blocks = c.collides_with_masks((entities.CollisionMasks.BLOCK,
                                                             entities.CollisionMasks.SLOPE_BLOCK_HORZ,
@@ -604,7 +608,7 @@ class CollisionResolver:
                                                                      or (cares_about_actors and _e.is_actor()))
                                                                      or (cares_about_breaking and _e.is_breaking())):
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders()):
-                        c_state.append(b)
+                        c_state[b] = None
 
                 res[c.get_id()] = c_state
 
@@ -640,10 +644,10 @@ class CollisionResolver:
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             for c in ent.all_colliders(sensor=True):
-                c_state = [] if c.get_id() not in res else res[c.get_id()]
+                c_state = collections.OrderedDict() if c.get_id() not in res else res[c.get_id()]
                 c_rect = c.get_rect(offs=ent_xy)
                 for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
-                        c_state.append(b)
+                        c_state[b] = None
                 res[c.get_id()] = c_state
 

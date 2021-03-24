@@ -71,7 +71,7 @@ class Entity:
 
         self._colliders = []
 
-        self._frame_of_reference_parent = None
+        self._frame_of_reference_parents = []
         self._frame_of_reference_parent_do_horz = True
         self._frame_of_reference_parent_do_vert = True
         self._frame_of_reference_children = []
@@ -149,6 +149,9 @@ class Entity:
                 if child_dx == 0 and child_dy == 0:
                     continue
                 else:
+                    child_dx /= len(child._frame_of_reference_parents)
+                    child_dy /= len(child._frame_of_reference_parents)
+
                     if child_dx == 0:
                         child.set_y(child.get_y(raw=True) + child_dy, update_frame_of_reference=True)
                     elif child_dy == 0:
@@ -178,33 +181,40 @@ class Entity:
     def get_physics_group(self):
         return UNKNOWN_GROUP
 
-    def set_frame_of_reference_parent(self, parent, horz=True, vert=True):
-        if parent is not None and parent.is_frame_of_reference_child_of(self):
-            print("WARN: attempted to create circular frame of reference chain from "
-                             "parent ({}) to child ({}), skipping".format(parent, self))
-            return
+    def set_frame_of_reference_parents(self, parents, horz=True, vert=True):
+        parents = [] if parents is None else util.listify(parents)
+        for p in parents:
+            if p is not None and p.is_frame_of_reference_child_of(self):
+                print("WARN: attempted to create circular frame of reference chain from "
+                             "parent ({}) to child ({}), skipping".format(p, self))
+                return
 
         self._frame_of_reference_parent_do_horz = horz
         self._frame_of_reference_parent_do_vert = vert
 
-        if parent == self._frame_of_reference_parent:
+        if parents == self._frame_of_reference_parents:
             return
-        if self._frame_of_reference_parent is not None:
-            if self in self._frame_of_reference_parent._frame_of_reference_children:  # family germs
-                self._frame_of_reference_parent._frame_of_reference_children.remove(self)
-        self._frame_of_reference_parent = parent
-        if parent is not None:
-            self._frame_of_reference_parent._frame_of_reference_children.append(self)
+        if len(self._frame_of_reference_parents) > 0:
+            for p in self._frame_of_reference_parents:
+                if self in p._frame_of_reference_children:  # family germs
+                    p._frame_of_reference_children.remove(self)
+
+        self._frame_of_reference_parents = []
+        for p in parents:
+            self._frame_of_reference_parents.append(p)
+            p._frame_of_reference_children.append(self)
 
     def is_frame_of_reference_child_of(self, other, max_depth=-1):
-        parent = self._frame_of_reference_parent
-        i = max_depth
-        while i != 0 and parent is not None:
+        if max_depth == 0:
+            return False
+        for p in self._frame_of_reference_parents:
+            parent = p
             if other == parent:
                 return True
             else:
-                i -= 1
-                parent = parent._frame_of_reference_parent
+                if parent.is_frame_of_reference_child_of(other, max_depth=max_depth-1):
+                    return True
+        return False
 
     def get_x(self, raw=False):
         return self.get_xy(raw=raw)[0]
@@ -261,7 +271,7 @@ class Entity:
     def update_sprites(self):
         pass
 
-    def update_frame_of_reference_parent(self):
+    def update_frame_of_reference_parents(self):
         pass
 
     def all_colliders(self, solid=None, sensor=None, enabled=True) -> typing.Iterable['PolygonCollider']:
@@ -618,13 +628,10 @@ class PushableBlockEntity(BlockEntity):
     def all_sub_entities(self):
         yield self._sensor_ent
 
-    def update_frame_of_reference_parent(self):
+    def update_frame_of_reference_parents(self):
         blocks_upon = self.get_world().get_sensor_state(self.ground_sensor_id)
-        best_upon, _ = choose_best_frame_of_reference(self, blocks_upon, self.ground_sensor)
-        if best_upon is not None:
-            self.set_frame_of_reference_parent(best_upon, horz=False, vert=True)
-        else:
-            self.set_frame_of_reference_parent(None)
+        best_upon, _ = choose_best_frames_of_reference(self, blocks_upon, self.ground_sensor, max_n=5)
+        self.set_frame_of_reference_parents(best_upon, horz=False, vert=True)
 
     def _adjust_colliders_for_breaking(self, breaking):
         self._is_currently_breaking = breaking
@@ -662,7 +669,7 @@ class PushableBlockEntity(BlockEntity):
 
     def was_crushed(self):
         print("INFO: pushable block was crushed: {}".format(self))
-        # self.get_world().remove_entity(self)
+        self.get_world().remove_entity(self)
 
     def get_main_model(self):
         if self._art_id is not None:
@@ -681,7 +688,7 @@ class SensorEntity(Entity):
 
         if self.parent is not None:
             self.set_xy((self.parent.get_x() + rect[0], self.parent.get_y() + rect[1]))
-            self.set_frame_of_reference_parent(self.parent)
+            self.set_frame_of_reference_parents(self.parent)
         else:
             self.set_xy((rect[0], rect[1]))
 
@@ -1318,29 +1325,43 @@ class PlaybackPlayerController(PlayerController):
         return False
 
 
-def choose_best_frame_of_reference(entity, candidate_list, sensor):
+def choose_best_frames_of_reference(entity, candidate_list, sensor, max_n=1):
+    """
+    :param entity:
+    :param candidate_list:
+    :param sensor:
+    :param max_n:
+    :return: tuple (list of best FORs, map: Entity -> int overlap amount)
+    """
+
     if len(candidate_list) == 0:
-        return None, None
+        return [], {}
     elif len(candidate_list) == 1:
-        return candidate_list[0]
+        return candidate_list, {candidate_list[0]: 1}
     else:
+        candidate_list = list(candidate_list)
         candidate_list.sort(key=lambda b: b.get_rect())  # for consistency
-        # figure out which one we're on more
+
+        overlaps = {}
+
+        # figure out which ones we're on most
         xy = entity.get_xy(raw=False)
         collider_rect = sensor.get_rect(xy)
-        max_overlap = -1
-        max_overlap_block = None
         for block in candidate_list:
             for block_collider in block.all_colliders():
                 block_collider_rect = block_collider.get_rect(block.get_xy(raw=False))
                 overlap_rect = util.get_rect_intersect(collider_rect, block_collider_rect)
                 if overlap_rect is None:
-                    continue  # ??
-                elif overlap_rect[2] * overlap_rect[3] > max_overlap:
-                    max_overlap = overlap_rect[2] * overlap_rect[3]
-                    max_overlap_block = block
+                    overlaps[block] = -1
+                else:
+                    overlaps[block] = overlap_rect[2] * overlap_rect[3]
 
-        return max_overlap_block, max_overlap
+        candidate_list = [c for c in candidate_list if overlaps[c] > 0]
+        candidate_list.sort(reverse=True, key=lambda b: overlaps[b])
+        if max_n < len(candidate_list):
+            return candidate_list[:max_n], overlaps
+        else:
+            return candidate_list, overlaps
 
 
 class PlayerEntity(Entity):
@@ -1756,32 +1777,31 @@ class PlayerEntity(Entity):
             new_particle = PlayerBodyPartParticle(self.get_x(), self.get_y(), self.get_player_type().get_id(), part_idx)
             self.get_world().add_entity(new_particle)
 
-    def update_frame_of_reference_parent(self):
+    def update_frame_of_reference_parents(self):
         # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
         # TODO touching your toe as you're (mostly) standing on a slop
         blocks_upon = self.get_world().get_sensor_state(self.foot_sensor_id)
-        best_upon, _ = choose_best_frame_of_reference(self, blocks_upon, self.foot_sensor)
-        if best_upon is not None:
-            self.set_frame_of_reference_parent(best_upon)
-            return
-
-        blocks_on_left = self.get_world().get_sensor_state(self.left_sensor_id)
-        blocks_on_right = self.get_world().get_sensor_state(self.right_sensor_id)
-
-        best_on_left, left_overlap = choose_best_frame_of_reference(self, blocks_on_left, self.left_sensor)
-        best_on_right, right_overlap = choose_best_frame_of_reference(self, blocks_on_right, self.right_sensor)
-
-        if best_on_left is not None and best_on_right is not None:
-            if left_overlap <= right_overlap:
-                self.set_frame_of_reference_parent(best_on_left, vert=False)
-            else:
-                self.set_frame_of_reference_parent(best_on_right, vert=False)
-        elif best_on_left is not None:
-            self.set_frame_of_reference_parent(best_on_left, vert=False)
-        elif best_on_right is not None:
-            self.set_frame_of_reference_parent(best_on_right, vert=False)
+        best_upon, _ = choose_best_frames_of_reference(self, blocks_upon, self.foot_sensor, max_n=1)
+        if len(best_upon) > 0:
+            self.set_frame_of_reference_parents(best_upon)
         else:
-            self.set_frame_of_reference_parent(None)
+            blocks_on_left = self.get_world().get_sensor_state(self.left_sensor_id)
+            blocks_on_right = self.get_world().get_sensor_state(self.right_sensor_id)
+
+            best_on_left, left_overlaps = choose_best_frames_of_reference(self, blocks_on_left, self.left_sensor, max_n=1)
+            best_on_right, right_overlaps = choose_best_frames_of_reference(self, blocks_on_right, self.right_sensor, max_n=1)
+
+            if len(best_on_left) > 0 and len(best_on_right) > 0:
+                if left_overlaps[best_on_left[0]] <= right_overlaps[best_on_right[0]]:
+                    self.set_frame_of_reference_parents(best_on_left[0], vert=False)
+                else:
+                    self.set_frame_of_reference_parents(best_on_right[0], vert=False)
+            elif len(best_on_left) > 0:
+                self.set_frame_of_reference_parents(best_on_left[0], vert=False)
+            elif len(best_on_right) > 0:
+                self.set_frame_of_reference_parents(best_on_right[0], vert=False)
+            else:
+                self.set_frame_of_reference_parents([])
 
     def get_debug_color(self):
         return colors.PERFECT_BLUE
