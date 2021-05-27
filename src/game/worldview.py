@@ -9,6 +9,7 @@ import src.engine.sprites as sprites
 import src.game.globalstate as gs
 import src.game.spriteref as spriteref
 import src.game.colors as colors
+import src.game.const as const
 
 
 class WorldView:
@@ -57,6 +58,10 @@ class WorldView:
                 self._world.constrain_camera(self)
 
         cam_x, cam_y = self.get_camera_pos_in_world()
+
+        # update the sprites of entities near the camera
+        for ent in self.get_entities_to_render_this_frame():
+            ent.update_sprites()
 
         self._update_grid_line_sprites()
 
@@ -118,10 +123,19 @@ class WorldView:
         xy = self.get_camera_pos_in_world()
         return (xy[0] + size[0] // 2, xy[1] + size[1] // 2)
 
-    def get_camera_rect_in_world(self, integer=True):
+    def get_camera_rect_in_world(self, integer=True, expansion=0):
         xy = self.get_camera_pos_in_world()
         size = self.get_camera_size_in_world(integer=integer)
-        return [xy[0], xy[1], size[0], size[1]]
+        return [xy[0] - expansion,
+                xy[1] - expansion,
+                size[0] + expansion * 2,
+                size[1] + expansion * 2]
+
+    def get_entities_to_render_this_frame(self):
+        buffer_zone = gs.get_instance().cell_size * 4
+        render_zone = self.get_camera_rect_in_world(integer=True, expansion=buffer_zone)
+        for ent in self._world.all_entities_in_rect(render_zone):
+            yield ent
 
     def screen_pos_to_world_pos(self, screen_xy):
         if screen_xy is None:
@@ -170,7 +184,7 @@ class WorldView:
             self._grid_line_sprites.clear()
 
     def all_sprites(self):
-        for ent in self._world.entities:
+        for ent in self.get_entities_to_render_this_frame():
             if gs.get_instance().debug_render:
                 for spr in ent.all_debug_sprites():
                     yield spr

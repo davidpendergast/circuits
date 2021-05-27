@@ -12,6 +12,8 @@ import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
 import src.game.playertypes as playertypes
 
+import random
+
 
 class World:
 
@@ -314,12 +316,10 @@ class World:
                                             [xy[0] - radius, xy[1] - radius, radius * 2, radius * 2],
                                             (xy, radius, color, strength))
 
-        for ent in self.entities:
-            ent.update_sprites()
-
-            # TODO kinda weird to do this here?
-            if ent.is_player():
-                ent.handle_death_if_necessary()
+        if entities.ACTOR_GROUP in phys_groups:
+            for ent in phys_groups[entities.ACTOR_GROUP]:
+                if ent.is_player():
+                    ent.handle_death_if_necessary()
 
         if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
             self._tick += 1
