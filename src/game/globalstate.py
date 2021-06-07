@@ -1,4 +1,5 @@
 import src.engine.globaltimer as globaltimer
+import src.game.dialog as dialog
 
 
 class SaveAndLoadJsonBlob:

@@ -31,7 +31,17 @@ class Scene:
     def all_sprites(self):
         raise NotImplementedError()
 
+    def update_sprites(self):
+        """Creates and/or updates the sprites in the scene.
+            This method is optional and intended for scenes that want to implement a pause mode (where
+            logical updates stop but sprite updates (e.g. animations) continue). Scenes that don't require a pause
+            function may instead update their sprites in update(). Under *no* circumstances should update() call this
+            method (if update() calls this method, it will be called twice per frame).
+        """
+        pass
+
     def update(self):
+        """Performs the "logic update" for the scene."""
         raise NotImplementedError()
 
     def became_active(self):
@@ -81,4 +91,5 @@ class SceneManager:
                 self._next_scene_delay -= 1
 
         self._active_scene.update()
+        self._active_scene.update_sprites()
 

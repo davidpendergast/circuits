@@ -27,6 +27,7 @@ import src.game.worlds as worlds
 import src.engine.threedee as threedee
 import src.engine.threedeecine as threedeecine
 import src.game.cinematics as cinematics
+import src.game.dialog as dialog
 
 class MainMenuScene(scenes.Scene):
 
@@ -353,7 +354,7 @@ class IntroCutsceneScene(CutsceneScene):
 
 class _BaseGameScene(scenes.Scene):
 
-    def __init__(self, bp=None):
+    def __init__(self):
         scenes.Scene.__init__(self)
 
         self._world = None
@@ -376,14 +377,17 @@ class _BaseGameScene(scenes.Scene):
         return self._world_view
 
     def update_world_and_view(self):
-        if self._world is not None:
-            self._world.update()
+        pass
+
+    def update_sprites(self):
         if self._world_view is not None:
             self._world_view.update()
 
     def update(self):
-        self.update_world_and_view()
+        if self._world is not None:
+            self._world.update()
 
+        # TODO why process inputs *after* updating world? because it never matters...?
         if inputs.get_instance().mouse_in_window():
             screen_pos = inputs.get_instance().mouse_pos()
             pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
@@ -442,6 +446,8 @@ class Statuses:
     PARTIAL_SUCCESS = Status("partial_success", False, True, True, is_success=True)
     TOTAL_SUCCESS = Status("success", False, True, True, is_success=True)
     EXIT_NOW_SUCCESSFULLY = Status("exit_success", False, False, False, is_success=True)
+
+    DIALOG = Status("dialog", False, False, False, world_ticks_inc=False, is_success=False)
 
 
 class _GameState:
@@ -716,7 +722,7 @@ class ProgressBarUi(ui.UiElement):
         yield self.bar_sprite
 
 
-class RealGameScene(_BaseGameScene):
+class RealGameScene(_BaseGameScene, dialog.DialogScene):
 
     def __init__(self, bp, on_level_completion, on_level_exit):
         """
@@ -726,7 +732,8 @@ class RealGameScene(_BaseGameScene):
         """
         self._state = _GameState(bp)
 
-        _BaseGameScene.__init__(self, bp=bp)
+        _BaseGameScene.__init__(self)
+        dialog.DialogScene.__init__(self)
 
         self._on_level_completion = on_level_completion
         self._on_level_exit = on_level_exit
@@ -741,12 +748,6 @@ class RealGameScene(_BaseGameScene):
         self._queued_next_world = None
         self._next_world_countdown = 0
 
-    def update_world_and_view(self):
-        if self._world is not None:
-            self._world.update()
-        if self._world_view is not None:
-            self._world_view.update()
-
     def on_level_complete(self, time):
         if self._on_level_completion is not None:
             self._on_level_completion(time)
@@ -755,7 +756,14 @@ class RealGameScene(_BaseGameScene):
         if self._on_level_exit is not None:
             self._on_level_exit()
 
+    def update_sprites(self):
+        super().update_sprites()
+        self._update_ui()
+
     def update(self):
+        dialog.DialogScene.update(self)  # babby's first attempt at multiple inheritance
+
+    def update_impl(self):
         if self._queued_next_world is not None:
             if self._next_world_countdown <= 0:
                 bp, new_status, runnable = self._queued_next_world
@@ -774,7 +782,7 @@ class RealGameScene(_BaseGameScene):
         elif self._state.get_status() == Statuses.EXIT_NOW_SUCCESSFULLY:
             self._on_level_completion(self._state.get_elapsed_ticks())
 
-        super().update()
+        _BaseGameScene.update(self)
 
         self._state.update(self.get_world())
 
@@ -812,8 +820,6 @@ class RealGameScene(_BaseGameScene):
                                                     runnable=lambda: self._state.active_player_succeeded(recording))
                 else:
                     print("WARN: active player is satisfied but has no recording. hopefully we're in dev mode?")
-
-        self._update_ui()
 
     def replace_players_with_fadeout(self, delay=60):
         for i in range(0, self._state.get_active_player_idx() + 1):

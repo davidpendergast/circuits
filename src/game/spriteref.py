@@ -129,6 +129,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             const.PLAYER_FLYING: [],
         }
 
+        self.speaker_portraits = {}
+
         self.thin_block_broken_pieces_horz = []
         self.thin_block_broken_pieces_vert = []
 
@@ -194,6 +196,12 @@ class _ObjectSheet(spritesheets.SpriteSheet):
                 return self.get_player_sprites(player_id, player_state.get_fallback())
             else:
                 return []  # no sprites exist, apparently
+
+    def get_speaker_portrait_sprites(self, speaker_id):
+        if speaker_id in self.speaker_portraits:
+            return self.speaker_portraits[speaker_id]
+        else:
+            return []
 
     def get_goal_arrow(self, player_id, alpha=1):
         return util.index_into(self.goal_arrows[player_id], alpha)
@@ -269,6 +277,12 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_broken_pieces[const.PLAYER_SMALL] = self._handle_rotated_player_pieces([624, 32, 8, 8], 7, 8, atlas, start_pos)
         self.player_broken_pieces[const.PLAYER_HEAVY] = self._handle_rotated_player_pieces([624, 64, 8, 8], 8, 8, atlas, start_pos)
         self.player_broken_pieces[const.PLAYER_FLYING] = self._handle_rotated_player_pieces([624, 96, 8, 8], 6, 8, atlas, start_pos)
+
+        self.speaker_portraits[const.PLAYER_FAST] = [_img(176, 392 + i * 32, 24, 32) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_SMALL] = [_img(176 + 24, 392 + i * 32, 24, 32) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_HEAVY] = [_img(176 + 24 * 2, 392 + i * 32, 24, 32) for i in range(0, 2)]
+        player_d_portrait_width = 25  # needed another pixel, sue me~
+        self.speaker_portraits[const.PLAYER_FLYING] = [_img(176 + 24 * 3, 392 + i * 32, player_d_portrait_width, 32) for i in range(0, 2)]
 
         temp = self._handle_rotated_player_pieces([624, 128, 8, 8], 2, 8, atlas, start_pos)
         self.thin_block_broken_pieces_horz = temp[0]
