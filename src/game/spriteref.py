@@ -278,11 +278,11 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_broken_pieces[const.PLAYER_HEAVY] = self._handle_rotated_player_pieces([624, 64, 8, 8], 8, 8, atlas, start_pos)
         self.player_broken_pieces[const.PLAYER_FLYING] = self._handle_rotated_player_pieces([624, 96, 8, 8], 6, 8, atlas, start_pos)
 
-        self.speaker_portraits[const.PLAYER_FAST] = [_img(176, 392 + i * 32, 24, 32) for i in range(0, 2)]
-        self.speaker_portraits[const.PLAYER_SMALL] = [_img(176 + 24, 392 + i * 32, 24, 32) for i in range(0, 2)]
-        self.speaker_portraits[const.PLAYER_HEAVY] = [_img(176 + 24 * 2, 392 + i * 32, 24, 32) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_FAST] = [_img(176, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_SMALL] = [_img(176 + 24, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_HEAVY] = [_img(176 + 24 * 2, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
         player_d_portrait_width = 25  # needed another pixel, sue me~
-        self.speaker_portraits[const.PLAYER_FLYING] = [_img(176 + 24 * 3, 392 + i * 32, player_d_portrait_width, 32) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_FLYING] = [_img(176 + 24 * 3, 392 + i * 32, player_d_portrait_width, 32, offs=start_pos) for i in range(0, 2)]
 
         temp = self._handle_rotated_player_pieces([624, 128, 8, 8], 2, 8, atlas, start_pos)
         self.thin_block_broken_pieces_horz = temp[0]
@@ -527,6 +527,9 @@ class _UiSheet(spritesheets.SpriteSheet):
         self._character_card_animations = {}    # (boolean first, boolean: last) -> list of ImageModel
         self._character_card_anim_done = None
 
+        self.translucent_squares = []
+        self.translucent_pixels = []
+
     def get_size(self, img_size):
         size = super().get_size(img_size)
         bar_size = _UiSheet.N_PROGRESS_BARS * 6
@@ -575,6 +578,8 @@ class _UiSheet(spritesheets.SpriteSheet):
                              decay_chance_provider=lambda frm_idx, xy: 0.1 - (0.08 * frm_idx / n_frames))
         for r in rects_drawn:
             self.top_panel_progress_bars.append(_img(r[0], r[1], r[2], r[3], offs=(0, 0)))
+
+
 
     def get_character_card_sprite(self, player_type, is_first):
         return self._character_cards[(player_type.get_id(), is_first)]

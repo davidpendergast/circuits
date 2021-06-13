@@ -77,8 +77,13 @@ class InputState:
             return any(map(lambda k: self.is_held(k), key))
         elif isinstance(key, keybinds.Binding):
             return key.is_held(self)
-        else:
+        elif isinstance(key, int):
             return key in self._held_keys
+        elif isinstance(key, str):
+            binding = keybinds.get_instance().get_binding(key)
+            return binding is not None and binding.is_held(self)
+        else:
+            raise ValueError("Unrecognized key type: {}".format(key))
     
     def time_held(self, key):
         """:param key - Binding, single key, or list of keys"""
@@ -86,24 +91,34 @@ class InputState:
             return max(map(lambda k: self.time_held(k), key))
         elif isinstance(key, keybinds.Binding):
             return key.time_held(self)
-        else:
+        elif isinstance(key, int):
             if key not in self._held_keys:
                 return -1
             else:
                 return self._current_time - self._held_keys[key]
+        elif isinstance(key, str):
+            binding = keybinds.get_instance().get_binding(key)
+            return binding is not None and binding.time_held(self)
+        else:
+            raise ValueError("Unrecognized key type: {}".format(key))
 
     def was_pressed(self, key):
-        """:param key - Binding, single key, or list of keys"""
+        """:param key - Binding, single key, the id of a binding, or a list/tuple of any of these"""
         if isinstance(key, list) or isinstance(key, tuple):
             for k in key:
-                if k in self._pressed_this_frame and self._pressed_this_frame[k] > 0:
+                if self.was_pressed(k):
                     return True
             return False
         elif isinstance(key, keybinds.Binding):
             return key.was_pressed(self)
-        else:
+        elif isinstance(key, int):
             # it's a single key, hopefully
             return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0
+        elif isinstance(key, str):
+            binding = keybinds.get_instance().get_binding(key)
+            return binding is not None and binding.was_pressed(self)
+        else:
+            raise ValueError("Unrecognized key type: {}".format(key))
 
     def was_pressed_or_held_and_repeated(self, key, delay=configs.key_repeat_delay, freq=configs.key_repeat_period):
         if self.was_pressed(key):

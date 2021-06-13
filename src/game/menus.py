@@ -732,6 +732,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         """
         self._state = _GameState(bp)
 
+        # babby's first attempt at multiple inheritance
         _BaseGameScene.__init__(self)
         dialog.DialogScene.__init__(self)
 
@@ -757,11 +758,12 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
             self._on_level_exit()
 
     def update_sprites(self):
-        super().update_sprites()
+        _BaseGameScene.update_sprites(self)
+        dialog.DialogScene.update_sprites(self)
         self._update_ui()
 
     def update(self):
-        dialog.DialogScene.update(self)  # babby's first attempt at multiple inheritance
+        dialog.DialogScene.update(self)
 
     def update_impl(self):
         if self._queued_next_world is not None:
@@ -902,7 +904,9 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         self._progress_bar_ui.update()
 
     def all_sprites(self):
-        for spr in super().all_sprites():
+        for spr in _BaseGameScene.all_sprites(self):
+            yield spr
+        for spr in dialog.DialogScene.all_sprites(self):
             yield spr
         if self._top_panel_ui is not None:
             for spr in self._top_panel_ui.all_sprites():

@@ -351,8 +351,8 @@ class ImageModel:
     def rect(self):
         return self._rect
         
-    def size(self):
-        return (self.w, self.h)
+    def size(self, scale=1):
+        return (self.w * scale, self.h * scale)
         
     def width(self):
         return self.w

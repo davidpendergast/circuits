@@ -33,6 +33,12 @@ class KeyBindings:
             keylist = util.listify(binding)
             self._binds[action_code] = Binding(keylist)
 
+    def get_binding(self, action_code):
+        if action_code in self._binds:
+            return self._binds[action_code]
+        else:
+            return None
+
     def set_global_action(self, key, name, action):
         if action is None:
             if key in self._global_bindings:
