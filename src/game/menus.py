@@ -409,7 +409,6 @@ class _BaseGameScene(scenes.Scene):
             cell_size = gs.get_instance().cell_size
             print("INFO: mouse pressed at ({}, {})".format(int(world_xy[0]) // cell_size,
                                                            int(world_xy[1]) // cell_size))
-
     def all_sprites(self):
         if self._world_view is not None:
             for spr in self._world_view.all_sprites():

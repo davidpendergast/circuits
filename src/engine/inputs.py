@@ -91,7 +91,7 @@ class InputState:
             return max(map(lambda k: self.time_held(k), key))
         elif isinstance(key, keybinds.Binding):
             return key.time_held(self)
-        elif isinstance(key, int):
+        elif isinstance(key, int) or (isinstance(key, str) and key.startswith("MOUSE_BUTTON")):
             if key not in self._held_keys:
                 return -1
             else:
@@ -111,7 +111,7 @@ class InputState:
             return False
         elif isinstance(key, keybinds.Binding):
             return key.was_pressed(self)
-        elif isinstance(key, int):
+        elif isinstance(key, int) or (isinstance(key, str) and key.startswith("MOUSE_BUTTON")):
             # it's a single key, hopefully
             return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0
         elif isinstance(key, str):
