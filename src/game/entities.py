@@ -19,6 +19,7 @@ import src.game.colors as colors
 import src.game.globalstate as gs
 import src.game.const as const
 import src.game.debug as debug
+import src.game.dialog as dialog
 
 
 _ENT_ID = 0
@@ -2331,19 +2332,64 @@ class SpikeEntity(Entity):
             yield spr
 
 
+_ALL_INFO_TYPES = {}
+
+
+class InfoEntityType:
+
+    def __init__(self, ident, turns, sprite_lookup, floating_type=False):
+        self.ident = ident
+        self.faces_player = turns
+        self.sprite_lookup = sprite_lookup
+        self.floating_type = floating_type
+        _ALL_INFO_TYPES[ident] = self
+
+    def get_entity_sprites(self):
+        all_sprites = [] if self.sprite_lookup is None else self.sprite_lookup()
+        if self.floating_type or len(all_sprites) == 0:
+            return all_sprites
+        else:
+            return all_sprites[(gs.get_instance().anim_tick() // 2) % len(all_sprites)]
+
+    def turns_to_face_player(self):
+        return self.faces_player
+
+    def get_id(self):
+        return self.ident
+
+
+class InfoEntityTypes:
+
+    EXCLAM = InfoEntityType("exclam", False, lambda: spriteref.object_sheet().info_exclamation, floating_type=True)
+    QUESTION = InfoEntityType("question", False, lambda: spriteref.object_sheet().info_question, floating_type=True)
+    PLAYER_FAST = InfoEntityType(const.PLAYER_FAST, True, lambda: spriteref.object_sheet().player_a[spriteref.PlayerStates.IDLE])
+    PLAYER_SMALL = InfoEntityType(const.PLAYER_SMALL, True, lambda: spriteref.object_sheet().player_b[spriteref.PlayerStates.IDLE])
+    PLAYER_HEAVY = InfoEntityType(const.PLAYER_HEAVY, True, lambda: spriteref.object_sheet().player_c[spriteref.PlayerStates.IDLE])
+    PLAYER_FLYING = InfoEntityType(const.PLAYER_FLYING, True, lambda: spriteref.object_sheet().player_d[spriteref.PlayerStates.IDLE])
+
+    @staticmethod
+    def get_by_id(ident):
+        if ident in _ALL_INFO_TYPES:
+            return _ALL_INFO_TYPES[ident]
+        else:
+            return InfoEntityTypes.QUESTION
+
+    @staticmethod
+    def all_types():
+        return [_ALL_INFO_TYPES[key] for key in _ALL_INFO_TYPES]
+
+
 class InfoEntity(Entity):
 
-    EXCLAM = "exclam"
-    QUESTION = "question"
-
-    def __init__(self, x, y, points, text, color_id=0, info_type="exclam"):
+    def __init__(self, x, y, points, text, info_type, dialog_id=None, color_id=0):
         cs = gs.get_instance().cell_size
         Entity.__init__(self, x, y, w=cs, h=cs)
         self._points = points
 
         self._text = text
         self._color_id = color_id
-        self._info_type = info_type
+        self._info_type = info_type if isinstance(info_type, InfoEntityType) else InfoEntityTypes.get_by_id(info_type)
+        self._dialog_id = dialog_id
 
         self._base_sprite = None
         self._top_sprite = None
@@ -2351,7 +2397,7 @@ class InfoEntity(Entity):
         self._text_bg_sprite = None
 
         self._activation_radius = 3 * cs // 4
-        self._is_showing = False
+        self._should_show_text = False
 
         self._ticks_overlapping_player = 0
         self._activation_thresh = 10
@@ -2359,51 +2405,13 @@ class InfoEntity(Entity):
         self._point_sprite_list_for_editor = []
 
     def _get_sprites(self):
-        """returns: (top_sprite, base_sprite)"""
-        if self._info_type == InfoEntity.EXCLAM:
-            return spriteref.object_sheet().info_exclamation
-        elif self._info_type == InfoEntity.QUESTION:
-            return spriteref.object_sheet().info_question
+        """returns: (top_sprite, base_sprite) or [sprite]"""
+        return self._info_type.get_entity_sprites()
 
     def get_color_id(self):
         return self._color_id
 
-    def update(self):
-        self._ticks_overlapping_player = max(0, self._ticks_overlapping_player - 1)
-
-        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprite_list_for_editor,
-                                         self._points, (8, 8))
-
-        w = self.get_world()
-        if w is not None:
-            p = w.get_player(must_be_active=True)
-            if p is not None:
-                if util.dist(p.get_center(), self.get_center()) <= self._activation_radius:
-                    self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
-
-        self._is_showing = self._ticks_overlapping_player >= self._activation_thresh
-
-        if len(self._points) == 0:
-            pt = self.get_xy()
-        else:
-            pt = self._points[0]
-
-        if not self._is_showing:
-            self._text_sprite = None
-            self._text_bg_sprite = None
-        else:
-            if self._text_sprite is None:
-                self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, self._text, depth=WORLD_UI_DEPTH,
-                                                       font_lookup=spriteref.spritesheets.get_default_font(small=True))
-                self._text_sprite.update(new_x=pt[0], new_y=pt[1], new_text=self._text)
-
-            text_rect = self._text_sprite.get_rect()
-            bg_rect = util.rect_expand(text_rect, all_expand=0)
-            if self._text_bg_sprite is None:
-                self._text_bg_sprite = sprites.BorderBoxSprite(spriteref.ENTITY_LAYER, bg_rect,
-                                                               all_borders=spriteref.overworld_sheet().border_thin)
-            self._text_bg_sprite.update(new_rect=bg_rect)
-
+    def update_sprites(self):
         top_model, base_model = self._get_sprites()
         if self._base_sprite is None:
             self._base_sprite = sprites.ImageSprite(base_model, 0, 0, spriteref.ENTITY_LAYER)
@@ -2423,6 +2431,51 @@ class InfoEntity(Entity):
                                                    new_y=bot_y - base_model.height() - cs // 8 - top_model.height(),
                                                    new_depth=PLAYER_DEPTH + 1,
                                                    new_color=self.get_color())
+
+    def update(self):
+        self._ticks_overlapping_player = max(0, self._ticks_overlapping_player - 1)
+
+        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprite_list_for_editor,
+                                         self._points, (8, 8))
+
+        w = self.get_world()
+        p = None if w is None else w.get_player(must_be_active=True)
+
+        overlapping = False
+        if p is not None:
+            overlapping = util.dist(p.get_center(), self.get_center()) <= self._activation_radius
+            if overlapping:
+                self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
+
+        self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh
+
+        if overlapping and self._should_show_text and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+            d = dialog.get_dialog(self._dialog_id, p.get_player_type())
+            if d is not None:
+                import src.engine.scenes as scenes
+                active_scene = scenes.get_instance().get_active_scene()
+                if isinstance(active_scene, dialog.DialogScene):
+                    active_scene.start_dialog(d)
+
+        if not self._should_show_text or (w is not None and w.is_dialog_active()):
+            self._text_sprite = None
+            self._text_bg_sprite = None
+        else:
+            if self._text_sprite is None:
+                self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, self._text, depth=WORLD_UI_DEPTH,
+                                                       font_lookup=spriteref.spritesheets.get_default_font(small=True))
+            if len(self._points) == 0:
+                pt = self.get_xy()
+            else:
+                pt = self._points[0]
+            self._text_sprite.update(new_x=pt[0], new_y=pt[1], new_text=self._text)
+
+            text_rect = self._text_sprite.get_rect()
+            bg_rect = util.rect_expand(text_rect, all_expand=0)
+            if self._text_bg_sprite is None:
+                self._text_bg_sprite = sprites.BorderBoxSprite(spriteref.ENTITY_LAYER, bg_rect,
+                                                               all_borders=spriteref.overworld_sheet().border_thin)
+            self._text_bg_sprite.update(new_rect=bg_rect)
 
     def all_sprites(self):
         yield self._text_sprite

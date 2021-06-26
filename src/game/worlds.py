@@ -374,6 +374,16 @@ class World:
                     return True
         return False
 
+    def is_dialog_active(self):
+        # TODO very stupid place for this method
+        import src.engine.scenes as scenes
+        import src.game.dialog as dialog
+        active_scene = scenes.get_instance().get_active_scene()
+        if isinstance(active_scene, dialog.DialogScene):
+            return active_scene.is_dialog_active()
+        else:
+            return False
+
     def constrain_camera(self, worldview):
         if self.camera_min_xy[0] is not None:  # this will be none if the level is empty
             cam_rect = worldview.get_camera_rect_in_world()

@@ -39,6 +39,7 @@ Y_DIR = "y_dir"         # int: -1, 0, or 1
 
 INVERTED = "inverted"   # bool
 TEXT = "text"           # str
+DIALOG_ID = "dialog"    # str
 
 
 _ALL_SPEC_TYPES = {}
@@ -408,7 +409,7 @@ class InfoSpecType(SpecType):
                           optional_keys={COLOR_ID: 0})
 
     def get_subtypes(self):
-        return ["exclam", "question"]
+        return [info_type.ident for info_type in entities.InfoEntityTypes.all_types()]
 
     def get_default_value(self, k):
         if k == TEXT:
@@ -424,7 +425,35 @@ class InfoSpecType(SpecType):
         points = json_blob[POINTS]
         color_id = json_blob[COLOR_ID]
 
-        yield entities.InfoEntity(x, y, points, text, color_id=color_id, info_type=subtype)
+        yield entities.InfoEntity(x, y, points, text, subtype, color_id=color_id)
+
+
+class DialogTriggerSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "dialog", required_keys=(SUBTYPE_ID, X, Y, W, H, DIALOG_ID, POINTS),
+                          optional_keys=(TEXT))
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 32
+        elif k == TEXT:
+            return "Press [{KEY}] to talk."
+        else:
+            return super().get_default_value(k)
+
+    def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        text = json_blob[TEXT].replace("{KEY}", "Enter")  # TODO get real keybinding value
+        points = json_blob[POINTS]
+        dialog_id = json_blob[DIALOG_ID]
+
+        yield entities.DialogTriggerEntity(x, y, w, h, dialog_id, text=text, points=points)
 
 
 class DoorBlockSpecType(SpecType):
@@ -577,6 +606,7 @@ class SpecTypes:
     SPIKES = SpikeSpecType()
     INFO = InfoSpecType()
     PUSHABLE_BLOCK = PushableBlockSpecType()
+    DIALOG_TRIGGER = DialogTriggerSpecType()
 
     DOOR_BLOCK = DoorBlockSpecType()
     KEY_BLOCK = KeySpecType()

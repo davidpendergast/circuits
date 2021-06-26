@@ -238,6 +238,11 @@ class DialogScene(scenes.Scene):
 def get_test_dialog():
     return link(DialogFragment("Here's some test text.", speaker=Speaker.A),
                 DialogFragment("And here's a test reply.", speaker=Speaker.B),
-                DialogFragment("Dialog adds a lot of life to a game, don't you think? I'm just going to add a bit more text here to extend the length to make it wrap. The Glitch Mob is a great band don't you think?", speaker=Speaker.C),
+                DialogFragment("Dialog adds a lot of life to a game, don't you think? I'm just going to add a bit more "
+                               "text here to extend the length to make it wrap. The Glitch Mob is a great band don't you think?", speaker=Speaker.C),
                 DialogFragment("Life?", speaker=Speaker.D),
                 DialogFragment("Err... life-mimicking CPU cycles, I mean.", speaker=Speaker.C))
+
+
+def get_dialog(dialog_id, player_type):
+    return get_test_dialog()
