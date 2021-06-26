@@ -406,7 +406,7 @@ class InfoSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "info", required_keys=(SUBTYPE_ID, X, Y, TEXT, POINTS),
-                          optional_keys={COLOR_ID: 0})
+                          optional_keys={COLOR_ID: 0, DIALOG_ID: ""})
 
     def get_subtypes(self):
         return [info_type.ident for info_type in entities.InfoEntityTypes.all_types()]
@@ -424,8 +424,9 @@ class InfoSpecType(SpecType):
         text = json_blob[TEXT]
         points = json_blob[POINTS]
         color_id = json_blob[COLOR_ID]
+        dialog_id = json_blob[DIALOG_ID]
 
-        yield entities.InfoEntity(x, y, points, text, subtype, color_id=color_id)
+        yield entities.InfoEntity(x, y, points, text, subtype, color_id=color_id, dialog_id=dialog_id)
 
 
 class DialogTriggerSpecType(SpecType):

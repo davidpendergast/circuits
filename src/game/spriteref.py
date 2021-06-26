@@ -354,8 +354,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.spike_bottoms_8 = _img(32, 392, 32, 8, offs=start_pos)
         self.all_spike_bottoms = [self.spike_bottoms_1, self.spike_bottoms_2, self.spike_bottoms_4, self.spike_bottoms_8]
 
-        self.info_exclamation = (_img(160, 416, 8, 16, offs=start_pos), _img(160, 438, 8, 2, offs=start_pos))
-        self.info_question = (_img(168, 416, 8, 16, offs=start_pos), _img(168, 438, 8, 2, offs=start_pos))
+        self.info_exclamation = (_img(160, 438, 8, 2, offs=start_pos), _img(160, 416, 8, 16, offs=start_pos))
+        self.info_question = ( _img(168, 438, 8, 2, offs=start_pos), _img(168, 416, 8, 16, offs=start_pos))
 
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
         all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms

@@ -2349,7 +2349,7 @@ class InfoEntityType:
         if self.floating_type or len(all_sprites) == 0:
             return all_sprites
         else:
-            return all_sprites[(gs.get_instance().anim_tick() // 2) % len(all_sprites)]
+            return [all_sprites[(gs.get_instance().anim_tick() // 8) % len(all_sprites)]]
 
     def turns_to_face_player(self):
         return self.faces_player
@@ -2362,7 +2362,7 @@ class InfoEntityTypes:
 
     EXCLAM = InfoEntityType("exclam", False, lambda: spriteref.object_sheet().info_exclamation, floating_type=True)
     QUESTION = InfoEntityType("question", False, lambda: spriteref.object_sheet().info_question, floating_type=True)
-    PLAYER_FAST = InfoEntityType(const.PLAYER_FAST, True, lambda: spriteref.object_sheet().player_a[spriteref.PlayerStates.IDLE])
+    PLAYER_FAST = InfoEntityType(const.PLAYER_FAST, True, lambda: spriteref.object_sheet().get_player_sprites(const.PLAYER_FAST, spriteref.PlayerStates.IDLE))
     PLAYER_SMALL = InfoEntityType(const.PLAYER_SMALL, True, lambda: spriteref.object_sheet().player_b[spriteref.PlayerStates.IDLE])
     PLAYER_HEAVY = InfoEntityType(const.PLAYER_HEAVY, True, lambda: spriteref.object_sheet().player_c[spriteref.PlayerStates.IDLE])
     PLAYER_FLYING = InfoEntityType(const.PLAYER_FLYING, True, lambda: spriteref.object_sheet().player_d[spriteref.PlayerStates.IDLE])
@@ -2396,7 +2396,7 @@ class InfoEntity(Entity):
         self._text_sprite = None
         self._text_bg_sprite = None
 
-        self._activation_radius = 3 * cs // 4
+        self._activation_radius = 8 * cs // 4
         self._should_show_text = False
 
         self._ticks_overlapping_player = 0
@@ -2412,50 +2412,41 @@ class InfoEntity(Entity):
         return self._color_id
 
     def update_sprites(self):
-        top_model, base_model = self._get_sprites()
-        if self._base_sprite is None:
-            self._base_sprite = sprites.ImageSprite(base_model, 0, 0, spriteref.ENTITY_LAYER)
-        cx = self.get_center()[0]
-        bot_y = self.get_y() + self.get_h()
-        self._base_sprite = self._base_sprite.update(new_model=base_model,
-                                                     new_x=cx - base_model.width() // 2,
-                                                     new_y=bot_y - base_model.height(),
-                                                     new_depth=PLAYER_DEPTH + 1,
-                                                     new_color=self.get_color())
-
-        cs = gs.get_instance().cell_size
-        if self._top_sprite is None:
-            self._top_sprite = sprites.ImageSprite(top_model, 0, 0, spriteref.ENTITY_LAYER)
-        self._top_sprite = self._top_sprite.update(new_model=top_model,
-                                                   new_x=cx - top_model.width() // 2,
-                                                   new_y=bot_y - base_model.height() - cs // 8 - top_model.height(),
-                                                   new_depth=PLAYER_DEPTH + 1,
-                                                   new_color=self.get_color())
-
-    def update(self):
-        self._ticks_overlapping_player = max(0, self._ticks_overlapping_player - 1)
-
-        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprite_list_for_editor,
-                                         self._points, (8, 8))
+        all_sprites = self._get_sprites()
+        base_model = all_sprites[0] if len(all_sprites) >= 1 else None
+        top_model = all_sprites[1] if len(all_sprites) >= 2 else None
 
         w = self.get_world()
-        p = None if w is None else w.get_player(must_be_active=True)
+        p = None if w is None else w.get_player()
 
-        overlapping = False
-        if p is not None:
-            overlapping = util.dist(p.get_center(), self.get_center()) <= self._activation_radius
-            if overlapping:
-                self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
+        should_xflip = self._info_type.faces_player and (p is not None and p.get_center()[0]  < self.get_center()[0])
 
-        self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh
+        if base_model is None:
+            self._base_sprite = None
+        else:
+            if self._base_sprite is None:
+                self._base_sprite = sprites.ImageSprite(base_model, 0, 0, spriteref.ENTITY_LAYER)
+            cx = self.get_center()[0]
+            bot_y = self.get_y() + self.get_h()
+            self._base_sprite = self._base_sprite.update(new_model=base_model,
+                                                         new_x=cx - base_model.width() // 2,
+                                                         new_y=bot_y - base_model.height(),
+                                                         new_depth=PLAYER_DEPTH + 1,
+                                                         new_color=self.get_color(),
+                                                         new_xflip=should_xflip)
 
-        if overlapping and self._should_show_text and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
-            d = dialog.get_dialog(self._dialog_id, p.get_player_type())
-            if d is not None:
-                import src.engine.scenes as scenes
-                active_scene = scenes.get_instance().get_active_scene()
-                if isinstance(active_scene, dialog.DialogScene):
-                    active_scene.start_dialog(d)
+        cs = gs.get_instance().cell_size
+        if top_model is None:
+            self._top_sprite = None
+        else:
+            if self._top_sprite is None:
+                self._top_sprite = sprites.ImageSprite(top_model, 0, 0, spriteref.ENTITY_LAYER)
+            self._top_sprite = self._top_sprite.update(new_model=top_model,
+                                                       new_x=cx - top_model.width() // 2,
+                                                       new_y=bot_y - base_model.height() - cs // 8 - top_model.height(),
+                                                       new_depth=PLAYER_DEPTH + 1,
+                                                       new_color=self.get_color(),
+                                                       new_xflip=should_xflip)
 
         if not self._should_show_text or (w is not None and w.is_dialog_active()):
             self._text_sprite = None
@@ -2476,6 +2467,35 @@ class InfoEntity(Entity):
                 self._text_bg_sprite = sprites.BorderBoxSprite(spriteref.ENTITY_LAYER, bg_rect,
                                                                all_borders=spriteref.overworld_sheet().border_thin)
             self._text_bg_sprite.update(new_rect=bg_rect)
+
+    def update(self):
+        if self._ticks_overlapping_player < 0:
+            self._ticks_overlapping_player += 1
+        else:
+            self._ticks_overlapping_player = max(0, self._ticks_overlapping_player - 1)
+
+        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprite_list_for_editor,
+                                         self._points, (8, 8))
+
+        w = self.get_world()
+        p = None if w is None else w.get_player(must_be_active=True)
+
+        overlapping = False
+        if p is not None:
+            overlapping = util.dist(p.get_center(), self.get_center()) <= self._activation_radius
+            if overlapping:
+                self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
+
+        self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh
+
+        if self._dialog_id is not None and overlapping and self._should_show_text and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+            d = dialog.get_dialog(self._dialog_id, p.get_player_type())
+            if d is not None:
+                self._ticks_overlapping_player = -60  # so that we can't insta-reactivate dialog after this one is over
+                import src.engine.scenes as scenes
+                active_scene = scenes.get_instance().get_active_scene()
+                if isinstance(active_scene, dialog.DialogScene):
+                    active_scene.start_dialog(d)
 
     def all_sprites(self):
         yield self._text_sprite

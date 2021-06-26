@@ -42,7 +42,8 @@ level_edit_dirs = {
         "2": os.path.join("overworlds", "sector_abc", "levels"),
         "?": os.path.join("overworlds"),
         "L": os.path.join("levels"),
-        "P": os.path.join("level_purgatory")
+        "P": os.path.join("level_purgatory"),
+        "t": os.path.join("testing")
     }
 
 
