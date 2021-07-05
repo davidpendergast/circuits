@@ -17,7 +17,8 @@ class Game:
     def get_layers(self):
         raise NotImplementedError()
 
-    def update(self):
+    def update(self) -> bool:
+        """returns: whether the game is still running."""
         raise NotImplementedError()
 
     def all_sprites(self):

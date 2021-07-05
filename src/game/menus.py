@@ -41,7 +41,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
         self._options_list.add_option("movie", lambda: self.jump_to_scene(cinematics.CinematicScene3D(cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.INTRO), lambda: MainMenuScene())))
-        self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
+        self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
         self._options_list.update_sprites()
 
     def update(self):

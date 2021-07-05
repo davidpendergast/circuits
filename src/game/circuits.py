@@ -140,6 +140,8 @@ class CircuitsGame(game.Game):
         scenes.get_instance().update()
         gs.get_instance().update()
 
+        return not gs.get_instance().should_exit()
+
     def get_clear_color(self):
         return scenes.get_instance().get_clear_color()
 
