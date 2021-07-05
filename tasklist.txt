@@ -2,16 +2,10 @@
 bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
  - should snap to vertical slopes too
- - glitchy animation when you run into a wall to the right
  
 features:
- - saving / loading levels
- - edit levels
- - make physics deterministic (or abandon replay idea?)
-    - (abandon replay idea? - cmon)
-    - lets at least give it a shot
  - joypad support
- - main menu?
+ - improve main menu?
     
     
 vertical slice: 
@@ -88,7 +82,6 @@ Art:
 
 Performance:
     - breakable blocks cause lag spikes
-    - large levels are laggy
 
 
 Old Thoughts (1/3/21):

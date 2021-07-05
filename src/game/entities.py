@@ -2455,11 +2455,16 @@ class InfoEntity(Entity):
             if self._text_sprite is None:
                 self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, self._text, depth=WORLD_UI_DEPTH,
                                                        font_lookup=spriteref.spritesheets.get_default_font(small=True))
+            self._text_sprite.update(new_text=self._text)
             if len(self._points) == 0:
-                pt = self.get_xy()
+                height = self._base_sprite.height() if self._base_sprite is not None else 0
+                height += self._top_sprite.height() if self._top_sprite is not None else 0
+                height = max(height, gs.get_instance().cell_size * 2)
+                pt = (self.get_center()[0] - self._text_sprite.size()[0] // 2,
+                      self.get_y() + self.get_h() - height - self._text_sprite.size()[1] - 8)
             else:
                 pt = self._points[0]
-            self._text_sprite.update(new_x=pt[0], new_y=pt[1], new_text=self._text)
+            self._text_sprite.update(new_x = pt[0], new_y = pt[1])
 
             text_rect = self._text_sprite.get_rect()
             bg_rect = util.rect_expand(text_rect, all_expand=0)

@@ -1214,6 +1214,10 @@ class LevelEditGameScene(_BaseGameScene):
         toggle_func = lambda s: blueprints.SpecUtils.toggle_inverted(s)
         self._mutate_selected_specs(toggle_func)
 
+    def handle_advanced_edit_pressed(self):
+        advanced_edit_func = lambda s: blueprints.SpecUtils.open_advanced_editor(s)
+        self._mutate_selected_specs(advanced_edit_func)
+
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
 
@@ -1393,6 +1397,7 @@ class LevelEditGameScene(_BaseGameScene):
                                                 lambda: manager.set_next_scene(LevelSelectForEditScene(configs.level_edit_dirs)),
                                                 description=desc,
                                                 output_file=self.output_file))
+
 
     def adjust_edit_resolution(self, increase):
         if self.edit_resolution in self.resolution_options:
@@ -1601,6 +1606,8 @@ class NormalMouseMode(MouseMode):
             self.scene.paste_clipboard_at_mouse()
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
             self.scene.delete_selection()
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ADVANCED_EDIT)):
+            self.scene.handle_advanced_edit_pressed()
 
         cycle_type_steps = inputs.get_instance().was_pressed_four_way(
             right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_SUBTYPE_FORWARD),

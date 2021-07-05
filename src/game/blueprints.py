@@ -1006,6 +1006,57 @@ class SpecUtils:
                 traceback.print_exc()
         return res
 
+    @staticmethod
+    def open_advanced_editor(spec_blob):
+        orig = spec_blob.copy()
+        try:
+            import json
+            import src.utils.threadutils as threadutils
+            import pygame
+            import time
+
+            added_tags = set()
+
+            spec_type = SpecTypes.get(orig[TYPE_ID])
+            for tag in spec_type.optional_keys:
+                if tag not in spec_blob:
+                    orig[tag] = spec_type.get_default_value(tag)
+                    added_tags.add(tag)
+
+            raw_json = util.make_json_pretty(json.dumps(orig, indent=4, sort_keys=True))
+            fut = threadutils.prompt_for_text("Edit {} Properties".format(spec_blob[TYPE_ID]), "", raw_json, async=True)
+
+            while not fut.is_done():
+                time.sleep(1/20)
+                pygame.event.clear()   # so that the OS doesn't get concerned
+                pygame.display.flip()  # not sure if this does much
+
+            result_text = fut.get_val()
+            if result_text is None or len(result_text) == 0:
+                print("INFO: no edits made to {}".format(spec_blob[TYPE_ID]))
+                return orig
+            else:
+                result_blob = json.loads(result_text)
+                if TYPE_ID not in result_blob:
+                    raise ValueError("Missing type key: {}".format(TYPE_ID))
+                spec_type = SpecTypes.get(result_blob[TYPE_ID])
+
+                for tag in added_tags:
+                    if tag in result_blob and result_blob[tag] == spec_type.get_default_value(tag):
+                        del result_blob[tag]  # remove the optional tags we added if they weren't changed.
+
+                if spec_type.check_if_valid(result_blob):
+                    return result_blob
+                else:
+                    print("ERROR: blob is not a valid object (the json is valid though)")
+                    return orig
+
+        except Exception:
+            print("ERROR: failed to edit spec_blob: {}".format(spec_blob))
+            traceback.print_exc()
+
+        return orig
+
 
 def get_test_blueprint_0() -> LevelBlueprint:
     cs = gs.get_instance().cell_size
