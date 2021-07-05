@@ -945,7 +945,7 @@ class LevelMetaDataEditScene(OptionSelectScene):
         self._on_exit = on_exit
 
         self._add_text_edit_option("level name: ", blueprints.NAME, bp)
-        self._add_text_edit_option("description: ", blueprints.DESCRIPTION, bp)
+        self._add_popout_text_edit_option("description: ", blueprints.DESCRIPTION, bp)
         self._add_text_edit_option("level ID: ", blueprints.LEVEL_ID, bp)
         self._add_players_edit_option("Players: ", bp)
 
@@ -966,7 +966,32 @@ class LevelMetaDataEditScene(OptionSelectScene):
                                        char_limit=char_limit,
                                        allowed_chars=allowed_chars)
             self.jump_to_scene(edit_scene)
-        self.add_option(name + current_val, _action)
+
+        self.add_option(name + (current_val if len(current_val) < 16 else current_val[:13] + "..."), _action)
+
+    def _add_popout_text_edit_option(self, name, attribute_id, bp, to_str=str, from_str=str):
+        current_val = to_str(bp.get_attribute(attribute_id))
+
+        def _action():
+            import src.utils.threadutils as threadutils
+            fut = threadutils.prompt_for_text("Edit Level Attribute: \"{}\"".format(attribute_id),
+                                              "Enter the new value: ", current_val, async=True)
+            import time
+            import pygame
+
+            while not fut.is_done():
+                time.sleep(1 / 20)
+                pygame.event.clear()
+                pygame.display.flip()
+
+            res = fut.get_val()
+            if res is not None:
+                new_bp = self._base_bp.copy_with(edits={attribute_id: from_str(res)})
+                self.get_manager().set_next_scene(LevelMetaDataEditScene(new_bp, self._on_exit))
+            else:
+                self.get_manager().set_next_scene(LevelMetaDataEditScene(self._base_bp, self._on_exit)),
+
+        self.add_option(name + (current_val if len(current_val) < 16 else current_val[:13] + "..."), _action)
 
     def _add_players_edit_option(self, name, bp):
         import src.game.playertypes as playertypes

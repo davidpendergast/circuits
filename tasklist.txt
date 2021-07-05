@@ -6,6 +6,12 @@ bugs:
 features:
  - joypad support
  - improve main menu?
+ - pop-out editor
+    - esc to cancel pop-out editor
+    - make sure pop-out editor isn't adding extra newlines?
+    - make sure tkinter is properly marked as a requirement for the project / handle missing case better
+    - make pop-out editor highlight everything by default
+ 
     
     
 vertical slice: 
