@@ -5,13 +5,37 @@ bugs:
  
 features:
  - joypad support
- - improve main menu?
+ - improve main menu
+    - some kind of scrolling background, so it doesn't feel so flat
+    - or a planetary scene? a la halo
+    
  - pop-out editor
     - esc to cancel pop-out editor
     - make sure pop-out editor isn't adding extra newlines?
     - make sure tkinter is properly marked as a requirement for the project / handle missing case better
     - make pop-out editor highlight everything by default
- 
+    - make a more convenient synchronous text editor method
+    - make a more convenient json editor method
+    - make pop-out editor stretchy and make it remember its bounds
+    
+ - dialog
+    - make it zoom in when you're talking
+    - make text appear letter-by-letter
+    
+ - sound
+    - start adding sound effects
+        - find good sound pack
+    
+ - mechanics
+    A: crouching
+    B: done?
+    C: Picking up B, pushing blocks
+    D: Picking up B
+    
+ - secret areas
+    - invisiblocks
+    - camera pans to area only if it's visible?
+    - things to talk to
     
     
 vertical slice: 
