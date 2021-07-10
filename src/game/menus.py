@@ -29,6 +29,7 @@ import src.engine.threedeecine as threedeecine
 import src.game.cinematics as cinematics
 import src.game.dialog as dialog
 
+
 class MainMenuScene(scenes.Scene):
 
     def __init__(self):
@@ -44,7 +45,13 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
         self._options_list.update_sprites()
 
+        self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
+
     def update(self):
+        self.cine_seq.update()
+        cam = self.cine_seq.get_camera().get_snapshot()
+        renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER).set_camera(cam)
+
         self.update_sprites()
 
         self._title_element.update_self_and_kids()
@@ -54,21 +61,25 @@ class MainMenuScene(scenes.Scene):
         total_size = renderengine.get_instance().get_game_size()
 
         if self._title_element.get_sprite() is None:
-            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=2)
+            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=1.5)
             self._title_element.set_sprite(text_sprite)
 
-        title_x = total_size[0] // 2 - self._title_element.get_size()[0] // 2
-        title_y = total_size[1] // 3 - self._title_element.get_size()[1] // 2
+        title_w = self._title_element.get_size()[0]
+        title_h = self._title_element.get_size()[1]
+        title_x = total_size[0] // 2 - title_w // 2
+        title_y = total_size[1] // 4 - title_h // 2
         self._title_element.set_xy((title_x, title_y))
 
-        options_xy = (total_size[0] // 3 - self._options_list.get_size()[0] // 2,
-                      title_y + self._title_element.get_size()[1] - 40)
+        options_xy = (total_size[0] // 2 - title_w // 4 - self._options_list.get_size()[0] // 2,
+                      title_y + 3 * title_h // 4)
         self._options_list.set_xy(options_xy)
 
     def all_sprites(self):
         for spr in self._title_element.all_sprites_from_self_and_kids():
             yield spr
         for spr in self._options_list.all_sprites_from_self_and_kids():
+            yield spr
+        for spr in self.cine_seq.all_sprites():
             yield spr
 
 

@@ -78,6 +78,30 @@ class InterpolatingAnimatedCamera(AnimatedCamera3D):
         return util.linear_interp(self._start.get_fov(), self._end.get_fov(), prog)
 
 
+class ExternallyControlledCamera(AnimatedCamera3D):
+
+    def __init__(self, position, direction, fov=lambda t: 45, duration=-1):
+        """
+        :param position:   t -> (x, y, z)
+        :param direction:  t -> (x, y, z)
+        :param fov:        t -> degrees
+        :param duration:   t -> int
+        """
+        super().__init__(duration=duration)
+        self.position_provider = position
+        self.direction_provider = direction
+        self.fov_provider = fov
+
+    def get_position(self):
+        return self.position_provider(self.ticks_active)
+
+    def get_direction(self):
+        return self.direction_provider(self.ticks_active)
+
+    def get_fov(self):
+        return self.fov_provider(self.ticks_active)
+
+
 class CompositeAnimatedCamera(AnimatedCamera3D):
 
     def __init__(self, cameras):
@@ -121,14 +145,18 @@ class CinematicSequence3D:
 
     def __init__(self, name, shots):
         self.name = name
-        self.shots = util.listify(shots)
-        self.current_shot_idx = 0
+        if isinstance(shots, CinematicShot3D):
+            shots = util.listify(shots)
+        if isinstance(shots, list) or isinstance(shots, tuple):
+            shots = list(shots)
+            shots.reverse()
+            self.shot_provider = lambda: None if len(shots) == 0 else shots.pop()
+        else:
+            self.shot_provider = shots
+        self.current_shot = self.shot_provider()
 
     def get_current_shot(self):
-        if self.current_shot_idx < len(self.shots):
-            return self.shots[self.current_shot_idx]
-        else:
-            return None
+        return self.current_shot
 
     def update(self):
         cur_shot = self.get_current_shot()
@@ -136,10 +164,10 @@ class CinematicSequence3D:
             return
         elif cur_shot.is_finished():
             cur_shot.destroy()
-            self.current_shot_idx += 1
-            cur_shot = self.get_current_shot()
+            cur_shot = self.shot_provider()
             if cur_shot is not None:
                 cur_shot.initialize()
+            self.current_shot = cur_shot
         else:
             cur_shot.update()
 
@@ -204,6 +232,16 @@ class SimpleCinematicShot3D(CinematicShot3D):
         :param updater: lambda (Sprite3D, tick) -> Sprite3D, None (to hide), or False (to delete)
         """
         self.sprite_lookup.append((spr, updater))
+
+    def add_sprites(self, sprites):
+        """
+        :param sprites: list of (Sprite3D, updater)s or Sprite3Ds
+        """
+        for spr in sprites:
+            if isinstance(spr, tuple):
+                self.add_sprite(spr[0], updater=spr[1])
+            else:
+                self.add_sprite(spr)
 
     def initialize(self):
         pass
