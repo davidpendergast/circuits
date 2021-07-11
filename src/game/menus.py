@@ -986,7 +986,7 @@ class LevelMetaDataEditScene(OptionSelectScene):
         def _action():
             import src.utils.threadutils as threadutils
             fut = threadutils.prompt_for_text("Edit Level Attribute: \"{}\"".format(attribute_id),
-                                              "Enter the new value: ", current_val, async=True)
+                                              "Enter the new value: ", current_val, do_async=True)
             import time
             import pygame
 

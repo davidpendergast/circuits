@@ -1024,7 +1024,7 @@ class SpecUtils:
                     added_tags.add(tag)
 
             raw_json = util.make_json_pretty(json.dumps(orig, indent=4, sort_keys=True))
-            fut = threadutils.prompt_for_text("Edit {} Properties".format(spec_blob[TYPE_ID]), "", raw_json, async=True)
+            fut = threadutils.prompt_for_text("Edit {} Properties".format(spec_blob[TYPE_ID]), "", raw_json, do_async=True)
 
             while not fut.is_done():
                 time.sleep(1/20)

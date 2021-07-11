@@ -11,4 +11,4 @@ Here are the five most recent gifs committed:
 
 ![094-dialog.gif](gifs/094-dialog.gif?raw=true "094-dialog")
 
-![093-falling-blocks.gif](gifs/093-falling-blocks.gif?raw=true "093-falling-blocks")
+![093-cinematics.gif](gifs/093-cinematics.gif?raw=true "093-cinematics")

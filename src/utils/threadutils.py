@@ -60,7 +60,7 @@ def do_work_on_background_thread(runnable, future=None) -> Future:
     return future
 
 
-def prompt_for_text(window_title, question_text, default_text, async=True) -> Future:
+def prompt_for_text(window_title, question_text, default_text, do_async=True) -> Future:
     try:
         import tkinter as tk
     except ImportError:
@@ -92,7 +92,7 @@ def prompt_for_text(window_title, question_text, default_text, async=True) -> Fu
 
         return result[0]
 
-    if async:
+    if do_async:
         return do_work_on_background_thread(_do_prompt)
     else:
         res = Future()
