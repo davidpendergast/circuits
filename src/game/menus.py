@@ -38,12 +38,14 @@ class MainMenuScene(scenes.Scene):
 
         self._options_list = ui.OptionsList(outlined=True)
         self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene.create_new_from_path("overworlds")))
-        self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
+        # self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
-        self._options_list.add_option("movie", lambda: self.jump_to_scene(cinematics.CinematicScene3D(cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.INTRO), lambda: MainMenuScene())))
+        # self._options_list.add_option("movie", lambda: self.jump_to_scene(cinematics.CinematicScene3D(cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.INTRO), lambda: MainMenuScene())))
         self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
         self._options_list.update_sprites()
+
+        self._option_pane_bg = None
 
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
@@ -74,11 +76,23 @@ class MainMenuScene(scenes.Scene):
                       title_y + 3 * title_h // 4)
         self._options_list.set_xy(options_xy)
 
+        if self._option_pane_bg is None:
+            model = spritesheets.get_instance().get_sheet(spritesheets.WhiteSquare.SHEET_ID).get_sprite(opacity=0.5)
+            self._option_pane_bg = sprites.ImageSprite(model, options_xy[0], options_xy[1], spriteref.UI_BG_LAYER)
+        bg_inset = 4
+        options_size = self._options_list.get_size()
+        self._option_pane_bg = self._option_pane_bg.update(new_x=options_xy[0] - bg_inset,
+                                                           new_y=options_xy[1] - bg_inset,
+                                                           new_color=colors.PERFECT_BLACK,
+                                                           new_raw_size=(options_size[0] + 2 * bg_inset,
+                                                                         options_size[1] + 2 * bg_inset))
+
     def all_sprites(self):
         for spr in self._title_element.all_sprites_from_self_and_kids():
             yield spr
         for spr in self._options_list.all_sprites_from_self_and_kids():
             yield spr
+        yield self._option_pane_bg
         for spr in self.cine_seq.all_sprites():
             yield spr
 

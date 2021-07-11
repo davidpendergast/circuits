@@ -3,7 +3,7 @@ A platformer about robots.
 
 Here are the five most recent gifs committed:
 
-![097-main-menu-3d.gif](gifs/097-main-menu-3d.gif?raw=true "097-main-menu-3d")
+![097-title-screen-3d.gif](gifs/097-title-screen-3d.gif?raw=true "097-title-screen-3d")
 
 ![096-json-editor.gif](gifs/096-json-editor.gif?raw=true "096-json-editor")
 

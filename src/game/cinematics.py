@@ -5,6 +5,7 @@ import src.engine.threedee as threedee
 import src.game.spriteref as spriteref
 import src.utils.util as util
 import src.engine.renderengine as renderengine
+import configs
 
 
 class CinematicScene3D(scenes.Scene):
@@ -87,13 +88,16 @@ class CinematicFactory:
                                                 vert_billboard=True, horz_billboard=True)
         all_sprites = [ship_sprite, sun_sprite]
 
-        y = lambda t: 2 + 1 * math.cos(t * 0.0025)
+        y = lambda t: 2 + 1 * math.cos(t * 0.0025 * configs.target_fps / 60)
         cam_center = lambda t: (5, y(t), -25)
         cam_radius = 2
-        cam_speed = 0.005  # whatever
+        cam_speed = 0.005 * configs.target_fps / 60  # whatever
 
-        cam_position = lambda t: util.add(cam_center(t), (cam_radius * math.cos(t * cam_speed), 0, cam_radius * math.sin(t * cam_speed)))
-        cam_direction = lambda t: util.set_length((util.sub((0, y(t), 0), cam_position(t))), 1)  # point at ship
+        def cam_position(t):
+            return util.add(cam_center(t), (cam_radius * math.cos(t * cam_speed), 0, cam_radius * math.sin(t * cam_speed)))
+        def cam_direction(t):
+            target = (0, y(t), 10)  # a little ahead of the ship's position, with some vertical offset
+            return util.set_length(util.sub(target, cam_position(t)), 1)  # point at ship
 
         camera = threedeecine.ExternallyControlledCamera(cam_position, cam_direction, fov=lambda t: 20)
 

@@ -155,7 +155,7 @@ class ImageSprite(AbstractSprite):
     def new_sprite(layer_id, scale=1, depth=0):
         return ImageSprite(None, 0, 0, layer_id, scale=scale, depth=depth)
 
-    def __init__(self, model, x, y, layer_id, scale=1, depth=1, xflip=False, rotation=0, color=(1, 1, 1), ratio=(1, 1), uid=None):
+    def __init__(self, model, x, y, layer_id, scale=1, depth=1, xflip=False, rotation=0, color=(1, 1, 1), ratio=(1, 1), raw_size=(-1, -1), uid=None):
         AbstractSprite.__init__(self, SpriteTypes.IMAGE, layer_id, uid=uid)
         self._model = model
         self._x = x
@@ -166,12 +166,13 @@ class ImageSprite(AbstractSprite):
         self._rotation = rotation
         self._color = color
         self._ratio = ratio
+        self._raw_size = raw_size
 
     def all_sprites_nullable(self):
         yield self
             
     def update(self, new_model=None, new_x=None, new_y=None, new_scale=None, new_depth=None,
-               new_xflip=None, new_color=None, new_rotation=None, new_ratio=None):
+               new_xflip=None, new_color=None, new_rotation=None, new_ratio=None, new_raw_size=None):
 
         if isinstance(new_model, bool) and new_model is False:
             model = None
@@ -186,6 +187,7 @@ class ImageSprite(AbstractSprite):
         color = self.color() if new_color is None else new_color
         rotation = self.rotation() if new_rotation is None else new_rotation
         ratio = self.ratio() if new_ratio is None else new_ratio
+        raw_size = self.raw_size() if new_raw_size is None else new_raw_size
         
         if (model == self.model() and 
                 x == self.x() and 
@@ -195,11 +197,12 @@ class ImageSprite(AbstractSprite):
                 xflip == self.xflip() and
                 color == self.color() and
                 ratio == self.ratio() and
-                rotation == self.rotation()):
+                rotation == self.rotation() and
+                raw_size == self.raw_size()):
             return self
         else:
             res = ImageSprite(model, x, y, self.layer_id(), scale=scale, depth=depth, xflip=xflip, rotation=rotation,
-                              color=color, ratio=ratio, uid=self.uid())
+                              color=color, ratio=ratio, raw_size=raw_size, uid=self.uid())
             return res
         
     def model(self):
@@ -248,6 +251,9 @@ class ImageSprite(AbstractSprite):
 
     def ratio(self):
         return self._ratio
+
+    def raw_size(self):
+        return self._raw_size
         
     def add_urself(self, i, vertices, texts, colors, indices):
         """
@@ -263,6 +269,10 @@ class ImageSprite(AbstractSprite):
         else:
             w = model.w * self.scale() * self.ratio()[0]
             h = model.h * self.scale() * self.ratio()[1]
+
+            raw_size = self.raw_size()
+            if raw_size[0] >= 0: w = raw_size[0]
+            if raw_size[1] >= 0: h = raw_size[1]
 
         if self.rotation() == 1 or self._rotation == 3:
             temp_w = w

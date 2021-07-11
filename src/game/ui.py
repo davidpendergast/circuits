@@ -196,8 +196,8 @@ class OptionsList(UiElement):
         h = 0
         for opt in self.options:
             opt_rect = opt[0]
-            w = max(opt_rect[2], w)
-            h = max(opt_rect[3], h)
+            w = max(opt_rect[0] + opt_rect[2], w)
+            h = max(opt_rect[1] + opt_rect[3], h)
         return (w, h)
 
     def update(self):
