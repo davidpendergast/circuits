@@ -36,7 +36,7 @@ class MainMenuScene(scenes.Scene):
         scenes.Scene.__init__(self)
         self._title_element = ui.SpriteElement()
 
-        self._options_list = ui.OptionsList()
+        self._options_list = ui.OptionsList(outlined=True)
         self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene.create_new_from_path("overworlds")))
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))

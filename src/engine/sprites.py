@@ -778,7 +778,7 @@ class TextSprite(MultiSprite):
     DEFAULT_Y_KERNING = 0
 
     def __init__(self, layer_id, x, y, text, scale=1.0, depth=0, color=(1, 1, 1), color_lookup=None, font_lookup=None,
-                 x_kerning=DEFAULT_X_KERNING, y_kerning=DEFAULT_Y_KERNING):
+                 x_kerning=DEFAULT_X_KERNING, y_kerning=DEFAULT_Y_KERNING, outline_thickness=0, outline_color=(0, 0, 0)):
 
         MultiSprite.__init__(self, SpriteTypes.IMAGE, layer_id)
         self._x = x
@@ -788,6 +788,8 @@ class TextSprite(MultiSprite):
         self._depth = depth
         self._base_color = color
         self._color_lookup = color_lookup if color_lookup is not None else {}
+        self._outline_thickness = outline_thickness
+        self._outline_color = outline_color
         self._x_kerning = x_kerning
         self._y_kerning = y_kerning
 
@@ -828,6 +830,11 @@ class TextSprite(MultiSprite):
         cur_x = self._x
         cur_y = self._y
 
+        outline_offsets = [(0, 0)]
+        if self._outline_thickness > 0:
+            thick = self._outline_thickness
+            outline_offsets.extend([(-thick, 0), (0, -thick), (thick, 0), (0, thick)])
+
         for idx in range(0, len(self._text)):
             character = self._text[idx]
             if character == "\n":
@@ -836,22 +843,33 @@ class TextSprite(MultiSprite):
             else:
                 char_model = self._font_lookup.get_char(character)
                 if char_model is not None:
-                    if len(old_sprites) > 0:
-                        next_sprite = old_sprites.pop()
-                    else:
-                        next_sprite = ImageSprite.new_sprite(self.layer_id())
+                    for offs in outline_offsets:
+                        is_outline = offs != (0, 0)
+                        if len(old_sprites) > 0:
+                            next_sprite = old_sprites.pop()
+                        else:
+                            next_sprite = ImageSprite.new_sprite(self.layer_id())
 
-                    char_color = self._base_color if idx not in self._color_lookup else self._color_lookup[idx]
+                        if not is_outline:
+                            char_color = self._base_color if idx not in self._color_lookup else self._color_lookup[idx]
+                        else:
+                            char_color = self._outline_color
 
-                    char_sprite = next_sprite.update(new_model=char_model, new_x=cur_x, new_y=cur_y,
-                                                     new_scale=self._scale, new_depth=self._depth,
-                                                     new_color=char_color)
+                        char_sprite = next_sprite.update(new_model=char_model,
+                                                         new_x=cur_x + offs[0],
+                                                         new_y=cur_y + offs[1],
+                                                         new_scale=self._scale,
+                                                         new_depth=self._depth + 0.1 * (1 if is_outline else 0),
+                                                         new_color=char_color)
 
-                    self._character_sprites.append(char_sprite)
+                        if not is_outline:
+                            base_char_sprite = char_sprite
 
-                    self._bounding_rect[2] = max(self._bounding_rect[2], char_sprite.x() + char_sprite.width() - self._bounding_rect[0])
-                    self._bounding_rect[3] = max(self._bounding_rect[3], char_sprite.y() + char_sprite.height() - self._bounding_rect[1])
-                    cur_x += char_sprite.width() + self._x_kerning
+                        self._character_sprites.append(char_sprite)
+
+                    self._bounding_rect[2] = max(self._bounding_rect[2], base_char_sprite.x() + base_char_sprite.width() - self._bounding_rect[0])
+                    self._bounding_rect[3] = max(self._bounding_rect[3], base_char_sprite.y() + base_char_sprite.height() - self._bounding_rect[1])
+                    cur_x += base_char_sprite.width() + self._x_kerning
                 else:
                     self._bounding_rect[2] = max(self._bounding_rect[2], cur_x + math.ceil(char_size[0] * self._scale) - self._bounding_rect[0])
                     self._bounding_rect[3] = max(self._bounding_rect[3], cur_y + math.ceil(char_size[1] * self._scale) - self._bounding_rect[1])
@@ -863,6 +881,7 @@ class TextSprite(MultiSprite):
 
     def update(self, new_x=None, new_y=None, new_text=None, new_scale=None, new_depth=None,
                new_color=None, new_color_lookup=None, new_font_lookup=None,
+               new_outline_thickness=None, new_outline_color=None,
                new_x_kerning=None, new_y_kerning=None):
 
         did_change = False
@@ -891,6 +910,12 @@ class TextSprite(MultiSprite):
         if new_font_lookup is not None and new_font_lookup != self._font_lookup:
             did_change = True
             self._font_lookup = new_font_lookup
+        if new_outline_thickness is not None and new_outline_thickness != self._outline_thickness:
+            did_change = True
+            self._outline_thickness = new_outline_thickness
+        if new_outline_color is not None and new_outline_color != self._outline_color:
+            did_change = True
+            self._outline_color = new_outline_color
         if new_x_kerning is not None and new_x_kerning != self._x_kerning:
             did_change = True
             self._x_kerning = new_x_kerning

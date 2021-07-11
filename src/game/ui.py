@@ -166,12 +166,13 @@ class OptionsList(UiElement):
     LEFT_ALIGN = 0
     CENTER_ALIGN = 1
 
-    def __init__(self, alignment=LEFT_ALIGN):
+    def __init__(self, alignment=LEFT_ALIGN, outlined=False):
         UiElement.__init__(self)
         self.selected_idx = 0
         self.options = []  # list of (rect, str: text, lambda: do_action, lambda: is_enabled)
         self.y_spacing = 4
         self.alignment = alignment
+        self.outlined = outlined
 
         self._sprites = []
 
@@ -235,7 +236,7 @@ class OptionsList(UiElement):
                 new_color = colors.PERFECT_RED
             else:
                 new_color = colors.PERFECT_WHITE
-            spr.update(new_text=text, new_color=new_color)
+            spr.update(new_text=text, new_color=new_color, new_outline_thickness=1 if self.outlined else 0)
             max_w = max(spr.size()[0], max_w)
 
         abs_xy = self.get_xy(absolute=True)
