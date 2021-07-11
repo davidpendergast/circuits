@@ -1,5 +1,6 @@
 
 import typing
+import collections
 
 import configs
 import src.utils.util as util
@@ -11,6 +12,8 @@ import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
 import src.game.playertypes as playertypes
 
+import random
+
 
 class World:
 
@@ -21,7 +24,7 @@ class World:
 
         self._game_state = None
 
-        self._sensor_states = {}  # sensor_id -> list of entities
+        self._sensor_states = {}  # sensor_id -> OrderedDict of entities
 
         # regular hashing
         self._ent_id_to_ent = {}  # ent_id -> entity
@@ -47,6 +50,13 @@ class World:
 
     def get_game_state(self) -> 'src.menus._GameState':
         return self._game_state
+
+    def is_waiting(self):
+        state = self.get_game_state()
+        if state is None:
+            return True
+        else:
+            return state.is_waiting()
 
     def set_safe_zones(self, safe_zones, kill_zones=()):
         self.safe_zones = safe_zones
@@ -265,8 +275,8 @@ class World:
             new_sensor_states = CollisionResolver.calc_sensor_states(self, actor_ents)
             self._sensor_states.update(new_sensor_states)
 
-            for actor in actor_ents:
-                actor.update_frame_of_reference_parent()
+        for dyna in dyna_ents:
+            dyna.update_frame_of_reference_parents()
 
         if len(self.safe_zones) > 0 or len(self.kill_zones) > 0:
             if entities.ACTOR_GROUP in phys_groups:
@@ -306,12 +316,10 @@ class World:
                                             [xy[0] - radius, xy[1] - radius, radius * 2, radius * 2],
                                             (xy, radius, color, strength))
 
-        for ent in self.entities:
-            ent.update_sprites()
-
-            # TODO kinda weird to do this here?
-            if ent.is_player():
-                ent.handle_death_if_necessary()
+        if entities.ACTOR_GROUP in phys_groups:
+            for ent in phys_groups[entities.ACTOR_GROUP]:
+                if ent.is_player():
+                    ent.handle_death_if_necessary()
 
         if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
             self._tick += 1
@@ -366,6 +374,16 @@ class World:
                     return True
         return False
 
+    def is_dialog_active(self):
+        # TODO very stupid place for this method
+        import src.engine.scenes as scenes
+        import src.game.dialog as dialog
+        active_scene = scenes.get_instance().get_active_scene()
+        if isinstance(active_scene, dialog.DialogScene):
+            return active_scene.is_dialog_active()
+        else:
+            return False
+
     def constrain_camera(self, worldview):
         if self.camera_min_xy[0] is not None:  # this will be none if the level is empty
             cam_rect = worldview.get_camera_rect_in_world()
@@ -416,6 +434,9 @@ class CollisionResolver:
             raw_requested_next_positions[ent] = ent.calc_next_xy(raw=True)
 
             next_positions[ent] = requested_next_positions[ent]
+
+        # solve collisions from the bottom up
+        dyna_ents.sort(reverse=False, key=lambda e: start_positions[e][1])
 
         CollisionResolver._solve_all_collisions(world, dyna_ents, start_positions, next_positions)
 
@@ -570,6 +591,10 @@ class CollisionResolver:
     def _is_colliding_with_any_blocks(world, ent, collider, xy) -> bool:
         collider_rect = collider.get_rect(offs=xy)
         for b in world.all_entities_in_rect(collider_rect, cond=lambda _e: _e.is_block()):
+            if b.is_frame_of_reference_child_of(ent):
+                # you can't really collide with your own children because they'll always move
+                # when you move
+                continue
             for b_collider in b.all_colliders(solid=True):
                 if collider.is_colliding_with(xy, b_collider, b.get_xy()):
                     return True
@@ -581,7 +606,7 @@ class CollisionResolver:
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             for c in ent.all_colliders(sensor=True):
-                c_state = []
+                c_state = collections.OrderedDict()
                 c_rect = c.get_rect(offs=ent_xy)
                 cares_about_blocks = c.collides_with_masks((entities.CollisionMasks.BLOCK,
                                                             entities.CollisionMasks.SLOPE_BLOCK_HORZ,
@@ -593,7 +618,7 @@ class CollisionResolver:
                                                                      or (cares_about_actors and _e.is_actor()))
                                                                      or (cares_about_breaking and _e.is_breaking())):
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders()):
-                        c_state.append(b)
+                        c_state[b] = None
 
                 res[c.get_id()] = c_state
 
@@ -629,10 +654,10 @@ class CollisionResolver:
         for ent in dyna_ents:
             ent_xy = ent.get_xy()
             for c in ent.all_colliders(sensor=True):
-                c_state = [] if c.get_id() not in res else res[c.get_id()]
+                c_state = collections.OrderedDict() if c.get_id() not in res else res[c.get_id()]
                 c_rect = c.get_rect(offs=ent_xy)
                 for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):
                     if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
-                        c_state.append(b)
+                        c_state[b] = None
                 res[c.get_id()] = c_state
 

@@ -326,3 +326,5 @@ class DemoGame(game.Game):
         camera_y = player_y - renderengine.get_instance().get_game_size()[1] // 2
         for layer_id in DemoGame.world_layer_ids:
             renderengine.get_instance().set_layer_offset(layer_id, camera_x, camera_y)
+
+        return True

@@ -197,7 +197,10 @@ class _GameLoop:
             sounds.update()
 
             # updates the actual game state
-            self._game.update()
+            still_running = self._game.update()
+
+            if still_running is False:
+                running = False
 
             # draws the actual game state
             for spr in self._game.all_sprites():

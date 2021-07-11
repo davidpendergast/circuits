@@ -39,6 +39,7 @@ Y_DIR = "y_dir"         # int: -1, 0, or 1
 
 INVERTED = "inverted"   # bool
 TEXT = "text"           # str
+DIALOG_ID = "dialog"    # str
 
 
 _ALL_SPEC_TYPES = {}
@@ -405,10 +406,10 @@ class InfoSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "info", required_keys=(SUBTYPE_ID, X, Y, TEXT, POINTS),
-                          optional_keys={COLOR_ID: 0})
+                          optional_keys={COLOR_ID: 0, DIALOG_ID: ""})
 
     def get_subtypes(self):
-        return ["exclam", "question"]
+        return [info_type.ident for info_type in entities.InfoEntityTypes.all_types()]
 
     def get_default_value(self, k):
         if k == TEXT:
@@ -423,8 +424,37 @@ class InfoSpecType(SpecType):
         text = json_blob[TEXT]
         points = json_blob[POINTS]
         color_id = json_blob[COLOR_ID]
+        dialog_id = json_blob[DIALOG_ID]
 
-        yield entities.InfoEntity(x, y, points, text, color_id=color_id, info_type=subtype)
+        yield entities.InfoEntity(x, y, points, text, subtype, color_id=color_id, dialog_id=dialog_id)
+
+
+class DialogTriggerSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "dialog", required_keys=(SUBTYPE_ID, X, Y, W, H, DIALOG_ID, POINTS),
+                          optional_keys=(TEXT))
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 32
+        elif k == TEXT:
+            return "Press [{KEY}] to talk."
+        else:
+            return super().get_default_value(k)
+
+    def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        text = json_blob[TEXT].replace("{KEY}", "Enter")  # TODO get real keybinding value
+        points = json_blob[POINTS]
+        dialog_id = json_blob[DIALOG_ID]
+
+        yield entities.DialogTriggerEntity(x, y, w, h, dialog_id, text=text, points=points)
 
 
 class DoorBlockSpecType(SpecType):
@@ -506,6 +536,41 @@ class MovingBlockSpecType(SpecType):
         return [i for i in range(0, n_block_sprites)]
 
 
+class PushableBlockSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "pushable_block", required_keys=(X, Y, W, H),
+                          optional_keys={COLOR_ID: 0})
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
+
+    def build_entities(self, json_blob):
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        color_id=json_blob[COLOR_ID]
+
+        yield entities.PushableBlockEntity(x, y, w, h, color_id=color_id)
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 32
+        else:
+            return super().get_default_value(k)
+
+    def get_minimum_size(self):
+        return (16, 16)
+
+    def get_art_ids(self, spec):
+        size = (spec[W] / gs.get_instance().cell_size, spec[H] / gs.get_instance().cell_size)
+        n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
+        return [i for i in range(0, n_block_sprites)]
+
+
 class PlayerSpecType(SpecType):
 
     def __init__(self):
@@ -541,6 +606,8 @@ class SpecTypes:
     END_BLOCK = EndBlockSpecType()
     SPIKES = SpikeSpecType()
     INFO = InfoSpecType()
+    PUSHABLE_BLOCK = PushableBlockSpecType()
+    DIALOG_TRIGGER = DialogTriggerSpecType()
 
     DOOR_BLOCK = DoorBlockSpecType()
     KEY_BLOCK = KeySpecType()
@@ -938,6 +1005,57 @@ class SpecUtils:
                 print("ERROR: failed to toggle inversion: {}".format(spec_blob))
                 traceback.print_exc()
         return res
+
+    @staticmethod
+    def open_advanced_editor(spec_blob):
+        orig = spec_blob.copy()
+        try:
+            import json
+            import src.utils.threadutils as threadutils
+            import pygame
+            import time
+
+            added_tags = set()
+
+            spec_type = SpecTypes.get(orig[TYPE_ID])
+            for tag in spec_type.optional_keys:
+                if tag not in spec_blob:
+                    orig[tag] = spec_type.get_default_value(tag)
+                    added_tags.add(tag)
+
+            raw_json = util.make_json_pretty(json.dumps(orig, indent=4, sort_keys=True))
+            fut = threadutils.prompt_for_text("Edit {} Properties".format(spec_blob[TYPE_ID]), "", raw_json, async=True)
+
+            while not fut.is_done():
+                time.sleep(1/20)
+                pygame.event.clear()   # so that the OS doesn't get concerned
+                pygame.display.flip()  # not sure if this does much
+
+            result_text = fut.get_val()
+            if result_text is None or len(result_text) == 0:
+                print("INFO: no edits made to {}".format(spec_blob[TYPE_ID]))
+                return orig
+            else:
+                result_blob = json.loads(result_text)
+                if TYPE_ID not in result_blob:
+                    raise ValueError("Missing type key: {}".format(TYPE_ID))
+                spec_type = SpecTypes.get(result_blob[TYPE_ID])
+
+                for tag in added_tags:
+                    if tag in result_blob and result_blob[tag] == spec_type.get_default_value(tag):
+                        del result_blob[tag]  # remove the optional tags we added if they weren't changed.
+
+                if spec_type.check_if_valid(result_blob):
+                    return result_blob
+                else:
+                    print("ERROR: blob is not a valid object (the json is valid though)")
+                    return orig
+
+        except Exception:
+            print("ERROR: failed to edit spec_blob: {}".format(spec_blob))
+            traceback.print_exc()
+
+        return orig
 
 
 def get_test_blueprint_0() -> LevelBlueprint:

@@ -2,16 +2,40 @@
 bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
  - should snap to vertical slopes too
- - glitchy animation when you run into a wall to the right
  
 features:
- - saving / loading levels
- - edit levels
- - make physics deterministic (or abandon replay idea?)
-    - (abandon replay idea? - cmon)
-    - lets at least give it a shot
  - joypad support
- - main menu?
+ - improve main menu
+    - some kind of scrolling background, so it doesn't feel so flat
+    - or a planetary scene? a la halo
+    
+ - pop-out editor
+    - esc to cancel pop-out editor
+    - make sure pop-out editor isn't adding extra newlines?
+    - make sure tkinter is properly marked as a requirement for the project / handle missing case better
+    - make pop-out editor highlight everything by default
+    - make a more convenient synchronous text editor method
+    - make a more convenient json editor method
+    - make pop-out editor stretchy and make it remember its bounds
+    
+ - dialog
+    - make it zoom in when you're talking
+    - make text appear letter-by-letter
+    
+ - sound
+    - start adding sound effects
+        - find good sound pack
+    
+ - mechanics
+    A: crouching
+    B: done?
+    C: Picking up B, pushing blocks
+    D: Picking up B
+    
+ - secret areas
+    - invisiblocks
+    - camera pans to area only if it's visible?
+    - things to talk to
     
     
 vertical slice: 
@@ -24,7 +48,7 @@ vertical slice:
         [x] should be extremely modular
     - levels should be locked until adjacent levels are beaten
     - it should clearly show when levels are beaten
-    - some kind of generated graphic for each level
+    [x] some kind of generated graphic for each level
  [x] in levels 
     [x] platforming phyiscs
     [x] play alongside your "ghosts"
@@ -88,7 +112,6 @@ Art:
 
 Performance:
     - breakable blocks cause lag spikes
-    - large levels are laggy
 
 
 Old Thoughts (1/3/21):

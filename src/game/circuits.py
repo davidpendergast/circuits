@@ -88,6 +88,7 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.CYCLE_SELECTION_ART_BACKWARD, keybinds.Binding(pygame.K_e, mods=pygame.KMOD_SHIFT))
 
         keybinds.get_instance().set_binding(const.TOGGLE_SELECTION_INVERTED, keybinds.Binding(pygame.K_i, mods=pygame.KMOD_NONE))
+        keybinds.get_instance().set_binding(const.ADVANCED_EDIT, keybinds.Binding(pygame.K_o, mods=pygame.KMOD_NONE))
 
         keybinds.get_instance().set_binding(const.ADD_POINT, keybinds.Binding(pygame.K_p, mods=pygame.KMOD_NONE))
         keybinds.get_instance().set_binding(const.REMOVE_POINT, keybinds.Binding(pygame.K_p, mods=pygame.KMOD_SHIFT))
@@ -138,6 +139,8 @@ class CircuitsGame(game.Game):
     def update(self):
         scenes.get_instance().update()
         gs.get_instance().update()
+
+        return not gs.get_instance().should_exit()
 
     def get_clear_color(self):
         return scenes.get_instance().get_clear_color()

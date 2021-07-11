@@ -129,12 +129,16 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             const.PLAYER_FLYING: [],
         }
 
+        self.speaker_portraits = {}
+
         self.thin_block_broken_pieces_horz = []
         self.thin_block_broken_pieces_vert = []
 
         self.toggle_block_bases = []
         self.toggle_block_icons = []
         self._toggle_blocks = {}
+
+        self.pushable_blocks = {}  # (w, h, color_id) -> list of ImageModel
 
         self.character_arrows = []
         self.character_arrow_fills = {}  # player_id -> ImageModel
@@ -192,6 +196,12 @@ class _ObjectSheet(spritesheets.SpriteSheet):
                 return self.get_player_sprites(player_id, player_state.get_fallback())
             else:
                 return []  # no sprites exist, apparently
+
+    def get_speaker_portrait_sprites(self, speaker_id):
+        if speaker_id in self.speaker_portraits:
+            return self.speaker_portraits[speaker_id]
+        else:
+            return []
 
     def get_goal_arrow(self, player_id, alpha=1):
         return util.index_into(self.goal_arrows[player_id], alpha)
@@ -268,13 +278,15 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_broken_pieces[const.PLAYER_HEAVY] = self._handle_rotated_player_pieces([624, 64, 8, 8], 8, 8, atlas, start_pos)
         self.player_broken_pieces[const.PLAYER_FLYING] = self._handle_rotated_player_pieces([624, 96, 8, 8], 6, 8, atlas, start_pos)
 
+        self.speaker_portraits[const.PLAYER_FAST] = [_img(176, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_SMALL] = [_img(176 + 24, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
+        self.speaker_portraits[const.PLAYER_HEAVY] = [_img(176 + 24 * 2, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
+        player_d_portrait_width = 25  # needed another pixel, sue me~
+        self.speaker_portraits[const.PLAYER_FLYING] = [_img(176 + 24 * 3, 392 + i * 32, player_d_portrait_width, 32, offs=start_pos) for i in range(0, 2)]
+
         temp = self._handle_rotated_player_pieces([624, 128, 8, 8], 2, 8, atlas, start_pos)
         self.thin_block_broken_pieces_horz = temp[0]
         self.thin_block_broken_pieces_vert = temp[1]
-
-        self.toggle_block_bases = []
-        self.toggle_block_icons = []
-        self._toggle_blocks = {}  # (idx, w, h, solid) -> ImageModel
 
         self.player_orb_sprites = [(_img(32, 368 + i * 8, 8, 8, offs=start_pos),
                                     _img(40, 368 + i * 8, 8, 8, offs=start_pos),
@@ -285,6 +297,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.particles_bubbles_small = [_img(56 + i * 3, 381, 3, 3, offs=start_pos) for i in range(0, 2)]
         self.particles_bubbles_medium = [_img(56 + i * 4, 376, 4, 4, offs=start_pos) for i in range(0, 2)]
         self.particles_bubbles_large = [_img(64 + i * 5, 376, 5, 5, offs=start_pos) for i in range(0, 2)]
+
+        self.toggle_block_bases = []
+        self.toggle_block_icons = []
+        self._toggle_blocks = {}  # (idx, w, h, solid) -> ImageModel
 
         tb_xy = (0, 224)
         for i in range(0, 4):
@@ -298,6 +314,12 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             self._toggle_blocks[(i, 32, 16, False)] = _img(tb_xy[0] + 32, tb_xy[1] + 16 + 32 * i, 32, 16, offs=start_pos)
             self._toggle_blocks[(i, 16, 32, False)] = _img(tb_xy[0] + 80, tb_xy[1] + 32 * i, 16, 32, offs=start_pos)
             self._toggle_blocks[(i, 32, 32, False)] = _img(tb_xy[0] + 128, tb_xy[1] + 32 * i, 32, 32, offs=start_pos)
+
+        self.pushable_blocks = {}
+        for i in range(0, 5):
+            self.pushable_blocks[(1, 1, (i + 1) % 5)] = _img(160, 224 + i * 32, 16, 16, offs=start_pos)
+            self.pushable_blocks[(2, 2, (i + 1) % 5)] = _img(176, 224 + i * 32, 24, 24, offs=start_pos)
+            self.pushable_blocks[(3, 3, (i + 1) % 5)] = _img(200, 224 + i * 32, 32, 32, offs=start_pos)
 
         for i in range(0, 4):
             self.character_arrows.append(_img(24 * i, 416, 24, 24, offs=start_pos))
@@ -332,8 +354,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.spike_bottoms_8 = _img(32, 392, 32, 8, offs=start_pos)
         self.all_spike_bottoms = [self.spike_bottoms_1, self.spike_bottoms_2, self.spike_bottoms_4, self.spike_bottoms_8]
 
-        self.info_exclamation = (_img(160, 416, 8, 16, offs=start_pos), _img(160, 438, 8, 2, offs=start_pos))
-        self.info_question = (_img(168, 416, 8, 16, offs=start_pos), _img(168, 438, 8, 2, offs=start_pos))
+        self.info_exclamation = (_img(160, 438, 8, 2, offs=start_pos), _img(160, 416, 8, 16, offs=start_pos))
+        self.info_question = ( _img(168, 438, 8, 2, offs=start_pos), _img(168, 416, 8, 16, offs=start_pos))
 
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
         all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms
@@ -347,6 +369,13 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         if length > 0 and overflow_if_not_divisible:
             res.append(all_spikes[0])
         return res
+
+    def get_pushable_block_sprite(self, size, color_id):
+        key = (size[0], size[1], color_id if color_id >= 0 else 0)
+        if key in self.pushable_blocks:
+            return self.pushable_blocks[key]
+        else:
+            return None
 
     def _make_transparent_sprites(self, base_rect, src_sheet, n, atlas):
         result_models = []
@@ -498,6 +527,9 @@ class _UiSheet(spritesheets.SpriteSheet):
         self._character_card_animations = {}    # (boolean first, boolean: last) -> list of ImageModel
         self._character_card_anim_done = None
 
+        self.translucent_squares = []
+        self.translucent_pixels = []
+
     def get_size(self, img_size):
         size = super().get_size(img_size)
         bar_size = _UiSheet.N_PROGRESS_BARS * 6
@@ -546,6 +578,8 @@ class _UiSheet(spritesheets.SpriteSheet):
                              decay_chance_provider=lambda frm_idx, xy: 0.1 - (0.08 * frm_idx / n_frames))
         for r in rects_drawn:
             self.top_panel_progress_bars.append(_img(r[0], r[1], r[2], r[3], offs=(0, 0)))
+
+
 
     def get_character_card_sprite(self, player_type, is_first):
         return self._character_cards[(player_type.get_id(), is_first)]

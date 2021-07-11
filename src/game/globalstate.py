@@ -67,6 +67,8 @@ class GlobalState:
         self._save_data = SaveData("save_data.txt").load_from_disk()
         self._settings = Settings("settings.txt").load_from_disk()
 
+        self._should_quit_for_real = False
+
     def tick_count(self):
         return self._tick_count
 
@@ -81,6 +83,12 @@ class GlobalState:
 
     def settings(self) -> Settings:
         return self._settings
+
+    def quit_game_for_real(self):
+        self._should_quit_for_real = True
+
+    def should_exit(self):
+        return self._should_quit_for_real
 
 
 _INSTANCE = GlobalState()

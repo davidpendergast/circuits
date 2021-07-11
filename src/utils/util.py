@@ -175,6 +175,14 @@ def cartesian_to_spherical(v):
         return (r, theta, phi)
 
 
+def interpolate_spherical(v1, v2, a):
+    r1, theta1, phi1 = cartesian_to_spherical(v1)
+    r2, theta2, phi2 = cartesian_to_spherical(v2)
+    return spherical_to_cartesian(linear_interp(r1, r2, a),
+                                  linear_interp(theta1, theta2, a),
+                                  linear_interp(phi1, phi2, a))
+
+
 def rect_expand(rect, all_expand=0, left_expand=0, right_expand=0, up_expand=0, down_expand=0):
     return [rect[0] - left_expand - all_expand,
             rect[1] - up_expand - all_expand,

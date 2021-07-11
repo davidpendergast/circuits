@@ -80,6 +80,7 @@ SELECT_ALL = "select_all"
 COPY = "copy"
 PASTE = "paste"
 CUT = "cut"
+ADVANCED_EDIT = "advanced_edit"
 
 SAVE = "save"
 SAVE_AS = "save_as"

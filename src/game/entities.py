@@ -2,6 +2,7 @@
 import math
 import random
 import typing
+from typing import Union, List
 
 import src as src  # for typing~
 
@@ -18,6 +19,7 @@ import src.game.colors as colors
 import src.game.globalstate as gs
 import src.game.const as const
 import src.game.debug as debug
+import src.game.dialog as dialog
 
 
 _ENT_ID = 0
@@ -70,7 +72,7 @@ class Entity:
 
         self._colliders = []
 
-        self._frame_of_reference_parent = None
+        self._frame_of_reference_parents = []
         self._frame_of_reference_parent_do_horz = True
         self._frame_of_reference_parent_do_vert = True
         self._frame_of_reference_children = []
@@ -92,6 +94,9 @@ class Entity:
 
     def get_color_override(self):
         return self._color_override
+
+    def is_color_baked_into_sprites(self):
+        return False
 
     def set_selected_in_editor(self, val):
         self._is_selected_in_editor = val
@@ -145,6 +150,9 @@ class Entity:
                 if child_dx == 0 and child_dy == 0:
                     continue
                 else:
+                    child_dx /= len(child._frame_of_reference_parents)
+                    child_dy /= len(child._frame_of_reference_parents)
+
                     if child_dx == 0:
                         child.set_y(child.get_y(raw=True) + child_dy, update_frame_of_reference=True)
                     elif child_dy == 0:
@@ -174,18 +182,40 @@ class Entity:
     def get_physics_group(self):
         return UNKNOWN_GROUP
 
-    def set_frame_of_reference_parent(self, parent, horz=True, vert=True):
+    def set_frame_of_reference_parents(self, parents, horz=True, vert=True):
+        parents = [] if parents is None else util.listify(parents)
+        for p in parents:
+            if p is not None and p.is_frame_of_reference_child_of(self):
+                print("WARN: attempted to create circular frame of reference chain from "
+                             "parent ({}) to child ({}), skipping".format(p, self))
+                return
+
         self._frame_of_reference_parent_do_horz = horz
         self._frame_of_reference_parent_do_vert = vert
 
-        if parent == self._frame_of_reference_parent:
+        if parents == self._frame_of_reference_parents:
             return
-        if self._frame_of_reference_parent is not None:
-            if self in self._frame_of_reference_parent._frame_of_reference_children:  # family germs
-                self._frame_of_reference_parent._frame_of_reference_children.remove(self)
-        self._frame_of_reference_parent = parent
-        if parent is not None:
-            self._frame_of_reference_parent._frame_of_reference_children.append(self)
+        if len(self._frame_of_reference_parents) > 0:
+            for p in self._frame_of_reference_parents:
+                if self in p._frame_of_reference_children:  # family germs
+                    p._frame_of_reference_children.remove(self)
+
+        self._frame_of_reference_parents = []
+        for p in parents:
+            self._frame_of_reference_parents.append(p)
+            p._frame_of_reference_children.append(self)
+
+    def is_frame_of_reference_child_of(self, other, max_depth=-1):
+        if max_depth == 0:
+            return False
+        for p in self._frame_of_reference_parents:
+            parent = p
+            if other == parent:
+                return True
+            else:
+                if parent.is_frame_of_reference_child_of(other, max_depth=max_depth-1):
+                    return True
+        return False
 
     def get_x(self, raw=False):
         return self.get_xy(raw=raw)[0]
@@ -242,7 +272,7 @@ class Entity:
     def update_sprites(self):
         pass
 
-    def update_frame_of_reference_parent(self):
+    def update_frame_of_reference_parents(self):
         pass
 
     def all_colliders(self, solid=None, sensor=None, enabled=True) -> typing.Iterable['PolygonCollider']:
@@ -342,7 +372,7 @@ class Entity:
         """return: the tint applied to this entity's sprites"""
         if not ignore_override and self.get_color_override() is not None:
             return self.get_color_override()
-        elif self.get_color_id() is not None:
+        elif self.get_color_id() is not None and not self.is_color_baked_into_sprites():
             return spriteref.get_color(self.get_color_id())
         else:
             return colors.PERFECT_WHITE
@@ -399,6 +429,9 @@ class AbstractBlockEntity(Entity):
 
     def get_color_id(self):
         return 0
+
+    def is_color_baked_into_sprites(self):
+        return False
 
     def get_color(self, ignore_override=False, include_lighting=True):
         base_color = super().get_color(ignore_override=ignore_override)
@@ -546,19 +579,121 @@ class BreakableBlockEntity(BlockEntity):
                 # TODO sound
 
 
+class PushableBlockEntity(BlockEntity):
+
+    def __init__(self, x, y, w, h, color_id=0):
+        vert_block_avoider = RectangleCollider([2, 0, w - 4, h],             # this avoids other blocks
+                                               CollisionMasks.ACTOR,
+                                               collides_with=CollisionMasks.BLOCK,
+                                               resolution_hint=CollisionResolutionHints.VERT_ONLY)
+        main_colliders = BlockEntity.build_colliders_for_rect([0, 0, w, h])  # this is what players collide with
+        vert_block_avoider.set_ignore_collisions_with(main_colliders)        # no self-collisions
+        main_colliders.append(vert_block_avoider)
+
+        self.breaking_collider = RectangleCollider([0, 0, w, h], CollisionMasks.BREAKING)  # so that breakables can sense us
+        main_colliders.append(self.breaking_collider)
+
+        left_block_sensor = RectangleCollider([-1, 0, 1, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.BLOCK)
+        right_block_sensor = RectangleCollider([w, 0, 1, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.BLOCK)
+        left_player_sensor = RectangleCollider([-4, 0, 4, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.ACTOR)
+        right_player_sensor = RectangleCollider([w, 0, 4, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.ACTOR)
+        self.ground_sensor = RectangleCollider([2, h, w - 4, 1], CollisionMasks.SENSOR, collides_with=CollisionMasks.BLOCK)
+
+        slope_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR,
+                                         collides_with=(CollisionMasks.SLOPE_BLOCK_VERT, CollisionMasks.SLOPE_BLOCK_HORZ))
+
+        self.left_player_sensor_id = left_player_sensor.get_id()
+        self.right_player_sensor_id = right_player_sensor.get_id()
+        self.left_block_sensor_id = left_block_sensor.get_id()
+        self.right_block_sensor_id = right_block_sensor.get_id()
+        self.ground_sensor_id = self.ground_sensor.get_id()
+        self.slope_sensor_id = slope_sensor.get_id()
+
+        all_sensors = [left_player_sensor, right_player_sensor, left_block_sensor, right_block_sensor,
+                       self.ground_sensor, slope_sensor]
+
+        super().__init__(x, y, w, h, color_id=color_id)
+
+        self.set_colliders(main_colliders)
+        self._sensor_ent = SensorEntity([0, 0, w, h], all_sensors, parent=self)
+
+        self._is_currently_breaking = False
+        self._adjust_colliders_for_breaking(False)
+
+        self.fall_speed = 2
+        self.slide_speed = 3
+
+    def is_color_baked_into_sprites(self):
+        return True
+
+    def all_sub_entities(self):
+        yield self._sensor_ent
+
+    def update_frame_of_reference_parents(self):
+        blocks_upon = self.get_world().get_sensor_state(self.ground_sensor_id)
+        best_upon, _ = choose_best_frames_of_reference(self, blocks_upon, self.ground_sensor, max_n=5)
+        self.set_frame_of_reference_parents(best_upon, horz=False, vert=True)
+
+    def _adjust_colliders_for_breaking(self, breaking):
+        self._is_currently_breaking = breaking
+        self.breaking_collider.set_enabled(breaking)
+        all_colliders = [c for c in self.all_colliders()]
+        all_colliders.extend([c for c in self._sensor_ent.all_colliders(sensor=True)])
+
+        for c in all_colliders:
+            if c.collides_with_masks((CollisionMasks.BLOCK,)):
+                new_collides_with = [m for m in c.get_collides_with() if m != CollisionMasks.BREAKABLE]
+                if not breaking:
+                    # if we're breaking, we want to move through breaking blocks, so we can break them
+                    new_collides_with.append(CollisionMasks.BREAKABLE)
+                c.set_collides_with(new_collides_with)
+
+    def update(self):
+        super().update()
+
+        if self.get_world().is_waiting():
+            return
+
+        is_grounded = self.get_world().get_sensor_state(self.ground_sensor_id)
+
+        new_is_breaking = not is_grounded
+        if new_is_breaking != self._is_currently_breaking:
+            self._adjust_colliders_for_breaking(new_is_breaking)
+
+        if is_grounded:
+            self.set_y_vel(0)
+        else:
+            self.set_y_vel(self.fall_speed)
+
+    def is_dynamic(self):
+        return True
+
+    def was_crushed(self):
+        print("INFO: pushable block was crushed: {}".format(self))
+        self.get_world().remove_entity(self)
+
+    def get_main_model(self):
+        if self._art_id is not None:
+            x_size = self.get_w() / gs.get_instance().cell_size
+            y_size = self.get_h() / gs.get_instance().cell_size
+            return spriteref.object_sheet().get_pushable_block_sprite((x_size, y_size), self.get_color_id())
+        else:
+            return super().get_main_model()
+
+
 class SensorEntity(Entity):
 
-    def __init__(self, rect, sensor, parent=None):
+    def __init__(self, rect, sensors, parent=None):
         self.parent = parent
         Entity.__init__(self, 0, 0, w=rect[2], h=rect[3])
 
         if self.parent is not None:
             self.set_xy((self.parent.get_x() + rect[0], self.parent.get_y() + rect[1]))
-            self.set_frame_of_reference_parent(self.parent)
+            self.set_frame_of_reference_parents(self.parent)
         else:
             self.set_xy((rect[0], rect[1]))
 
-        self.set_colliders([sensor])
+        self.set_colliders(util.listify(sensors))
 
     def is_dynamic(self):
         return True
@@ -1191,6 +1326,45 @@ class PlaybackPlayerController(PlayerController):
         return False
 
 
+def choose_best_frames_of_reference(entity, candidate_list, sensor, max_n=1):
+    """
+    :param entity:
+    :param candidate_list:
+    :param sensor:
+    :param max_n:
+    :return: tuple (list of best FORs, map: Entity -> int overlap amount)
+    """
+
+    if len(candidate_list) == 0:
+        return [], {}
+    elif len(candidate_list) == 1:
+        return candidate_list, {candidate_list[0]: 1}
+    else:
+        candidate_list = list(candidate_list)
+        candidate_list.sort(key=lambda b: b.get_rect())  # for consistency
+
+        overlaps = {}
+
+        # figure out which ones we're on most
+        xy = entity.get_xy(raw=False)
+        collider_rect = sensor.get_rect(xy)
+        for block in candidate_list:
+            for block_collider in block.all_colliders():
+                block_collider_rect = block_collider.get_rect(block.get_xy(raw=False))
+                overlap_rect = util.get_rect_intersect(collider_rect, block_collider_rect)
+                if overlap_rect is None:
+                    overlaps[block] = -1
+                else:
+                    overlaps[block] = overlap_rect[2] * overlap_rect[3]
+
+        candidate_list = [c for c in candidate_list if overlaps[c] > 0]
+        candidate_list.sort(reverse=True, key=lambda b: overlaps[b])
+        if max_n < len(candidate_list):
+            return candidate_list[:max_n], overlaps
+        else:
+            return candidate_list, overlaps
+
+
 class PlayerEntity(Entity):
 
     LIGHT_RADIUS = 8 * gs.get_instance().cell_size
@@ -1604,56 +1778,31 @@ class PlayerEntity(Entity):
             new_particle = PlayerBodyPartParticle(self.get_x(), self.get_y(), self.get_player_type().get_id(), part_idx)
             self.get_world().add_entity(new_particle)
 
-    def update_frame_of_reference_parent(self):
+    def update_frame_of_reference_parents(self):
         # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
         # TODO touching your toe as you're (mostly) standing on a slop
         blocks_upon = self.get_world().get_sensor_state(self.foot_sensor_id)
-        best_upon, _ = self._choose_best_frame_of_reference(blocks_upon, self.foot_sensor)
-        if best_upon is not None:
-            self.set_frame_of_reference_parent(best_upon)
-            return
+        best_upon, _ = choose_best_frames_of_reference(self, blocks_upon, self.foot_sensor, max_n=1)
+        if len(best_upon) > 0:
+            self.set_frame_of_reference_parents(best_upon)
+        else:
+            blocks_on_left = self.get_world().get_sensor_state(self.left_sensor_id)
+            blocks_on_right = self.get_world().get_sensor_state(self.right_sensor_id)
 
-        blocks_on_left = self.get_world().get_sensor_state(self.left_sensor_id)
-        blocks_on_right = self.get_world().get_sensor_state(self.right_sensor_id)
+            best_on_left, left_overlaps = choose_best_frames_of_reference(self, blocks_on_left, self.left_sensor, max_n=1)
+            best_on_right, right_overlaps = choose_best_frames_of_reference(self, blocks_on_right, self.right_sensor, max_n=1)
 
-        best_on_left, left_overlap = self._choose_best_frame_of_reference(blocks_on_left, self.left_sensor)
-        best_on_right, right_overlap = self._choose_best_frame_of_reference(blocks_on_right, self.right_sensor)
-
-        if best_on_left is not None and best_on_right is not None:
-            if left_overlap <= right_overlap:
-                self.set_frame_of_reference_parent(best_on_left, vert=False)
+            if len(best_on_left) > 0 and len(best_on_right) > 0:
+                if left_overlaps[best_on_left[0]] <= right_overlaps[best_on_right[0]]:
+                    self.set_frame_of_reference_parents(best_on_left[0], vert=False)
+                else:
+                    self.set_frame_of_reference_parents(best_on_right[0], vert=False)
+            elif len(best_on_left) > 0:
+                self.set_frame_of_reference_parents(best_on_left[0], vert=False)
+            elif len(best_on_right) > 0:
+                self.set_frame_of_reference_parents(best_on_right[0], vert=False)
             else:
-                self.set_frame_of_reference_parent(best_on_right, vert=False)
-        elif best_on_left is not None:
-            self.set_frame_of_reference_parent(best_on_left, vert=False)
-        elif best_on_right is not None:
-            self.set_frame_of_reference_parent(best_on_right, vert=False)
-        else:
-            self.set_frame_of_reference_parent(None)
-
-    def _choose_best_frame_of_reference(self, candidate_list, sensor):
-        if len(candidate_list) == 0:
-            return None, None
-        elif len(candidate_list) == 1:
-            return candidate_list[0]
-        else:
-            candidate_list.sort(key=lambda b: b.get_rect())  # for consistency
-            # figure out which one we're on more
-            xy = self.get_xy(raw=False)
-            collider_rect = sensor.get_rect(xy)
-            max_overlap = -1
-            max_overlap_block = None
-            for block in candidate_list:
-                for block_collider in block.all_colliders():
-                    block_collider_rect = block_collider.get_rect(block.get_xy(raw=False))
-                    overlap_rect = util.get_rect_intersect(collider_rect, block_collider_rect)
-                    if overlap_rect is None:
-                        continue  # ??
-                    elif overlap_rect[2] * overlap_rect[3] > max_overlap:
-                        max_overlap = overlap_rect[2] * overlap_rect[3]
-                        max_overlap_block = block
-
-            return max_overlap_block, max_overlap
+                self.set_frame_of_reference_parents([])
 
     def get_debug_color(self):
         return colors.PERFECT_BLUE
@@ -2183,27 +2332,72 @@ class SpikeEntity(Entity):
             yield spr
 
 
+_ALL_INFO_TYPES = {}
+
+
+class InfoEntityType:
+
+    def __init__(self, ident, turns, sprite_lookup, floating_type=False):
+        self.ident = ident
+        self.faces_player = turns
+        self.sprite_lookup = sprite_lookup
+        self.floating_type = floating_type
+        _ALL_INFO_TYPES[ident] = self
+
+    def get_entity_sprites(self):
+        all_sprites = [] if self.sprite_lookup is None else self.sprite_lookup()
+        if self.floating_type or len(all_sprites) == 0:
+            return all_sprites
+        else:
+            return [all_sprites[(gs.get_instance().anim_tick() // 8) % len(all_sprites)]]
+
+    def turns_to_face_player(self):
+        return self.faces_player
+
+    def get_id(self):
+        return self.ident
+
+
+class InfoEntityTypes:
+
+    EXCLAM = InfoEntityType("exclam", False, lambda: spriteref.object_sheet().info_exclamation, floating_type=True)
+    QUESTION = InfoEntityType("question", False, lambda: spriteref.object_sheet().info_question, floating_type=True)
+    PLAYER_FAST = InfoEntityType(const.PLAYER_FAST, True, lambda: spriteref.object_sheet().get_player_sprites(const.PLAYER_FAST, spriteref.PlayerStates.IDLE))
+    PLAYER_SMALL = InfoEntityType(const.PLAYER_SMALL, True, lambda: spriteref.object_sheet().player_b[spriteref.PlayerStates.IDLE])
+    PLAYER_HEAVY = InfoEntityType(const.PLAYER_HEAVY, True, lambda: spriteref.object_sheet().player_c[spriteref.PlayerStates.IDLE])
+    PLAYER_FLYING = InfoEntityType(const.PLAYER_FLYING, True, lambda: spriteref.object_sheet().player_d[spriteref.PlayerStates.IDLE])
+
+    @staticmethod
+    def get_by_id(ident):
+        if ident in _ALL_INFO_TYPES:
+            return _ALL_INFO_TYPES[ident]
+        else:
+            return InfoEntityTypes.QUESTION
+
+    @staticmethod
+    def all_types():
+        return [_ALL_INFO_TYPES[key] for key in _ALL_INFO_TYPES]
+
+
 class InfoEntity(Entity):
 
-    EXCLAM = "exclam"
-    QUESTION = "question"
-
-    def __init__(self, x, y, points, text, color_id=0, info_type="exclam"):
+    def __init__(self, x, y, points, text, info_type, dialog_id=None, color_id=0):
         cs = gs.get_instance().cell_size
         Entity.__init__(self, x, y, w=cs, h=cs)
         self._points = points
 
         self._text = text
         self._color_id = color_id
-        self._info_type = info_type
+        self._info_type = info_type if isinstance(info_type, InfoEntityType) else InfoEntityTypes.get_by_id(info_type)
+        self._dialog_id = dialog_id
 
         self._base_sprite = None
         self._top_sprite = None
         self._text_sprite = None
         self._text_bg_sprite = None
 
-        self._activation_radius = 3 * cs // 4
-        self._is_showing = False
+        self._activation_radius = 8 * cs // 4
+        self._should_show_text = False
 
         self._ticks_overlapping_player = 0
         self._activation_thresh = 10
@@ -2211,43 +2405,66 @@ class InfoEntity(Entity):
         self._point_sprite_list_for_editor = []
 
     def _get_sprites(self):
-        """returns: (top_sprite, base_sprite)"""
-        if self._info_type == InfoEntity.EXCLAM:
-            return spriteref.object_sheet().info_exclamation
-        elif self._info_type == InfoEntity.QUESTION:
-            return spriteref.object_sheet().info_question
+        """returns: (top_sprite, base_sprite) or [sprite]"""
+        return self._info_type.get_entity_sprites()
 
     def get_color_id(self):
         return self._color_id
 
-    def update(self):
-        self._ticks_overlapping_player = max(0, self._ticks_overlapping_player - 1)
-
-        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprite_list_for_editor,
-                                         self._points, (8, 8))
+    def update_sprites(self):
+        all_sprites = self._get_sprites()
+        base_model = all_sprites[0] if len(all_sprites) >= 1 else None
+        top_model = all_sprites[1] if len(all_sprites) >= 2 else None
 
         w = self.get_world()
-        if w is not None:
-            p = w.get_player(must_be_active=True)
-            if p is not None:
-                if util.dist(p.get_center(), self.get_center()) <= self._activation_radius:
-                    self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
+        p = None if w is None else w.get_player()
 
-        self._is_showing = self._ticks_overlapping_player >= self._activation_thresh
+        should_xflip = self._info_type.faces_player and (p is not None and p.get_center()[0]  < self.get_center()[0])
 
-        if len(self._points) == 0:
-            pt = self.get_xy()
+        if base_model is None:
+            self._base_sprite = None
         else:
-            pt = self._points[0]
+            if self._base_sprite is None:
+                self._base_sprite = sprites.ImageSprite(base_model, 0, 0, spriteref.ENTITY_LAYER)
+            cx = self.get_center()[0]
+            bot_y = self.get_y() + self.get_h()
+            self._base_sprite = self._base_sprite.update(new_model=base_model,
+                                                         new_x=cx - base_model.width() // 2,
+                                                         new_y=bot_y - base_model.height(),
+                                                         new_depth=PLAYER_DEPTH + 1,
+                                                         new_color=self.get_color(),
+                                                         new_xflip=should_xflip)
 
-        if not self._is_showing:
+        cs = gs.get_instance().cell_size
+        if top_model is None:
+            self._top_sprite = None
+        else:
+            if self._top_sprite is None:
+                self._top_sprite = sprites.ImageSprite(top_model, 0, 0, spriteref.ENTITY_LAYER)
+            self._top_sprite = self._top_sprite.update(new_model=top_model,
+                                                       new_x=cx - top_model.width() // 2,
+                                                       new_y=bot_y - base_model.height() - cs // 8 - top_model.height(),
+                                                       new_depth=PLAYER_DEPTH + 1,
+                                                       new_color=self.get_color(),
+                                                       new_xflip=should_xflip)
+
+        if not self._should_show_text or (w is not None and w.is_dialog_active()):
             self._text_sprite = None
             self._text_bg_sprite = None
         else:
             if self._text_sprite is None:
                 self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, self._text, depth=WORLD_UI_DEPTH,
                                                        font_lookup=spriteref.spritesheets.get_default_font(small=True))
-                self._text_sprite.update(new_x=pt[0], new_y=pt[1], new_text=self._text)
+            self._text_sprite.update(new_text=self._text)
+            if len(self._points) == 0:
+                height = self._base_sprite.height() if self._base_sprite is not None else 0
+                height += self._top_sprite.height() if self._top_sprite is not None else 0
+                height = max(height, gs.get_instance().cell_size * 2)
+                pt = (self.get_center()[0] - self._text_sprite.size()[0] // 2,
+                      self.get_y() + self.get_h() - height - self._text_sprite.size()[1] - 8)
+            else:
+                pt = self._points[0]
+            self._text_sprite.update(new_x = pt[0], new_y = pt[1])
 
             text_rect = self._text_sprite.get_rect()
             bg_rect = util.rect_expand(text_rect, all_expand=0)
@@ -2256,25 +2473,34 @@ class InfoEntity(Entity):
                                                                all_borders=spriteref.overworld_sheet().border_thin)
             self._text_bg_sprite.update(new_rect=bg_rect)
 
-        top_model, base_model = self._get_sprites()
-        if self._base_sprite is None:
-            self._base_sprite = sprites.ImageSprite(base_model, 0, 0, spriteref.ENTITY_LAYER)
-        cx = self.get_center()[0]
-        bot_y = self.get_y() + self.get_h()
-        self._base_sprite = self._base_sprite.update(new_model=base_model,
-                                                     new_x=cx - base_model.width() // 2,
-                                                     new_y=bot_y - base_model.height(),
-                                                     new_depth=PLAYER_DEPTH + 1,
-                                                     new_color=self.get_color())
+    def update(self):
+        if self._ticks_overlapping_player < 0:
+            self._ticks_overlapping_player += 1
+        else:
+            self._ticks_overlapping_player = max(0, self._ticks_overlapping_player - 1)
 
-        cs = gs.get_instance().cell_size
-        if self._top_sprite is None:
-            self._top_sprite = sprites.ImageSprite(top_model, 0, 0, spriteref.ENTITY_LAYER)
-        self._top_sprite = self._top_sprite.update(new_model=top_model,
-                                                   new_x=cx - top_model.width() // 2,
-                                                   new_y=bot_y - base_model.height() - cs // 8 - top_model.height(),
-                                                   new_depth=PLAYER_DEPTH + 1,
-                                                   new_color=self.get_color())
+        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprite_list_for_editor,
+                                         self._points, (8, 8))
+
+        w = self.get_world()
+        p = None if w is None else w.get_player(must_be_active=True)
+
+        overlapping = False
+        if p is not None:
+            overlapping = util.dist(p.get_center(), self.get_center()) <= self._activation_radius
+            if overlapping:
+                self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
+
+        self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh
+
+        if self._dialog_id is not None and overlapping and self._should_show_text and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+            d = dialog.get_dialog(self._dialog_id, p.get_player_type())
+            if d is not None:
+                self._ticks_overlapping_player = -60  # so that we can't insta-reactivate dialog after this one is over
+                import src.engine.scenes as scenes
+                active_scene = scenes.get_instance().get_active_scene()
+                if isinstance(active_scene, dialog.DialogScene):
+                    active_scene.start_dialog(d)
 
     def all_sprites(self):
         yield self._text_sprite
@@ -2315,7 +2541,7 @@ class CollisionMasks:
     SLOPE_BLOCK_HORZ = CollisionMask("slope_block_horz", render_depth=25)
     SLOPE_BLOCK_VERT = CollisionMask("slope_block_vert", render_depth=25)
 
-    ACTOR = CollisionMask("actor", render_depth=10)
+    ACTOR = CollisionMask("actor", render_depth=10)  # aka BLOCK_AVOIDER
     BREAKING = CollisionMask("breaking", render_depth=10)
 
     SENSOR = CollisionMask("block_sensor", is_solid=False, is_sensor=True, render_depth=10)
@@ -2375,6 +2601,8 @@ class PolygonCollider:
         self._debug_color = color
         self._id = _next_collider_id()
 
+        self._ignore_ids = set()
+
         self._is_enabled = True
 
     def get_id(self):
@@ -2405,7 +2633,11 @@ class PolygonCollider:
         return self._collides_with
 
     def collides_with(self, other: 'PolygonCollider'):
-        return self.collides_with_mask(other.get_mask())
+        return self.collides_with_mask(other.get_mask()) and other.get_id() not in self._ignore_ids
+
+    def set_ignore_collisions_with(self, other: Union[List['PolygonCollider'], 'PolygonCollider']):
+        for c in util.listify(other):
+            self._ignore_ids.add(c.get_id())
 
     def collides_with_mask(self, mask: CollisionMask):
         return mask in self._collides_with

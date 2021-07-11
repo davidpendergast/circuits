@@ -24,6 +24,10 @@ import src.game.overworld as overworld
 import src.game.ui as ui
 import src.engine.spritesheets as spritesheets
 import src.game.worlds as worlds
+import src.engine.threedee as threedee
+import src.engine.threedeecine as threedeecine
+import src.game.cinematics as cinematics
+import src.game.dialog as dialog
 
 
 class MainMenuScene(scenes.Scene):
@@ -37,10 +41,17 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
-        self._options_list.add_option("exit", lambda: self.jump_to_scene(LevelEditGameScene(blueprints.get_test_blueprint_4())), esc_option=True)
+        self._options_list.add_option("movie", lambda: self.jump_to_scene(cinematics.CinematicScene3D(cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.INTRO), lambda: MainMenuScene())))
+        self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
         self._options_list.update_sprites()
 
+        self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
+
     def update(self):
+        self.cine_seq.update()
+        cam = self.cine_seq.get_camera().get_snapshot()
+        renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER).set_camera(cam)
+
         self.update_sprites()
 
         self._title_element.update_self_and_kids()
@@ -50,21 +61,25 @@ class MainMenuScene(scenes.Scene):
         total_size = renderengine.get_instance().get_game_size()
 
         if self._title_element.get_sprite() is None:
-            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=2)
+            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=1.5)
             self._title_element.set_sprite(text_sprite)
 
-        title_x = total_size[0] // 2 - self._title_element.get_size()[0] // 2
-        title_y = total_size[1] // 3 - self._title_element.get_size()[1] // 2
+        title_w = self._title_element.get_size()[0]
+        title_h = self._title_element.get_size()[1]
+        title_x = total_size[0] // 2 - title_w // 2
+        title_y = total_size[1] // 4 - title_h // 2
         self._title_element.set_xy((title_x, title_y))
 
-        options_xy = (total_size[0] // 3 - self._options_list.get_size()[0] // 2,
-                      title_y + self._title_element.get_size()[1] - 40)
+        options_xy = (total_size[0] // 2 - title_w // 4 - self._options_list.get_size()[0] // 2,
+                      title_y + 3 * title_h // 4)
         self._options_list.set_xy(options_xy)
 
     def all_sprites(self):
         for spr in self._title_element.all_sprites_from_self_and_kids():
             yield spr
         for spr in self._options_list.all_sprites_from_self_and_kids():
+            yield spr
+        for spr in self.cine_seq.all_sprites():
             yield spr
 
 
@@ -350,7 +365,7 @@ class IntroCutsceneScene(CutsceneScene):
 
 class _BaseGameScene(scenes.Scene):
 
-    def __init__(self, bp=None):
+    def __init__(self):
         scenes.Scene.__init__(self)
 
         self._world = None
@@ -373,14 +388,17 @@ class _BaseGameScene(scenes.Scene):
         return self._world_view
 
     def update_world_and_view(self):
-        if self._world is not None:
-            self._world.update()
+        pass
+
+    def update_sprites(self):
         if self._world_view is not None:
             self._world_view.update()
 
     def update(self):
-        self.update_world_and_view()
+        if self._world is not None:
+            self._world.update()
 
+        # TODO why process inputs *after* updating world? because it never matters...?
         if inputs.get_instance().mouse_in_window():
             screen_pos = inputs.get_instance().mouse_pos()
             pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
@@ -402,7 +420,6 @@ class _BaseGameScene(scenes.Scene):
             cell_size = gs.get_instance().cell_size
             print("INFO: mouse pressed at ({}, {})".format(int(world_xy[0]) // cell_size,
                                                            int(world_xy[1]) // cell_size))
-
     def all_sprites(self):
         if self._world_view is not None:
             for spr in self._world_view.all_sprites():
@@ -440,6 +457,8 @@ class Statuses:
     TOTAL_SUCCESS = Status("success", False, True, True, is_success=True)
     EXIT_NOW_SUCCESSFULLY = Status("exit_success", False, False, False, is_success=True)
 
+    DIALOG = Status("dialog", False, False, False, world_ticks_inc=False, is_success=False)
+
 
 class _GameState:
 
@@ -476,6 +495,9 @@ class _GameState:
         else:
             self._next_status = status
             self._next_status_countdown = delay
+
+    def is_waiting(self):
+        return self.get_status() == Statuses.WAITING
 
     def status_changed_this_frame(self):
         return self._status_elapsed_time <= 1
@@ -710,7 +732,7 @@ class ProgressBarUi(ui.UiElement):
         yield self.bar_sprite
 
 
-class RealGameScene(_BaseGameScene):
+class RealGameScene(_BaseGameScene, dialog.DialogScene):
 
     def __init__(self, bp, on_level_completion, on_level_exit):
         """
@@ -720,7 +742,9 @@ class RealGameScene(_BaseGameScene):
         """
         self._state = _GameState(bp)
 
-        _BaseGameScene.__init__(self, bp=bp)
+        # babby's first attempt at multiple inheritance
+        _BaseGameScene.__init__(self)
+        dialog.DialogScene.__init__(self)
 
         self._on_level_completion = on_level_completion
         self._on_level_exit = on_level_exit
@@ -735,12 +759,6 @@ class RealGameScene(_BaseGameScene):
         self._queued_next_world = None
         self._next_world_countdown = 0
 
-    def update_world_and_view(self):
-        if self._world is not None:
-            self._world.update()
-        if self._world_view is not None:
-            self._world_view.update()
-
     def on_level_complete(self, time):
         if self._on_level_completion is not None:
             self._on_level_completion(time)
@@ -749,7 +767,15 @@ class RealGameScene(_BaseGameScene):
         if self._on_level_exit is not None:
             self._on_level_exit()
 
+    def update_sprites(self):
+        _BaseGameScene.update_sprites(self)
+        dialog.DialogScene.update_sprites(self)
+        self._update_ui()
+
     def update(self):
+        dialog.DialogScene.update(self)
+
+    def update_impl(self):
         if self._queued_next_world is not None:
             if self._next_world_countdown <= 0:
                 bp, new_status, runnable = self._queued_next_world
@@ -768,7 +794,7 @@ class RealGameScene(_BaseGameScene):
         elif self._state.get_status() == Statuses.EXIT_NOW_SUCCESSFULLY:
             self._on_level_completion(self._state.get_elapsed_ticks())
 
-        super().update()
+        _BaseGameScene.update(self)
 
         self._state.update(self.get_world())
 
@@ -806,8 +832,6 @@ class RealGameScene(_BaseGameScene):
                                                     runnable=lambda: self._state.active_player_succeeded(recording))
                 else:
                     print("WARN: active player is satisfied but has no recording. hopefully we're in dev mode?")
-
-        self._update_ui()
 
     def replace_players_with_fadeout(self, delay=60):
         for i in range(0, self._state.get_active_player_idx() + 1):
@@ -890,7 +914,9 @@ class RealGameScene(_BaseGameScene):
         self._progress_bar_ui.update()
 
     def all_sprites(self):
-        for spr in super().all_sprites():
+        for spr in _BaseGameScene.all_sprites(self):
+            yield spr
+        for spr in dialog.DialogScene.all_sprites(self):
             yield spr
         if self._top_panel_ui is not None:
             for spr in self._top_panel_ui.all_sprites():
@@ -930,7 +956,7 @@ class LevelMetaDataEditScene(OptionSelectScene):
         self._on_exit = on_exit
 
         self._add_text_edit_option("level name: ", blueprints.NAME, bp)
-        self._add_text_edit_option("description: ", blueprints.DESCRIPTION, bp)
+        self._add_popout_text_edit_option("description: ", blueprints.DESCRIPTION, bp)
         self._add_text_edit_option("level ID: ", blueprints.LEVEL_ID, bp)
         self._add_players_edit_option("Players: ", bp)
 
@@ -951,7 +977,32 @@ class LevelMetaDataEditScene(OptionSelectScene):
                                        char_limit=char_limit,
                                        allowed_chars=allowed_chars)
             self.jump_to_scene(edit_scene)
-        self.add_option(name + current_val, _action)
+
+        self.add_option(name + (current_val if len(current_val) < 16 else current_val[:13] + "..."), _action)
+
+    def _add_popout_text_edit_option(self, name, attribute_id, bp, to_str=str, from_str=str):
+        current_val = to_str(bp.get_attribute(attribute_id))
+
+        def _action():
+            import src.utils.threadutils as threadutils
+            fut = threadutils.prompt_for_text("Edit Level Attribute: \"{}\"".format(attribute_id),
+                                              "Enter the new value: ", current_val, async=True)
+            import time
+            import pygame
+
+            while not fut.is_done():
+                time.sleep(1 / 20)
+                pygame.event.clear()
+                pygame.display.flip()
+
+            res = fut.get_val()
+            if res is not None:
+                new_bp = self._base_bp.copy_with(edits={attribute_id: from_str(res)})
+                self.get_manager().set_next_scene(LevelMetaDataEditScene(new_bp, self._on_exit))
+            else:
+                self.get_manager().set_next_scene(LevelMetaDataEditScene(self._base_bp, self._on_exit)),
+
+        self.add_option(name + (current_val if len(current_val) < 16 else current_val[:13] + "..."), _action)
 
     def _add_players_edit_option(self, name, bp):
         import src.game.playertypes as playertypes
@@ -1199,6 +1250,10 @@ class LevelEditGameScene(_BaseGameScene):
         toggle_func = lambda s: blueprints.SpecUtils.toggle_inverted(s)
         self._mutate_selected_specs(toggle_func)
 
+    def handle_advanced_edit_pressed(self):
+        advanced_edit_func = lambda s: blueprints.SpecUtils.open_advanced_editor(s)
+        self._mutate_selected_specs(advanced_edit_func)
+
     def _apply_state(self, state: 'EditorState'):
         self.all_spec_blobs = [s.copy() for s in state.all_specs]
 
@@ -1379,6 +1434,7 @@ class LevelEditGameScene(_BaseGameScene):
                                                 description=desc,
                                                 output_file=self.output_file))
 
+
     def adjust_edit_resolution(self, increase):
         if self.edit_resolution in self.resolution_options:
             cur_idx = self.resolution_options.index(self.edit_resolution)
@@ -1458,6 +1514,7 @@ class LevelEditGameScene(_BaseGameScene):
         res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())           # 7
         res.append(blueprints.SpecTypes.SPIKES.get_default_blob())              # 8
         res.append(blueprints.SpecTypes.INFO.get_default_blob())                # 9
+        res.append(blueprints.SpecTypes.PUSHABLE_BLOCK.get_default_blob())      # 0
 
         return res
 
@@ -1585,6 +1642,8 @@ class NormalMouseMode(MouseMode):
             self.scene.paste_clipboard_at_mouse()
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.DELETE)):
             self.scene.delete_selection()
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ADVANCED_EDIT)):
+            self.scene.handle_advanced_edit_pressed()
 
         cycle_type_steps = inputs.get_instance().was_pressed_four_way(
             right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_SUBTYPE_FORWARD),
@@ -1786,25 +1845,25 @@ class Test3DScene(scenes.Scene):
         self.handle_camera_rotate()
 
         layer = renderengine.get_instance().get_layer(spriteref.THREEDEE_LAYER)
-        layer.camera_position = self.cam_pos
-        layer.camera_direction = self.cam_dir
-        layer.camera_fov = self.cam_fov
+        layer.camera.set_position(self.cam_pos)
+        layer.camera.set_direction(self.cam_dir)
+        layer.camera.set_fov(self.cam_fov)
 
         pos = self.ship_sprites[0].position()
-        rot = self.ship_sprites[0].get_effective_rotation(camera_pos=layer.camera_position)
+        rot = self.ship_sprites[0].get_effective_rotation(camera_pos=layer.camera.get_position())
         scale = self.ship_sprites[0].scale()
-        cam_x, cam_y, cam_z = layer.camera_position
-        dir_x, dir_y, dir_z = layer.camera_direction
-        text = "camera_pos= ({:.2f}, {:.2f}, {:.2f})\n" \
-               "camera_dir= ({:.2f}, {:.2f}, {:.2f})\n" \
-               "camera_fov= {} \n\n" \
+        cam_x, cam_y, cam_z = layer.camera.get_position()
+        dir_x, dir_y, dir_z = layer.camera.get_direction()
+        text = "camera.pos= ({:.2f}, {:.2f}, {:.2f})\n" \
+               "camera.dir= ({:.2f}, {:.2f}, {:.2f})\n" \
+               "camera.fov= {} \n\n" \
                "ship_pos=   ({:.2f}, {:.2f}, {:.2f})\n" \
                "ship_rot=   ({:.2f}, {:.2f}, {:.2f})\n" \
                "ship_scale= ({:.2f}, {:.2f}, {:.2f})\n" \
                "tracking=   {}".format(
             cam_x, cam_y, cam_z,
             dir_x, dir_y, dir_z,
-            layer.camera_fov,
+            layer.camera.get_fov(),
             pos[0], pos[1], pos[2],
             rot[0], rot[1], rot[2],
             scale[0], scale[1], scale[2],
