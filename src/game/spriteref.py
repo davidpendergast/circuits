@@ -701,6 +701,60 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.border_double_thick = self._make_borders([24, 96, 24, 24], 6, offs=start_pos)
 
 
+class _StarSheet(spritesheets.SpriteSheet):
+
+    N_OPACITY_LEVELS = 8
+
+    def __init__(self):
+        spritesheets.SpriteSheet.__init__(self, "stars", "assets/stars.png")
+
+        self.stars = []
+
+    def get_size(self, img_size):
+        w = img_size[0]
+        h = img_size[1] * _StarSheet.N_OPACITY_LEVELS
+        return (w, h)
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+
+        sheet_h = sheet.get_height()
+
+        for i in range(1, _StarSheet.N_OPACITY_LEVELS):
+            opacity = 1 - i / (_StarSheet.N_OPACITY_LEVELS + 1)
+            x = start_pos[0]
+            y = start_pos[1] + sheet_h * i
+            artutils.draw_with_transparency(sheet, sheet.get_rect(), atlas, (x, y), opacity)
+
+        small_rects = [[(i % 3) * 16, (i // 3) % 2, 16, 16] for i in range(0, 6)]
+        large_rects = [[48, 0, 32, 32], [80, 0, 32, 32]]
+
+        self.stars = []
+        for i in range(1, _StarSheet.N_OPACITY_LEVELS):
+            y = sheet_h * i
+            table = {"small": [],
+                     "large": []}
+            for r in small_rects:
+                table["small"].append(_img(r[0], r[1] + y, r[2], r[3], offs=start_pos))
+            for r in large_rects:
+                table["large"].append(_img(r[0], r[1] + y, r[2], r[3], offs=start_pos))
+            self.stars.append(table)
+        self.stars.reverse()
+
+    def get_small_star(self, idx, opacity):
+        return self.get_star(idx, "small", opacity)
+
+    def get_large_star(self, idx, opacity):
+        return self.get_star(idx, "large", opacity)
+
+    def get_star(self, idx, ident, opacity):
+        table = util.index_into(self.stars, opacity, wrap=False)
+        if ident in table:
+            return table[ident][idx % len(table[ident])]
+        else:
+            return None
+
+
 class TextureSheet(spritesheets.SpriteSheet):
 
     def __init__(self, sheet_id, filename):
@@ -737,6 +791,8 @@ class ThreeDeeModels:
     AXIS = None
     SUN_FLAT = None
 
+    _2D_MODEL_CACHE = {}  # ImageModel -> ThreeDeeModel
+
     @staticmethod
     def _get_xform_for_texture(texture_id):
         if configs.rainbow_3d:
@@ -745,14 +801,18 @@ class ThreeDeeModels:
 
     @staticmethod
     def load_models_from_disk():
-        ThreeDeeModels.SHIP = threedee.ThreeDeeModel("ship", "assets/models/ship.obj",
-                                                     ThreeDeeModels._get_xform_for_texture("ship_texture"))
-        ThreeDeeModels.POINTY_BOX = threedee.ThreeDeeModel("pointy_box", "assets/models/pointy_box.obj",
-                                                           ThreeDeeModels._get_xform_for_texture("ship_texture"))
-        ThreeDeeModels.AXIS = threedee.ThreeDeeModel("axis", "assets/models/axis.obj",
-                                                     ThreeDeeModels._get_xform_for_texture("ship_texture"))
-        ThreeDeeModels.SUN_FLAT = threedee.ThreeDeeModel("sun_flat", "assets/models/sun_flat.obj",
-                                                         ThreeDeeModels._get_xform_for_texture("sun_texture_flat"))
+        xform = lambda ident: ThreeDeeModels._get_xform_for_texture(ident)
+
+        ThreeDeeModels.SHIP = threedee.ThreeDeeModel.load_from_disk("ship", "assets/models/ship.obj", xform("ship_texture"))
+        ThreeDeeModels.POINTY_BOX = threedee.ThreeDeeModel.load_from_disk("pointy_box", "assets/models/pointy_box.obj", xform("ship_texture"))
+        ThreeDeeModels.AXIS = threedee.ThreeDeeModel.load_from_disk("axis", "assets/models/axis.obj", xform("ship_texture"))
+        ThreeDeeModels.SUN_FLAT = threedee.ThreeDeeModel.load_from_disk("sun_flat", "assets/models/sun_flat.obj", xform("sun_texture_flat"))
+
+    @staticmethod
+    def from_2d_model(model_2d):
+        if model_2d not in ThreeDeeModels._2D_MODEL_CACHE:
+            ThreeDeeModels._2D_MODEL_CACHE[model_2d] = threedee.ThreeDeeModel.build_from_2d_model(model_2d)
+        return ThreeDeeModels._2D_MODEL_CACHE[model_2d]
 
 
 class CutsceneTypes:
@@ -772,6 +832,7 @@ _OBJECTS = None
 _BLOCKS = None
 _OVERWORLD = None
 _UI = None
+_STARS = None
 
 _CUTSCENES = {}    # sheet_id -> Sheet
 _3D_TEXTURES = {}  # sheet_id -> TextureSheet
@@ -792,6 +853,9 @@ def overworld_sheet() -> _OverworldSheet:
 def ui_sheet() -> _UiSheet:
     return _UI
 
+def star_sheet() -> _StarSheet:
+    return _STARS
+
 
 def cutscene_image(sheet_type) -> sprites.ImageModel:
     if sheet_type in _CUTSCENES and _CUTSCENES[sheet_type] is not None:
@@ -799,13 +863,14 @@ def cutscene_image(sheet_type) -> sprites.ImageModel:
 
 
 def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
-    global _OBJECTS, _BLOCKS, _OVERWORLD, _CUTSCENES, _UI
+    global _OBJECTS, _BLOCKS, _OVERWORLD, _CUTSCENES, _UI, _STARS
     _OBJECTS = _ObjectSheet()
     _BLOCKS = _BlockSheet()
     _OVERWORLD = _OverworldSheet()
     _UI = _UiSheet()
+    _STARS = _StarSheet()
 
-    all_sheets = [_OBJECTS, _BLOCKS, _OVERWORLD, _UI]
+    all_sheets = [_OBJECTS, _BLOCKS, _OVERWORLD, _UI, _STARS]
 
     for sheet_id in CutsceneTypes.ALL_TYPES:
         _CUTSCENES[sheet_id] = spritesheets.SingleImageSheet(sheet_id)

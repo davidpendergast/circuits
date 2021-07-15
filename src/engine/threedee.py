@@ -328,18 +328,24 @@ class BillboardSprite3D(Sprite3D):
 
 class ThreeDeeModel:
 
-    def __init__(self, model_id, model_path, map_texture_xy_to_atlas):
+    def __init__(self, model_id, vertices, normals, native_texture_coords, indices, map_from_texture_to_atlas=lambda xy: xy):
+        """
+        :param model_id: str
+        :param vertices: list of (x, y, z)
+        :param normals: list of (x, y, z)
+        :param native_texture_coords: list of (x, y)
+        :param indices: list of ints, one for each corner of each triangle
+        :param map_from_texture_to_atlas: converts points from native_texture_coords to actual atlas coordinates
+        """
         self._model_id = model_id
 
-        self._vertices = []                 # list of (x, y, z)
-        self._normals = []                  # list of (x, y, z)
-        self._native_texture_coords = []    # list of (x, y)
-        self._indices = []                  # list of ints, one for each corner of each triangle
+        self._vertices = vertices
+        self._normals = normals
+        self._native_texture_coords = native_texture_coords
+        self._indices = indices
 
-        self._map_texture_xy_to_atlas = map_texture_xy_to_atlas
-        self._cached_atlas_coords = []      # list of (x, y)
-
-        self._load_from_disk(model_path)
+        self._map_from_texture_to_atlas = map_from_texture_to_atlas
+        self._cached_atlas_coords = []  # list of (x, y)
 
     def get_model_id(self):
         return self._model_id
@@ -355,7 +361,7 @@ class ThreeDeeModel:
 
     def get_texture_coords(self):
         if len(self._cached_atlas_coords) == 0:
-            self._cached_atlas_coords = [self._map_texture_xy_to_atlas(xy) for xy in self._native_texture_coords]
+            self._cached_atlas_coords = [self._map_from_texture_to_atlas(xy) for xy in self._native_texture_coords]
         return self._cached_atlas_coords
 
     def add_urself(self, vertices, tex_coords, indices):
@@ -366,7 +372,8 @@ class ThreeDeeModel:
         for i in range(0, len(self.get_indices())):
             indices[i] = self.get_indices()[i]
 
-    def _load_from_disk(self, model_path):
+    @staticmethod
+    def load_from_disk(model_id, model_path, map_from_texture_to_atlas):
         try:
             raw_vertices = []
             raw_normals = []
@@ -402,6 +409,11 @@ class ThreeDeeModel:
                             corners.append((vertex_idx, texture_idx, normal_idx))
                         triangle_faces.append(tuple(corners))
 
+            vertices = []
+            native_texture_coords = []
+            normals = []
+            indices = []
+
             for tri in triangle_faces:
                 for c in tri:  # TODO use the normals
                     v_idx, t_idx, norm_idx = c
@@ -410,12 +422,26 @@ class ThreeDeeModel:
                     norm_xyz = raw_normals[norm_idx] if norm_idx >= 0 else None
                     # TODO can probably condense this a bit (only have one index per unique (vertex, texture, normal))
                     # TODO would that ever matter for most models? probably not?
-                    index = len(self._indices)
+                    index = len(indices)
 
-                    self._vertices.append(vertex_xyz)
-                    self._native_texture_coords.append(texture_xy)
-                    self._normals.append(norm_xyz)
-                    self._indices.append(index)
+                    vertices.append(vertex_xyz)
+                    native_texture_coords.append(texture_xy)
+                    normals.append(norm_xyz)
+                    indices.append(index)
             print("INFO: loaded model ({} faces): {}".format(len(triangle_faces), model_path))
+            return ThreeDeeModel(model_id, vertices, normals, native_texture_coords, indices,
+                                 map_from_texture_to_atlas=map_from_texture_to_atlas)
         except IOError:
             print("ERROR: failed to load model: {}".format(model_path))
+            return None
+
+    @staticmethod
+    def build_from_2d_model(model_2d: sprites.ImageModel) -> 'ThreeDeeModel':
+        vertices = [(-1, -1, 0), (1, 1, 0), (-1, 1, 0), (-1, -1, 0), (1, -1, 0), (1, 1, 0)]
+        native_texture_coords = [(model_2d.tx1 if v[0] < 0 else model_2d.tx2,
+                                  model_2d.ty1 if v[1] < 0 else model_2d.ty2) for v in vertices]
+        normals = [(0, 0, 1)] * 6
+        indices = [0, 1, 2, 3, 4, 5]
+
+        return ThreeDeeModel("2d_sprite_" + str(model_2d.uid()), vertices, normals, native_texture_coords, indices)
+

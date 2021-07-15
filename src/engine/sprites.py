@@ -338,6 +338,15 @@ class ImageSprite(AbstractSprite):
 _CURRENT_ATLAS_SIZE = None  # XXX this is a mega hack, just look away please
 
 
+_IMAGE_MODEL_UID_COUNTER = 0
+
+
+def _get_next_model_uid():
+    global _IMAGE_MODEL_UID_COUNTER
+    _IMAGE_MODEL_UID_COUNTER += 1
+    return _IMAGE_MODEL_UID_COUNTER - 1
+
+
 class ImageModel:
 
     def __init__(self, x, y, w, h, offset=(0, 0), texture_size=None):
@@ -357,6 +366,8 @@ class ImageModel:
         self.ty1 = tex_size[1] - (self.y + self.h)
         self.tx2 = self.x + self.w
         self.ty2 = tex_size[1] - self.y
+
+        self._uid = _get_next_model_uid()
         
     def rect(self):
         return self._rect
@@ -369,9 +380,21 @@ class ImageModel:
         
     def height(self):
         return self.h
+
+    def uid(self):
+        return self._uid
         
     def __repr__(self):
         return "ImageModel({}, {}, {}, {})".format(self.x, self.y, self.w, self.h)
+
+    def __eq__(self, other):
+        if isinstance(other, ImageModel):
+            return self._uid == other._uid
+        else:
+            return False
+
+    def __hash__(self):
+        return hash(self._uid)
 
 
 class MultiSprite(AbstractSprite):
