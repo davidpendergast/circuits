@@ -154,3 +154,42 @@ class Binding:
                     return min_time
         return min_time
 
+
+def pg_const_val_to_var_name(const_val: int, starts_with="K_", default=None) -> str:
+    """
+    Converts a pygame constant's value to its pygame variable name (filtering by an optional prefix).
+    This is useful for writing keys and such to disk in a version-safe way. (Constants are not guaranteed
+    to remain the same between different pygame versions).
+
+    Example: pygame.K_SPACE (32) -> "K_SPACE"
+    """
+    for key in pygame.__dict__:
+        if str(key).startswith(starts_with):
+            if pygame.__dict__[key] == const_val:
+                return key
+    return default
+
+
+def pg_var_name_to_const_val(varname: str) -> int:
+    """
+    Converts a pygame constant's variable name to its int value.
+    Example: "K_SPACE" -> pygame.K_SPACE (32)
+    """
+    return getattr(pygame, varname, -1)
+
+
+if __name__ == "__main__":
+    left = pygame.K_LEFT
+
+    maps = {
+        "jump": pygame.K_SPACE,
+        "left": pygame.K_LEFT,
+        "right": pygame.K_RIGHT,
+        "pause": pygame.K_p
+    }
+
+    sanitized_maps = {k: pg_const_val_to_var_name(maps[k]) for k in maps}
+    print("sanitized_maps =", sanitized_maps)
+
+    desanitized_maps = {k: pg_var_name_to_const_val(sanitized_maps[k]) for k in sanitized_maps}
+    print("desanitized_maps =", desanitized_maps)
