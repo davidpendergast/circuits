@@ -1047,20 +1047,17 @@ class LevelMetaDataEditScene(OptionSelectScene):
 
 class LevelEditObjectButton(ui.UiElement):
 
-    def __init__(self):
+    def __init__(self, scene, xy, icon, is_selected=lambda: False):
         super().__init__()
+        self.scene = scene
+        self.icon = icon
+        self.is_selected = is_selected
 
     def update(self):
         pass
 
     def get_size(self):
         return (32, 32)
-
-    def __init__(self, scene, xy, icon, is_selected=lambda: False):
-        super().__init__()
-        self.scene = scene
-        self.icon = icon
-        self.is_selected = is_selected
 
 
 class LevelEditObjectSidepanel(ui.UiElement):
@@ -1070,7 +1067,7 @@ class LevelEditObjectSidepanel(ui.UiElement):
     def __init__(self, scene):
         super().__init__()
 
-        self.page_selector_img = None  # just a non-interactive image for now, lol
+        self.page_selector_imgs = [None] * 5 # imgs
 
         self.all_buttons = {}  # x, y -> LevelEditObjectButton
         self.bg_fill = None
@@ -1085,14 +1082,6 @@ class LevelEditObjectSidepanel(ui.UiElement):
 
     def add_button(self, xy, button):
         self.all_buttons[xy] = button
-
-    def all_sprites(self):
-        yield self.bg_fill
-        yield self.page_selector_img
-        for panel in self.bg_panels:
-            yield panel
-        if self.expand_button is not None:
-            pass  # is this even fucking necessary
 
     def update_sprites(self):
         xy = self.get_xy(absolute=True)
@@ -1123,6 +1112,23 @@ class LevelEditObjectSidepanel(ui.UiElement):
                                              new_raw_size=(size[0], ys[i + 1] - ys[i]),
                                              new_color=colors.WHITE)
 
+        selected_page = self.scene.get_selected_object_page()
+        for i in range(len(self.page_selector_imgs)):
+            if self.page_selector_imgs[i] is None:
+                self.page_selector_imgs[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+            model = spriteref.ui_sheet().level_builder_page_buttons[i][1 if i == selected_page else 0]
+            self.page_selector_imgs[i] = self.page_selector_imgs[i].update(new_model=model,
+                                                                           new_x=xy[0] + 8 + 16 * i, new_y=xy[1] + 8,
+                                                                           new_color=colors.WHITE)
+
+        if self.expand_button is None:
+            self.expand_button = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
+        if self.scene.is_panel_expanded():
+            expand_model = spriteref.ui_sheet().level_builder_contract_button
+        else:
+            expand_model = spriteref.ui_sheet().level_builder_expand_button
+        self.expand_button = self.expand_button.update(new_model=expand_model, new_x=xy[0] - 8, new_y=xy[1])
+
     def update(self):
         self.update_sprites()
 
@@ -1133,6 +1139,14 @@ class LevelEditObjectSidepanel(ui.UiElement):
         panel_size = self.get_panel_size()
         # include width of the expand/contract button
         return (panel_size[0] + 4, panel_size[1])
+
+    def all_sprites(self):
+        yield self.bg_fill
+        for page_btn in self.page_selector_imgs:
+            yield page_btn
+        for panel in self.bg_panels:
+            yield panel
+        yield self.expand_button
 
 
 class LevelEditGameScene(_BaseGameScene):
@@ -1173,6 +1187,12 @@ class LevelEditGameScene(_BaseGameScene):
     def _setup_sidepanel(self):
         return LevelEditObjectSidepanel(self)
         # TODO add buttons and stuff
+
+    def get_selected_object_page(self):
+        return 0
+
+    def is_panel_expanded(self):
+        return True
 
     def stamp_current_state(self):
         cur_specs = [s.copy() for s in self.all_spec_blobs]
