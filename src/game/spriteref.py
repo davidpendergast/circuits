@@ -530,6 +530,17 @@ class _UiSheet(spritesheets.SpriteSheet):
         self.translucent_squares = []
         self.translucent_pixels = []
 
+        self.level_builder_page_buttons = []     # (deselected_img, selected_img)
+        self.level_builder_button_outline = None
+        self.level_builder_new_obj_buttons = []
+        self.level_builder_misc_buttons = []
+        self.level_builder_panel_top_outline = None
+        self.level_builder_panel_mid_outline = None
+        self.level_builder_panel_divider_outline = None
+        self.level_builder_panel_bottom_outline = None
+        self.level_builder_expand_button = None
+        self.level_builder_contract_button = None
+
     def get_size(self, img_size):
         size = super().get_size(img_size)
         bar_size = _UiSheet.N_PROGRESS_BARS * 6
@@ -579,7 +590,19 @@ class _UiSheet(spritesheets.SpriteSheet):
         for r in rects_drawn:
             self.top_panel_progress_bars.append(_img(r[0], r[1], r[2], r[3], offs=(0, 0)))
 
+        self.level_builder_page_buttons = [(_img(376 + i * 16, 0, 16, 16, offs=start_pos),
+                                            _img(376 + i * 16, 16, 16, 16, offs=start_pos)) for i in range(5)]
+        self.level_builder_button_outline = _img(376, 32, 16, 16, offs=start_pos)
+        self.level_builder_new_obj_buttons = [_img(376 + (i % 5) * 16, 48 + (i // 5) * 16, 16, 16, offs=start_pos) for i in range(10)]
+        self.level_builder_misc_buttons = [_img(376 + (i % 5) * 16, 96 + (i // 5) * 16, 16, 16, offs=start_pos) for i in range(8)]
 
+        self.level_builder_panel_top_outline = _img(368, 136, 96, 8, offs=start_pos)
+        self.level_builder_panel_mid_outline = _img(368, 136 + 8, 96, 8, offs=start_pos)
+        self.level_builder_panel_divider_outline = _img(368, 136 + 8 * 2, 96, 8, offs=start_pos)
+        self.level_builder_panel_bottom_outline = _img(368, 136 + 8 * 3, 96, 8, offs=start_pos)
+
+        self.level_builder_expand_button = _img(368, 168, 8, 24, offs=start_pos)
+        self.level_builder_contract_button = _img(376, 168, 8, 24, offs=start_pos)
 
     def get_character_card_sprite(self, player_type, is_first):
         return self._character_cards[(player_type.get_id(), is_first)]

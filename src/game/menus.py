@@ -1045,6 +1045,96 @@ class LevelMetaDataEditScene(OptionSelectScene):
                                    allowed_chars="ABCDabcd")
 
 
+class LevelEditObjectButton(ui.UiElement):
+
+    def __init__(self):
+        super().__init__()
+
+    def update(self):
+        pass
+
+    def get_size(self):
+        return (32, 32)
+
+    def __init__(self, scene, xy, icon, is_selected=lambda: False):
+        super().__init__()
+        self.scene = scene
+        self.icon = icon
+        self.is_selected = is_selected
+
+
+class LevelEditObjectSidepanel(ui.UiElement):
+    # NO STATE ALLOWED IN THIS CLASS
+    # don't even think about it
+
+    def __init__(self, scene):
+        super().__init__()
+
+        self.page_selector_img = None  # just a non-interactive image for now, lol
+
+        self.all_buttons = {}  # x, y -> LevelEditObjectButton
+        self.bg_fill = None
+        self.bg_panels = [None] * 5  # top, mid1, divider, mid2, bottom
+        self.expand_button = None
+
+        self.scene = scene
+        self.bg_opacity = 0.8
+
+    def _build_elements(self):
+        pass
+
+    def add_button(self, xy, button):
+        self.all_buttons[xy] = button
+
+    def all_sprites(self):
+        yield self.bg_fill
+        yield self.page_selector_img
+        for panel in self.bg_panels:
+            yield panel
+        if self.expand_button is not None:
+            pass  # is this even fucking necessary
+
+    def update_sprites(self):
+        xy = self.get_xy(absolute=True)
+        xy = (xy[0] + 4, xy[1])
+        size = self.get_panel_size()
+
+        if self.bg_fill is None:
+            model = spritesheets.get_instance().get_sheet(spritesheets.WhiteSquare.SHEET_ID).get_sprite(self.bg_opacity)
+            self.bg_fill = sprites.ImageSprite(model, 0, 0, spriteref.UI_BG_LAYER)
+        self.bg_fill = self.bg_fill.update(new_x=xy[0], new_y=xy[1], new_raw_size=size,
+                                           new_color=colors.PERFECT_BLACK, new_depth=10)
+
+        ys = [0, 8, size[1] - 64, size[1] - 64 + 8, size[1] - 8, size[1]]
+        for i in range(len(self.bg_panels)):
+            if i == 0:
+                model = spriteref.ui_sheet().level_builder_panel_top_outline
+            elif i == 2:
+                model = spriteref.ui_sheet().level_builder_panel_divider_outline
+            elif i == 4:
+                model = spriteref.ui_sheet().level_builder_panel_bottom_outline
+            else:
+                model = spriteref.ui_sheet().level_builder_panel_mid_outline
+
+            panel = self.bg_panels[i]
+            if panel is None:
+                panel = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+            self.bg_panels[i] = panel.update(new_model=model, new_x=xy[0], new_y=ys[i],
+                                             new_raw_size=(size[0], ys[i + 1] - ys[i]),
+                                             new_color=colors.WHITE)
+
+    def update(self):
+        self.update_sprites()
+
+    def get_panel_size(self):
+        return 96, renderengine.get_instance().get_game_size()[1]
+
+    def get_size(self):
+        panel_size = self.get_panel_size()
+        # include width of the expand/contract button
+        return (panel_size[0] + 4, panel_size[1])
+
+
 class LevelEditGameScene(_BaseGameScene):
 
     def __init__(self, bp: blueprints.LevelBlueprint, output_file=None):
@@ -1071,12 +1161,18 @@ class LevelEditGameScene(_BaseGameScene):
         self.resolution_options = [cs // 8, cs // 4, cs // 2, cs]  # essentially assumes cs >= 16
         self.camera_speed = 8  # ticks per move (smaller == faster)
 
+        self.sidepanel = self._setup_sidepanel()
+
         self._dirty = False  # whether the current state is different from the last-saved state
 
         self.stamp_current_state()
         self.setup_new_world(bp)
 
         self.object_pallette = self._load_object_pallette()
+
+    def _setup_sidepanel(self):
+        return LevelEditObjectSidepanel(self)
+        # TODO add buttons and stuff
 
     def stamp_current_state(self):
         cur_specs = [s.copy() for s in self.all_spec_blobs]
@@ -1424,6 +1520,12 @@ class LevelEditGameScene(_BaseGameScene):
             dy = 2 * gs.get_instance().cell_size // zoom * camera_move_y
             self.get_world_view().move_camera_in_world((dx, dy))
 
+        sidepanel_size = self.sidepanel.get_size()
+        screen_size = renderengine.get_instance().get_game_size()
+        # TODO have it move incrementally while it's expanding / contracting
+        self.sidepanel.set_xy((screen_size[0] - sidepanel_size[0], 0))
+        self.sidepanel.update_self_and_kids()
+
         super().update()
 
     def handle_esc_pressed(self):
@@ -1495,6 +1597,12 @@ class LevelEditGameScene(_BaseGameScene):
                     for ent in self.entities_for_specs[key]:
                         ent.set_color_override(None)
                         ent.set_selected_in_editor(False)
+
+    def all_sprites(self):
+        for spr in super().all_sprites():
+            yield spr
+        for spr in self.sidepanel.all_sprites_from_self_and_kids():
+            yield spr
 
     def _create_new_world(self, world_type=0):
         if isinstance(world_type, blueprints.LevelBlueprint):
