@@ -3,11 +3,9 @@ bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
  - should snap to vertical slopes too
  
+ 
 features:
  - joypad support
- - improve main menu
-    - some kind of scrolling background, so it doesn't feel so flat
-    - or a planetary scene? a la halo
     
  - pop-out editor
     - esc to cancel pop-out editor

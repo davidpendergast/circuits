@@ -1047,14 +1047,39 @@ class LevelMetaDataEditScene(OptionSelectScene):
 
 class LevelEditObjectButton(ui.UiElement):
 
-    def __init__(self, scene, xy, icon, is_selected=lambda: False):
+    def __init__(self, scene, icon, is_selected=lambda: False):
         super().__init__()
         self.scene = scene
         self.icon = icon
         self.is_selected = is_selected
 
+        self._outline_sprite = None
+        self._icon_sprite = None
+
     def update(self):
-        pass
+        self.update_sprites()
+
+    def _calc_outline_color(self):
+        # TODO color for mouse hover
+        return colors.DARK_GRAY if not self.is_selected() else colors.PERFECT_YELLOW
+
+    def update_sprites(self):
+        raw_xy = self.get_xy(absolute=True)
+
+        if self._outline_sprite is None:
+            self._outline_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, depth=10)
+        self._outline_sprite = self._outline_sprite.update(new_model=spriteref.ui_sheet().level_builder_button_outline,
+                                                           new_x=raw_xy[0], new_y=raw_xy[1],
+                                                           new_color=self._calc_outline_color())
+        if self._icon_sprite is None:
+            self._icon_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+        self._icon_sprite = self._icon_sprite.update(new_model=self.icon,
+                                                     new_x=raw_xy[0], new_y=raw_xy[1],
+                                                     new_color=colors.WHITE)  # TODO probably need special handling for colored buttons
+
+    def all_sprites(self):
+        yield self._outline_sprite
+        yield self._icon_sprite
 
     def get_size(self):
         return (32, 32)
@@ -1067,7 +1092,7 @@ class LevelEditObjectSidepanel(ui.UiElement):
     def __init__(self, scene):
         super().__init__()
 
-        self.page_selector_imgs = [None] * 5 # imgs
+        self.page_selector_imgs = [None] * 5  # imgs
 
         self.all_buttons = {}  # x, y -> LevelEditObjectButton
         self.bg_fill = None
@@ -1077,11 +1102,9 @@ class LevelEditObjectSidepanel(ui.UiElement):
         self.scene = scene
         self.bg_opacity = 0.8
 
-    def _build_elements(self):
-        pass
-
     def add_button(self, xy, button):
         self.all_buttons[xy] = button
+        self.add_child(button)
 
     def update_sprites(self):
         xy = self.get_xy(absolute=True)
@@ -1129,7 +1152,14 @@ class LevelEditObjectSidepanel(ui.UiElement):
             expand_model = spriteref.ui_sheet().level_builder_expand_button
         self.expand_button = self.expand_button.update(new_model=expand_model, new_x=xy[0] - 8, new_y=xy[1])
 
+    def _update_button_positions(self):
+        for xy in self.all_buttons:
+            xpos = 4 + 8 + xy[0] * 16
+            ypos = 24 + xy[1] * 16
+            self.all_buttons[xy].set_xy((xpos, ypos))
+
     def update(self):
+        self._update_button_positions()
         self.update_sprites()
 
     def get_panel_size(self):
@@ -1185,8 +1215,20 @@ class LevelEditGameScene(_BaseGameScene):
         self.object_pallette = self._load_object_pallette()
 
     def _setup_sidepanel(self):
-        return LevelEditObjectSidepanel(self)
-        # TODO add buttons and stuff
+        res = LevelEditObjectSidepanel(self)
+        for i in range(0, 25):
+            if i < len(spriteref.ui_sheet().level_builder_new_obj_buttons):
+                icon = spriteref.ui_sheet().level_builder_new_obj_buttons[i]
+            else:
+                icon = None
+            res.add_button((i % 5, i // 5), LevelEditObjectButton(self, icon, lambda: False))
+
+        for i in range(0, 10):
+            if i < len(spriteref.ui_sheet().level_builder_misc_buttons):
+                icon = spriteref.ui_sheet().level_builder_misc_buttons[i]
+            else:
+                icon = None
+        return res
 
     def get_selected_object_page(self):
         return 0
