@@ -77,6 +77,10 @@ class Entity:
         self._frame_of_reference_parent_do_vert = True
         self._frame_of_reference_children = []
 
+        # used to let entities "hold" other entities
+        self._held_parent = None
+        self._held_child = None
+
     def get_world(self) -> 'src.game.worlds.World':
         return self._world
 
@@ -275,6 +279,31 @@ class Entity:
     def update_frame_of_reference_parents(self):
         pass
 
+    def pickup_entity(self, ent):
+        if self._held_child is not None:
+            # detach own child
+            self._held_child._held_parent = None
+        if ent is not None:
+            if ent._held_parent is not None:
+                # detach ent from old parent
+                ent._held_parent._held_child = None
+            ent._held_parent = self
+        self._held_child = ent
+
+    def is_held(self):
+        return self._held_parent is not None
+
+    def get_held_by(self):
+        return self._held_parent
+
+    def get_held_entity(self):
+        return self._held_child
+
+    def get_held_entity_position(self, entity, raw=True):
+        rect = self.get_rect(raw=raw)
+        erect = entity.get_rect()
+        return [rect[0] + rect[2] // 2 - erect[2] // 2, rect[1] - erect[3]]
+
     def all_colliders(self, solid=None, sensor=None, enabled=True) -> typing.Iterable['PolygonCollider']:
         for c in self._colliders:
             if enabled is not None and enabled != c.is_enabled():
@@ -284,6 +313,13 @@ class Entity:
             if sensor is not None and sensor != c.is_sensor():
                 continue
             yield c
+
+        # TODO hmm, should held objects have collisions?
+        # parent absorbs its child's colliders
+        # TODO will this work? aren't colliders relative to object position?
+        #if self._held_child is not None:
+        #    for c in self._held_child.all_colliders(solid=solid, sensor=sensor, enabled=enabled):
+        #        yield c
 
     def set_colliders(self, colliders):
         self._colliders = [c for c in colliders]
@@ -392,6 +428,10 @@ class Entity:
 
     def is_player(self):
         return isinstance(self, PlayerEntity)
+
+    def can_be_picked_up(self):
+        # might add more pick-uppdable things later, but for now it's just players
+        return self.is_player() and self.get_player_type().can_be_grabbed()
 
     def is_actor(self):
         return self.is_player()
@@ -1605,6 +1645,16 @@ class PlayerEntity(Entity):
         elif self.get_x_vel() > 0.1:
             self._dir_facing = 1
 
+        parent_entity = self
+        held_entity = self.get_held_entity()
+        while held_entity is not None:
+            pos = parent_entity.get_held_entity_position(held_entity, raw=True)
+            held_entity.set_xy(pos)
+            held_entity.set_y_vel(parent_entity.get_y_vel())
+
+            parent_entity = held_entity
+            held_entity = parent_entity.get_held_entity()
+
         currently_breaking = self.is_breaking()
         if currently_breaking != self._was_breaking_last_frame:
             self._was_breaking_last_frame = currently_breaking
@@ -1653,6 +1703,9 @@ class PlayerEntity(Entity):
         else:
             return self._dir_facing
 
+    def get_pickup_range(self):
+        return self.get_rect(raw=False)
+
     def _handle_inputs(self):
         if self.get_world().get_game_state() is not None and self.get_world().get_game_state().get_status().can_player_control:
             cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
@@ -1662,6 +1715,7 @@ class PlayerEntity(Entity):
         request_left = cur_inputs.is_left_held()
         request_right = cur_inputs.is_right_held()
         request_jump = cur_inputs.was_jump_pressed()
+        request_action = cur_inputs.was_act_pressed()
         holding_jump = cur_inputs.is_jump_held()
         holding_crouch = cur_inputs.is_down_held()
 
@@ -1676,6 +1730,22 @@ class PlayerEntity(Entity):
             self._last_jump_request_time = 0
         else:
             self._last_jump_request_time += 1
+
+        if request_action:
+            if self.get_player_type().can_grab():
+                if self.get_held_entity() is not None:
+                    self.pickup_entity(None)  # dropping held item
+                else:
+                    can_be_picked_up = []
+                    for e in self.get_world().all_entities_in_rect(self.get_pickup_range(), cond=lambda x: x.can_be_picked_up()):
+                        if e is not self:
+                            can_be_picked_up.append(e)
+                    if len(can_be_picked_up) > 0:
+                        # prioritize stuff that's closer and not already held
+                        can_be_picked_up.sort(key=lambda x: util.dist(self.get_center(), x.get_center()) + 100 if x.is_held() else 0)
+
+                        to_pick_up = can_be_picked_up[0]
+                        self.pickup_entity(to_pick_up)
 
         if self.is_grounded():
             self._air_time = 0
