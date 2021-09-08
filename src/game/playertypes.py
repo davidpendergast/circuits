@@ -100,6 +100,7 @@ class PlayerType:
         return self._move_speed
 
     def get_anim_rate(self, player_state, player_ent):
+        player_state = player_state.as_non_carrying()
         if player_state in self._anim_rates:
             rate = self._anim_rates[player_state]
             if isinstance(rate, int) or isinstance(rate, float):

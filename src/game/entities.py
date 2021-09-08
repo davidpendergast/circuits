@@ -304,6 +304,9 @@ class Entity:
     def get_held_entity(self):
         return self._held_child
 
+    def is_holding_an_entity(self):
+        return self.get_held_entity() is not None
+
     def get_held_entity_position(self, entity, raw=True):
         rect = self.get_rect(raw=raw)
         erect = entity.get_rect()
@@ -1887,24 +1890,27 @@ class PlayerEntity(Entity):
         return [(self.get_center(), PlayerEntity.LIGHT_RADIUS, colors.PERFECT_WHITE, 1.0)]
 
     def get_player_state(self):
-        """returns: (state, anim_rate)"""
         if (self.is_grounded() or self.is_held()) and (self._last_jump_time <= 1 or self.get_y_vel() > -0.1):
             if self.is_moving() or self.is_holding_left_or_right():
                 if not self.is_crouching():
-                    return spriteref.PlayerStates.WALKING
+                    res = spriteref.PlayerStates.WALKING
                 else:
-                    return spriteref.PlayerStates.CROUCH_WALKING
+                    res = spriteref.PlayerStates.CROUCH_WALKING
             else:
                 if not self.is_crouching():
-                    return spriteref.PlayerStates.IDLE
+                    res = spriteref.PlayerStates.IDLE
                 else:
-                    return spriteref.PlayerStates.CROUCH_IDLE
+                    res = spriteref.PlayerStates.CROUCH_IDLE
 
         elif (not self.is_left_walled() and not self.is_right_walled()) or not self.get_player_type().can_walljump():
-            return spriteref.PlayerStates.AIRBORNE
-
+            res = spriteref.PlayerStates.AIRBORNE
         else:
-            return spriteref.PlayerStates.WALLSLIDE
+            res = spriteref.PlayerStates.WALLSLIDE
+
+        if self.is_holding_an_entity():
+            res = res.as_carrying()
+
+        return res
 
     def _get_current_img(self):
         state = self.get_player_state()

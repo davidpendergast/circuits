@@ -54,8 +54,28 @@ class PlayerState:
         self.state_id = state_id
         self._fallback_state = fallback
 
+        self._carrying_link = None
+        self._non_carrying_link = None
+
     def get_fallback(self):
         return self._fallback_state
+
+    def as_carrying(self) -> 'PlayerState':
+        if self._carrying_link is not None:
+            return self._carrying_link
+        else:
+            return self
+
+    def as_non_carrying(self) -> 'PlayerState':
+        if self._non_carrying_link is not None:
+            return self._non_carrying_link
+        else:
+            return self
+
+    @staticmethod
+    def make_carrying_link(non_carrying_state, carrying_state):
+        non_carrying_state._carrying_link = carrying_state
+        carrying_state._non_carrying_link = non_carrying_state
 
     def __eq__(self, other):
         if isinstance(other, PlayerState):
@@ -74,6 +94,20 @@ class PlayerStates:
     AIRBORNE = PlayerState("airborne", fallback=IDLE)
     WALLSLIDE = PlayerState("wallslide", fallback=AIRBORNE)
     WALKING = PlayerState("walking", fallback=IDLE)
+
+    IDLE_CARRYING = PlayerState("idle_carrying", fallback=IDLE)
+    CROUCH_IDLE_CARRYING = PlayerState("crouch_idle_carrying", fallback=CROUCH_IDLE)
+    CROUCH_WALKING_CARRYING = PlayerState("crouch_walking_carrying", fallback=CROUCH_WALKING)
+    AIRBORNE_CARRYING = PlayerState("airborne_carrying", fallback=AIRBORNE)
+    WALLSLIDE_CARRYING = PlayerState("wallslide_carrying", fallback=WALLSLIDE)
+    WALKING_CARRYING = PlayerState("walking_carrying", fallback=WALKING)
+
+    PlayerState.make_carrying_link(IDLE, IDLE_CARRYING)
+    PlayerState.make_carrying_link(CROUCH_IDLE, CROUCH_IDLE_CARRYING)
+    PlayerState.make_carrying_link(CROUCH_WALKING, CROUCH_WALKING_CARRYING)
+    PlayerState.make_carrying_link(AIRBORNE, AIRBORNE_CARRYING)
+    PlayerState.make_carrying_link(WALLSLIDE, WALLSLIDE_CARRYING)
+    PlayerState.make_carrying_link(WALKING, WALKING_CARRYING)
 
 
 class _ObjectSheet(spritesheets.SpriteSheet):
@@ -101,12 +135,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             PlayerStates.WALKING: []
         }
 
-        self.player_c = {
+        self.player_c = {  # other "real" animations are in _PlayerCSheet
             PlayerStates.IDLE: [],
-            PlayerStates.AIRBORNE: [],
-            PlayerStates.WALKING: [],
-            PlayerStates.CROUCH_IDLE: [],
-            PlayerStates.CROUCH_WALKING: []
         }
 
         self.player_d = {
@@ -118,7 +148,6 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self._player_id_to_sprite_lookup = {
             const.PLAYER_FAST: self.player_a,
             const.PLAYER_SMALL: self.player_b,
-            const.PLAYER_HEAVY: self.player_c,
             const.PLAYER_FLYING: self.player_d
         }
 
@@ -186,16 +215,19 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         return res
 
     def get_player_sprites(self, player_id, player_state) -> typing.List[sprites.ImageModel]:
-        if player_id not in self._player_id_to_sprite_lookup:
+        if player_id == const.PLAYER_HEAVY:
+            lookup = _player_c_sheet().player_c
+        elif player_id not in self._player_id_to_sprite_lookup:
             raise ValueError("unrecognized player id: {}".format(player_id))
         else:
             lookup = self._player_id_to_sprite_lookup[player_id]
-            if player_state in lookup and len(lookup[player_state]) > 0:
-                return lookup[player_state]
-            elif player_state.get_fallback() is not None:
-                return self.get_player_sprites(player_id, player_state.get_fallback())
-            else:
-                return []  # no sprites exist, apparently
+
+        if player_state in lookup and len(lookup[player_state]) > 0:
+            return lookup[player_state]
+        elif player_state.get_fallback() is not None:
+            return self.get_player_sprites(player_id, player_state.get_fallback())
+        else:
+            return []  # no sprites exist, apparently
 
     def get_speaker_portrait_sprites(self, speaker_id):
         if speaker_id in self.speaker_portraits:
@@ -263,10 +295,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.player_b[PlayerStates.CROUCH_IDLE] = [_img(96 + i * 16, 48, 16, 16, offs=start_pos) for i in range(0, 2)]
         self.player_b[PlayerStates.WALKING] = [_img(128 + i * 16, 48, 16, 16, offs=start_pos) for i in range(0, 6)]
 
-        self.player_c[PlayerStates.IDLE] = [_img(0 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
-        self.player_c[PlayerStates.WALKING] = [_img(64 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 8)]
-        self.player_c[PlayerStates.AIRBORNE] = [_img(320 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
-        self.player_c[PlayerStates.CROUCH_IDLE] = [_img(384 + i * 32, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
+        # needed for stuff like fadeout animations
+        self.player_c[PlayerStates.IDLE] = [_img(0 + 32 * i, 64, 32, 32, offs=start_pos) for i in range(0, 2)]
 
         self.player_d[PlayerStates.IDLE] = [_img(0 + i * 16, 96, 16, 32, offs=start_pos) for i in range(0, 8)]
         self.player_d[PlayerStates.WALKING] = [_img(0 + i * 16, 128, 16, 32, offs=start_pos) for i in range(0, 8)]
@@ -409,6 +439,33 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         raw_rects = artutils.draw_vertical_line_phasing_animation(atlas, base_rect, n_frames, atlas, get_pos,
                                                                   min_fade_dur=10, rand_seed=12345, fade_out=fade_out)
         return [_img(r[0], r[1], r[2], r[3]) for r in raw_rects]  # start_pos offset is already baked in
+
+
+class _PlayerCSheet(spritesheets.SpriteSheet):
+
+    def __init__(self):
+        spritesheets.SpriteSheet.__init__(self, "player_c", "assets/player_c.png")
+
+        self.player_c = {}  # state -> list of models
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+
+        self.player_c[PlayerStates.IDLE] = [_img(0 + i * 32, 0, 32, 32, offs=start_pos) for i in range(0, 2)]
+        self.player_c[PlayerStates.WALKING] = [_img(i * 32, 32, 32, 32, offs=start_pos) for i in range(0, 8)]
+        self.player_c[PlayerStates.AIRBORNE] = [_img(64 + i * 32, 0, 32, 32, offs=start_pos) for i in range(0, 2)]
+        self.player_c[PlayerStates.CROUCH_IDLE] = [_img(128 + i * 32, 0, 32, 32, offs=start_pos) for i in range(0, 2)]
+        self.player_c[PlayerStates.CROUCH_WALKING] = self.player_c[PlayerStates.CROUCH_IDLE]
+
+        def move(model, dxy):
+            return _img(model.x + dxy[0], model.y + dxy[1], model.width(), model.height())
+
+        carrying_y_offs = 64
+        self.player_c[PlayerStates.IDLE_CARRYING] = [move(m, (0, carrying_y_offs)) for m in self.player_c[PlayerStates.IDLE]]
+        self.player_c[PlayerStates.WALKING_CARRYING] = [move(m, (0, carrying_y_offs)) for m in self.player_c[PlayerStates.WALKING]]
+        self.player_c[PlayerStates.AIRBORNE_CARRYING] = [move(m, (0, carrying_y_offs)) for m in self.player_c[PlayerStates.AIRBORNE]]
+        self.player_c[PlayerStates.CROUCH_IDLE_CARRYING] = [move(m, (0, carrying_y_offs)) for m in self.player_c[PlayerStates.CROUCH_IDLE]]
+        self.player_c[PlayerStates.CROUCH_WALKING_CARRYING] = self.player_c[PlayerStates.CROUCH_IDLE_CARRYING]
 
 
 class _BlockSheet(spritesheets.SpriteSheet):
@@ -852,6 +909,7 @@ class CutsceneTypes:
 
 # global sheet instances
 _OBJECTS = None
+_PLAYER_C = None
 _BLOCKS = None
 _OVERWORLD = None
 _UI = None
@@ -865,6 +923,10 @@ def object_sheet() -> _ObjectSheet:
     return _OBJECTS
 
 
+def _player_c_sheet() -> _PlayerCSheet:
+    return _PLAYER_C
+
+
 def block_sheet() -> _BlockSheet:
     return _BLOCKS
 
@@ -876,6 +938,7 @@ def overworld_sheet() -> _OverworldSheet:
 def ui_sheet() -> _UiSheet:
     return _UI
 
+
 def star_sheet() -> _StarSheet:
     return _STARS
 
@@ -886,14 +949,15 @@ def cutscene_image(sheet_type) -> sprites.ImageModel:
 
 
 def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
-    global _OBJECTS, _BLOCKS, _OVERWORLD, _CUTSCENES, _UI, _STARS
+    global _OBJECTS, _PLAYER_C, _BLOCKS, _OVERWORLD, _CUTSCENES, _UI, _STARS
     _OBJECTS = _ObjectSheet()
+    _PLAYER_C = _PlayerCSheet()
     _BLOCKS = _BlockSheet()
     _OVERWORLD = _OverworldSheet()
     _UI = _UiSheet()
     _STARS = _StarSheet()
 
-    all_sheets = [_OBJECTS, _BLOCKS, _OVERWORLD, _UI, _STARS]
+    all_sheets = [_OBJECTS, _PLAYER_C, _BLOCKS, _OVERWORLD, _UI, _STARS]
 
     for sheet_id in CutsceneTypes.ALL_TYPES:
         _CUTSCENES[sheet_id] = spritesheets.SingleImageSheet(sheet_id)
