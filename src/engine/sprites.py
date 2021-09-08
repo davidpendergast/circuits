@@ -155,7 +155,7 @@ class ImageSprite(AbstractSprite):
     def new_sprite(layer_id, scale=1, depth=0):
         return ImageSprite(None, 0, 0, layer_id, scale=scale, depth=depth)
 
-    def __init__(self, model, x, y, layer_id, scale=1, depth=1, xflip=False, rotation=0, color=(1, 1, 1), ratio=(1, 1), raw_size=(-1, -1), uid=None):
+    def __init__(self, model, x, y, layer_id, scale=1, depth=1, xflip=False, yflip=False, rotation=0, color=(1, 1, 1), ratio=(1, 1), raw_size=(-1, -1), uid=None):
         AbstractSprite.__init__(self, SpriteTypes.IMAGE, layer_id, uid=uid)
         self._model = model
         self._x = x
@@ -163,6 +163,7 @@ class ImageSprite(AbstractSprite):
         self._scale = scale
         self._depth = depth
         self._xflip = xflip
+        self._yflip = yflip
         self._rotation = rotation
         self._color = color
         self._ratio = ratio
@@ -172,7 +173,7 @@ class ImageSprite(AbstractSprite):
         yield self
             
     def update(self, new_model=None, new_x=None, new_y=None, new_scale=None, new_depth=None,
-               new_xflip=None, new_color=None, new_rotation=None, new_ratio=None, new_raw_size=None):
+               new_xflip=None, new_yflip=None, new_color=None, new_rotation=None, new_ratio=None, new_raw_size=None):
 
         if isinstance(new_model, bool) and new_model is False:
             model = None
@@ -184,6 +185,7 @@ class ImageSprite(AbstractSprite):
         scale = self.scale() if new_scale is None else new_scale
         depth = self.depth() if new_depth is None else new_depth
         xflip = self.xflip() if new_xflip is None else new_xflip
+        yflip = self.yflip() if new_yflip is None else new_yflip
         color = self.color() if new_color is None else new_color
         rotation = self.rotation() if new_rotation is None else new_rotation
         ratio = self.ratio() if new_ratio is None else new_ratio
@@ -195,14 +197,15 @@ class ImageSprite(AbstractSprite):
                 scale == self.scale() and
                 depth == self.depth() and 
                 xflip == self.xflip() and
+                yflip == self.yflip() and
                 color == self.color() and
                 ratio == self.ratio() and
                 rotation == self.rotation() and
                 raw_size == self.raw_size()):
             return self
         else:
-            res = ImageSprite(model, x, y, self.layer_id(), scale=scale, depth=depth, xflip=xflip, rotation=rotation,
-                              color=color, ratio=ratio, raw_size=raw_size, uid=self.uid())
+            res = ImageSprite(model, x, y, self.layer_id(), scale=scale, depth=depth, xflip=xflip, yflip=yflip,
+                              rotation=rotation, color=color, ratio=ratio, raw_size=raw_size, uid=self.uid())
             return res
         
     def model(self):
@@ -241,6 +244,9 @@ class ImageSprite(AbstractSprite):
         
     def xflip(self):
         return self._xflip
+
+    def yflip(self):
+        return self._yflip
 
     def rotation(self):
         """returns: int: 0, 1, 2, or 3 representing a number of clockwise 90 degree rotations."""
@@ -315,6 +321,12 @@ class ImageSprite(AbstractSprite):
                 corners[2] = model.tx2
                 corners[4] = model.tx1
                 corners[6] = model.tx1
+
+            if self.yflip():
+                corners[1] = model.ty1
+                corners[3] = model.ty2
+                corners[5] = model.ty2
+                corners[7] = model.ty1
 
             for _ in range(0, self.rotation()):
                 corners = corners[2:] + corners[:2]

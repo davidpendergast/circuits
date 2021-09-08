@@ -290,6 +290,11 @@ class Entity:
             ent._held_parent = self
         self._held_child = ent
 
+    def break_free_from_parent(self):
+        parent = self.get_held_by()
+        if parent is not None:
+            parent.pickup_entity(None)
+
     def is_held(self):
         return self._held_parent is not None
 
@@ -1812,7 +1817,8 @@ class PlayerEntity(Entity):
                        self._last_jump_time >= self._jump_cooldown)
 
         if try_to_jump:
-            if self.is_grounded():
+            if self.is_grounded() or self.is_held():
+                self.break_free_from_parent()
                 self.set_y_vel(self._jump_y_vel)
                 self._last_jump_time = 0
 
@@ -1882,7 +1888,7 @@ class PlayerEntity(Entity):
 
     def get_player_state(self):
         """returns: (state, anim_rate)"""
-        if self.is_grounded() and (self._last_jump_time <= 1 or self.get_y_vel() > -0.1):
+        if (self.is_grounded() or self.is_held()) and (self._last_jump_time <= 1 or self.get_y_vel() > -0.1):
             if self.is_moving() or self.is_holding_left_or_right():
                 if not self.is_crouching():
                     return spriteref.PlayerStates.WALKING
@@ -1935,6 +1941,7 @@ class PlayerEntity(Entity):
                                                      new_y=spr_y,
                                                      new_depth=PLAYER_DEPTH,
                                                      new_xflip=can_xflip and self.dir_facing() < 0,
+                                                     # new_yflip=self.is_held(),  # TODO not sure if I like this
                                                      new_color=self.get_color())
 
     def all_sprites(self):
