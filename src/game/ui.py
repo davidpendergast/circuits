@@ -53,6 +53,29 @@ class UiElement:
         else:
             return self.focus_manager.is_focused(self)
 
+    def send_click_to_self_and_kids(self, xy, absolute=False, button=1) -> bool:
+        """returns: whether anything consumed the click"""
+        if absolute:
+            xy = util.sub(xy, self.get_xy(absolute=True))
+
+        if not util.rect_contains((0, 0, *self.get_size()), xy):
+            return False
+
+        for c in self._children:
+            r = c.get_rect()
+            if util.rect_contains(r, xy):
+                new_xy = util.sub(xy, (r[0], r[1]))
+                if c.send_click_to_self_and_kids(new_xy, absolute=False, button=button):
+                    return True
+
+        return self.handle_click(xy, button=button)
+
+    def handle_click(self, xy, button=1) -> bool:
+        """xy: position of click relative to this component
+            returns: whether it consumed the click
+        """
+        return False
+
     def all_sprites_from_self_and_kids(self):
         for c in self._children:
             for spr in c.all_sprites_from_self_and_kids():

@@ -417,11 +417,11 @@ class _BaseGameScene(scenes.Scene):
             screen_pos = inputs.get_instance().mouse_pos()
             pos_in_world = self._world_view.screen_pos_to_world_pos(screen_pos)
             if inputs.get_instance().mouse_was_pressed(button=1):
-                self.handle_click_at(pos_in_world, button=1)
+                self.handle_click_at(screen_pos, pos_in_world, button=1)
             if inputs.get_instance().mouse_was_pressed(button=2):
-                self.handle_click_at(pos_in_world, button=2)
+                self.handle_click_at(screen_pos, pos_in_world, button=2)
             if inputs.get_instance().mouse_was_pressed(button=3):
-                self.handle_click_at(pos_in_world, button=3)
+                self.handle_click_at(screen_pos, pos_in_world, button=3)
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
             self.handle_esc_pressed()
@@ -429,7 +429,7 @@ class _BaseGameScene(scenes.Scene):
     def handle_esc_pressed(self):
         pass
 
-    def handle_click_at(self, world_xy, button=1):
+    def handle_click_at(self, screen_xy, world_xy, button=1):
         if configs.is_dev:
             cell_size = gs.get_instance().cell_size
             print("INFO: mouse pressed at ({}, {})".format(int(world_xy[0]) // cell_size,
@@ -1047,17 +1047,20 @@ class LevelMetaDataEditScene(OptionSelectScene):
 
 class LevelEditObjectButton(ui.UiElement):
 
-    def __init__(self, scene, icon, is_selected=lambda: False):
+    def __init__(self, scene: 'LevelEditGameScene', icon, spec_type):
         super().__init__()
-        self.scene = scene
+        self.scene: 'LevelEditGameScene' = scene
         self.icon = icon
-        self.is_selected = is_selected
+        self.spec_type = spec_type
 
         self._outline_sprite = None
         self._icon_sprite = None
 
     def update(self):
         self.update_sprites()
+
+    def is_selected(self):
+        return self.spec_type is not None and self.scene.get_spec_type_to_place() == self.spec_type
 
     def _calc_outline_color(self):
         # TODO color for mouse hover
@@ -1082,7 +1085,11 @@ class LevelEditObjectButton(ui.UiElement):
         yield self._icon_sprite
 
     def get_size(self):
-        return (32, 32)
+        return (16, 16)
+
+    def handle_click(self, xy, button=1) -> bool:
+        self.scene.set_spec_type_to_place(self.spec_type)
+        return True
 
 
 class LevelEditObjectSidepanel(ui.UiElement):
@@ -1105,6 +1112,10 @@ class LevelEditObjectSidepanel(ui.UiElement):
     def add_button(self, xy, button):
         self.all_buttons[xy] = button
         self.add_child(button)
+
+    def handle_click(self, xy, button=1):
+        self.scene.set_spec_type_to_place(None)
+        return True
 
     def update_sprites(self):
         xy = self.get_xy(absolute=True)
@@ -1205,14 +1216,13 @@ class LevelEditGameScene(_BaseGameScene):
         self.resolution_options = [cs // 8, cs // 4, cs // 2, cs]  # essentially assumes cs >= 16
         self.camera_speed = 8  # ticks per move (smaller == faster)
 
+        self.object_pallette = self._load_object_pallette()
         self.sidepanel = self._setup_sidepanel()
 
         self._dirty = False  # whether the current state is different from the last-saved state
 
         self.stamp_current_state()
         self.setup_new_world(bp)
-
-        self.object_pallette = self._load_object_pallette()
 
     def _setup_sidepanel(self):
         res = LevelEditObjectSidepanel(self)
@@ -1221,13 +1231,15 @@ class LevelEditGameScene(_BaseGameScene):
                 icon = spriteref.ui_sheet().level_builder_new_obj_buttons[i]
             else:
                 icon = None
-            res.add_button((i % 5, i // 5), LevelEditObjectButton(self, icon, lambda: False))
+            spec_type = self.get_pallette_object_type(i)
+            res.add_button((i % 5, i // 5), LevelEditObjectButton(self, icon, spec_type))
 
         for i in range(0, 10):
             if i < len(spriteref.ui_sheet().level_builder_misc_buttons):
                 icon = spriteref.ui_sheet().level_builder_misc_buttons[i]
             else:
                 icon = None
+            # TODO misc edit buttons
         return res
 
     def get_selected_object_page(self):
@@ -1235,6 +1247,18 @@ class LevelEditGameScene(_BaseGameScene):
 
     def is_panel_expanded(self):
         return True
+
+    def get_spec_type_to_place(self):
+        if isinstance(self.mouse_mode, ObjectPlacementMouseMode):
+            return self.mouse_mode.spec_type
+        else:
+            return None
+
+    def set_spec_type_to_place(self, spec_type):
+        if spec_type is not None:
+            self.set_mouse_mode(ObjectPlacementMouseMode(spec_type, self))
+        else:
+            self.set_mouse_mode(None)
 
     def stamp_current_state(self):
         cur_specs = [s.copy() for s in self.all_spec_blobs]
@@ -1281,10 +1305,15 @@ class LevelEditGameScene(_BaseGameScene):
         self.mark_dirty()
 
     def set_mouse_mode(self, mode):
+        if self.mouse_mode is not None:
+            self.mouse_mode.deactivate()
+
         if mode is None:
             self.mouse_mode = NormalMouseMode(self)
         else:
             self.mouse_mode = mode
+
+        self.mouse_mode.activate()
 
     def get_selected_specs(self):
         # TODO pretty inefficient due to poor design
@@ -1591,6 +1620,11 @@ class LevelEditGameScene(_BaseGameScene):
         super().update()
 
     def handle_esc_pressed(self):
+        if not isinstance(self.mouse_mode, NormalMouseMode):
+            # if in a non-default mousemode, esc exits the mode
+            self.set_mouse_mode(None)
+            return
+
         if self.is_dirty():
             desc = "you have unsaved changes."
         else:
@@ -1600,6 +1634,7 @@ class LevelEditGameScene(_BaseGameScene):
         manager = self.get_manager()
         current_bp = self.build_current_bp()
         current_output_file = self.output_file
+
         def _handle_new_bp(new_bp):
             if new_bp != current_bp:
                 manager.set_next_scene(LevelEditGameScene(new_bp,
@@ -1612,7 +1647,6 @@ class LevelEditGameScene(_BaseGameScene):
                                                 description=desc,
                                                 output_file=self.output_file))
 
-
     def adjust_edit_resolution(self, increase):
         if self.edit_resolution in self.resolution_options:
             cur_idx = self.resolution_options.index(self.edit_resolution)
@@ -1622,9 +1656,12 @@ class LevelEditGameScene(_BaseGameScene):
             self.edit_resolution = self.resolution_options[-1]
         print("INFO: new editor resolution: {}".format(self.edit_resolution))
 
-    def handle_click_at(self, world_xy, button=1):
-        super().handle_click_at(world_xy, button=button)
-        self.mouse_mode.handle_click_at(world_xy, button=button)
+    def handle_click_at(self, screen_xy, world_xy, button=1):
+        if self.sidepanel.send_click_to_self_and_kids(screen_xy, absolute=True, button=button):
+            pass
+        else:
+            super().handle_click_at(screen_xy, world_xy, button=button)
+            self.mouse_mode.handle_click_at(world_xy, button=button)
 
     def is_selected(self, spec):
         return util.to_key(spec) in self.selected_specs
@@ -1708,6 +1745,13 @@ class LevelEditGameScene(_BaseGameScene):
         else:
             return None
 
+    def get_pallette_object_type(self, idx):
+        obj = self.get_pallette_object(idx)
+        if obj is not None:
+            return blueprints.SpecTypes.get(obj[blueprints.TYPE_ID])
+        else:
+            return None
+
     def get_mouse_position_in_world(self, snap_to_grid=True):
         if not inputs.get_instance().mouse_in_window():
             return None
@@ -1717,14 +1761,26 @@ class LevelEditGameScene(_BaseGameScene):
             if not snap_to_grid:
                 return mouse_pos_in_world
             else:
-                snapped_x = mouse_pos_in_world[0] - (mouse_pos_in_world[0] % self.edit_resolution)
-                snapped_y = mouse_pos_in_world[1] - (mouse_pos_in_world[1] % self.edit_resolution)
-                return (snapped_x, snapped_y)
+                return self.snap_world_coords_to_edit_grid(mouse_pos_in_world)
+
+    def snap_world_coords_to_edit_grid(self, world_xy):
+        snapped_x = world_xy[0] - (world_xy[0] % self.edit_resolution)
+        snapped_y = world_xy[1] - (world_xy[1] % self.edit_resolution)
+        return (snapped_x, snapped_y)
 
     def spawn_pallette_object_at(self, idx, xy):
         spec_to_spawn = self.get_pallette_object(idx)
         if spec_to_spawn is not None and xy is not None:
             spec_to_spawn = blueprints.SpecUtils.set_xy(spec_to_spawn, xy)
+
+            self.all_spec_blobs.append(spec_to_spawn)
+            self.stamp_current_state()
+            self.setup_new_world(self.build_current_bp())
+
+    def spawn_object_at(self, spec_type, xy):
+        spec_blob = spec_type.get_default_blob()
+        if spec_blob is not None and xy is not None:
+            spec_to_spawn = blueprints.SpecUtils.set_xy(spec_blob, xy)
 
             self.all_spec_blobs.append(spec_to_spawn)
             self.stamp_current_state()
@@ -1762,6 +1818,20 @@ class MouseMode:
 
     def handle_key_events(self):
         pass
+
+    def _get_activated_spawn_idx(self):
+        for i in range(0, len(const.OPTIONS)):
+            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.OPTIONS[i])):
+                spawn_idx = i
+                # 80 different choices!~
+                if inputs.get_instance().shift_is_held():
+                    spawn_idx += 10
+                if inputs.get_instance().ctrl_is_held():
+                    spawn_idx += 20
+                if inputs.get_instance().alt_is_held():
+                    spawn_idx += 40
+                return spawn_idx
+        return None
 
 
 class NormalMouseMode(MouseMode):
@@ -1859,19 +1929,44 @@ class NormalMouseMode(MouseMode):
             elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ADD_POINT)):
                 self.scene.add_point_to_selection(edit_xy[0], edit_xy[1])
 
-        for i in range(0, len(const.OPTIONS)):
-            if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.OPTIONS[i])):
-                spawn_idx = i
-                # 80 different choices!~
-                if inputs.get_instance().shift_is_held():
-                    spawn_idx += 10
-                if inputs.get_instance().ctrl_is_held():
-                    spawn_idx += 20
-                if inputs.get_instance().alt_is_held():
-                    spawn_idx += 40
-                print("INFO: spawning object [{}] at mouse: {}".format(spawn_idx,
-                                                                       self.scene.get_pallette_object(spawn_idx)))
-                self.scene.spawn_pallette_object_at(spawn_idx, edit_xy)
+        spawn_idx = self._get_activated_spawn_idx()
+        if spawn_idx is not None:
+            obj_type = self.scene.get_pallette_object_type(spawn_idx)
+            self.scene.set_spec_type_to_place(obj_type)
+
+
+class ObjectPlacementMouseMode(MouseMode):
+
+    def __init__(self, spec_type_to_place, scene: LevelEditGameScene):
+        super().__init__(scene)
+        self.spec_type = spec_type_to_place
+
+    def activate(self):
+        # self.scene.deselect_all()
+        pass
+
+    def deactivate(self):
+        pass
+
+    def handle_drag_events(self):
+        pass
+
+    def handle_click_at(self, world_xy, button=1):
+        if button == 1:  # left click
+            edit_xy = self.scene.snap_world_coords_to_edit_grid(world_xy)
+            self.scene.spawn_object_at(self.spec_type, edit_xy)
+
+            if not inputs.get_instance().shift_is_held():
+                self.scene.set_mouse_mode(None)
+
+    def handle_key_events(self):
+        spawn_idx = self._get_activated_spawn_idx()
+        if spawn_idx is not None:
+            obj_type = self.scene.get_pallette_object_type(spawn_idx)
+            if obj_type == self.spec_type:
+                self.scene.set_spec_type_to_place(None)
+            else:
+                self.scene.set_spec_type_to_place(obj_type)
 
 
 class Test3DScene(scenes.Scene):
