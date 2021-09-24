@@ -1,0 +1,36 @@
+
+It's time to reset. Make the game easier to work on.
+
+core gameplay
+- player D behavior = J to swap with nearest other character
+- player C draw arms properly
+    - animation / sound for whiffing a grab
+- animate player B bouncing while held
+- player A and B "J" acitons
+- remove crouching (except for player B, bc it's cute)
+
+mechanics
+- rework falling block to be simpler
+    - starts falling when stood on 
+    - never moves horizontally
+
+- portals
+    - "Portal"-style, in the sense that it preserves speed + direction
+    - should be very much 2D, built into crevaces only
+    - non-directional
+    
+- false blocks
+    - blocks that don't have collision areas and fade when you step onto them
+    
+- slug? or NPC?
+- spiky NPC?
+    
+- use that big brain of yours to build some damn levels
+
+- music (placeholder is fine)
+- classic sounds
+- cutscenes / dialog
+
+Then... game is done?
+
+
