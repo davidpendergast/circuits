@@ -14,6 +14,7 @@ class PlayerType:
                  move_speed=7.5,
                  jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
                  can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
+                 can_swap=False, can_be_swapped_with=True,
                  anim_rate_overrides=None, should_ever_xflip=True, breaks_blocks=False):
         self._name = name
         self._color_id = color_id
@@ -33,6 +34,8 @@ class PlayerType:
         self._can_crouch = can_crouch
         self._can_grab = can_grab
         self._can_be_grabbed = can_be_grabbed
+        self._can_swap = can_swap
+        self._can_be_swapped_with = can_be_swapped_with
         self._breaks_blocks = breaks_blocks
 
         self._should_ever_xflip = should_ever_xflip
@@ -78,6 +81,12 @@ class PlayerType:
 
     def can_break_blocks(self):
         return self._breaks_blocks
+
+    def can_swap(self):
+        return self._can_swap
+
+    def can_be_swapped_with(self):
+        return self._can_be_swapped_with
 
     def get_size(self):
         """returns: size of player in cells"""
@@ -145,8 +154,9 @@ class PlayerTypes:
                        anim_rate_overrides={
                            spriteref.PlayerStates.WALKING: 1
                        })
-    FLYING = PlayerType("D", 4, const.PLAYER_FLYING, size=(0.75, 1.5), can_fly=True, can_grab=True, can_crouch=True,
-                        move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2,
+    FLYING = PlayerType("D", 4, const.PLAYER_FLYING, size=(0.75, 1.5),
+                        can_fly=True, can_swap=True, can_be_swapped_with=False,
+                        can_crouch=True, move_speed=6, jump_height=4.3, gravity=DEFAULT_GRAVITY / 2,
                         should_ever_xflip=False,
                         anim_rate_overrides={
                             spriteref.PlayerStates.AIRBORNE: lambda _ent: 1 if _ent.get_y_vel() < 0 else 1,

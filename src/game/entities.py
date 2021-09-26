@@ -183,6 +183,10 @@ class Entity:
         """whether this entity has any BREAKING colliders, or whether it possibly could"""
         return False
 
+    def is_swappable(self):
+        """whether this entity is a valid target for 'swap' actions"""
+        return False
+
     def get_physics_group(self):
         return UNKNOWN_GROUP
 
@@ -1614,6 +1618,9 @@ class PlayerEntity(Entity):
     def is_breaking(self):
         return self.get_player_type().can_break_blocks() and not self.is_grounded()
 
+    def is_swappable(self):
+        return self.get_player_type().can_be_swapped_with()
+
     def _adjust_colliders_for_breaking(self, breaking):
         self.breaking_collider.set_enabled(breaking)
         for c in self.all_colliders():
@@ -1741,19 +1748,9 @@ class PlayerEntity(Entity):
 
         if request_action:
             if self.get_player_type().can_grab():
-                if self.get_held_entity() is not None:
-                    self.pickup_entity(None)  # dropping held item
-                else:
-                    can_be_picked_up = []
-                    for e in self.get_world().all_entities_in_rect(self.get_pickup_range(), cond=lambda x: x.can_be_picked_up()):
-                        if e is not self:
-                            can_be_picked_up.append(e)
-                    if len(can_be_picked_up) > 0:
-                        # prioritize stuff that's closer and not already held
-                        can_be_picked_up.sort(key=lambda x: util.dist(self.get_center(), x.get_center()) + 100 if x.is_held() else 0)
-
-                        to_pick_up = can_be_picked_up[0]
-                        self.pickup_entity(to_pick_up)
+                self._try_to_grab_or_drop()
+            if self.get_player_type().can_swap():
+                self._try_to_swap()
 
         if self.is_grounded():
             self._air_time = 0
@@ -1856,6 +1853,47 @@ class PlayerEntity(Entity):
             part_idx = random.randint(0, spriteref.object_sheet().num_broken_player_parts(player_id) - 1)
             new_particle = PlayerBodyPartParticle(self.get_x(), self.get_y(), self.get_player_type().get_id(), part_idx)
             self.get_world().add_entity(new_particle)
+
+    def _try_to_grab_or_drop(self):
+        if self.get_held_entity() is not None:
+            self.pickup_entity(None)  # dropping held item
+            # TODO dropping sound / animation
+        else:
+            can_be_picked_up = []
+            for e in self.get_world().all_entities_in_rect(self.get_pickup_range(),
+                                                           cond=lambda x: x.can_be_picked_up()):
+                if e is not self:
+                    can_be_picked_up.append(e)
+
+            if len(can_be_picked_up) > 0:
+                # prioritize stuff that's closer and not already held
+                my_center = self.get_center()
+                can_be_picked_up.sort(
+                    key=lambda x: util.dist(my_center, x.get_center()) + 100 if x.is_held() else 0)
+
+                to_pick_up = can_be_picked_up[0]
+                self.pickup_entity(to_pick_up)
+
+    def _try_to_swap(self, target: Entity=None):
+        if target is None:
+            other_actors_in_level = list(self.get_world().all_entities(
+                cond=lambda e: e.is_swappable() and e is not self and not e.is_held()))
+
+            if len(other_actors_in_level) > 0:
+                my_center = self.get_center()
+                other_actors_in_level.sort(key=lambda e: util.dist(my_center, e.get_center()))
+                target = other_actors_in_level[0]
+
+        if target is not None:
+            # TODO *poof* animations and sound
+            my_bottom_center = (self.get_center()[0], self.get_y() + self.get_h())
+            target_bottom_center = (target.get_center()[0], target.get_y() + target.get_h())
+
+            my_new_xy = (target_bottom_center[0] - self.get_w() // 2, target_bottom_center[1] - self.get_h())
+            self.set_xy(my_new_xy)
+
+            other_new_xy = (my_bottom_center[0] - target.get_w() // 2, my_bottom_center[1] - target.get_h())
+            target.set_xy(other_new_xy)
 
     def update_frame_of_reference_parents(self):
         # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
