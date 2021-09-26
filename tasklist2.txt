@@ -7,7 +7,7 @@ DONE player D behavior = J to swap with nearest other character
 - player C draw arms properly
     - animation / sound for whiffing a grab
 - animate player B bouncing while held
-- player A and B "J" acitons
+DONE player A and B "J" actions
 - remove crouching (except for player B, bc it's cute)
 
 mechanics

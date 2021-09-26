@@ -1747,6 +1747,7 @@ class PlayerEntity(Entity):
             self._last_jump_request_time += 1
 
         if request_action:
+            self._try_to_alert()
             if self.get_player_type().can_grab():
                 self._try_to_grab_or_drop()
             if self.get_player_type().can_swap():
@@ -1894,6 +1895,16 @@ class PlayerEntity(Entity):
 
             other_new_xy = (my_bottom_center[0] - target.get_w() // 2, my_bottom_center[1] - target.get_h())
             target.set_xy(other_new_xy)
+
+    def _try_to_alert(self):
+        color_id = self.get_player_type().get_color_id()
+        color = spriteref.get_color(color_id)
+        # TODO play alert sound
+
+        top_center_xy = (self.get_x() + self.get_w() // 2, self.get_y() - 2)
+        alert_entity = FloatingTextAlertEntity(top_center_xy, "!", color, colors.darken(color, 0.4),
+                                               depth=WORLD_UI_DEPTH, fadeout_time=15, fadeout_dir=(0, -4))
+        self.get_world().add_entity(alert_entity)
 
     def update_frame_of_reference_parents(self):
         # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
@@ -2350,6 +2361,48 @@ class EndBlockIndicatorEntity(PlayerIndicatorEntity):
         return res
 
 
+class FloatingTextAlertEntity(Entity):
+
+    def __init__(self, bottom_center_xy, text, color=(1, 1, 1), end_color=None, text_scale=1.0, font_provider=None,
+                 depth=0, fadeout_time=30, fadeout_dir=(0, -5)):
+        self.text_img = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, text, scale=text_scale, depth=depth,
+                                           color=color, font_lookup=font_provider,
+                                           outline_thickness=1, outline_color=colors.PERFECT_BLACK)
+        self.start_xy = (bottom_center_xy[0] - self.text_img.get_rect()[2] // 2,
+                         bottom_center_xy[1] - self.text_img.get_rect()[3])
+        super().__init__(self.start_xy[0], self.start_xy[1],
+                         w=self.text_img.get_rect()[2],
+                         h=self.text_img.get_rect()[3])
+        self.ticks_active = 0
+        self.fadeout_time = fadeout_time
+        self.end_xy = util.add(self.start_xy, fadeout_dir)
+
+        self.start_color = color
+        self.end_color = color if end_color is None else end_color
+
+    def all_sprites(self):
+        for s in super().all_sprites():
+            yield s
+        for s in self.text_img.all_sprites():
+            yield s
+
+    def get_prog(self):
+        return util.bound(self.ticks_active / self.fadeout_time, 0.0, 1.0)
+
+    def update(self):
+        if self.ticks_active >= self.fadeout_time:
+            self.get_world().remove_entity(self)
+        else:
+            self.set_xy(util.linear_interp(self.start_xy, self.end_xy, self.get_prog()))
+        self.ticks_active += 1
+
+    def update_sprites(self):
+        x, y = self.get_xy()
+        color = util.linear_interp(self.start_color, self.end_color, self.get_prog())
+
+        self.text_img.update(new_x=x, new_y=y, new_color=color)
+
+
 class SpikeEntity(Entity):
 
     def __init__(self, x, y, w, h, direction=(0, -1), color_id=0):
@@ -2540,7 +2593,7 @@ class InfoEntity(Entity):
         w = self.get_world()
         p = None if w is None else w.get_player()
 
-        should_xflip = self._info_type.faces_player and (p is not None and p.get_center()[0]  < self.get_center()[0])
+        should_xflip = self._info_type.faces_player and (p is not None and p.get_center()[0] < self.get_center()[0])
 
         if base_model is None:
             self._base_sprite = None
@@ -2552,7 +2605,7 @@ class InfoEntity(Entity):
             self._base_sprite = self._base_sprite.update(new_model=base_model,
                                                          new_x=cx - base_model.width() // 2,
                                                          new_y=bot_y - base_model.height(),
-                                                         new_depth=PLAYER_DEPTH + 1,
+                                                         new_depth=WORLD_UI_DEPTH,
                                                          new_color=self.get_color(),
                                                          new_xflip=should_xflip)
 
