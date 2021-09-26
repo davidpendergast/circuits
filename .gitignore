@@ -5,6 +5,7 @@ xcfs/*
 *.mp4
 *.wav
 *.lnk
+*.mmpz
 logs/*
 *.DS_Store
 texture_atlas.png

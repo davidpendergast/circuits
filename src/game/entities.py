@@ -316,6 +316,12 @@ class Entity:
         erect = entity.get_rect()
         return [rect[0] + rect[2] // 2 - erect[2] // 2, rect[1] - erect[3]]
 
+    def get_weight(self):
+        if self.is_holding_an_entity():
+            return 1 + self.get_held_entity().get_weight()
+        else:
+            return 1
+
     def all_colliders(self, solid=None, sensor=None, enabled=True) -> typing.Iterable['PolygonCollider']:
         for c in self._colliders:
             if enabled is not None and enabled != c.is_enabled():
@@ -632,6 +638,7 @@ class BreakableBlockEntity(BlockEntity):
 
 
 class PushableBlockEntity(BlockEntity):
+    # TODO this has been re-worked, see FallingBlockEntity
 
     def __init__(self, x, y, w, h, color_id=0):
         vert_block_avoider = RectangleCollider([2, 0, w - 4, h],             # this avoids other blocks
@@ -731,6 +738,105 @@ class PushableBlockEntity(BlockEntity):
             return spriteref.object_sheet().get_pushable_block_sprite((x_size, y_size), self.get_color_id())
         else:
             return super().get_main_model()
+
+
+class FallingBlockEntity(BlockEntity):
+
+    def __init__(self, x, y, w, h, weight_thresh=1, color_id=0):
+        super().__init__(x, y, w, h, color_id=color_id)
+
+        all_colliders = []
+
+        # so players collide with it
+        all_colliders.extend(BlockEntity.build_colliders_for_rect([0, 0, w, h]))
+
+        # avoids other blocks while falling
+        self.vert_block_avoider = RectangleCollider([2, 0, w - 4, h],
+                                                    CollisionMasks.ACTOR,
+                                                    collides_with=CollisionMasks.BLOCK,
+                                                    resolution_hint=CollisionResolutionHints.VERT_ONLY)
+        self.vert_block_avoider.set_ignore_collisions_with(all_colliders)  # no self-collisions
+        all_colliders.append(self.vert_block_avoider)
+
+        # so that breakables can sense us while falling
+        self.breaking_collider = RectangleCollider([0, 0, w, h], CollisionMasks.BREAKING)
+        all_colliders.append(self.breaking_collider)
+
+        # stops us from falling when we hit something solid
+        ground_sensor = RectangleCollider([2, 2, w - 4, h - 2], CollisionMasks.SENSOR,
+                                          collides_with=CollisionMasks.BLOCK)
+
+        # if it falls onto a slope, it dies
+        slope_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR,
+                                         collides_with=(
+                                         CollisionMasks.SLOPE_BLOCK_VERT, CollisionMasks.SLOPE_BLOCK_HORZ))
+
+        # used to detect actors standing on top, which triggers it to start falling
+        actor_sensor = RectangleCollider([0, -2, w, 2], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR))
+
+        self.ground_sensor_id = ground_sensor.get_id()
+        self.slope_sensor_id = slope_sensor.get_id()
+        self.actor_sensor_id = actor_sensor.get_id()
+
+        all_sensors = [ground_sensor, slope_sensor, actor_sensor]
+
+        super().__init__(x, y, w, h, color_id=color_id)
+
+        self.set_colliders(all_colliders)
+        self._sensor_ent = SensorEntity([0, -2, w, h + 2], all_sensors, parent=self)
+
+        self.fall_speed = 3
+        self.weight_thresh = weight_thresh
+
+        self.current_weight_on_top = 0
+
+        self._is_primed_to_fall = False
+        self._is_falling = False
+
+    def is_color_baked_into_sprites(self):
+        return True
+
+    def get_main_model(self):
+        if self._art_id is not None:
+            x_size = self.get_w() / gs.get_instance().cell_size
+            y_size = self.get_h() / gs.get_instance().cell_size
+            return spriteref.object_sheet().get_pushable_block_sprite((x_size, y_size), self.get_color_id())
+        else:
+            return super().get_main_model()
+
+    def is_dynamic(self):
+        return True
+
+    def all_sub_entities(self):
+        for e in super().all_sub_entities():
+            yield e
+        yield self._sensor_ent
+
+    def update(self):
+        super().update()
+
+        if self.get_world().is_waiting():
+            return
+        else:
+            if self._is_falling:
+                pass
+            elif self._is_primed_to_fall:
+                pass
+            else:
+                self.current_weight_on_top = 0
+                for a in self.get_world().get_sensor_state(self.actor_sensor_id):
+                    if isinstance(a, PlayerEntity) and a.is_grounded():
+                        # TODO I'm pretty sure groundedness makes sense to check here
+                        self.current_weight_on_top += a.get_weight()
+
+                if self.current_weight_on_top >= self.weight_thresh:
+                    self.set_primed_to_fall()
+
+    def set_primed_to_fall(self):
+        if not self._is_primed_to_fall:
+            self._is_primed_to_fall = True
+            # TODO shake animation, sound?
+            print(f"INFO: {self} is primed to fall!")
 
 
 class SensorEntity(Entity):

@@ -12,8 +12,9 @@ DONE player A and B "J" actions
 
 mechanics
 - rework falling block to be simpler
-    - starts falling when stood on 
+    - starts falling when stood on (threshold depends on weight of player)
     - never moves horizontally
+    - ignores moving blocks
 
 - portals
     - "Portal"-style, in the sense that it preserves speed + direction
@@ -23,8 +24,12 @@ mechanics
 - false blocks
     - blocks that don't have collision areas and fade when you step onto them
     
-- slug? or NPC?
-- spiky NPC?
+
+- finish the buttons in the level editor
+    
+- actors that can't be controlled but have behavior that integrates with other systems    
+    - slug? or NPC?
+    - spiky NPC?
     
 - use that big brain of yours to build some damn levels
 

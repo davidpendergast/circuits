@@ -537,6 +537,7 @@ class MovingBlockSpecType(SpecType):
 
 
 class PushableBlockSpecType(SpecType):
+    # TODO this was reworked, see FallingBlockSpecType
 
     def __init__(self):
         SpecType.__init__(self, "pushable_block", required_keys=(X, Y, W, H),
@@ -553,6 +554,40 @@ class PushableBlockSpecType(SpecType):
         color_id=json_blob[COLOR_ID]
 
         yield entities.PushableBlockEntity(x, y, w, h, color_id=color_id)
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 32
+        else:
+            return super().get_default_value(k)
+
+    def get_minimum_size(self):
+        return (16, 16)
+
+    def get_art_ids(self, spec):
+        size = (spec[W] / gs.get_instance().cell_size, spec[H] / gs.get_instance().cell_size)
+        n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
+        return [i for i in range(0, n_block_sprites)]
+
+
+class FallingBlockSpecType(SpecType):
+
+    def __init__(self):
+        super().__init__("falling_block", required_keys=(X, Y, W, H), optional_keys={COLOR_ID: 0})
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
+
+    def build_entities(self, json_blob):
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        color_id = json_blob[COLOR_ID]
+
+        yield entities.FallingBlockEntity(x, y, w, h, color_id=color_id)
 
     def get_default_value(self, k):
         if k == W:
@@ -607,6 +642,7 @@ class SpecTypes:
     SPIKES = SpikeSpecType()
     INFO = InfoSpecType()
     PUSHABLE_BLOCK = PushableBlockSpecType()
+    FALLING_BLOCK = FallingBlockSpecType()
     DIALOG_TRIGGER = DialogTriggerSpecType()
 
     DOOR_BLOCK = DoorBlockSpecType()
