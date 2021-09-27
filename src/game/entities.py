@@ -728,7 +728,6 @@ class PushableBlockEntity(BlockEntity):
         return True
 
     def was_crushed(self):
-        print("INFO: pushable block was crushed: {}".format(self))
         self.get_world().remove_entity(self)
 
     def get_main_model(self):
@@ -750,28 +749,29 @@ class FallingBlockEntity(BlockEntity):
         # so players collide with it
         all_colliders.extend(BlockEntity.build_colliders_for_rect([0, 0, w, h]))
 
-        # avoids other blocks while falling
+        # avoids other blocks
         self.vert_block_avoider = RectangleCollider([2, 0, w - 4, h],
                                                     CollisionMasks.ACTOR,
                                                     collides_with=CollisionMasks.BLOCK,
                                                     resolution_hint=CollisionResolutionHints.VERT_ONLY)
         self.vert_block_avoider.set_ignore_collisions_with(all_colliders)  # no self-collisions
+        self.vert_block_avoider.set_enabled(False)
         all_colliders.append(self.vert_block_avoider)
 
         # so that breakables can sense us while falling
         self.breaking_collider = RectangleCollider([0, 0, w, h], CollisionMasks.BREAKING)
         all_colliders.append(self.breaking_collider)
 
-        # stops us from falling when we hit something solid
-        ground_sensor = RectangleCollider([2, 2, w - 4, h - 2], CollisionMasks.SENSOR,
-                                          collides_with=CollisionMasks.BLOCK)
+        # stops or prevents us from falling if we're on something solid
+        ground_sensor = RectangleCollider([2, 0, w - 4, h + 1], CollisionMasks.SENSOR,
+                                          collides_with=(CollisionMasks.BLOCK, CollisionMasks.BREAKABLE))
 
         # if it falls onto a slope, it dies
         slope_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR,
                                          collides_with=(
                                          CollisionMasks.SLOPE_BLOCK_VERT, CollisionMasks.SLOPE_BLOCK_HORZ))
 
-        # used to detect actors standing on top, which triggers it to start falling
+        # used to detect actors standing on top of it, which triggers it to start falling
         actor_sensor = RectangleCollider([0, -2, w, 2], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR))
 
         self.ground_sensor_id = ground_sensor.get_id()
@@ -782,10 +782,14 @@ class FallingBlockEntity(BlockEntity):
 
         super().__init__(x, y, w, h, color_id=color_id)
 
-        self.set_colliders(all_colliders)
-        self._sensor_ent = SensorEntity([0, -2, w, h + 2], all_sensors, parent=self)
+        for c in all_colliders + all_sensors:
+            # XXX collisions with moving blocks are just too messy
+            c.add_entity_ignore_condition(lambda e: isinstance(e, MovingBlockEntity) or e is self)
 
-        self.fall_speed = 3
+        self.set_colliders(all_colliders)
+        self._sensor_ent = SensorEntity([0, 0, w, h], all_sensors, parent=self)
+
+        self.fall_speed = 2
         self.weight_thresh = weight_thresh
 
         self.current_weight_on_top = 0
@@ -812,31 +816,76 @@ class FallingBlockEntity(BlockEntity):
             yield e
         yield self._sensor_ent
 
+    def was_crushed(self):
+        # TODO sound, particles
+        self.get_world().remove_entity(self)
+
     def update(self):
         super().update()
 
         if self.get_world().is_waiting():
             return
         else:
-            if self._is_falling:
-                pass
-            elif self._is_primed_to_fall:
-                pass
+            ground_collisions = self.get_world().get_sensor_state(self.ground_sensor_id)
+
+            if self.get_world().get_sensor_state(self.slope_sensor_id):
+                self.was_crushed()
+            elif self._is_falling:
+                if ground_collisions:
+                    self.stop_falling()
             else:
                 self.current_weight_on_top = 0
                 for a in self.get_world().get_sensor_state(self.actor_sensor_id):
                     if isinstance(a, PlayerEntity) and a.is_grounded():
-                        # TODO I'm pretty sure groundedness makes sense to check here
                         self.current_weight_on_top += a.get_weight()
-
-                if self.current_weight_on_top >= self.weight_thresh:
+                if ground_collisions:
+                    self._is_primed_to_fall = False
+                elif self.current_weight_on_top >= self.weight_thresh and not self._is_primed_to_fall:
                     self.set_primed_to_fall()
+                elif self.current_weight_on_top == 0 and self._is_primed_to_fall:
+                    self.start_falling()
+
+    def _calc_is_grounded(self):
+        for b in self.get_world().get_sensor_state(self.ground_sensor_id):
+            if b is not self:
+                return True
+        return False
 
     def set_primed_to_fall(self):
         if not self._is_primed_to_fall:
             self._is_primed_to_fall = True
             # TODO shake animation, sound?
-            print(f"INFO: {self} is primed to fall!")
+
+    def start_falling(self):
+        # TODO shake again?
+        self._is_falling = True
+        self._is_primed_to_fall = False
+        self.set_y_vel(self.fall_speed)
+
+        self.vert_block_avoider.set_enabled(True)
+        self._adjust_colliders_for_breaking(True)
+
+    def stop_falling(self):
+        self._is_falling = False
+        self._is_primed_to_fall = False
+        self.set_y_vel(0)
+
+        self.vert_block_avoider.set_enabled(False)
+        self._adjust_colliders_for_breaking(False)
+
+    def _adjust_colliders_for_breaking(self, breaking):
+        self._is_currently_breaking = breaking
+        self.breaking_collider.set_enabled(breaking)
+        all_colliders = [c for c in self.all_colliders()]
+        all_colliders.extend([c for c in self._sensor_ent.all_colliders(sensor=True)])
+
+        for c in all_colliders:
+            if c.collides_with_masks((CollisionMasks.BLOCK,)):
+                new_collides_with = [m for m in c.get_collides_with() if m != CollisionMasks.BREAKABLE]
+                if not breaking:
+                    # if we're breaking, we want to move through breaking blocks, so we can break them
+                    new_collides_with.append(CollisionMasks.BREAKABLE)
+                c.set_collides_with(new_collides_with)
 
 
 class SensorEntity(Entity):
@@ -2882,6 +2931,7 @@ class PolygonCollider:
         self._id = _next_collider_id()
 
         self._ignore_ids = set()
+        self._entity_ignore_conds = []
 
         self._is_enabled = True
 
@@ -2919,6 +2969,19 @@ class PolygonCollider:
         for c in util.listify(other):
             self._ignore_ids.add(c.get_id())
 
+    def add_entity_ignore_condition(self, cond):
+        """cond: Entiy -> bool"""
+        self._entity_ignore_conds.append(cond)
+
+    def can_collide_with_colliders_from_entity(self, other_entity):
+        if other_entity is None:
+            return True
+        else:
+            for cond in self._entity_ignore_conds:
+                if cond(other_entity):
+                    return False
+            return True
+
     def collides_with_mask(self, mask: CollisionMask):
         return mask in self._collides_with
 
@@ -2937,8 +3000,19 @@ class PolygonCollider:
     def is_overlapping(self, offs, other, other_offs):
         raise NotImplementedError()  # TODO general polygon collisions
 
-    def is_colliding_with(self, offs, other, other_offs):
-        return self.collides_with(other) and self.is_overlapping(offs, other, other_offs)
+    def is_colliding_with(self, offs, other_collider, other_offs, other_entity):
+        return (self.can_collide_with_colliders_from_entity(other_entity)
+                and self.collides_with(other_collider)
+                and self.is_overlapping(offs, other_collider, other_offs))
+
+    def is_colliding_with_any(self, offs, other_colliders, other_offs, other_entity):
+        if not self.can_collide_with_colliders_from_entity(other_entity):
+            return False
+        else:
+            for c in other_colliders:
+                if self.collides_with(c) and self.is_overlapping(offs, c, other_offs):
+                    return True
+            return False
 
     def is_solid(self):
         return self._mask.is_solid()

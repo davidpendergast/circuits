@@ -591,12 +591,14 @@ class CollisionResolver:
     def _is_colliding_with_any_blocks(world, ent, collider, xy) -> bool:
         collider_rect = collider.get_rect(offs=xy)
         for b in world.all_entities_in_rect(collider_rect, cond=lambda _e: _e.is_block()):
+            if not collider.can_collide_with_colliders_from_entity(b):
+                continue
             if b.is_frame_of_reference_child_of(ent):
                 # you can't really collide with your own children because they'll always move
                 # when you move
                 continue
             for b_collider in b.all_colliders(solid=True):
-                if collider.is_colliding_with(xy, b_collider, b.get_xy()):
+                if collider.is_colliding_with(xy, b_collider, b.get_xy(), b):
                     return True
         return False
 
@@ -609,6 +611,7 @@ class CollisionResolver:
                 c_state = collections.OrderedDict()
                 c_rect = c.get_rect(offs=ent_xy)
                 cares_about_blocks = c.collides_with_masks((entities.CollisionMasks.BLOCK,
+                                                            entities.CollisionMasks.BREAKABLE,
                                                             entities.CollisionMasks.SLOPE_BLOCK_HORZ,
                                                             entities.CollisionMasks.SLOPE_BLOCK_VERT), any=True)
                 cares_about_actors = c.collides_with_mask(entities.CollisionMasks.ACTOR)
@@ -617,7 +620,7 @@ class CollisionResolver:
                                                     cond=lambda _e: ((cares_about_blocks and _e.is_block())
                                                                      or (cares_about_actors and _e.is_actor()))
                                                                      or (cares_about_breaking and _e.is_breaking())):
-                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders()):
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy(), b) for b_collider in b.all_colliders()):
                         c_state[b] = None
 
                 res[c.get_id()] = c_state
@@ -638,7 +641,7 @@ class CollisionResolver:
                     continue
                 c_rect = c.get_rect(offs=ent_xy)
                 for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):
-                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy(), b) for b_collider in b.all_colliders(solid=True)):
                         should_snap_down = True
                         snap_dist = max(snap_dist, c.get_rect()[3])
 
@@ -657,7 +660,7 @@ class CollisionResolver:
                 c_state = collections.OrderedDict() if c.get_id() not in res else res[c.get_id()]
                 c_rect = c.get_rect(offs=ent_xy)
                 for b in world.all_entities_in_rect(c_rect, cond=lambda _e: _e.is_block()):
-                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy()) for b_collider in b.all_colliders(solid=True)):
+                    if any(c.is_colliding_with(ent_xy, b_collider, b.get_xy(), b) for b_collider in b.all_colliders(solid=True)):
                         c_state[b] = None
                 res[c.get_id()] = c_state
 
