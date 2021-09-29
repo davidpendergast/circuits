@@ -53,6 +53,7 @@ class Entity:
         self._y = y
 
         if w is not None and h is not None:
+            # wtf is all this (-_-)
             w = util.assert_int(w, msg="width must be an integer: {}".format(w), error=True)
             h = util.assert_int(h, msg="height must be an integer: {}".format(h), error=True)
             self._size = w, h
@@ -80,6 +81,8 @@ class Entity:
         # used to let entities "hold" other entities
         self._held_parent = None
         self._held_child = None
+
+        self._perturbs = []
 
     def get_world(self) -> 'src.game.worlds.World':
         return self._world
@@ -115,24 +118,40 @@ class Entity:
         """All the entities that should be added/removed to World along with this one."""
         return []
 
-    def get_rect(self, raw=False):
-        xy = self.get_xy(raw=raw)
+    def set_xy_perturbs(self, shake_points):
+        self._perturbs = shake_points
+
+    def get_xy_perturb(self):
+        if len(self._perturbs) > 0:
+            return self._perturbs[-1]
+        else:
+            return (0, 0)
+
+    def get_rect(self, raw=False, with_xy_perturbs=False):
+        xy = self.get_xy(raw=raw, with_xy_perturbs=with_xy_perturbs)
         size = self.get_size()
         return [xy[0], xy[1], size[0], size[1]]
 
-    def get_center(self, raw=False):
-        r = self.get_rect(raw=raw)
+    def get_center(self, raw=False, with_xy_perturbs=False):
+        r = self.get_rect(raw=raw, with_xy_perturbs=with_xy_perturbs)
         pt = (r[0] + r[2] / 2, r[1] + r[3] / 2)
         if raw:
             return pt
         else:
             return (int(pt[0]), int(pt[1]))
 
-    def get_xy(self, raw=False):
-        if raw:
-            return self._x, self._y
+    def get_xy(self, raw=False, with_xy_perturbs=False):
+        res = [self._x, self._y]
+
+        if with_xy_perturbs:
+            perturb = self.get_xy_perturb()
+            res[0] += perturb[0]
+            res[1] += perturb[1]
+
+        if not raw:
+            return (int(res[0]), int(res[1]))
         else:
-            return (int(self._x), int(self._y))
+            return tuple(res)
 
     def set_xy(self, xy, update_frame_of_reference=True):
         old_x = self._x
@@ -225,11 +244,11 @@ class Entity:
                     return True
         return False
 
-    def get_x(self, raw=False):
-        return self.get_xy(raw=raw)[0]
+    def get_x(self, raw=False, with_xy_perturbs=False):
+        return self.get_xy(raw=raw, with_xy_perturbs=with_xy_perturbs)[0]
 
-    def get_y(self, raw=False):
-        return self.get_xy(raw=raw)[1]
+    def get_y(self, raw=False, with_xy_perturbs=False):
+        return self.get_xy(raw=raw, with_xy_perturbs=with_xy_perturbs)[1]
 
     def get_w(self):
         return self.get_size()[0]
@@ -275,7 +294,8 @@ class Entity:
         return [next_xy[0], next_xy[1], size[0], size[1]]
 
     def update(self):
-        pass
+        if len(self._perturbs) > 0:
+            self._perturbs.pop(-1)
 
     def update_sprites(self):
         pass
@@ -477,7 +497,7 @@ class AbstractBlockEntity(Entity):
         Entity.__init__(self, x, y, w=w, h=h)
 
     def update(self):
-        pass
+        super().update()
 
     def is_dynamic(self):
         return False
@@ -544,7 +564,7 @@ class BlockEntity(AbstractBlockEntity):
         self._sprite = None
 
     def update(self):
-        pass
+        super().update()
 
     def get_color_id(self):
         return self._color_id
@@ -564,12 +584,15 @@ class BlockEntity(AbstractBlockEntity):
             if self._sprite is None or not isinstance(self._sprite, sprites.ImageSprite):
                 self._sprite = sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER)
             ratio = (self.get_w() / img.width(), self.get_h() / img.height())
-            self._sprite = self._sprite.update(new_model=img, new_x=self.get_x(), new_y=self.get_y(),
+            self._sprite = self._sprite.update(new_model=img,
+                                               new_x=self.get_x(with_xy_perturbs=True),
+                                               new_y=self.get_y(with_xy_perturbs=True),
                                                new_scale=1, new_depth=0, new_color=self.get_color(),
                                                new_ratio=ratio)
         else:
             scale = 1
-            inner_rect = util.rect_expand(self.get_rect(), all_expand=-spriteref.block_sheet().border_inset * scale)
+            inner_rect = util.rect_expand(self.get_rect(with_xy_perturbs=True),
+                                          all_expand=-spriteref.block_sheet().border_inset * scale)
             if self._sprite is None or not isinstance(self._sprite, sprites.BorderBoxSprite):
                 self._sprite = sprites.BorderBoxSprite(spriteref.BLOCK_LAYER, inner_rect,
                                                        all_borders=spriteref.block_sheet().border_sprites)
@@ -792,8 +815,6 @@ class FallingBlockEntity(BlockEntity):
         self.fall_speed = 2
         self.weight_thresh = weight_thresh
 
-        self.current_weight_on_top = 0
-
         self._is_primed_to_fall = False
         self._is_falling = False
 
@@ -834,15 +855,15 @@ class FallingBlockEntity(BlockEntity):
                 if ground_collisions:
                     self.stop_falling()
             else:
-                self.current_weight_on_top = 0
+                current_weight_on_top = 0
                 for a in self.get_world().get_sensor_state(self.actor_sensor_id):
                     if isinstance(a, PlayerEntity) and a.is_grounded():
-                        self.current_weight_on_top += a.get_weight()
+                        current_weight_on_top += a.get_weight()
                 if ground_collisions:
                     self._is_primed_to_fall = False
-                elif self.current_weight_on_top >= self.weight_thresh and not self._is_primed_to_fall:
+                elif current_weight_on_top >= self.weight_thresh and not self._is_primed_to_fall:
                     self.set_primed_to_fall()
-                elif self.current_weight_on_top == 0 and self._is_primed_to_fall:
+                elif current_weight_on_top == 0 and self._is_primed_to_fall:
                     self.start_falling()
 
     def _calc_is_grounded(self):
@@ -854,7 +875,8 @@ class FallingBlockEntity(BlockEntity):
     def set_primed_to_fall(self):
         if not self._is_primed_to_fall:
             self._is_primed_to_fall = True
-            # TODO shake animation, sound?
+            self.set_xy_perturbs(util.get_shake_points(2, 10))
+            # TODO sound?
 
     def start_falling(self):
         # TODO shake again?
@@ -865,6 +887,8 @@ class FallingBlockEntity(BlockEntity):
         self.vert_block_avoider.set_enabled(True)
         self._adjust_colliders_for_breaking(True)
 
+        self.set_xy_perturbs(util.get_shake_points(3, 60, freq=2))
+
     def stop_falling(self):
         self._is_falling = False
         self._is_primed_to_fall = False
@@ -872,6 +896,8 @@ class FallingBlockEntity(BlockEntity):
 
         self.vert_block_avoider.set_enabled(False)
         self._adjust_colliders_for_breaking(False)
+
+        self.set_xy_perturbs([])
 
     def _adjust_colliders_for_breaking(self, breaking):
         self._is_currently_breaking = breaking
@@ -1068,6 +1094,7 @@ class DoorBlock(BlockEntity):
         return self._toggle_idx
 
     def update(self):
+        super().update()
         should_be_solid = (not self.get_world().is_door_unlocked(self._toggle_idx)) ^ self._inverted
         if self._is_solid != should_be_solid:
             if should_be_solid:
@@ -1135,6 +1162,8 @@ class KeyEntity(Entity):
         return self._toggle_idx
 
     def update(self):
+        super().update()
+
         if len(self.get_world().get_sensor_state(self.player_sensor_id)) > 0:
             self._player_colliding_tick_count = min(self._player_collide_max, self._player_colliding_tick_count + 1)
         else:
@@ -1249,6 +1278,8 @@ class EndBlock(CompositeBlockEntity):
         yield self._sensor_ent
 
     def update(self):
+        super().update()
+
         actors_in_sensor = self.get_world().get_sensor_state(self._level_end_sensor_id)
         found_one = False
         for a in actors_in_sensor:
@@ -1793,6 +1824,7 @@ class PlayerEntity(Entity):
         return ACTOR_GROUP
 
     def update(self):
+        super().update()
         self._handle_inputs()
 
         if self.is_grounded():
@@ -2273,6 +2305,7 @@ class ParticleEntity(Entity):
         self.get_world().remove_entity(self)
 
     def update(self):
+        super().update()
         if 0 <= self._duration <= self._ticks_alive:
             self.get_world().remove_entity(self)
             return
@@ -2414,6 +2447,7 @@ class PlayerFadeAnimation(Entity):
         return [(self.get_player_center(), PlayerEntity.LIGHT_RADIUS, colors.PERFECT_WHITE, strength)]
 
     def update(self):
+        super().update()
         if self.ticks_active >= self.duration:
             self.get_world().remove_entity(self)
         else:
@@ -2461,6 +2495,7 @@ class PlayerIndicatorEntity(Entity):
         return player.has_ever_moved()
 
     def update(self):
+        super().update()
         player = self.get_world().get_entity_by_id(self.target_player_ent_id)
         if player is None or self.should_remove(player):
             self.get_world().remove_entity(self)
@@ -2545,6 +2580,7 @@ class FloatingTextAlertEntity(Entity):
         return util.bound(self.ticks_active / self.fadeout_time, 0.0, 1.0)
 
     def update(self):
+        super().update()
         if self.ticks_active >= self.fadeout_time:
             self.get_world().remove_entity(self)
         else:
@@ -2605,6 +2641,7 @@ class SpikeEntity(Entity):
         return self._color_id
 
     def update(self):
+        super().update()
         ents_in_spikes = self.get_world().get_sensor_state(self._sensor_id)
         for e in ents_in_spikes:
             if isinstance(e, PlayerEntity):
@@ -2803,6 +2840,7 @@ class InfoEntity(Entity):
             self._text_bg_sprite.update(new_rect=bg_rect)
 
     def update(self):
+        super().update()
         if self._ticks_overlapping_player < 0:
             self._ticks_overlapping_player += 1
         else:

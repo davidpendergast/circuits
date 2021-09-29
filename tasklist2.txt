@@ -29,6 +29,9 @@ mechanics
     
 
 - finish the dang buttons in the level editor
+
+bugs
+- you can put two identical blocks on top of each other in the editor, leading to all kinds of issues
     
 - actors that can't be controlled but have behavior that integrates with other systems    
     - slug? or NPC?
