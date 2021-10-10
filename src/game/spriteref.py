@@ -199,6 +199,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.info_exclamation = (None, None)
         self.info_question = (None, None)
 
+        self.teleporter_blocks = []  # list of (rim, arrow, inner_detail, outer_detail)
+
     def get_size(self, img_size):
         return (img_size[0] + self.extra_space[0], img_size[1] + self.extra_space[1])
 
@@ -385,7 +387,13 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.all_spike_bottoms = [self.spike_bottoms_1, self.spike_bottoms_2, self.spike_bottoms_4, self.spike_bottoms_8]
 
         self.info_exclamation = (_img(160, 438, 8, 2, offs=start_pos), _img(160, 416, 8, 16, offs=start_pos))
-        self.info_question = ( _img(168, 438, 8, 2, offs=start_pos), _img(168, 416, 8, 16, offs=start_pos))
+        self.info_question = (_img(168, 438, 8, 2, offs=start_pos), _img(168, 416, 8, 16, offs=start_pos))
+
+        tp_xy = (232, 224)
+        self.teleporter_blocks = []
+        for i in range(8):
+            tp_sprites = tuple([_img(tp_xy[0] + j * 32, tp_xy[1] + i * 16, 32, 16, offs=start_pos) for j in range(4)])
+            self.teleporter_blocks.append(tp_sprites)
 
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
         all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms
@@ -399,6 +407,13 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         if length > 0 and overflow_if_not_divisible:
             res.append(all_spikes[0])
         return res
+
+    def get_teleporter_sprites(self, angle_pcnt: float):
+        """
+        :param angle_pcnt: value from 0.0 to 1.0 (0 = down, 0.5 = up, 1.0 = down again)
+        :return: (main_sprite, arrow_fill, inner_detail, outer_detail)
+        """
+        return util.index_into(self.teleporter_blocks, angle_pcnt, wrap=True)
 
     def get_pushable_block_sprite(self, size, color_id):
         key = (size[0], size[1], color_id if color_id >= 0 else 0)

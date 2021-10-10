@@ -1734,8 +1734,9 @@ class LevelEditGameScene(_BaseGameScene):
         res.append(blueprints.SpecTypes.DOOR_BLOCK.get_default_blob())          # 6
         res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())           # 7
         res.append(blueprints.SpecTypes.SPIKES.get_default_blob())              # 8
-        res.append(blueprints.SpecTypes.INFO.get_default_blob())                # 9
         res.append(blueprints.SpecTypes.FALLING_BLOCK.get_default_blob())       # 0
+        res.append(blueprints.SpecTypes.TELEPORTER.get_default_blob())          # 9
+        res.append(blueprints.SpecTypes.INFO.get_default_blob())                # shift + 1
 
         return res
 

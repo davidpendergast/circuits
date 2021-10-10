@@ -83,7 +83,7 @@ class SpecType:
         return []
 
     def get_color_ids(self, spec):
-        return []
+        raise NotImplementedError()
 
     def get_art_ids(self, spec):
         return []
@@ -366,6 +366,38 @@ class EndBlockSpecType(SpecType):
         yield entities.EndBlock(x, y, w, h, player_type, color_id=color_id)
 
 
+class TeleporterSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "teleporter", required_keys=(SUBTYPE_ID, X, Y, W, H),
+                          optional_keys={COLOR_ID: 0, INVERTED: False})
+
+    def get_subtypes(self):
+        return ["one_way", "two_way"]
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
+
+    def get_default_value(self, k):
+        if k == W:
+            return 32
+        elif k == H:
+            return 16
+        else:
+            return super().get_default_value(k)
+
+    def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        mode = entities.TeleporterBlock.ONE_WAY if json_blob[SUBTYPE_ID] == "one_way" else entities.TeleporterBlock.TWO_WAY
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        inverted = json_blob[INVERTED]
+        channel = json_blob[COLOR_ID]
+
+        yield entities.TeleporterBlock(x, y, w, h, channel, not inverted, mode)
+
+
 class SpikeSpecType(SpecType):
 
     def __init__(self):
@@ -411,6 +443,9 @@ class InfoSpecType(SpecType):
     def get_subtypes(self):
         return [info_type.ident for info_type in entities.InfoEntityTypes.all_types()]
 
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4]
+
     def get_default_value(self, k):
         if k == TEXT:
             return "Info text will appear here.\nRemember to watch your step!"
@@ -445,6 +480,9 @@ class DialogTriggerSpecType(SpecType):
         else:
             return super().get_default_value(k)
 
+    def get_color_ids(self, spec):
+        return []
+
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
         y = json_blob[Y]
@@ -465,6 +503,9 @@ class DoorBlockSpecType(SpecType):
 
     def get_subtypes(self):
         return [0, 1, 2, 3]
+
+    def get_color_ids(self, spec):
+        return []
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
@@ -488,6 +529,9 @@ class KeySpecType(SpecType):
 
     def get_subtypes(self):
         return [0, 1, 2, 3]
+
+    def get_color_ids(self, spec):
+        return []
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
@@ -614,6 +658,9 @@ class PlayerSpecType(SpecType):
     def get_subtypes(self):
         return [const.PLAYER_FAST, const.PLAYER_SMALL, const.PLAYER_HEAVY, const.PLAYER_FLYING]
 
+    def get_color_ids(self, spec):
+        return []
+
     @staticmethod
     def get_player_type(json_blob):
         player_type_id = json_blob[SUBTYPE_ID]
@@ -644,6 +691,7 @@ class SpecTypes:
     PUSHABLE_BLOCK = PushableBlockSpecType()
     FALLING_BLOCK = FallingBlockSpecType()
     DIALOG_TRIGGER = DialogTriggerSpecType()
+    TELEPORTER = TeleporterSpecType()
 
     DOOR_BLOCK = DoorBlockSpecType()
     KEY_BLOCK = KeySpecType()

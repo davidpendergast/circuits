@@ -10,7 +10,6 @@ import src.utils.util as util
 import src.engine.sprites as sprites
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
-import src.engine.globaltimer as globaltimer
 import configs as configs
 
 import src.game.spriteref as spriteref
@@ -466,6 +465,9 @@ class Entity:
 
     def is_player(self):
         return isinstance(self, PlayerEntity)
+
+    def is_teleporter(self):
+        return isinstance(self, TeleporterBlock)
 
     def can_be_picked_up(self):
         # might add more pick-uppdable things later, but for now it's just players
@@ -938,8 +940,9 @@ class SensorEntity(Entity):
 class CompositeBlockEntity(AbstractBlockEntity):
 
     class BlockSpriteInfo:
-        def __init__(self, model_provider=lambda: None, xy_offs=(0, 0), rotation=0, scale=1, xflip=False):
+        def __init__(self, model_provider=lambda: None, color_provider=lambda: None, xy_offs=(0, 0), rotation=0, scale=1, xflip=False):
             self.model_provider = model_provider
+            self.color_provider = color_provider
             self.xy_offs = xy_offs
             self.rotation = rotation
             self.xflip = xflip
@@ -976,13 +979,14 @@ class CompositeBlockEntity(AbstractBlockEntity):
         for i in range(0, len(self._sprite_infos)):
             info = self._sprite_infos[i]
             spr = self._sprites[i]
+            spr_color = info.color_provider()
 
             x = self.get_x()
             y = self.get_y()
             self._sprites[i] = spr.update(new_model=info.model_provider(),
                                           new_x=x + info.xy_offs[0], new_y=y + info.xy_offs[1],
                                           new_scale=info.scale, new_xflip=info.xflip,
-                                          new_color=self.get_color(),
+                                          new_color=spr_color if spr_color is not None else self.get_color(),
                                           new_rotation=info.rotation)
 
     def all_sprites(self):
@@ -1237,58 +1241,75 @@ class StartBlock(BlockEntity):
         return spriteref.block_sheet().get_start_block_sprite(size, self.get_player_type().get_id())
 
 
-class EndBlock(CompositeBlockEntity):
+class AbstractActorSensorBlock(CompositeBlockEntity):
 
-    def __init__(self, x, y, w, h, player_type, color_id=-1):
-        cs = gs.get_instance().cell_size
-        if w != cs * 2:
-            raise ValueError("illegal width for start block: {}".format(w))
-        if h != cs:
-            raise ValueError("illegal height for start block: {}".format(h))
-
-        self._player_type = player_type
-
-        if color_id < 0:
-            color_id = player_type.get_color_id()
-
-        dip_h = 3
-
+    def __init__(self, x, y, w, h, dip_h=3, nub_w=2, color_id=-1, sensor_name="unnamed_player_sensor_block"):
         colliders = []
-        colliders.extend(BlockEntity.build_colliders_for_rect([2, dip_h, 28, 16 - dip_h]))  # center
-        colliders.extend(BlockEntity.build_colliders_for_rect([0, 0, 2, 16]))   # left
-        colliders.extend(BlockEntity.build_colliders_for_rect([30, 0, 2, 16]))  # right
+        colliders.extend(BlockEntity.build_colliders_for_rect([nub_w, dip_h, w - nub_w * 2, h - dip_h]))  # center
+        colliders.extend(BlockEntity.build_colliders_for_rect([0, 0, nub_w, h]))                          # left
+        colliders.extend(BlockEntity.build_colliders_for_rect([w - nub_w, 0, nub_w, h]))                  # right
 
-        self._is_satisfied = False
-
-        sprite_infos = [CompositeBlockEntity.BlockSpriteInfo(model_provider=lambda: self.get_main_model(),
-                                                             xy_offs=(0, 0))]
-
-        CompositeBlockEntity.__init__(self, x, y, colliders, sprite_infos, color_id=color_id)
+        CompositeBlockEntity.__init__(self, x, y, colliders, self.get_sprite_infos(), color_id=color_id)
 
         # this is what it uses to detect the player (normally blocks can't have sensors)
-        level_end_collider = RectangleCollider([0, 0, 28, 10], CollisionMasks.SENSOR,
-                                               collides_with=CollisionMasks.ACTOR,
-                                               name="level_end_{}".format(self._player_type))
-        self._level_end_sensor_id = level_end_collider.get_id()
-        self._player_stationary_in_sensor_count = 0
-        self._player_stationary_in_sensor_limit = 10
-        self._sensor_ent = SensorEntity([2, 0, 28, dip_h + 2], level_end_collider, parent=self)
+        player_collider = RectangleCollider([0, 0, w - nub_w * 2, h // 2], CollisionMasks.SENSOR,
+                                            collides_with=CollisionMasks.ACTOR,
+                                            name=sensor_name)
+        self._player_sensor_id = player_collider.get_id()
+        self._sensor_ent = SensorEntity([nub_w, 0, w - nub_w * 2, dip_h + 2], player_collider, parent=self)
 
     def all_sub_entities(self):
         yield self._sensor_ent
 
+    def get_sensor_id(self):
+        return self._player_sensor_id
+
+    def get_sprite_infos(self) -> List[CompositeBlockEntity.BlockSpriteInfo]:
+        raise NotImplementedError()
+
+    def all_actors_currently_in_sensor(self):
+        for a in self.get_world().get_sensor_state(self.get_sensor_id()):
+            if self.should_accept(a):
+                yield a
+
+    def should_accept(self, actor):
+        return True
+
+
+class EndBlock(AbstractActorSensorBlock):
+
+    def __init__(self, x, y, w, h, player_type, color_id=-1):
+        cs = gs.get_instance().cell_size
+        if w != cs * 2:
+            raise ValueError("illegal width for end block: {}".format(w))
+        if h != cs:
+            raise ValueError("illegal height for end block: {}".format(h))
+
+        self._player_type = player_type
+        if color_id < 0:
+            color_id = player_type.get_color_id()
+        self._is_satisfied = False
+
+        self._player_stationary_in_sensor_count = 0
+        self._player_stationary_in_sensor_limit = 10
+
+        super().__init__(x, y, w, h, color_id=color_id, sensor_name="level_end_{}".format(self._player_type))
+
+    def get_sprite_infos(self):
+        return [CompositeBlockEntity.BlockSpriteInfo(model_provider=lambda: self.get_main_model(), xy_offs=(0, 0))]
+
+    def should_accept(self, actor):
+        return (isinstance(actor, PlayerEntity)
+                and actor.get_player_type() == self._player_type
+                and not actor.is_crouching()
+                and util.mag(actor.get_vel()) < 2)
+
     def update(self):
         super().update()
 
-        actors_in_sensor = self.get_world().get_sensor_state(self._level_end_sensor_id)
-        found_one = False
-        for a in actors_in_sensor:
-            if isinstance(a, PlayerEntity) and a.get_player_type() == self._player_type and not a.is_crouching():
-                # TODO velocity relative to block?
-                if util.mag(a.get_vel()) < 2:
-                    self._player_stationary_in_sensor_count += 1
-                    found_one = True
-        if not found_one:
+        if len([e for e in self.all_actors_currently_in_sensor()]) > 0:
+            self._player_stationary_in_sensor_count += 1
+        else:
             self._player_stationary_in_sensor_count = 0
 
         was_satisfied = self._is_satisfied
@@ -1313,6 +1334,108 @@ class EndBlock(CompositeBlockEntity):
 
     def __repr__(self):
         return type(self).__name__ + "({}, {})".format(self.get_rect(), self.get_player_type())
+
+
+class TeleporterBlock(AbstractActorSensorBlock):
+
+    ONE_WAY = "one_way"
+    TWO_WAY = "two_way"
+
+    def __init__(self, x, y, w, h, channel, sending, mode):
+        cs = gs.get_instance().cell_size
+        if w != cs * 2:
+            raise ValueError("illegal width for teleporter: {}".format(w))
+        if h != cs:
+            raise ValueError("illegal height for teleporter: {}".format(h))
+
+        super().__init__(x, y, w, h, color_id=channel, sensor_name="teleporter_{}".format(channel))
+
+        self._channel = channel
+        self._sending = sending
+        self._mode = mode
+
+        self._arrow_rot = 0.0
+
+        self._pulse_offset = 10
+        self._pulse_colors = ((colors.WHITE, 15), (colors.LIGHT_GRAY, 15), (colors.DARK_GRAY, 60))
+        self._pulse_interval = sum([x[1] for x in self._pulse_colors])
+        self._pulse_ticks = (channel * self._pulse_interval) // 5
+
+        self._activation_thresh = 30
+        self._players_in_sensor = {}  # entity_id -> ticks in sensor (while stationary / not crouching)
+
+    def get_channel(self):
+        return self._channel
+
+    def get_prog(self):
+        if self._sending:
+            max_time_in_sensor = max(self._players_in_sensor.values(), default=0)
+            if max_time_in_sensor >= self._activation_thresh:
+                return 1.0
+            else:
+                return max(0.0, max_time_in_sensor / self._activation_thresh)
+        else:
+            return 0
+
+    def get_actors_ready_to_send(self) -> List[int]:
+        if self._sending:
+            return [p_id for p_id in self._players_in_sensor if self._players_in_sensor[p_id] >= self._activation_thresh]
+        else:
+            return []
+
+    def update(self):
+        super().update()
+
+        self._pulse_ticks += 1
+
+        if self.get_world().is_waiting():
+            return
+
+        seen = set()
+        for p in self.all_actors_currently_in_sensor():
+            p_id = p.get_ent_id()
+            seen.add(p_id)
+            if p_id not in self._players_in_sensor:
+                self._players_in_sensor[p_id] = 0
+            else:
+                if isinstance(p, PlayerEntity) and not p.is_crouching() and util.mag(p.get_vel()) < 2:
+                    self._players_in_sensor[p_id] = min(self._activation_thresh, self._players_in_sensor[p_id] + 1)
+
+        to_rem = []
+        for p_id in self._players_in_sensor:
+            if p_id not in seen:
+                self._players_in_sensor[p_id] -= 1
+                if self._players_in_sensor[p_id] < 0:
+                    to_rem.append(p_id)
+        for p_id in to_rem:
+            del self._players_in_sensor[p_id]
+
+    def get_sprite_infos(self):
+
+        def get_sprite_and_color(idx):
+            if self._sending:
+                spr = spriteref.object_sheet().get_teleporter_sprites(self.get_prog() / 2)[idx]
+            else:
+                spr = spriteref.object_sheet().get_teleporter_sprites(0.5 + self.get_prog() / 2)[idx]
+
+            if idx == 0:
+                return (spr, None)
+            else:
+                ticks = (self._pulse_ticks - (idx - 1) * self._pulse_offset) % self._pulse_interval
+                color = self._pulse_colors[-1][0]
+                for color_and_duration in self._pulse_colors:
+                    if ticks <= color_and_duration[1]:
+                        color = color_and_duration[0]
+                        break
+                    else:
+                        ticks -= color_and_duration[1]
+                return (spr, color)
+
+        return [CompositeBlockEntity.BlockSpriteInfo(
+            model_provider=lambda idx=i: get_sprite_and_color(idx)[0],
+            color_provider=lambda idx=i: get_sprite_and_color(idx)[1],
+            xy_offs=(0, 0)) for i in range(4)
+        ]
 
 
 class SlopeOrientation:
