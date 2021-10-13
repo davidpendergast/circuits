@@ -1,39 +1,24 @@
 
-import src.utils.util as util
-import src.game.entities as entities
+_ALL_PARTICLE_TYPES = []
 
 
-class ParticleTeleportEffect(entities.Entity):
+class ParticleType:
 
-    def __init__(self, start_sprite, end_sprite, time):
-        entities.Entity.__init__(self,
-                                 self.start_sprite.x(),
-                                 self.end_sprite.y(),
-                                 w=start_sprite.width(),
-                                 h=start_sprite.height())
-        self.start_sprite = start_sprite
-        self.end_sprite = end_sprite
-        self.total_time = time
+    def __init__(self, ident):
+        self._id = ident
+        _ALL_PARTICLE_TYPES.append(self)
 
-        self.t = 0
+    def __hash__(self):
+        return hash(self._id)
 
-    def update_start_sprite(self, start_sprite):
-        self.start_sprite = start_sprite
+    def __eq__(self, other):
+        return isinstance(other, ParticleType) and other._id == self._id
 
-    def update_end_sprite(self, end_sprite):
-        self.end_sprite = end_sprite
 
-    def get_prog(self):
-        return util.bound(self.t / self.total_time, 0, 1)
-
-    def update(self):
-        self.t += 1
-
-        if self.t > self.total_time:
-            self.get_world().remove_entity(self)
-
-    def all_sprites(self):
-        # TODO
-        yield self.start_sprite
-        yield self.end_sprite
+class ParticleTypes:
+    CROSS_TINY = ParticleType("CROSS_TINY")
+    CROSS_SMALL = ParticleType("CROSS_SMALL")
+    BUBBLES_SMALL = ParticleType("BUBBLES_SMALL")
+    BUBBLES_MEDIUM = ParticleType("BUBBLES_MEDIUM")
+    BUBBLES_LARGE = ParticleType("BUBBLES_LARGE")
 

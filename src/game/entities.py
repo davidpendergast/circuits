@@ -19,6 +19,7 @@ import src.game.globalstate as gs
 import src.game.const as const
 import src.game.debug as debug
 import src.game.dialog as dialog
+import src.game.particles as particles
 
 
 _ENT_ID = 0
@@ -34,6 +35,7 @@ def next_entity_id():
 UNKNOWN_GROUP = -1
 ENVIRONMENT_GROUP = 5
 ACTOR_GROUP = 10
+DECORATION_GROUP = 20
 
 
 # depths
@@ -1364,6 +1366,26 @@ class TeleporterBlock(AbstractActorSensorBlock):
         self._activation_thresh = 30
         self._players_in_sensor = {}  # entity_id -> ticks in sensor (while stationary / not crouching)
 
+        def make_particle(xy):
+            return FloatingDustParticleEntity(xy, particles.ParticleTypes.CROSS_TINY, 60,
+                                              (0, -1),
+                                              self.get_color(include_lighting=False),
+                                              end_color=colors.PERFECT_BLACK,
+                                              anim_rate=4,
+                                              fric=0.01,
+                                              accel=(0, 0.025),
+                                              max_speed=3,
+                                              max_sway_per_second=3.1415 / 8)
+
+        self._particle_emitter = ParticleEmitterZone([0, 3, w, 1], make_particle, 2,
+                                                     parent=self,
+                                                     xy_provider=lambda: (util.sample_triangular(0.2, 0.8), 1))
+
+    def all_sub_entities(self):
+        for s in super().all_sub_entities():
+            yield s
+        yield self._particle_emitter
+
     def get_channel(self):
         return self._channel
 
@@ -2586,6 +2608,120 @@ class PlayerFadeAnimation(Entity):
     def all_sprites(self):
         if self._sprite is not None:
             yield self._sprite
+
+
+class FloatingDustParticleEntity(Entity):
+
+    def __init__(self, xy, particle_type, duration, vel, color,
+                 scale=1,
+                 depth=0,
+                 layer=spriteref.ENTITY_LAYER,
+                 end_color=None,
+                 anim_rate=4,
+                 fric=0.0,
+                 accel=(0, 0.01),
+                 max_speed=10,
+                 max_sway_per_second=3.1415/8):
+        super().__init__(xy[0], xy[1], 1, 1)
+        self._scale = scale
+        self._depth = depth
+        self._layer = layer
+        self._type = particle_type
+        self._duration = duration
+        self._ticks_active = 0
+        self.set_vel(vel)
+        self._accel = accel
+        self._fric = fric
+        self._max_speed = max_speed
+        self._start_color = color
+        self._end_color = end_color if end_color is not None else color
+        self._anim_rate = anim_rate
+        self._max_sway = max_sway_per_second
+
+        self._sprite = None
+
+    def is_dynamic(self):
+        return False
+
+    def calc_next_vel(self, cur_vel):
+        sway_val_rads = 2 * (0.5 - random.random()) * self._max_sway / configs.target_fps
+        vel_with_sway = util.rotate(cur_vel, sway_val_rads)
+
+        new_vel = util.add(vel_with_sway, self._accel)
+        if util.mag(new_vel) > self._max_speed:
+            new_vel = util.set_length(new_vel, self._max_speed)
+        new_vel = util.mult(new_vel, 1 - self._fric)
+
+        return new_vel
+
+    def get_prog(self):
+        return util.bound(self._ticks_active / self._duration, 0, 1)
+
+    def update_sprites(self):
+        prog = self.get_prog()
+        cur_color = util.linear_interp(self._start_color, self._end_color, prog)
+        cur_anim_idx = gs.get_instance().anim_tick() // self._anim_rate
+        cur_model = spriteref.object_sheet().get_particle_sprite(self._type, cur_anim_idx)
+        cur_xy = self.get_xy()
+
+        if self._sprite is None:
+            self._sprite = sprites.ImageSprite.new_sprite(self._layer, scale=self._scale, depth=self._depth)
+
+        self._sprite = self._sprite.update(new_model=cur_model,
+                                           new_x=cur_xy[0] - cur_model.width() * self._scale // 2,
+                                           new_y=cur_xy[1] - cur_model.height() * self._scale // 2,
+                                           new_color=cur_color, new_scale=self._scale, new_depth=self._depth)
+
+    def update(self):
+        if self._ticks_active >= self._duration:
+            self.get_world().remove_entity(self)
+        else:
+            self.set_vel(self.calc_next_vel(self.get_vel()))
+            self.set_xy(self.calc_next_xy(raw=True))
+
+        self.update_sprites()
+        self._ticks_active += 1
+
+    def all_sprites(self):
+        yield self._sprite
+
+
+class ParticleEmitterZone(Entity):
+
+    def __init__(self, rect, particle_spawner, spawn_rate_per_sec, parent=None, max_particles=20,
+                 xy_provider=lambda: (random.random(), 1)):
+        self.parent = parent
+        super().__init__(rect[0], rect[1], rect[2], rect[3])
+        self.enabled = True
+        self._spawn_chance_per_frame = spawn_rate_per_sec / configs.target_fps
+        self._max_particles = max_particles
+        self._spawner = particle_spawner
+        self._xy_provider = xy_provider
+
+        if self.parent is not None:
+            self.set_xy((self.parent.get_x() + rect[0], self.parent.get_y() + rect[1]))
+            self.set_frame_of_reference_parents(self.parent)
+        else:
+            self.set_xy((rect[0], rect[1]))
+
+        self._active_particle_ids = []
+
+    def is_dynamic(self):
+        return True
+
+    def get_physics_group(self):
+        return DECORATION_GROUP
+
+    def update(self):
+        self._active_particle_ids = [p for p in self._active_particle_ids if self.get_world().has_entity_with_id(p)]
+        if self._max_particles < 0 or len(self._active_particle_ids) < self._max_particles:
+            if self.enabled and random.random() < self._spawn_chance_per_frame:
+                xy_scalars = self._xy_provider()
+                xy = util.add(self.get_xy(), (self.get_w() * xy_scalars[0], self.get_h() * xy_scalars[1]))
+                new_particle = self._spawner(xy)
+                if new_particle is not None:
+                    self.get_world().add_entity(new_particle)
+                    self._active_particle_ids.append(new_particle.get_ent_id())
 
 
 class PlayerIndicatorEntity(Entity):

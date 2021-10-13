@@ -7,6 +7,7 @@ import src.utils.artutils as artutils
 
 import src.game.const as const
 import src.game.colors as colors
+import src.game.particles as particles
 import configs
 
 BLOCK_LAYER = "block_layer"
@@ -176,11 +177,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
 
         self.player_orb_sprites = []  # list of (ImageModel, ImageModel, ImageModel)
 
-        self.particles_cross_tiny = []
-        self.particles_cross_small = []
-        self.particles_bubbles_small = []
-        self.particles_bubbles_medium = []
-        self.particles_bubbles_large = []
+        self.particles = {}
 
         self.phasing_sprites = {}  # player_id -> list of ImageModels
 
@@ -324,11 +321,11 @@ class _ObjectSheet(spritesheets.SpriteSheet):
                                     _img(40, 368 + i * 8, 8, 8, offs=start_pos),
                                     _img(48, 368 + i * 8, 8, 8, offs=start_pos)) for i in range(0, 2)]
 
-        self.particles_cross_tiny = [_img(56 + i * 3, 368, 3, 3, offs=start_pos) for i in range(0, 2)]
-        self.particles_cross_small = [_img(64 + i * 5, 368, 5, 5, offs=start_pos) for i in range(0, 2)]
-        self.particles_bubbles_small = [_img(56 + i * 3, 381, 3, 3, offs=start_pos) for i in range(0, 2)]
-        self.particles_bubbles_medium = [_img(56 + i * 4, 376, 4, 4, offs=start_pos) for i in range(0, 2)]
-        self.particles_bubbles_large = [_img(64 + i * 5, 376, 5, 5, offs=start_pos) for i in range(0, 2)]
+        self.particles[particles.ParticleTypes.CROSS_TINY] = [_img(56 + i * 3, 368, 3, 3, offs=start_pos) for i in range(0, 2)]
+        self.particles[particles.ParticleTypes.CROSS_SMALL] = [_img(64 + i * 5, 368, 5, 5, offs=start_pos) for i in range(0, 2)]
+        self.particles[particles.ParticleTypes.BUBBLES_SMALL] = [_img(56 + i * 3, 381, 3, 3, offs=start_pos) for i in range(0, 2)]
+        self.particles[particles.ParticleTypes.BUBBLES_MEDIUM] = [_img(56 + i * 4, 376, 4, 4, offs=start_pos) for i in range(0, 2)]
+        self.particles[particles.ParticleTypes.BUBBLES_LARGE] = [_img(64 + i * 5, 376, 5, 5, offs=start_pos) for i in range(0, 2)]
 
         self.toggle_block_bases = []
         self.toggle_block_icons = []
@@ -414,6 +411,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         :return: (main_sprite, arrow_fill, inner_detail, outer_detail)
         """
         return util.index_into(self.teleporter_blocks, angle_pcnt, wrap=True)
+
+    def get_particle_sprite(self, particle_type: particles.ParticleType, idx):
+        sprites = self.particles[particle_type]
+        return sprites[idx % len(sprites)]
 
     def get_pushable_block_sprite(self, size, color_id):
         key = (size[0], size[1], color_id if color_id >= 0 else 0)

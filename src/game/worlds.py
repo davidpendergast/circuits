@@ -67,7 +67,10 @@ class World:
         self.camera_max_xy = camera_max_xy
 
     def has_entity(self, ent):
-        return ent.get_ent_id() in self._ent_id_to_ent
+        return self.has_entity_with_id(ent.get_ent_id())
+
+    def has_entity_with_id(self, ident):
+        return ident in self._ent_id_to_ent
 
     def add_entity(self, ent, next_update=True):
         if ent is None or ent in self.entities:

@@ -497,6 +497,26 @@ def round_vec(v):
     return tuple([round(i) for i in v])
 
 
+def sample_uniform(lower, upper):
+    return lower + random.random() * (upper - lower)
+
+
+def sample_triangular(lower, upper, center=None):
+    # https://en.wikipedia.org/wiki/Triangular_distribution#Generating_triangular-distributed_random_variates
+    a = lower
+    b = upper
+    if center is None:
+        c = (upper + lower) / 2
+    else:
+        c = center
+
+    u = random.random()
+    if u < (c - a) / (b - a):
+        return a + math.sqrt(u * (b - a) * (c - a))
+    else:
+        return b - math.sqrt((1 - u) * (b - a) * (b - c))
+
+
 def replace_all_except(text, replace_txt, except_for=()):
     return "".join(x if (x in except_for) else replace_txt for x in text)
 
