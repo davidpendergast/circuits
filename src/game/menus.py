@@ -1071,7 +1071,7 @@ class LevelEditObjectButton(ui.UiElement):
 
         if self._outline_sprite is None:
             self._outline_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, depth=10)
-        self._outline_sprite = self._outline_sprite.update(new_model=spriteref.ui_sheet().level_builder_button_outline,
+        self._outline_sprite = self._outline_sprite.update(new_model=spriteref.level_builder_sheet().level_builder_button_outline,
                                                            new_x=raw_xy[0], new_y=raw_xy[1],
                                                            new_color=self._calc_outline_color())
         if self._icon_sprite is None:
@@ -1131,13 +1131,13 @@ class LevelEditObjectSidepanel(ui.UiElement):
         ys = [0, 8, size[1] - 64, size[1] - 64 + 8, size[1] - 8, size[1]]
         for i in range(len(self.bg_panels)):
             if i == 0:
-                model = spriteref.ui_sheet().level_builder_panel_top_outline
+                model = spriteref.level_builder_sheet().level_builder_panel_top_outline
             elif i == 2:
-                model = spriteref.ui_sheet().level_builder_panel_divider_outline
+                model = spriteref.level_builder_sheet().level_builder_panel_divider_outline
             elif i == 4:
-                model = spriteref.ui_sheet().level_builder_panel_bottom_outline
+                model = spriteref.level_builder_sheet().level_builder_panel_bottom_outline
             else:
-                model = spriteref.ui_sheet().level_builder_panel_mid_outline
+                model = spriteref.level_builder_sheet().level_builder_panel_mid_outline
 
             panel = self.bg_panels[i]
             if panel is None:
@@ -1150,7 +1150,7 @@ class LevelEditObjectSidepanel(ui.UiElement):
         for i in range(len(self.page_selector_imgs)):
             if self.page_selector_imgs[i] is None:
                 self.page_selector_imgs[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
-            model = spriteref.ui_sheet().level_builder_page_buttons[i][1 if i == selected_page else 0]
+            model = spriteref.level_builder_sheet().level_builder_page_buttons[i][1 if i == selected_page else 0]
             self.page_selector_imgs[i] = self.page_selector_imgs[i].update(new_model=model,
                                                                            new_x=xy[0] + 8 + 16 * i, new_y=xy[1] + 8,
                                                                            new_color=colors.WHITE)
@@ -1158,9 +1158,9 @@ class LevelEditObjectSidepanel(ui.UiElement):
         if self.expand_button is None:
             self.expand_button = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
         if self.scene.is_panel_expanded():
-            expand_model = spriteref.ui_sheet().level_builder_contract_button
+            expand_model = spriteref.level_builder_sheet().level_builder_contract_button
         else:
-            expand_model = spriteref.ui_sheet().level_builder_expand_button
+            expand_model = spriteref.level_builder_sheet().level_builder_expand_button
         self.expand_button = self.expand_button.update(new_model=expand_model, new_x=xy[0] - 8, new_y=xy[1])
 
     def _update_button_positions(self):
@@ -1227,16 +1227,16 @@ class LevelEditGameScene(_BaseGameScene):
     def _setup_sidepanel(self):
         res = LevelEditObjectSidepanel(self)
         for i in range(0, 25):
-            if i < len(spriteref.ui_sheet().level_builder_new_obj_buttons):
-                icon = spriteref.ui_sheet().level_builder_new_obj_buttons[i]
+            if i < len(spriteref.level_builder_sheet().level_builder_new_obj_buttons):
+                icon = spriteref.level_builder_sheet().level_builder_new_obj_buttons[i]
             else:
                 icon = None
             spec_type = self.get_pallette_object_type(i)
             res.add_button((i % 5, i // 5), LevelEditObjectButton(self, icon, spec_type))
 
         for i in range(0, 10):
-            if i < len(spriteref.ui_sheet().level_builder_misc_buttons):
-                icon = spriteref.ui_sheet().level_builder_misc_buttons[i]
+            if i < len(spriteref.level_builder_sheet().level_builder_misc_buttons):
+                icon = spriteref.level_builder_sheet().level_builder_misc_buttons[i]
             else:
                 icon = None
             # TODO misc edit buttons
@@ -1734,8 +1734,9 @@ class LevelEditGameScene(_BaseGameScene):
         res.append(blueprints.SpecTypes.DOOR_BLOCK.get_default_blob())          # 6
         res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())           # 7
         res.append(blueprints.SpecTypes.SPIKES.get_default_blob())              # 8
-        res.append(blueprints.SpecTypes.FALLING_BLOCK.get_default_blob())       # 0
-        res.append(blueprints.SpecTypes.TELEPORTER.get_default_blob())          # 9
+        res.append(blueprints.SpecTypes.FALLING_BLOCK.get_default_blob())       # 9
+        res.append(blueprints.SpecTypes.TELEPORTER.get_default_blob())          # 0
+
         res.append(blueprints.SpecTypes.INFO.get_default_blob())                # shift + 1
 
         return res
