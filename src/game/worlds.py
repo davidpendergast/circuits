@@ -200,6 +200,10 @@ class World:
         if ent_id in self._ent_id_to_ent:
             return self._ent_id_to_ent[ent_id]
 
+    def get_teleporters_by_channel(self, channel):
+        # TODO pre-cache this
+        return self.all_entities(cond=lambda e: e.is_teleporter() and e.get_channel() == channel)
+
     def get_player_start_position(self, player):
         player_type = player.get_player_type()
         start_block = self.get_start_block(player_type)
@@ -256,6 +260,7 @@ class World:
 
         for ent in self.entities:
             ent.update()
+            ent._last_updated_at = self._tick
 
         ordered_phys_groups = [group_key for group_key in phys_groups]
         ordered_phys_groups.sort()

@@ -85,6 +85,8 @@ class Entity:
 
         self._perturbs = []
 
+        self._last_updated_at = -1  # should only be set by World
+
     def get_world(self) -> 'src.game.worlds.World':
         return self._world
 
@@ -1367,24 +1369,41 @@ class TeleporterBlock(AbstractActorSensorBlock):
         self._players_in_sensor = {}  # entity_id -> ticks in sensor (while stationary / not crouching)
 
         def make_particle(xy):
-            return FloatingDustParticleEntity(xy, particles.ParticleTypes.CROSS_TINY, 60,
-                                              (0, -1),
-                                              self.get_color(include_lighting=False),
-                                              end_color=colors.PERFECT_BLACK,
-                                              anim_rate=4,
-                                              fric=0.01,
-                                              accel=(0, 0.025),
-                                              max_speed=3,
-                                              max_sway_per_second=3.1415 / 8)
+            if self._sending:
+                return FloatingDustParticleEntity(xy, particles.ParticleTypes.CROSS_TINY, 60,
+                                                  (0, -1),
+                                                  self.get_color(include_lighting=False),
+                                                  end_color=colors.PERFECT_BLACK,
+                                                  anim_rate=4,
+                                                  fric=0.01,
+                                                  accel=(0, 0.025),
+                                                  max_speed=3,
+                                                  max_sway_per_second=3.1415 / 8)
+            else:
+                return None
 
         self._particle_emitter = ParticleEmitterZone([0, 3, w, 1], make_particle, 2,
                                                      parent=self,
                                                      xy_provider=lambda: (util.sample_triangular(0.2, 0.8), 1))
 
+    def all_linked_teleporters(self):
+        return self.get_world().all_entities(cond=lambda t: (t.is_teleporter()
+                                                             and t.get_channel() == self.get_channel()
+                                                             and t.is_sending() is not self.is_sending()))
+
+    def all_bro_teleporters(self):
+        return self.get_world().all_entities(cond=lambda t: (t.is_teleporter()
+                                                             and t is not self
+                                                             and t.get_channel() == self.get_channel()
+                                                             and t.is_sending() is self.is_sending()))
+
     def all_sub_entities(self):
         for s in super().all_sub_entities():
             yield s
         yield self._particle_emitter
+
+    def is_sending(self):
+        return self._sending
 
     def get_channel(self):
         return self._channel
@@ -1404,6 +1423,12 @@ class TeleporterBlock(AbstractActorSensorBlock):
             return [p_id for p_id in self._players_in_sensor if self._players_in_sensor[p_id] >= self._activation_thresh]
         else:
             return []
+
+    def is_ready_to_teleport(self):
+        if self._sending:
+            return len(self.get_actors_ready_to_send()) == 1
+        else:
+            return True
 
     def update(self):
         super().update()
@@ -1431,6 +1456,70 @@ class TeleporterBlock(AbstractActorSensorBlock):
                     to_rem.append(p_id)
         for p_id in to_rem:
             del self._players_in_sensor[p_id]
+
+        self._handle_actual_teleports_if_last_to_update()
+
+    def _handle_actual_teleports_if_last_to_update(self):
+        if not self.is_ready_to_teleport():
+            return
+        linked_teles = []
+        for linked in self.all_linked_teleporters():
+            if self._last_updated_at < linked._last_updated_at and linked.is_ready_to_teleport():
+                linked_teles.append(linked)
+            else:
+                return  # we aren't last, or linked isn't ready
+        bro_teles = []
+        for bro in self.all_bro_teleporters():
+            if self._last_updated_at < bro._last_updated_at and bro.is_ready_to_teleport():
+                bro_teles.append(bro)
+            else:
+                return  # not last, or bro isn't ready
+
+        types_to_send = set()
+        actors_to_send = set()
+        senders = []
+        receivers = []
+
+        for t in linked_teles + bro_teles + [self]:
+            if t.is_sending():
+                actor_to_send = self.get_world().get_entity_by_id(t.get_actors_ready_to_send()[0])
+                if actor_to_send is None:
+                    return  # actor no longer exists..?
+                elif actor_to_send in actors_to_send:
+                    return  # another teleporter is already sending this actor
+                else:
+                    types_to_send.add(actor_to_send.get_player_type())
+                    if len(types_to_send) > 1:
+                        return  # multiple types of players are queued to be sent
+                    actors_to_send.add(actor_to_send)
+                    senders.append((t, actor_to_send))
+            else:
+                receivers.append(t)
+
+        if len(senders) == 0 or len(receivers) == 0 or len(types_to_send) > 1:
+            return
+
+        xy_offs = (0, 0)  # all actors end up in the same location relative to the receiver block
+        for tele_block, actor in senders:
+            xy_offs = util.add(xy_offs, util.sub(actor.get_xy(raw=True), tele_block.get_xy()))
+        xy_offs = util.mult(xy_offs, 1 / len(senders))
+
+        final_positions = []
+        for tele_block in receivers:
+            final_positions.append(util.add(tele_block.get_xy(), xy_offs))
+
+        # it shouldn't matter which one we copy, but just to be safe we do it deterministically
+        proto_actor = min(actors_to_send, key=lambda a: a.get_ent_id())
+        other_actors = [a for a in actors_to_send if a is not proto_actor]
+
+        new_actors = proto_actor.copy_for_teleport(final_positions, and_combine_with=other_actors)
+        for a in actors_to_send:
+            a.prepare_for_teleport()
+            self.get_world().remove_entity(a)
+        for a in new_actors:
+            self.get_world().add_entity(a)
+
+        print("INFO: teleported {} to {}.".format(actors_to_send, new_actors))
 
     def get_sprite_infos(self):
 
@@ -2237,6 +2326,24 @@ class PlayerEntity(Entity):
         alert_entity = FloatingTextAlertEntity(top_center_xy, "!", color, colors.darken(color, 0.4),
                                                depth=WORLD_UI_DEPTH, fadeout_time=15, fadeout_dir=(0, -4))
         self.get_world().add_entity(alert_entity)
+
+    def copy_for_teleport(self, positions, and_combine_with=()):
+        res = []
+        all_players_to_avg = [self] + list(and_combine_with)
+        avg_vel = util.average([p.get_vel() for p in all_players_to_avg])
+        avg_dir = -1 if sum([p.dir_facing() for p in all_players_to_avg]) < 0 else 1
+        for xy in positions:
+            new_player = PlayerEntity(xy[0], xy[1], self.get_player_type(),
+                                      controller=self.get_controller(),
+                                      align_to_cells=False)
+            new_player.set_vel(avg_vel)
+            new_player._dir_facing = avg_dir
+            res.append(new_player)
+        return res
+
+    def prepare_for_teleport(self):
+        if self.is_holding_an_entity():
+            self._try_to_grab_or_drop()
 
     def update_frame_of_reference_parents(self):
         # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
