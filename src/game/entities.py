@@ -1417,10 +1417,10 @@ class TeleporterBlock(AbstractActorSensorBlock):
     def get_mode(self):
         return self._mode
 
-    def get_prog(self, or_cooldown=False):
-        if self._post_tele_countdown > 0 and or_cooldown:
-            return self._post_tele_countdown / self._post_tele_max_cooldown
-        if self._sending:
+    def get_prog(self, for_anim=False):
+        if for_anim and not self.is_two_way():
+            return 0
+        elif self._sending:
             max_time_in_sensor = max(self._players_in_sensor.values(), default=0)
             if max_time_in_sensor >= self._activation_thresh:
                 return 1.0
@@ -1431,6 +1431,9 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
     def reset_prog(self):
         self._players_in_sensor.clear()
+
+    def is_two_way(self):
+        return self.get_mode() == TeleporterBlock.TWO_WAY
 
     def get_actors_ready_to_send(self) -> List[int]:
         if self._sending and self._post_tele_countdown <= 0:
@@ -1551,12 +1554,14 @@ class TeleporterBlock(AbstractActorSensorBlock):
     def get_sprite_infos(self):
 
         def get_sprite_and_color(idx):
-            one_way = self.get_mode() == TeleporterBlock.ONE_WAY
             if self._sending:
-                spr = spriteref.object_sheet().get_teleporter_sprites(self.get_prog(or_cooldown=one_way) / 2)[idx]
+                spr = spriteref.object_sheet().get_teleporter_sprites(self.get_prog(for_anim=True) / 2)[idx]
             else:
-                min_sender_prog = min([t.get_prog(or_cooldown=one_way) for t in self.all_linked_teleporters()], default=0)
-                spr = spriteref.object_sheet().get_teleporter_sprites(0.5 + min_sender_prog / 2)[idx]
+                if self.is_two_way():
+                    anim_prog = min([t.get_prog() for t in self.all_linked_teleporters()], default=0)
+                else:
+                    anim_prog = 0
+                spr = spriteref.object_sheet().get_teleporter_sprites(0.5 + anim_prog / 2)[idx]
 
             if idx == 0:
                 return (spr, None)
