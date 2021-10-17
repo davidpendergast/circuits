@@ -410,7 +410,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         :param angle_pcnt: value from 0.0 to 1.0 (0 = down, 0.5 = up, 1.0 = down again)
         :return: (main_sprite, arrow_fill, inner_detail, outer_detail)
         """
-        return util.index_into(self.teleporter_blocks, angle_pcnt, wrap=True)
+        return util.index_into(self.teleporter_blocks, angle_pcnt + 0.5 / len(self.teleporter_blocks), wrap=True)
 
     def get_particle_sprite(self, particle_type: particles.ParticleType, idx):
         sprites = self.particles[particle_type]

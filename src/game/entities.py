@@ -2,7 +2,7 @@
 import math
 import random
 import typing
-from typing import Union, List
+from typing import Union, List, Iterable
 
 import src as src  # for typing~
 
@@ -1368,6 +1368,9 @@ class TeleporterBlock(AbstractActorSensorBlock):
         self._activation_thresh = 30
         self._players_in_sensor = {}  # entity_id -> ticks in sensor (while stationary / not crouching)
 
+        self._post_tele_max_cooldown = 120
+        self._post_tele_countdown = 0
+
         def make_particle(xy):
             if self._sending:
                 return FloatingDustParticleEntity(xy, particles.ParticleTypes.CROSS_TINY, 60,
@@ -1386,12 +1389,12 @@ class TeleporterBlock(AbstractActorSensorBlock):
                                                      parent=self,
                                                      xy_provider=lambda: (util.sample_triangular(0.2, 0.8), 1))
 
-    def all_linked_teleporters(self):
+    def all_linked_teleporters(self) -> 'Iterable[TeleporterBlock]':
         return self.get_world().all_entities(cond=lambda t: (t.is_teleporter()
                                                              and t.get_channel() == self.get_channel()
                                                              and t.is_sending() is not self.is_sending()))
 
-    def all_bro_teleporters(self):
+    def all_bro_teleporters(self) -> 'Iterable[TeleporterBlock]':
         return self.get_world().all_entities(cond=lambda t: (t.is_teleporter()
                                                              and t is not self
                                                              and t.get_channel() == self.get_channel()
@@ -1405,10 +1408,18 @@ class TeleporterBlock(AbstractActorSensorBlock):
     def is_sending(self):
         return self._sending
 
+    def set_sending(self, val):
+        self._sending = val
+
     def get_channel(self):
         return self._channel
 
-    def get_prog(self):
+    def get_mode(self):
+        return self._mode
+
+    def get_prog(self, or_cooldown=False):
+        if self._post_tele_countdown > 0 and or_cooldown:
+            return self._post_tele_countdown / self._post_tele_max_cooldown
         if self._sending:
             max_time_in_sensor = max(self._players_in_sensor.values(), default=0)
             if max_time_in_sensor >= self._activation_thresh:
@@ -1418,8 +1429,11 @@ class TeleporterBlock(AbstractActorSensorBlock):
         else:
             return 0
 
+    def reset_prog(self):
+        self._players_in_sensor.clear()
+
     def get_actors_ready_to_send(self) -> List[int]:
-        if self._sending:
+        if self._sending and self._post_tele_countdown <= 0:
             return [p_id for p_id in self._players_in_sensor if self._players_in_sensor[p_id] >= self._activation_thresh]
         else:
             return []
@@ -1438,26 +1452,31 @@ class TeleporterBlock(AbstractActorSensorBlock):
         if self.get_world().is_waiting():
             return
 
-        seen = set()
-        for p in self.all_actors_currently_in_sensor():
-            p_id = p.get_ent_id()
-            seen.add(p_id)
-            if p_id not in self._players_in_sensor:
-                self._players_in_sensor[p_id] = 0
-            else:
-                if isinstance(p, PlayerEntity) and not p.is_crouching() and util.mag(p.get_vel()) < 2:
-                    self._players_in_sensor[p_id] = min(self._activation_thresh, self._players_in_sensor[p_id] + 1)
+        if self._post_tele_countdown > 0:
+            self._post_tele_countdown -= 1
+        else:
+            seen = set()
+            for p in self.all_actors_currently_in_sensor():
+                p_id = p.get_ent_id()
+                seen.add(p_id)
+                if p_id not in self._players_in_sensor:
+                    self._players_in_sensor[p_id] = 0
+                else:
+                    if (isinstance(p, PlayerEntity)
+                            and not p.is_crouching()
+                            and util.mag(p.get_vel()) < 2):
+                        self._players_in_sensor[p_id] = min(self._activation_thresh, self._players_in_sensor[p_id] + 1)
 
-        to_rem = []
-        for p_id in self._players_in_sensor:
-            if p_id not in seen:
-                self._players_in_sensor[p_id] -= 1
-                if self._players_in_sensor[p_id] < 0:
-                    to_rem.append(p_id)
-        for p_id in to_rem:
-            del self._players_in_sensor[p_id]
+            to_rem = []
+            for p_id in self._players_in_sensor:
+                if p_id not in seen:
+                    self._players_in_sensor[p_id] -= 1
+                    if self._players_in_sensor[p_id] < 0:
+                        to_rem.append(p_id)
+            for p_id in to_rem:
+                del self._players_in_sensor[p_id]
 
-        self._handle_actual_teleports_if_last_to_update()
+            self._handle_actual_teleports_if_last_to_update()
 
     def _handle_actual_teleports_if_last_to_update(self):
         if not self.is_ready_to_teleport():
@@ -1519,15 +1538,25 @@ class TeleporterBlock(AbstractActorSensorBlock):
         for a in new_actors:
             self.get_world().add_entity(a)
 
+        for t in linked_teles + bro_teles + [self]:
+            # XXX Using a mixture of two-way and non two-way teleporters can create a bizarre (but not necessarily
+            # incorrect) situation after teleporting, might consider disallowing this. Hmm.
+            if t.get_mode() == TeleporterBlock.TWO_WAY:
+                t.set_sending(not t.is_sending())
+            t.reset_prog()
+            t._post_tele_countdown = t._post_tele_max_cooldown
+
         print("INFO: teleported {} to {}.".format(actors_to_send, new_actors))
 
     def get_sprite_infos(self):
 
         def get_sprite_and_color(idx):
+            one_way = self.get_mode() == TeleporterBlock.ONE_WAY
             if self._sending:
-                spr = spriteref.object_sheet().get_teleporter_sprites(self.get_prog() / 2)[idx]
+                spr = spriteref.object_sheet().get_teleporter_sprites(self.get_prog(or_cooldown=one_way) / 2)[idx]
             else:
-                spr = spriteref.object_sheet().get_teleporter_sprites(0.5 + self.get_prog() / 2)[idx]
+                min_sender_prog = min([t.get_prog(or_cooldown=one_way) for t in self.all_linked_teleporters()], default=0)
+                spr = spriteref.object_sheet().get_teleporter_sprites(0.5 + min_sender_prog / 2)[idx]
 
             if idx == 0:
                 return (spr, None)

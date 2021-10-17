@@ -40,7 +40,6 @@ key_repeat_period = 5  # after the delay has passed, the key will be typed every
 level_edit_dirs = {
         "1": os.path.join("overworlds", "sector_ab", "levels"),
         "2": os.path.join("overworlds", "sector_abc", "levels"),
-        "?": os.path.join("overworlds"),
         "L": os.path.join("levels"),
         "P": os.path.join("level_purgatory"),
         "t": os.path.join("testing")
