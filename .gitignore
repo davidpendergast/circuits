@@ -11,4 +11,5 @@ logs/*
 texture_atlas.png
 **/songs/**/*.json
 testing/*
+unused_assets/*
 
