@@ -2,30 +2,32 @@
 It's time to reset. Make the game easier to work on.
 
 core gameplay
-DONE player D behavior = J to swap with nearest other character
-  - poof animation + sound
-- player C draw arms properly
-    - animation / sound for whiffing a grab
-- animate player B bouncing while held
-DONE player A and B "J" actions
-- remove crouching (except for player B, bc it's cute)
-- or just implement crouching for real~
+- remove player D swapping, unnecessary with teleportation
+- grabbing
+    - player C draw arms properly
+    DONE animation / sound for whiffing a grab
+    - dropped items should keep momentum + maybe some boost
+    - animate player B bouncing properly while held
+- make crouching change player's heights?
+
 
 mechanics
 - rework falling block to be simpler
     DONE starts falling when stood on (threshold depends on weight of player)
     DONE never moves horizontally
     DONE ignores moving blocks
-    - visual effects / art to show block state
-    - visual effects for when block breaks apart
+    DONE? visual effects / art to show block state
 
 - portals
-    - "Portal"-style, in the sense that it preserves speed + direction
-    - should be very much 2D, built into crevaces only
-    - non-directional
+    NOPE "Portal"-style, in the sense that it preserves speed + direction
+    DONE should be very much 2D, built into crevaces only
+    ??? non-directional
     
+    
+(optional)
 - false blocks
     - blocks that don't have collision areas and fade when you step onto them
+    - (for secrets)
     
 
 - finish the dang buttons in the level editor
@@ -42,6 +44,7 @@ bugs
 - music (placeholder is fine)
 - classic sounds
 - cutscenes / dialog
+- credits~
 
 Then... game is done?
 

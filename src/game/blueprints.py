@@ -83,7 +83,10 @@ class SpecType:
         return []
 
     def get_color_ids(self, spec):
-        raise NotImplementedError()
+        if COLOR_ID in self.required_keys or COLOR_ID in self.optional_keys:
+            return [0, 1, 2, 3, 4]
+        else:
+            return []
 
     def get_art_ids(self, spec):
         return []
@@ -178,9 +181,6 @@ class BlockSpecType(SpecType):
         else:
             yield entities.BreakableBlockEntity(x, y, w, h, art_id=art_id, color_id=color_id)
 
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
-
     def get_art_ids(self, spec):
         size = (spec[W] // gs.get_instance().cell_size, spec[H] // gs.get_instance().cell_size)
         n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
@@ -252,9 +252,6 @@ class SlopedQuadBlockSpecType(SpecType):
         return entities.CompositeBlockEntity.BlockSpriteInfo(lambda: spriteref.block_sheet().get_quad_block_sprite(art_id),
                                                              rotation=rot, xflip=xflip)
 
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
-
     def get_art_ids(self, spec):
         n_block_sprites = spriteref.block_sheet().num_quad_block_sprites()
         return [i for i in range(0, n_block_sprites)]
@@ -307,6 +304,9 @@ class StartBlockSpecType(SpecType):
         SpecType.__init__(self, "start_block", required_keys=(SUBTYPE_ID, X, Y, W, H, X_DIR),
                           optional_keys={COLOR_ID: -1})
 
+    def get_color_ids(self, spec):
+        return [-1] + super().get_color_ids(spec)
+
     def get_subtypes(self):
         return const.ALL_PLAYER_IDS
 
@@ -343,6 +343,9 @@ class EndBlockSpecType(SpecType):
     def get_subtypes(self):
         return const.ALL_PLAYER_IDS
 
+    def get_color_ids(self, spec):
+        return [-1] + super().get_color_ids(spec)
+
     def get_default_value(self, k):
         if k == W:
             return 32
@@ -374,9 +377,6 @@ class TeleporterSpecType(SpecType):
 
     def get_subtypes(self):
         return ["one_way", "two_way"]
-
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
 
     def get_default_value(self, k):
         if k == W:
@@ -417,9 +417,6 @@ class SpikeSpecType(SpecType):
 
         yield entities.SpikeEntity(x, y, w, h, direction, color_id=color_id)
 
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
-
     def get_default_value(self, k):
         if k == W:
             return 32
@@ -443,9 +440,6 @@ class InfoSpecType(SpecType):
     def get_subtypes(self):
         return [info_type.ident for info_type in entities.InfoEntityTypes.all_types()]
 
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
-
     def get_default_value(self, k):
         if k == TEXT:
             return "Info text will appear here.\nRemember to watch your step!"
@@ -464,6 +458,7 @@ class InfoSpecType(SpecType):
         yield entities.InfoEntity(x, y, points, text, subtype, color_id=color_id, dialog_id=dialog_id)
 
 
+# XXX pretty sure this isn't used, delete?
 class DialogTriggerSpecType(SpecType):
 
     def __init__(self):
@@ -479,9 +474,6 @@ class DialogTriggerSpecType(SpecType):
             return "Press [{KEY}] to talk."
         else:
             return super().get_default_value(k)
-
-    def get_color_ids(self, spec):
-        return []
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
@@ -503,9 +495,6 @@ class DoorBlockSpecType(SpecType):
 
     def get_subtypes(self):
         return [0, 1, 2, 3]
-
-    def get_color_ids(self, spec):
-        return []
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
@@ -529,9 +518,6 @@ class KeySpecType(SpecType):
 
     def get_subtypes(self):
         return [0, 1, 2, 3]
-
-    def get_color_ids(self, spec):
-        return []
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
         x = json_blob[X]
@@ -563,9 +549,6 @@ class MovingBlockSpecType(SpecType):
 
         yield entities.MovingBlockEntity(w, h, points, period=duration, loop=loop, art_id=art_id, color_id=color_id)
 
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
-
     def get_default_value(self, k):
         if k == W:
             return 32
@@ -586,9 +569,6 @@ class PushableBlockSpecType(SpecType):
     def __init__(self):
         SpecType.__init__(self, "pushable_block", required_keys=(X, Y, W, H),
                           optional_keys={COLOR_ID: 0})
-
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
 
     def build_entities(self, json_blob):
         x = json_blob[X]
@@ -621,9 +601,6 @@ class FallingBlockSpecType(SpecType):
     def __init__(self):
         super().__init__("falling_block", required_keys=(X, Y, W, H), optional_keys={COLOR_ID: 0})
 
-    def get_color_ids(self, spec):
-        return [0, 1, 2, 3, 4]
-
     def build_entities(self, json_blob):
         x = json_blob[X]
         y = json_blob[Y]
@@ -650,6 +627,7 @@ class FallingBlockSpecType(SpecType):
         return [i for i in range(0, n_block_sprites)]
 
 
+# XXX this shouldn't be used, delete?
 class PlayerSpecType(SpecType):
 
     def __init__(self):
@@ -657,9 +635,6 @@ class PlayerSpecType(SpecType):
 
     def get_subtypes(self):
         return [const.PLAYER_FAST, const.PLAYER_SMALL, const.PLAYER_HEAVY, const.PLAYER_FLYING]
-
-    def get_color_ids(self, spec):
-        return []
 
     @staticmethod
     def get_player_type(json_blob):
