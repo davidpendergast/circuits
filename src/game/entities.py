@@ -2176,6 +2176,26 @@ class PlayerEntity(Entity):
     def get_pickup_range(self):
         return self.get_rect(raw=False)
 
+    def get_held_entity_position(self, entity, raw=True):
+        self.update_sprites()  # XXX hack
+
+        body_spr: sprites.ImageSprite = self.get_body_sprite()
+        if body_spr is None:
+            return super().get_held_entity_position(entity, raw=raw)
+        else:
+            carrying_rect = spriteref.object_sheet().get_carrying_position(body_spr.model())
+            if body_spr.xflip():
+                carrying_rect = [body_spr.model().w - (carrying_rect[0] + carrying_rect[2]),
+                                 carrying_rect[1],
+                                 carrying_rect[2], carrying_rect[3]]
+
+            cx = self.get_center(raw=raw, with_xy_perturbs=False)[0]
+            y_bot = self.get_y(raw=raw, with_xy_perturbs=False) + self.get_h()
+
+            x = cx - body_spr.width() // 2 + (carrying_rect[0] + carrying_rect[2] // 2) * body_spr.scale() - entity.get_w() // 2
+            y = y_bot - body_spr.height() + (carrying_rect[1] + carrying_rect[3]) * body_spr.scale() - entity.get_h()
+            return (x, y)
+
     def _handle_inputs(self):
         if self.get_world().get_game_state() is not None and self.get_world().get_game_state().get_status().can_player_control:
             cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())

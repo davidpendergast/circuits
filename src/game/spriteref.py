@@ -73,6 +73,9 @@ class PlayerState:
         else:
             return self
 
+    def is_carrying(self):
+        return self.as_carrying() is self
+
     @staticmethod
     def make_carrying_link(non_carrying_state, carrying_state):
         non_carrying_state._carrying_link = carrying_state
@@ -243,6 +246,12 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             return None
         else:
             return spr_list[frame % len(spr_list)]
+
+    def get_carrying_position(self, spr):
+        if spr in _player_c_sheet().carrying_pos:
+            return _player_c_sheet().carrying_pos[spr]
+        else:
+            return (spr.width() // 2 - 2, 0, 4, 1)
 
     def get_broken_player_sprite(self, player_id, part_idx, rotation=0):
         """
@@ -463,6 +472,7 @@ class _PlayerCSheet(spritesheets.SpriteSheet):
         spritesheets.SpriteSheet.__init__(self, "player_c", "assets/player_c.png")
 
         self.player_c = {}  # state -> list of models
+        self.carrying_pos = {}  # image model -> rect
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
@@ -482,6 +492,22 @@ class _PlayerCSheet(spritesheets.SpriteSheet):
         self.player_c[PlayerStates.AIRBORNE_CARRYING] = [move(m, (0, carrying_y_offs)) for m in self.player_c[PlayerStates.AIRBORNE]]
         self.player_c[PlayerStates.CROUCH_IDLE_CARRYING] = [move(m, (0, carrying_y_offs)) for m in self.player_c[PlayerStates.CROUCH_IDLE]]
         self.player_c[PlayerStates.CROUCH_WALKING_CARRYING] = self.player_c[PlayerStates.CROUCH_IDLE_CARRYING]
+
+        for k in self.player_c:
+            if k.is_carrying():
+                for spr in self.player_c[k]:
+                    self._calc_carrying_pos_and_rm_markers(atlas, spr)
+
+    def _calc_carrying_pos_and_rm_markers(self, atlas, spr: sprites.ImageModel, marker=(255, 0, 0, 255)):
+        reds = []
+        for x in range(0, spr.width()):
+            for y in range(0, spr.height()):
+                atlas_xy = (spr.x + x, spr.y + y)
+                if atlas.get_at(atlas_xy) == marker:
+                    reds.append((x, y))
+                    atlas.set_at(atlas_xy, (255, 255, 255, 0))
+        if len(reds) > 0:
+            self.carrying_pos[spr] = util.get_rect_containing_points(reds)
 
 
 class _BlockSheet(spritesheets.SpriteSheet):

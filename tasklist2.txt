@@ -8,7 +8,7 @@ core gameplay
     DONE animation / sound for whiffing a grab
     - dropped items should keep momentum + maybe some boost
     - animate player B bouncing properly while held
-- make crouching change player's heights?
+- make crouching change player's height?
 
 
 mechanics
