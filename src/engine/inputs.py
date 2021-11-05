@@ -173,6 +173,9 @@ class InputState:
         return self.time_held(keycode)
 
     def mouse_was_pressed(self, button=1):
+        """
+        button: 1 = left, 2 = middle, 3 = right, 4, 5 = something fancy
+        """
         keycode = self.to_key_code(button)
         return self.was_pressed(keycode) and self.mouse_in_window()
 

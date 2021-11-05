@@ -31,6 +31,7 @@ class UiElement:
         self._rel_xy = (0, 0)  # position relative to parent
 
         self.focus_manager = None
+        self.ticks_alive = 0
 
     def update(self):
         raise NotImplementedError()
@@ -87,6 +88,7 @@ class UiElement:
         self.update()
         for c in self._children:
             c.update_self_and_kids()
+        self.ticks_alive += 1
 
     def get_rect(self, absolute=False):
         xy = self.get_xy(absolute=absolute)
@@ -223,15 +225,37 @@ class OptionsList(UiElement):
             h = max(opt_rect[1] + opt_rect[3], h)
         return (w, h)
 
+    def get_option_idx_at(self, xy, absolute=False):
+        rel_xy = xy if not absolute else util.sub(xy, self.get_xy(absolute=True))
+        for idx, opt in enumerate(self.options):
+            rect = opt[0]
+            if util.rect_contains(rect, rel_xy):
+                return idx
+        return None
+
+    def set_selected_idx(self, idx, silent=False):
+        if idx != self.selected_idx:
+            self.selected_idx = 0 if len(self.options) == 0 else idx % len(self.options)
+            if not silent:
+                pass  # TODO play sound
+
     def update(self):
         if len(self.options) == 0:
             return  # probably not initialized yet
 
         if self.is_focused():
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_UP)):
-                self.selected_idx = (self.selected_idx - 1) % len(self.options)
+                self.set_selected_idx((self.selected_idx - 1) % len(self.options))
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
-                self.selected_idx = (self.selected_idx + 1) % len(self.options)
+                self.set_selected_idx((self.selected_idx + 1) % len(self.options))
+
+            opt_idx_at_mouse_xy = None
+            if inputs.get_instance().mouse_in_window():
+                mouse_xy = inputs.get_instance().mouse_pos()
+                opt_idx_at_mouse_xy = self.get_option_idx_at(mouse_xy, absolute=True)
+
+            if opt_idx_at_mouse_xy is not None and (inputs.get_instance().mouse_moved() or self.ticks_alive <= 1):
+                self.set_selected_idx(opt_idx_at_mouse_xy)
 
             did_activation = False
 
@@ -242,6 +266,10 @@ class OptionsList(UiElement):
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
                 if not did_activation and 0 <= self.selected_idx < len(self.options):
                     did_activation = self._try_to_activate_option(self.options[self.selected_idx])
+
+            if inputs.get_instance().mouse_was_pressed(button=1):
+                if not did_activation and opt_idx_at_mouse_xy is not None and self.ticks_alive >= 5:
+                    did_activation = self._try_to_activate_option(self.options[opt_idx_at_mouse_xy])
 
         self.update_sprites()
 
