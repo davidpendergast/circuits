@@ -11,6 +11,7 @@ import src.engine.threedee as threedee
 import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
 import src.engine.readme_writer as readme_writer
+import src.engine.cursors as cursors
 import src.engine.scenes as scenes
 import src.utils.util as util
 
@@ -117,6 +118,14 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.PASTE, keybinds.Binding(pygame.K_v, mods=pygame.KMOD_CTRL))
         keybinds.get_instance().set_binding(const.CUT, keybinds.Binding(pygame.K_x, mods=pygame.KMOD_CTRL))
         keybinds.get_instance().set_binding(const.SELECT_ALL, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_CTRL))
+
+        path_to_cursors = util.resource_path("assets/cursors.png")
+
+        cursors.init_cursors(path_to_cursors, [
+            (const.CURSOR_DEFAULT, [0, 0, 16, 16], (0, 0)),
+            (const.CURSOR_HAND, [16, 0, 16, 16], (5, 3)),
+            (const.CURSOR_INVIS, [32, 0, 16, 16], (0, 0))
+        ])
 
         scenes.create_instance(menus.MainMenuScene())
 

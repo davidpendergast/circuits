@@ -77,6 +77,25 @@ class UiElement:
         """
         return False
 
+    def get_cursor_id_from_self_and_kids(self, xy, absolute=False) -> str:
+        if absolute:
+            xy = util.sub(xy, self.get_xy(absolute=True))
+
+        if not util.rect_contains((0, 0, *self.get_size()), xy):
+            return None
+
+        for c in self._children:
+            r = c.get_rect()
+            if util.rect_contains(r, xy):
+                cursor_id = c.get_cursor_id_from_self_and_kids(util.sub(xy, (r[0], r[1])), absolute=False)
+                if cursor_id is not None:
+                    return cursor_id
+
+        return self.get_cursor_id_at(xy)
+
+    def get_cursor_id_at(self, xy):
+        return const.CURSOR_DEFAULT
+
     def all_sprites_from_self_and_kids(self):
         for c in self._children:
             for spr in c.all_sprites_from_self_and_kids():
@@ -238,6 +257,16 @@ class OptionsList(UiElement):
             self.selected_idx = 0 if len(self.options) == 0 else idx % len(self.options)
             if not silent:
                 pass  # TODO play sound
+
+    def get_cursor_id_at(self, xy):
+        option_idx = self.get_option_idx_at(xy, absolute=False)
+        if option_idx is not None:
+            if self.options[option_idx][3]():  # if it's enabled
+                return const.CURSOR_HAND
+            else:
+                return const.CURSOR_DEFAULT
+        else:
+            return None  # no opinion on cursor
 
     def update(self):
         if len(self.options) == 0:

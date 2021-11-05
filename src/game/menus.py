@@ -49,6 +49,12 @@ class MainMenuScene(scenes.Scene):
 
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
+    def should_do_cursor_updates(self):
+        return True
+
+    def get_cursor_id_at(self, xy):
+        return self._options_list.get_cursor_id_from_self_and_kids(xy, absolute=True)
+
     def update(self):
         self.cine_seq.update()
         cam = self.cine_seq.get_camera().get_snapshot()
@@ -158,6 +164,9 @@ class OptionSelectScene(scenes.Scene):
                 yield spr
         for spr in self.option_pages.all_sprites_from_self_and_kids():
             yield spr
+
+    def get_cursor_id_at(self, xy):
+        return self.option_pages.get_cursor_id_from_self_and_kids(xy, absolute=True)
 
 
 class LevelSelectForEditScene(OptionSelectScene):

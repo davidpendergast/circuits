@@ -1,4 +1,8 @@
+import pygame
+
 import configs
+import src.engine.cursors as cursors
+import src.engine.inputs as inputs
 
 
 _INSTANCE = None
@@ -53,6 +57,12 @@ class Scene:
     def get_clear_color(self):
         return configs.clear_color
 
+    def should_do_cursor_updates(self):
+        return True
+
+    def get_cursor_id_at(self, xy):
+        return None
+
 
 class SceneManager:
 
@@ -93,3 +103,8 @@ class SceneManager:
         self._active_scene.update()
         self._active_scene.update_sprites()
 
+        if self._active_scene.should_do_cursor_updates() and inputs.get_instance().mouse_in_window():
+            mouse_xy = inputs.get_instance().mouse_pos()
+            cursor_key = self._active_scene.get_cursor_id_at(mouse_xy)
+            cursor_image = cursors.get_cursor(cursor_key)
+            pygame.mouse.set_cursor(*cursor_image)

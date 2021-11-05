@@ -105,6 +105,10 @@ _PLAYER_COLOR_MAP = {
     PLAYER_FLYING: (colors.PURPLE, colors.DARK_PURPLE)
 }
 
+CURSOR_DEFAULT = "default"
+CURSOR_HAND = "hand"
+CURSOR_INVIS = "invis"
+
 
 def get_player_color(player_type, dark=False):
     if player_type is not None and player_type.get_id() in _PLAYER_COLOR_MAP:
