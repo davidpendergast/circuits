@@ -127,7 +127,7 @@ class CircuitsGame(game.Game):
             (const.CURSOR_INVIS, [32, 0, 16, 16], (0, 0))
         ])
 
-        scenes.create_instance(menus.MainMenuScene())
+        scenes.set_instance(menus.CircuitsSceneManager(menus.MainMenuScene()))
 
     def get_sheets(self):
         return spriteref.initialize_sheets()
@@ -144,6 +144,7 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19, sort_sprites=True, use_color=True)
         yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20, sort_sprites=True, use_color=True)
         yield layers.PolygonLayer(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER, 10000, sort_sprites=True)
+        yield layers.ImageLayer(spriteref.ULTRA_OMEGA_GAMMA_TOP_IMAGE_LAYER, 10005, sort_sprites=True)
 
     def update(self):
         scenes.get_instance().update()
@@ -155,6 +156,8 @@ class CircuitsGame(game.Game):
         return scenes.get_instance().get_clear_color()
 
     def all_sprites(self):
+        for spr in gs.get_instance().all_sprites():
+            yield spr
         for spr in scenes.get_instance().all_sprites():
             yield spr
 

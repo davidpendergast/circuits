@@ -8,10 +8,14 @@ import src.engine.inputs as inputs
 _INSTANCE = None
 
 
-def create_instance(cur_scene) -> 'SceneManager':
+def set_instance(manager: 'SceneManager') -> 'SceneManager':
     global _INSTANCE
-    _INSTANCE = SceneManager(cur_scene)
+    _INSTANCE = manager
     return _INSTANCE
+
+
+def create_instance(initial_scene: 'Scene') -> 'SceneManager':
+    return set_instance(SceneManager(initial_scene))
 
 
 def get_instance() -> 'SceneManager':

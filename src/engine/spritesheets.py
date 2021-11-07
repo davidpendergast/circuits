@@ -189,6 +189,10 @@ class WhiteSquare(SpriteSheet):
             self.white_boxes.append(sprites.ImageModel(rect[0], rect[1], rect[2], rect[3]))
 
 
+def get_white_square_img(opacity=1.0):
+    return get_instance().get_sheet(WhiteSquare.SHEET_ID).get_sprite(opacity=opacity)
+
+
 class SingleImageSheet(SpriteSheet):
 
     def __init__(self, filepath):

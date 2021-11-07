@@ -30,6 +30,17 @@ import src.game.cinematics as cinematics
 import src.game.dialog as dialog
 
 
+class CircuitsSceneManager(scenes.SceneManager):
+
+    def __init__(self, cur_scene):
+        super().__init__(cur_scene)
+
+    def set_next_scene(self, scene, delay=0, do_fade=True):
+        if do_fade and not delay:
+            gs.get_instance().do_simple_fade_in()
+        super().set_next_scene(scene, delay=delay)
+
+
 class MainMenuScene(scenes.Scene):
 
     def __init__(self):
