@@ -72,6 +72,12 @@ class OverworldGrid:
         def get_level_num(self):
             return self.n
 
+        def get_level_info(self, state: 'OverworldState'):
+            """returns: (level_num, level_id, level_bp)"""
+            level_id = state.get_level_id_for_num(self.n)
+            level_bp = state.get_level_blueprint(level_id)
+            return (self.n, level_id, level_bp)
+
         def is_level(self):
             return True
 
@@ -603,6 +609,7 @@ class OverworldState:
         self.update_nodes()
 
         self.selected_cell = self.find_initial_selection(came_from_exit_id=came_from)
+        self.cell_under_mouse = None
 
     def get_grid(self) -> OverworldGrid:
         return self.current_overworld.get_grid()
@@ -628,6 +635,7 @@ class OverworldState:
         if new_overworld is not None:
             self.current_overworld = new_overworld
             self.selected_cell = self.find_initial_selection(came_from_exit_id=entry_num)
+            self.cell_under_mouse = None
             self.requested_overworld = None
         else:
             print("WARN: unrecognized overworld_id: {}".format(overworld.ref_id))
@@ -863,6 +871,8 @@ class LevelNodeElement(ui.UiElement):
 
 class OverworldGridElement(ui.UiElement):
 
+    CELL_SIZE = 24
+
     def __init__(self, state: OverworldState):
         ui.UiElement.__init__(self)
         self.state = state
@@ -881,6 +891,8 @@ class OverworldGridElement(ui.UiElement):
         for xy in self.level_nodes:
             level_nodes_to_clear.add(xy)
 
+        cs = OverworldGridElement.CELL_SIZE
+
         for xy in self.state.get_grid().grid.indices(ignore_missing=True):
             node = self.state.get_grid().get_node(xy)
             if isinstance(node, OverworldGrid.LevelNode):
@@ -893,7 +905,7 @@ class OverworldGridElement(ui.UiElement):
                 self.level_nodes[xy].set_node(level_id, node)
 
                 ele = self.level_nodes[xy]
-                ele.set_xy((xy[0] * 24, xy[1] * 24))
+                ele.set_xy((xy[0] * cs, xy[1] * cs))
                 ele.update()
             elif node.is_connector() or node.is_endpoint():
                 if xy in sprites_to_clear:
@@ -904,8 +916,8 @@ class OverworldGridElement(ui.UiElement):
                 spr = spriteref.overworld_sheet().get_connection_sprite(n=connections[0], e=connections[1],
                                                                         s=connections[2], w=connections[3])
                 color = self.unlocked_color if self.state.is_unlocked_at(xy) else self.locked_color
-                x = self.get_xy(absolute=True)[0] + xy[0] * 24
-                y = self.get_xy(absolute=True)[1] + xy[1] * 24
+                x = self.get_xy(absolute=True)[0] + xy[0] * cs
+                y = self.get_xy(absolute=True)[1] + xy[1] * cs
                 self.connector_sprites[xy] = self.connector_sprites[xy].update(new_model=spr, new_color=color,
                                                                                new_x=x, new_y=y)
         for xy in sprites_to_clear:
@@ -920,7 +932,17 @@ class OverworldGridElement(ui.UiElement):
 
     def get_size(self):
         grid_dims = self.state.get_grid().size()
-        return (24 * grid_dims[0], 24 * grid_dims[1])
+        cs = OverworldGridElement.CELL_SIZE
+        return (cs * grid_dims[0], cs * grid_dims[1])
+
+    def get_grid_pos_at(self, xy, absolute=True):
+        if absolute:
+            rel_xy = util.sub(xy, self.get_xy(absolute=True))
+        else:
+            rel_xy = xy
+
+        cs = OverworldGridElement.CELL_SIZE
+        return (rel_xy[0] // cs, rel_xy[1] // cs)
 
 
 class LevelPreviewElement(ui.UiElement):
@@ -1056,7 +1078,7 @@ class _EntityPreview():
 
 class OverworldInfoPanelElement(ui.UiElement):
 
-    def __init__(self, state):
+    def __init__(self, state: OverworldState):
         ui.UiElement.__init__(self)
         self.state = state
 
@@ -1071,41 +1093,54 @@ class OverworldInfoPanelElement(ui.UiElement):
         self.level_preview_panel_element = self.add_child(LevelPreviewElement())
         self.options_element = self.add_child(ui.OptionsList())
 
-    def get_title_text(self):
-        level_num, level_bp = self.state.get_selected_level()
-        if level_num is not None and level_bp is not None:
-            world_num = self.state.get_world_num()
-            return "{}-{} {}".format(world_num, level_num, level_bp.name())
-        else:
-            return None
+    def get_node_to_show(self):
+        if self.state.cell_under_mouse is not None:
+            node = self.state.get_grid().get_node(self.state.cell_under_mouse)
+            if node is not None and node.is_level():
+                return node
 
-    def can_play_selected_level(self) -> bool:
-        n = self.state.get_selected_node()
-        if n is not None and isinstance(n, OverworldGrid.LevelNode):
-            if n.is_selectable():
-                return True
+        return self.state.get_selected_node()
+
+    def get_title_text(self):
+        node = self.get_node_to_show()
+        if node is not None and isinstance(node, OverworldGrid.LevelNode):
+            level_num, _, level_bp = node.get_level_info(self.state)
+            if level_num is not None and level_bp is not None:
+                world_num = self.state.get_world_num()
+                return "{}-{} {}".format(world_num, level_num, level_bp.name())
+
+        return None
+
+    def can_play_visible_level(self) -> bool:
+        node = self.get_node_to_show()
+        if node is not None and isinstance(node, OverworldGrid.LevelNode):
+            return node.is_selectable()
         return False
 
-    def get_selected_level_time(self) -> sprites.TextBuilder:
-        level_id = self.state.get_selected_level_id()
-        if level_id is not None:
-            time = self.state.get_completion_time(level_id)
-            if time is not None:
-                time_str = util.ticks_to_time_string(time, fps=configs.target_fps, n_decimals=2)
-                res = sprites.TextBuilder()
-                res.add(time_str, color=colors.LIGHT_GRAY)
-                return res
+    def get_visible_level_time(self) -> sprites.TextBuilder:
+        node = self.get_node_to_show()
+        if node is not None and isinstance(node, OverworldGrid.LevelNode):
+            _, level_id, _ = node.get_level_info(self.state)
+            if level_id is not None:
+                time = self.state.get_completion_time(level_id)
+                if time is not None:
+                    time_str = util.ticks_to_time_string(time, fps=configs.target_fps, n_decimals=2)
+                    res = sprites.TextBuilder()
+                    res.add(time_str, color=colors.LIGHT_GRAY)
+                    return res
 
         res = sprites.TextBuilder()
         res.add("--:--.--", color=colors.LIGHT_GRAY)
         return res
 
     def get_description_text(self):
-        level_num, level_bp = self.state.get_selected_level()
-        if level_bp is not None:
-            return level_bp.description()
-        else:
-            return None
+        node = self.get_node_to_show()
+        if node is not None and isinstance(node, OverworldGrid.LevelNode):
+            level_num, _, level_bp = node.get_level_info(self.state)
+            if level_bp is not None:
+                return level_bp.description()
+            else:
+                return None
 
     def update(self):
         rect = self.get_rect(absolute=True)
@@ -1134,7 +1169,14 @@ class OverworldInfoPanelElement(ui.UiElement):
         self.level_preview_panel_element.set_xy((2, y_pos))
         self.level_preview_panel_element.set_size((rect[2] - 4, 90))
         y_pos += self.level_preview_panel_element.get_size()[1]
-        self.level_preview_panel_element.set_bp(self.state.get_selected_level()[1])
+
+        node = self.get_node_to_show()
+        if node is not None and isinstance(node, OverworldGrid.LevelNode):
+            level_num, level_id, level_bp = node.get_level_info(self.state)
+        else:
+            level_num, level_id, level_bp = (None, None, None)
+
+        self.level_preview_panel_element.set_bp(level_bp)
 
         desc_text = self.get_description_text()
         if desc_text is None:
@@ -1150,7 +1192,7 @@ class OverworldInfoPanelElement(ui.UiElement):
             y_pos += self.description_text_sprite.size()[1]
 
         play_text = sprites.TextBuilder()
-        if self.can_play_selected_level():
+        if self.can_play_visible_level():
             play_text.add("Play", color=colors.PERFECT_RED)
         else:
             play_text.add("Locked", color=colors.DARK_GRAY)
@@ -1164,7 +1206,7 @@ class OverworldInfoPanelElement(ui.UiElement):
         play_text_y = rect[1] + rect[3] - border_thickness[1] * 2 - self.play_text_sprite.size()[1]
         self.play_text_sprite.update(new_x=play_text_x, new_y=play_text_y)
 
-        level_time = self.get_selected_level_time()
+        level_time = self.get_visible_level_time()
         if self.time_text_sprite is None:
             self.time_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", x_kerning=1)
         self.time_text_sprite.update(new_text=level_time.text, new_color_lookup=level_time.colors)
@@ -1201,7 +1243,7 @@ class OverworldScene(scenes.Scene):
         state = OverworldState(pack)
         return OverworldScene(state)
 
-    def __init__(self, state):
+    def __init__(self, state: OverworldState):
         scenes.Scene.__init__(self)
         self.state = state
 
@@ -1249,9 +1291,10 @@ class OverworldScene(scenes.Scene):
                 yield spr
 
     def update(self):
+        self._handle_mouse_inputs()
         if self.fading_in is not False:
             # lock inputs while we're fading out
-            self.handle_inputs()
+            self._handle_key_inputs()
 
         screen_size = renderengine.get_instance().get_game_size()
         grid_size = self.grid_ui_element.get_size()
@@ -1298,7 +1341,45 @@ class OverworldScene(scenes.Scene):
 
         self._update_bg_triangles()
 
-    def handle_inputs(self):
+    def _handle_mouse_inputs(self):
+        mouse_grid_pos = None
+        if inputs.get_instance().mouse_in_window():
+            mouse_xy = inputs.get_instance().mouse_pos()
+            mouse_grid_pos = self.grid_ui_element.get_grid_pos_at(mouse_xy, absolute=True)
+
+        old_pos = self.state.cell_under_mouse
+        if mouse_grid_pos is None:
+            self.state.cell_under_mouse = None
+        elif mouse_grid_pos != old_pos and inputs.get_instance().mouse_moved():
+            self.state.cell_under_mouse = mouse_grid_pos
+
+        if inputs.get_instance().mouse_was_pressed(button=1) and self.grid_ui_element.ticks_alive > 1:
+            if mouse_grid_pos is not None:
+                node_at_click = self.state.get_grid().get_node(mouse_grid_pos)
+                if node_at_click is not None:
+                    if node_at_click.is_exit():
+                        # click an exit -> go to the other overworld
+                        # TODO only if exit is available
+                        self.state.activate_exit_node(node_at_click.get_exit_id(), instantly=False)
+                    elif node_at_click.is_selectable():
+                        if self.state.get_selected_node() != node_at_click:
+                            # if it's not selected, select it
+                            self.state.set_selected_node(node_at_click)
+                        elif node_at_click.is_level():
+                            # if it's already selected, activate the level
+                            level_id = self.state.get_level_id_for_num(node_at_click.get_level_num())
+                            self.start_level(level_id)
+
+    def get_cursor_id_at(self, xy):
+        mouse_grid_pos = self.grid_ui_element.get_grid_pos_at(xy, absolute=True)
+        if mouse_grid_pos is not None:
+            node_at_xy = self.state.get_grid().get_node(mouse_grid_pos)
+            if node_at_xy is not None:
+                if node_at_xy.is_exit() or node_at_xy.is_selectable():
+                    return const.CURSOR_HAND
+        return super().get_cursor_id_at(xy)
+
+    def _handle_key_inputs(self):
         dx = 0
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_LEFT)):
             dx -= 1
@@ -1311,7 +1392,7 @@ class OverworldScene(scenes.Scene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
             dy += 1
 
-        # TODO tab and shift-tab to jump to the next or prev level?
+        # TODO tab and shift-tab to jump to the next or prev level? ..what
 
         if dx != 0 or dy != 0:
             orig_node = self.state.get_selected_node()
@@ -1323,6 +1404,7 @@ class OverworldScene(scenes.Scene):
                         self.state.activate_exit_node(new_node.get_exit_id())
                     else:
                         self.state.set_selected_node(new_node)
+                        self.state.cell_under_mouse = None  # subtle QOL
                 else:
                     # TODO play sound
                     pass
