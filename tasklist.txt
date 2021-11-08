@@ -25,10 +25,10 @@ features:
         - find good sound pack
     
  - mechanics
-    A: crouching
+    A: done?
     B: done?
-    C: Picking up B, pushing blocks
-    D: Picking up B
+    C: done?
+    D: done?
     
  - secret areas
     - invisiblocks
@@ -132,4 +132,4 @@ New thoughts 1/11/21:
   - graphics and gameplay actually seems better now (lighting helped a lot).
   - and puzzles are coming together easier.
   - full speed ahead with original plan
-
+  

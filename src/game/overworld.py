@@ -601,10 +601,7 @@ class OverworldState:
 
         """level_blueprints level_id -> level_blueprint"""
         self.level_blueprints = {}
-        for overworld_bp in overworld_pack.all_overworlds():
-            level_dir = os.path.join(overworld_bp.directory, "levels")
-            loaded_levels = blueprints.load_all_levels_from_dir(level_dir)
-            self.level_blueprints.update(loaded_levels)
+        self.reload_level_blueprints_from_disk()
 
         self.update_nodes()
 
@@ -639,6 +636,13 @@ class OverworldState:
             self.requested_overworld = None
         else:
             print("WARN: unrecognized overworld_id: {}".format(overworld.ref_id))
+
+    def reload_level_blueprints_from_disk(self):
+        self.level_blueprints.clear()
+        for overworld_bp in self.overworld_pack.all_overworlds():
+            level_dir = os.path.join(overworld_bp.directory, "levels")
+            loaded_levels = blueprints.load_all_levels_from_dir(level_dir)
+            self.level_blueprints.update(loaded_levels)
 
     def get_level_blueprint(self, level_id) -> blueprints.LevelBlueprint:
         if level_id in self.level_blueprints:
@@ -1428,26 +1432,37 @@ class OverworldScene(scenes.Scene):
 
     def start_level(self, level_id):
         level_bp = self.state.get_level_blueprint(level_id)
-        menu_manager = self.get_manager()
         state = self.state
 
-        def _return_to_overworld(time):
+        def _updated_scene(new_time=None, reload_levels=False):
             old_time = state.get_completion_time(level_id)
-            if time is not None and (old_time is None or time < old_time):
-                state.set_completed(level_id, time)
+            if new_time is not None and (old_time is None or new_time < old_time):
+                state.set_completed(level_id, new_time)
+
+            if reload_levels:
+                state.reload_level_blueprints_from_disk()
+
             new_scene = OverworldScene(state)
 
             nodes = new_scene.state.get_nodes_with_id(level_id)
             if len(nodes) > 0:
                 new_scene.state.set_selected_node(nodes[0])
 
-            menu_manager.set_next_scene(new_scene)
+            return new_scene
 
         if level_bp is not None:
             import src.game.menus as menus
-            self.get_manager().set_next_scene(menus.RealGameScene(level_bp,
-                                                                  lambda time: _return_to_overworld(time),
-                                                                  lambda: _return_to_overworld(None)))
+            if configs.is_dev and inputs.get_instance().ctrl_is_held():
+                # activate edit mode
+                next_scene = menus.LevelEditGameScene(level_bp,
+                                                      output_file=level_bp.directory,
+                                                      prev_scene_provider=lambda: _updated_scene(reload_levels=True))
+            else:
+                # enter the level normally
+                next_scene = menus.RealGameScene(level_bp,
+                                                 lambda time: self.get_manager().set_next_scene(_updated_scene(new_time=time)),
+                                                 lambda: self.get_manager().set_next_scene(_updated_scene()))
+            self.get_manager().set_next_scene(next_scene)
 
     def _update_bg_triangles(self):
         size = renderengine.get_instance().get_game_size()

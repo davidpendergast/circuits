@@ -221,17 +221,19 @@ class LevelSelectForEditScene(OptionSelectScene):
 
 class LevelEditorPauseMenu(OptionSelectScene):
 
-    def __init__(self, level_bp, on_cancel, on_quit, description=None, output_file=None):
+    def __init__(self, level_bp, on_cancel, on_quit, edit_scene_provider, description=None):
         """
         :param level_bp: current LevelBlueprint
         :param on_cancel: manager, LevelBlueprint -> None
         :param on_quit: () -> None
+        :param edit_scene_provider: new_bp -> Scene
         """
         super().__init__(title="editing {}".format(level_bp.name()), description=description)
         self.add_option("resume", lambda: on_cancel(level_bp), esc_option=True)
         self.add_option("edit metadata", lambda: self.jump_to_scene(
-            LevelMetaDataEditScene(level_bp, lambda new_bp: self.jump_to_scene(LevelEditGameScene(new_bp,
-                                   output_file=output_file if new_bp.level_id() == level_bp.level_id() else None)))))
+            LevelMetaDataEditScene(level_bp, lambda new_bp: self.jump_to_scene(edit_scene_provider(new_bp)))
+        ))
+
         self.add_option("quit", on_quit)
         # self.add_option("save and quit", on_save_and_quit)  # TODO?
 
@@ -1212,7 +1214,7 @@ class LevelEditObjectSidepanel(ui.UiElement):
 
 class LevelEditGameScene(_BaseGameScene):
 
-    def __init__(self, bp: blueprints.LevelBlueprint, output_file=None):
+    def __init__(self, bp: blueprints.LevelBlueprint, output_file=None, prev_scene_provider=None):
         """
         world_type: an int or level blueprint
         """
@@ -1243,6 +1245,8 @@ class LevelEditGameScene(_BaseGameScene):
 
         self.stamp_current_state()
         self.setup_new_world(bp)
+
+        self._prev_scene_provider = prev_scene_provider
 
     def _setup_sidepanel(self):
         res = LevelEditObjectSidepanel(self)
@@ -1521,8 +1525,6 @@ class LevelEditGameScene(_BaseGameScene):
             else:
                 self.output_file = file_to_use
 
-        # TODO add a real way to set this from the editor...
-        # TODO and make sure it avoids name collisions because otherwise levels won't load properly
         # (they're hashed by level_id all over the place)
         if bp_to_save.level_id() == "???":
             bp_to_save = bp_to_save.copy_with(level_id=str(file_to_use))
@@ -1661,11 +1663,26 @@ class LevelEditGameScene(_BaseGameScene):
                                                           current_output_file if new_bp.level_id() == current_bp.level_id() else None))
             else:
                 manager.set_next_scene(self)
+
+        def _do_final_exit():
+            prev_scene = None
+            if self._prev_scene_provider is not None:
+                prev_scene = self._prev_scene_provider()
+
+            if prev_scene is None:
+                prev_scene = LevelSelectForEditScene(configs.level_edit_dirs)
+
+            self.get_manager().set_next_scene(prev_scene)
+
+        def _new_editor_scene(new_bp: blueprints.LevelBlueprint):
+            out_file = self.output_file if new_bp.level_id() == current_bp.level_id() else None
+            return LevelEditGameScene(new_bp, output_file=out_file, prev_scene_provider=self._prev_scene_provider)
+
         self.jump_to_scene(LevelEditorPauseMenu(current_bp,
                                                 _handle_new_bp,
-                                                lambda: manager.set_next_scene(LevelSelectForEditScene(configs.level_edit_dirs)),
-                                                description=desc,
-                                                output_file=self.output_file))
+                                                _do_final_exit,
+                                                _new_editor_scene,
+                                                description=desc))
 
     def adjust_edit_resolution(self, increase):
         if self.edit_resolution in self.resolution_options:
