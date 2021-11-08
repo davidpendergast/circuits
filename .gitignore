@@ -12,4 +12,5 @@ texture_atlas.png
 **/songs/**/*.json
 testing/*
 unused_assets/*
+levels/custom_levels/*
 

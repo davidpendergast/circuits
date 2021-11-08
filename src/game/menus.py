@@ -208,7 +208,7 @@ class LevelSelectForEditScene(OptionSelectScene):
             level_bp = self.all_levels[level_id]
 
             def _action(bp=level_bp):  # lambdas in loops, yikes
-                self.jump_to_scene(LevelEditGameScene(bp, output_file=bp.directory))
+                self.jump_to_scene(LevelEditGameScene(bp))
 
             self.add_option(level_names[level_id], _action)
 
@@ -1214,14 +1214,14 @@ class LevelEditObjectSidepanel(ui.UiElement):
 
 class LevelEditGameScene(_BaseGameScene):
 
-    def __init__(self, bp: blueprints.LevelBlueprint, output_file=None, prev_scene_provider=None):
+    def __init__(self, bp: blueprints.LevelBlueprint, prev_scene_provider=None):
         """
         world_type: an int or level blueprint
         """
         _BaseGameScene.__init__(self)
 
         self.orig_bp = bp
-        self.output_file = output_file
+        self._level_id = bp.level_id()
 
         self.mouse_mode = NormalMouseMode(self)
 
@@ -1491,11 +1491,12 @@ class LevelEditGameScene(_BaseGameScene):
 
     def build_current_bp(self):
         return blueprints.LevelBlueprint.build(self.orig_bp.name(),
-                                               self.orig_bp.level_id(),
+                                               self._level_id,
                                                self.orig_bp.get_player_types(),
                                                self.orig_bp.time_limit(),
                                                self.orig_bp.description(),
-                                               self.all_spec_blobs)
+                                               self.all_spec_blobs,
+                                               directory=self.orig_bp.directory)
 
     def get_specs_at(self, world_xy):
         res = []
@@ -1507,36 +1508,35 @@ class LevelEditGameScene(_BaseGameScene):
                 res.append(spec)
         return res
 
-    def save_to_disk(self, prompt_for_location=False):
+    def save_to_disk(self, force_new_id=False):
         bp_to_save = self.build_current_bp()
-        file_to_use = self.output_file
 
-        if prompt_for_location or self.output_file is None:
-            file_to_use = util.prompt_for_file("enter file name for save", root="testing/", ext=".json")
-            if file_to_use is None:
-                return
-            if os.path.isfile(file_to_use):
-                ans = util.prompt_question("overwrite {}?".format(file_to_use), accepted_answers=("y", "n"))
-                if ans == "y":
-                    self.output_file = file_to_use
-                else:
-                    print("INFO: save canceled")
-                    return
-            else:
-                self.output_file = file_to_use
+        if force_new_id or bp_to_save.level_id() in (None, "", "???"):
+            default_text = self.build_current_bp().level_id()
 
-        # (they're hashed by level_id all over the place)
-        if bp_to_save.level_id() == "???":
-            bp_to_save = bp_to_save.copy_with(level_id=str(file_to_use))
+            def _do_accept(manager, level_id):
+                self._level_id = level_id
+                self.save_to_disk()
+                manager.set_next_scene(self)
 
-        save_result = blueprints.write_level_to_file(bp_to_save, file_to_use)
-        if save_result:
-            print("INFO: saved level to {}".format(file_to_use))
-            self.output_file = file_to_use
-            self._dirty = False
+            self.jump_to_scene(TextEditScene("enter new level id:", default_text=default_text,
+                                             on_cancel=lambda mgr: mgr.set_next_scene(self),
+                                             on_accept=_do_accept,
+                                             allowed_chars=ui.TextEditElement.LEVEL_ID_CHARS))
         else:
-            print("INFO: failed to save level to {}".format(file_to_use))
-            self.output_file = None
+            file_to_use = bp_to_save.get_filepath()
+            is_overwriting = os.path.exists(file_to_use)
+
+            save_result = blueprints.write_level_to_file(bp_to_save, file_to_use)
+
+            if save_result:
+                if is_overwriting:
+                    print("INFO: successfully overwrote {}".format(file_to_use))
+                else:
+                    print("INFO: successfully created {}".format(file_to_use))
+                self._dirty = False
+            else:
+                print("INFO: failed to save level to {}".format(file_to_use))
 
     def setup_new_world(self, bp, reset_camera=False):
         camera_pos = None
@@ -1588,22 +1588,9 @@ class LevelEditGameScene(_BaseGameScene):
         self.mouse_mode.handle_key_events()
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE_AS)):
-            default_text = "" if self.output_file is None else self.output_file
-
-            def _do_accept(manager, filename):
-                # TODO validate the filename?
-                self.output_file = filename
-                self.save_to_disk(prompt_for_location=False)
-                manager.set_next_scene(self)
-
-            self.jump_to_scene(TextEditScene("enter filename:", default_text=default_text,
-                                             on_cancel=lambda mgr: mgr.set_next_scene(self),
-                                             on_accept=_do_accept,
-                                             allowed_chars=ui.TextEditElement.FILEPATH_CHARS))
-            return
-            # self.save_to_disk(prompt_for_location=True)
+            self.save_to_disk(force_new_id=True)
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SAVE)):
-            self.save_to_disk(prompt_for_location=False)
+            self.save_to_disk()
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.INCREASE_EDIT_RESOLUTION)):
             self.adjust_edit_resolution(True)
@@ -1655,12 +1642,10 @@ class LevelEditGameScene(_BaseGameScene):
         # TODO would be really pro to jump back to the level select screen with this level highlighted
         manager = self.get_manager()
         current_bp = self.build_current_bp()
-        current_output_file = self.output_file
 
         def _handle_new_bp(new_bp):
             if new_bp != current_bp:
-                manager.set_next_scene(LevelEditGameScene(new_bp,
-                                                          current_output_file if new_bp.level_id() == current_bp.level_id() else None))
+                manager.set_next_scene(LevelEditGameScene(new_bp))
             else:
                 manager.set_next_scene(self)
 
@@ -1675,8 +1660,7 @@ class LevelEditGameScene(_BaseGameScene):
             self.get_manager().set_next_scene(prev_scene)
 
         def _new_editor_scene(new_bp: blueprints.LevelBlueprint):
-            out_file = self.output_file if new_bp.level_id() == current_bp.level_id() else None
-            return LevelEditGameScene(new_bp, output_file=out_file, prev_scene_provider=self._prev_scene_provider)
+            return LevelEditGameScene(new_bp, prev_scene_provider=self._prev_scene_provider)
 
         self.jump_to_scene(LevelEditorPauseMenu(current_bp,
                                                 _handle_new_bp,

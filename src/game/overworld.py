@@ -1455,7 +1455,6 @@ class OverworldScene(scenes.Scene):
             if configs.is_dev and inputs.get_instance().ctrl_is_held():
                 # activate edit mode
                 next_scene = menus.LevelEditGameScene(level_bp,
-                                                      output_file=level_bp.directory,
                                                       prev_scene_provider=lambda: _updated_scene(reload_levels=True))
             else:
                 # enter the level normally

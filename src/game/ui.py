@@ -504,6 +504,7 @@ class TextEditElement(UiElement):
 
     SIMPLE_CHARS = ABC_CHARS + NUM_CHARS + " _"
     FILEPATH_CHARS = SIMPLE_CHARS + " _-./()"
+    LEVEL_ID_CHARS = ABC_CHARS + NUM_CHARS + CURSOR_CHAR
     ASCII_CHARS = SIMPLE_CHARS + SPECIAL_CHARS
 
     def __init__(self, text, scale=1, color=None, font=None, char_limit=24, outline_color=None, allowed_chars=ASCII_CHARS):

@@ -35,15 +35,17 @@ is_dev = os.path.exists(".gitignore")  # yikes
 key_repeat_delay = 30  # keys held for longer than this many ticks will start to be typed repeatedly
 key_repeat_period = 5  # after the delay has passed, the key will be typed every X ticks until released
 
+custom_levels_save_dir = os.path.join("levels", "custom_levels")
 
 """ Debug Stuff"""
 level_edit_dirs = {
-        "1": os.path.join("overworlds", "sector_ab", "levels"),
-        "2": os.path.join("overworlds", "sector_abc", "levels"),
-        "L": os.path.join("levels"),
-        "P": os.path.join("level_purgatory"),
-        "t": os.path.join("testing")
-    }
+    "1": os.path.join("overworlds", "sector_ab", "levels"),
+    "2": os.path.join("overworlds", "sector_abc", "levels"),
+    "L": os.path.join("levels"),
+    "P": os.path.join("level_purgatory"),
+    "t": os.path.join("testing"),
+    "c": custom_levels_save_dir
+}
 
 
 """ 3D Debug """

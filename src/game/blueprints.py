@@ -4,6 +4,7 @@ import traceback
 import random
 import os
 
+import configs
 import src.utils.util as util
 
 import src.game.entities as entities
@@ -701,7 +702,7 @@ class LevelBlueprint:
         self._cached_entities = None  # list of (blob, spec)
 
     @staticmethod
-    def build(name, level_id, players, timelimit, desc, entity_specs):
+    def build(name, level_id, players, timelimit, desc, entity_specs, directory=None):
         return LevelBlueprint({
             NAME: name,
             PLAYERS: [p.get_id() for p in players],
@@ -709,7 +710,7 @@ class LevelBlueprint:
             TIME_LIMIT: timelimit,
             DESCRIPTION: desc,
             ENTITIES: entity_specs
-        })
+        }, directory=directory)
 
     def name(self):
         return util.read_string(self.json_blob, NAME, "???")
@@ -731,7 +732,7 @@ class LevelBlueprint:
         json_copy = util.copy_json(self.json_blob)
         for key in edits:
             json_copy[key] = edits[key]
-        return LevelBlueprint(json_copy)
+        return LevelBlueprint(json_copy, directory=self.directory)
 
     def get_attribute(self, attrib_id):
         if attrib_id in self.json_blob:
@@ -815,6 +816,14 @@ class LevelBlueprint:
 
         return world
 
+    def get_filepath(self):
+        if self.directory is None:
+            base_dir = configs.custom_levels_save_dir
+        else:
+            base_dir = self.directory
+
+        return os.path.join(base_dir, self.level_id() + ".json")
+
     def __repr__(self):
         return "{}:{}".format(type(self).__name__, self.name())
 
@@ -822,8 +831,7 @@ class LevelBlueprint:
 def load_level_from_file(filepath) -> LevelBlueprint:
     try:
         json_blob = util.load_json_from_path(filepath)
-        return LevelBlueprint(json_blob, directory=filepath)
-
+        return LevelBlueprint(json_blob, directory=os.path.dirname(filepath))
     except Exception:
         print("ERROR: failed to load level: {}".format(filepath))
         traceback.print_exc()
@@ -840,7 +848,6 @@ def load_all_levels_from_dir(path):
                 filepath = os.path.join(path, file)
                 level = load_level_from_file(filepath)
                 if level is not None:
-                    level.directory = filepath
                     res[level.level_id()] = level
                     print("INFO: loaded level \"{}\" from file: {}".format(level.level_id(), filepath))
     except Exception:
