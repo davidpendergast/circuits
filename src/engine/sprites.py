@@ -1016,11 +1016,16 @@ class TextSprite(MultiSprite):
             return res
         else:
             # at this point, text contains no newlines
-            res = []
 
             words = text.split(" ")  # FYI if you have repeated spaces this will delete them
             cur_line = []
             cur_width = 0
+
+            if len(words) == 1 and len(words[0]) == 0:
+                # probably an intentional empty line, so preserve it.
+                return [""]
+
+            res = []
 
             for w in words:
                 if len(w) == 0:

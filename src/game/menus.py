@@ -48,17 +48,24 @@ class MainMenuScene(scenes.Scene):
         self._title_element = ui.SpriteElement()
 
         self._options_list = ui.OptionsList(outlined=True)
-        self._options_list.add_option("start", lambda: self.jump_to_scene(overworld.OverworldScene.create_new_from_path("overworlds")))
-        # self._options_list.add_option("intro", lambda: self.jump_to_scene(IntroCutsceneScene()))
+        self._options_list.add_option("start", lambda: self._do_start())
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
-        # self._options_list.add_option("movie", lambda: self.jump_to_scene(cinematics.CinematicScene3D(cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.INTRO), lambda: MainMenuScene())))
         self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
         self._options_list.update_sprites()
 
         self._option_pane_bg = None
 
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
+
+    def _do_start(self):
+        do_instructions = True  # TODO will probably disable this in dev
+        overworld_scene = overworld.OverworldScene.create_new_from_path("overworlds")
+        if do_instructions:
+            next_scene = InstructionsScene(overworld_scene, self)
+        else:
+            next_scene = overworld_scene
+        self.jump_to_scene(next_scene)
 
     def should_do_cursor_updates(self):
         return True
@@ -112,6 +119,52 @@ class MainMenuScene(scenes.Scene):
         yield self._option_pane_bg
         for spr in self.cine_seq.all_sprites():
             yield spr
+
+
+class InstructionsScene(scenes.Scene):
+
+    TEXT = "Objective:\n" \
+           "Guide each unit to their respective goal, indicated by a capital letter. " \
+           "To pass a level, all robots must be at their goal simultaneously.\n\n" \
+           "[WASD or ←↑↓→] to move.\n" \
+           "[R] to reset the entire level.\n" \
+           "[Z] to reset the current robot."  # TODO swap in actual hotkeys
+
+    def __init__(self, next_scene, prev_scene):
+        super().__init__()
+        self.next_scene = next_scene
+        self.prev_scene = prev_scene
+
+        self._text_scale = 1
+        self._text_sprite = None
+        self._ticks_active = 0
+
+    def update(self):
+        if inputs.get_instance().was_pressed(const.MENU_CANCEL):
+            self.get_manager().set_next_scene(self.prev_scene)
+            return
+
+        if self._ticks_active > 15 and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+            self.get_manager().set_next_scene(self.next_scene)
+            return
+
+        self._ticks_active += 1
+
+        if self._text_sprite is None:
+            self._text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self._text_scale)
+
+        screen_size = renderengine.get_instance().get_game_size()
+        wrapped_text = sprites.TextSprite.wrap_text_to_fit(InstructionsScene.TEXT,
+                                                           int(screen_size[0] * 0.8),
+                                                           scale=self._text_scale)
+        self._text_sprite = self._text_sprite.update(new_text="\n".join(wrapped_text))
+        self._text_sprite = self._text_sprite.update(new_x=screen_size[0] // 2 - self._text_sprite.size()[0] // 2,
+                                                     new_y=screen_size[1] // 2 - self._text_sprite.size()[1] // 2)
+
+    def all_sprites(self):
+        if self._text_sprite is not None:
+            for spr in self._text_sprite.all_sprites():
+                yield spr
 
 
 class OptionSelectScene(scenes.Scene):
