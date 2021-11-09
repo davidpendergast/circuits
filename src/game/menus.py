@@ -934,19 +934,23 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         self.get_world_view().update()
 
     def _update_ui(self):
+        # account for vertical camera pans
+        # the UI bar should always be drawn at the top of the level, not the screen.
+        y0 = self.get_world_view().world_pos_to_screen_pos((0, 0))[1]
+
         y = 4
         if self._top_panel_ui is None:
             self._top_panel_ui = TopPanelUi(self._state)
         top_panel_size = self._top_panel_ui.get_size()
         display_size = renderengine.get_instance().get_game_size()
-        self._top_panel_ui.set_xy((display_size[0] // 2 - top_panel_size[0] // 2, y))
+        self._top_panel_ui.set_xy((display_size[0] // 2 - top_panel_size[0] // 2, y0 + y))
         self._top_panel_ui.update()
         y += top_panel_size[1]
 
         if self._progress_bar_ui is None:
             self._progress_bar_ui = ProgressBarUi(self._state)
         prog_bar_size = self._progress_bar_ui.get_size()
-        self._progress_bar_ui.set_xy((display_size[0] // 2 - prog_bar_size[0] // 2, y))
+        self._progress_bar_ui.set_xy((display_size[0] // 2 - prog_bar_size[0] // 2, y0 + y))
         self._progress_bar_ui.update()
 
     def all_sprites(self):

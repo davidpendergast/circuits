@@ -9,7 +9,6 @@ import src.engine.sprites as sprites
 import src.game.globalstate as gs
 import src.game.spriteref as spriteref
 import src.game.colors as colors
-import src.game.const as const
 
 
 class WorldView:

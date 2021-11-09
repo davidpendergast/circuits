@@ -411,8 +411,8 @@ class World:
                 elif cam_rect[1] < self.camera_min_xy[1]:
                     new_cam_xy[1] = self.camera_min_xy[1]
             else:
-                # camera is too tall to fit within the bounds, snap to top
-                new_cam_xy[1] = self.camera_min_xy[1]
+                # camera is too tall to fit within the bounds, center it
+                new_cam_xy[1] = int((self.camera_min_xy[1] + self.camera_max_xy[1]) / 2 - cam_rect[3] / 2)
 
             worldview.set_camera_pos_in_world(new_cam_xy)
 
