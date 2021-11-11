@@ -127,6 +127,8 @@ class CircuitsGame(game.Game):
             (const.CURSOR_INVIS, [32, 0, 16, 16], (0, 0))
         ])
 
+        gs.get_instance().load_data_from_disk()
+
         scenes.set_instance(menus.CircuitsSceneManager(menus.MainMenuScene()))
 
     def get_sheets(self):
@@ -151,6 +153,9 @@ class CircuitsGame(game.Game):
         gs.get_instance().update()
 
         return not gs.get_instance().should_exit()
+
+    def cleanup(self):
+        gs.get_instance().save_data_to_disk()
 
     def get_clear_color(self):
         return scenes.get_instance().get_clear_color()

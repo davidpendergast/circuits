@@ -1,57 +1,130 @@
+import traceback
+import os
+
+import configs
 import src.utils.util as util
 import src.game.colors as colors
 
 
 class SaveAndLoadJsonBlob:
 
-    def __init__(self, filepath):
-        self.filepath = filepath
+    def __init__(self):
         self.json_blob = {}
-        self.set_defaults()
 
-    def load_from_disk(self) -> 'SaveAndLoadJsonBlob':
-        # TODO implement
+    def load_from_disk(self, filepath) -> 'SaveAndLoadJsonBlob':
+        try:
+            print("INFO: loading {}...".format(filepath))
+            if os.path.exists(filepath):
+                json_blob = util.load_json_from_path(filepath)
+                for k in json_blob:
+                    self.set(k, self._safe_clean(k, json_blob[k]))
+                print("INFO: file loaded successfully")
+            else:
+                print("INFO: file not found, using defaults")
+        except Exception:
+            print("ERROR: failed to load data from \"{}\"".format(filepath))
+            traceback.print_exc()
+
         return self
 
-    def save_to_disk(self, filepath=None):
-        pass  # TODO
+    def save_to_disk(self, filepath):
+        try:
+            if os.path.exists(filepath):
+                print("INFO: overwriting {}...".format(filepath))
+            else:
+                print("INFO: creating {}...".format(filepath))
+            util.save_json_to_path(self.json_blob, filepath, make_pretty=True)
+            print("INFO: saved data successfully")
+        except Exception:
+            print("ERROR: failed to write {}".format(filepath))
+            traceback.print_exc()
 
-    def set_defaults(self):
-        pass
+    def _safe_clean(self, attrib, new_val):
+        try:
+            return self.clean(attrib, new_val)
+        except Exception:
+            print("ERROR: failed to clean value for attribute {}: {}".format(attrib, str(new_val)))
+            traceback.print_exc()
+            return self.get_default_val(attrib)
+
+    def get_default_val(self, attrib):
+        raise NotImplementedError()
+
+    def clean(self, attrib, new_val):
+        raise NotImplementedError()
+
+    def get(self, attrib):
+        if attrib in self.json_blob:
+            return self.json_blob[attrib]
+        else:
+            return self.get_default_val(attrib)
+
+    def set(self, attrib, val):
+        self.json_blob[attrib] = val
 
 
 class SaveData(SaveAndLoadJsonBlob):
 
     COMPLETED_LEVELS = "completed_levels"
 
-    def __init__(self, filepath):
-        super().__init__(filepath)
+    def __init__(self):
+        super().__init__()
 
-    def set_defaults(self):
-        self.json_blob[SaveData.COMPLETED_LEVELS] = {}  # level_id -> completion time (in ticks)
+    def get_default_val(self, attrib):
+        if attrib == SaveData.COMPLETED_LEVELS:
+            return {}
+        else:
+            return None
+
+    def clean(self, attrib, new_val):
+        if attrib == SaveData.COMPLETED_LEVELS:
+            return {k: new_val[k] for k in new_val if (new_val[k] is not None and new_val[k] >= 0)}
+        else:
+            raise ValueError("unrecognized attribute: {}".format(attrib))
 
     def completed_levels(self) -> dict:
-        return self.json_blob[SaveData.COMPLETED_LEVELS]
+        return self.get(SaveData.COMPLETED_LEVELS)
+
+    def is_completed(self, level_id):
+        return self.get_time(level_id) is not None
+
+    def get_time(self, level_id):
+        if level_id in self.completed_levels():
+            t = self.completed_levels()[level_id]
+            if t is not None and t >= 0:
+                return t
+        else:
+            return None
+
+    def set_completed(self, level_id, completion_time):
+        c = self.completed_levels()
+
+        if completion_time is not None and completion_time >= 0:
+            c[level_id] = completion_time
+        elif level_id in c:
+            del c[level_id]
+
+        self.set(SaveData.COMPLETED_LEVELS, c)
 
 
 class Settings(SaveAndLoadJsonBlob):
 
     SHOW_LIGHTING = "show_lighting"
 
-    def __init__(self, filepath):
-        super().__init__(filepath)
+    def __init__(self):
+        super().__init__()
 
-    def set_defaults(self):
-        self.json_blob[Settings.SHOW_LIGHTING] = True
-
-    def get(self, attrib):
-        if attrib in self.json_blob:
-            return self.json_blob[attrib]
+    def get_default_val(self, attrib):
+        if attrib == Settings.SHOW_LIGHTING:
+            return True
         else:
             return None
 
-    def set(self, attrib, val):
-        self.json_blob[attrib] = val
+    def clean(self, attrib, new_val):
+        if Settings.SHOW_LIGHTING == attrib:
+            return bool(new_val)
+        else:
+            return super().clean(attrib, new_val)
 
 
 class GlobalState:
@@ -65,13 +138,13 @@ class GlobalState:
 
         self._tick_count = 0
 
-        self._save_data = SaveData("save_data.txt").load_from_disk()
-        self._settings = Settings("settings.txt").load_from_disk()
+        self._save_data = SaveData()
+        self._settings = Settings()
 
         self._should_quit_for_real = False
 
         self._fullscreen_fade_sprite = None
-        self._fullscreen_fade_info = None  # (ticks_active, duration, start_opacity, end_opacity, start_color, end_color)
+        self._fullscreen_fade_info = None  # (ticks_active, duration, opacity, end_opacity, color, end_color)
 
     def tick_count(self):
         return self._tick_count
@@ -133,6 +206,14 @@ class GlobalState:
 
     def settings(self) -> Settings:
         return self._settings
+
+    def load_data_from_disk(self):
+        self._save_data.load_from_disk(util.user_data_path(configs.save_data_path, localpath=configs.use_local_paths))
+        self._settings.load_from_disk(util.user_data_path(configs.settings_path, localpath=configs.use_local_paths))
+
+    def save_data_to_disk(self):
+        self._save_data.save_to_disk(util.user_data_path(configs.save_data_path, localpath=configs.use_local_paths))
+        self._settings.save_to_disk(util.user_data_path(configs.settings_path, localpath=configs.use_local_paths))
 
     def quit_game_for_real(self):
         self._should_quit_for_real = True

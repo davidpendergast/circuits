@@ -1,0 +1,3 @@
+
+If this file exists, the game will store user data in ./userdata/
+Otherwise, it'll store it in some far off, OS-specific place.

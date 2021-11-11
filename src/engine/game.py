@@ -26,3 +26,6 @@ class Game:
 
     def get_clear_color(self):
         return configs.clear_color
+
+    def cleanup(self):
+        pass

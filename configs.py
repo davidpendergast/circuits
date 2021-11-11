@@ -52,3 +52,9 @@ level_edit_dirs = {
 rainbow_3d = False
 wireframe_3d = False
 
+
+""" Paths """
+use_local_paths = os.path.exists("store_userdata_here.txt")
+save_data_path = "save_data.json"
+settings_path = "settings.json"
+

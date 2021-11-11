@@ -671,7 +671,7 @@ class OverworldState:
         return 1
 
     def is_complete(self, level_id):
-        return level_id in gs.get_instance().save_data().completed_levels()
+        return gs.get_instance().save_data().is_completed(level_id)
 
     def is_selected_at(self, xy):
         if self.selected_cell is None:
@@ -723,7 +723,7 @@ class OverworldState:
     def set_completed(self, level_id, time):
         cur_time = self.get_completion_time(level_id)
         if cur_time is None or cur_time > time:
-            gs.get_instance().save_data().completed_levels()[level_id] = time
+            gs.get_instance().save_data().set_completed(level_id, time)
 
     def update_nodes(self):
         # TODO set nodes to locked / unlocked

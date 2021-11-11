@@ -3,7 +3,6 @@ import random
 import os
 import json
 import re
-import pathlib
 import sys
 import heapq
 import traceback
@@ -842,7 +841,15 @@ def resource_path(relative_path):
     except AttributeError:
         base_path = os.path.abspath(".")
 
-    return os.path.join(base_path, str(pathlib.Path(relative_path)))
+    return os.path.normpath(os.path.join(base_path, relative_path))
+
+
+def user_data_path(relative_path, dirname="userdata", localpath=True):
+    if localpath:
+        return os.path.normpath(os.path.join(dirname, relative_path))
+    else:
+        # TODO hookup fancy appdir stuff
+        raise NotImplementedError()
 
 
 def copy_json(json_blob):
@@ -940,34 +947,6 @@ def get_value_or_create_new(the_map, key, creator):
     if key not in the_map or the_map[key] is None:
         the_map[key] = creator()
     return the_map[key]
-
-
-def prompt_for_file(prompt, root="", ext="") -> pathlib.Path:
-    # TODO ui?
-    res = None
-
-    if len(root) > 0 and not root.endswith(os.path.sep):
-        root = root + os.path.sep
-
-    ext_str = " ({})".format(ext) if len(ext) > 0 else ""
-
-    try:
-        print()
-        text = input("INPUT: {}{}: {}".format(prompt, ext_str, root))
-
-        if text is None or len(text) == 0:
-            return None
-
-        path = pathlib.Path(root, text)
-        if len(path.suffixes) != 0:
-            res = path  # user gave a path, just leave it?
-        else:
-            res = pathlib.Path(root, text + ext)
-    except Exception:
-        print("ERROR: failed to get user-supplied path")
-        traceback.print_exc()
-
-    return res
 
 
 def prompt_question(question, accepted_answers=(), max_tries=3) -> str:
