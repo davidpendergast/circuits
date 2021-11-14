@@ -5,6 +5,7 @@ import os
 import random
 import re
 from collections import deque
+import typing
 
 import src.engine.scenes as scenes
 import src.game.blueprints as blueprints
@@ -262,12 +263,12 @@ class OverworldGrid:
         return self.search_for_node(lambda n: n.is_end())
 
     def get_all_exit_nodes(self):
-        return [e for e in self.all_nodes(cond=lambda n: e.is_exit())]
+        return [e for e in self.all_nodes(cond=lambda n: n.is_exit())]
 
     def get_exit_node(self, exit_id):
         return self.search_for_node(lambda n: n.is_exit() and n.get_exit_id() == exit_id)
 
-    def get_all_level_nodes(self):
+    def get_all_level_nodes(self) -> typing.List[LevelNode]:
         res = [l for l in self.all_nodes(cond=lambda n: n.is_level())]
         res.sort(key=lambda l: l.get_level_num())
         return res
@@ -603,9 +604,11 @@ class OverworldState:
         self.level_blueprints = {}
         self.reload_level_blueprints_from_disk()
 
-        self.update_nodes()
-
         self.selected_cell = self.find_initial_selection(came_from_exit_id=came_from)
+
+        self._unlocked_nodes = set()
+        self.refresh_unlocked_levels()
+
         self.cell_under_mouse = None
 
     def get_grid(self) -> OverworldGrid:
@@ -613,6 +616,13 @@ class OverworldState:
 
     def get_overworld(self) -> OverworldBlueprint:
         return self.current_overworld
+
+    def refresh_unlocked_levels(self):
+        self._unlocked_nodes = self._calc_unlocked_nodes(self.selected_cell)
+        for n in self.get_grid().get_all_level_nodes():
+            n.set_enabled(n.get_xy() in self._unlocked_nodes)
+        for n in self.get_grid().get_all_exit_nodes():
+            n.set_enabled(n.get_xy() in self._unlocked_nodes)
 
     def next_requested_overworld(self):
         """returns: (OverworldBlueprint, entry_num)"""
@@ -634,6 +644,7 @@ class OverworldState:
             self.selected_cell = self.find_initial_selection(came_from_exit_id=entry_num)
             self.cell_under_mouse = None
             self.requested_overworld = None
+            self.refresh_unlocked_levels()
         else:
             print("WARN: unrecognized overworld_id: {}".format(overworld.ref_id))
 
@@ -710,8 +721,7 @@ class OverworldState:
             self.selected_cell = node.get_xy()
 
     def is_unlocked_at(self, xy):
-        # TODO
-        return True
+        return xy in self._unlocked_nodes
 
     def get_completion_time(self, level_id):
         completed_levels = gs.get_instance().save_data().completed_levels()
@@ -724,10 +734,30 @@ class OverworldState:
         cur_time = self.get_completion_time(level_id)
         if cur_time is None or cur_time > time:
             gs.get_instance().save_data().set_completed(level_id, time)
+            self.refresh_unlocked_levels()
 
-    def update_nodes(self):
-        # TODO set nodes to locked / unlocked
-        pass
+    def _calc_unlocked_nodes(self, starting_xy):
+        unlocked = set()
+        q = [starting_xy]
+
+        seen = set()
+        seen.add(starting_xy)
+
+        while len(q) > 0:
+            xy = q.pop(-1)
+            level_id = self.get_level_id_at(xy)
+            if level_id is None or xy == starting_xy or self.is_complete(level_id):
+                if level_id is not None:
+                    unlocked.add(xy)
+                for d in util.neighbors(0, 0):
+                    neighbor = self.get_grid().get_connected_node_in_dir(xy, d, selectable_only=False, enabled_only=False)
+                    if neighbor is not None:
+                        if neighbor.get_xy() not in seen:
+                            seen.add(neighbor.get_xy())
+                            q.append(neighbor.get_xy())
+            else:
+                unlocked.add(xy)
+        return unlocked
 
     def get_nodes_with_id(self, level_id):
         res = []
@@ -764,6 +794,8 @@ class OverworldState:
 
 class LevelNodeElement(ui.UiElement):
 
+    UNLOCK_ANIM_DURATION = 180
+
     def __init__(self, xy, level_id, level_num, overworld_state):
         ui.UiElement.__init__(self)
         self.grid_xy = xy
@@ -771,9 +803,10 @@ class LevelNodeElement(ui.UiElement):
         self.level_num = level_num
         self.state = overworld_state
 
-        self.icon_sprites = [None] * 9
+        self.border_sprites = [None] * 9
 
-        self.number_sprite = None
+        self.icon_sprite = None
+        self.freshly_unlocked_counter = 0
 
         self._cached_player_types = None
 
@@ -782,7 +815,7 @@ class LevelNodeElement(ui.UiElement):
         self.level_num = node.n
         self._cached_player_types = None
 
-    def _get_icon_img_and_color_at(self, idx, selected, completed, unlocked, players_in_level):
+    def _get_border_img_and_color_at(self, idx, selected, completed, unlocked, players_in_level):
         corners = {
             0: playertypes.PlayerTypes.FAST,
             2: playertypes.PlayerTypes.SMALL,
@@ -799,11 +832,11 @@ class LevelNodeElement(ui.UiElement):
         if selected:
             color = colors.PERFECT_RED
         elif completed:
-            color = colors.PERFECT_WHITE  # XXX the sprites are drawn with off-white already
-        elif unlocked:
             color = colors.LIGHT_GRAY
+        elif unlocked:
+            color = colors.PERFECT_WHITE  # XXX the sprites are drawn with off-white already
         else:
-            color = colors.DARK_GRAY
+            color = colors.PERFECT_WHITE  # sprites are already colored
 
         if idx in corners:
             player_type = corners[idx]
@@ -814,11 +847,11 @@ class LevelNodeElement(ui.UiElement):
         else:
             return empty_sprites[idx], color
 
-    def _get_text_color(self, selected, completed, unlocked):
+    def _get_icon_color(self, selected, completed, unlocked):
         if completed:
-            return colors.WHITE
-        elif unlocked:
             return colors.LIGHT_GRAY
+        elif unlocked:
+            return colors.WHITE
         else:
             return colors.DARK_GRAY
 
@@ -839,34 +872,58 @@ class LevelNodeElement(ui.UiElement):
         xy = self.get_xy(absolute=True)
         i_x = 0
         i_y = 0
-        for i in range(0, len(self.icon_sprites)):
+        for i in range(0, len(self.border_sprites)):
             if i % 3 == 0:
                 i_x = 0
-            if self.icon_sprites[i] is None:
-                self.icon_sprites[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, scale=1, depth=5)
-            model, color = self._get_icon_img_and_color_at(i, selected, completed, unlocked, players)
+            if self.border_sprites[i] is None:
+                self.border_sprites[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, scale=1, depth=5)
+            model, color = self._get_border_img_and_color_at(i, selected, completed, unlocked, players)
 
-            self.icon_sprites[i] = self.icon_sprites[i].update(new_model=model, new_x=xy[0] + i_x, new_y=xy[1] + i_y,
-                                                               new_color=color)
-            i_x += self.icon_sprites[i].width()
+            self.border_sprites[i] = self.border_sprites[i].update(new_model=model,
+                                                                   new_x=xy[0] + i_x, new_y=xy[1] + i_y,
+                                                                   new_color=color)
+            i_x += self.border_sprites[i].width()
             if i % 3 == 2:
-                i_y += self.icon_sprites[i].height()
+                i_y += self.border_sprites[i].height()
 
-        if self.number_sprite is None:
-            self.number_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, str(self.level_num), x_kerning=0)
-
+        icon_color = self._get_icon_color(selected, completed, unlocked)
         size = self.get_size()
-        t_xy = (xy[0] + size[0] // 2 - self.number_sprite.size()[0] // 2,
-                xy[1] + size[1] // 2 - self.number_sprite.size()[1] // 2)
-        t_color = self._get_text_color(selected, completed, unlocked)
-        self.number_sprite = self.number_sprite.update(new_x=t_xy[0], new_y=t_xy[1], new_text=str(self.level_num),
-                                                       new_color=t_color, new_depth=0, new_scale=1)
+
+        if selected:
+            # once you select a level, cancel the unlocking animation.
+            self.freshly_unlocked_counter = LevelNodeElement.UNLOCK_ANIM_DURATION + 10
+
+        if not unlocked or (not completed and not selected and self.freshly_unlocked_counter < LevelNodeElement.UNLOCK_ANIM_DURATION):
+            if not unlocked:
+                prog = 0
+            else:
+                prog = self.freshly_unlocked_counter / LevelNodeElement.UNLOCK_ANIM_DURATION
+                if prog > 0.5:
+                    # fade out as it unlocks
+                    icon_color = colors.darken(icon_color, min(0.5, (prog - 0.5)) / 0.5)
+                self.freshly_unlocked_counter += 1
+
+            if self.icon_sprite is None or not isinstance(self.icon_sprite, sprites.ImageSprite):
+                self.icon_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+            icon_xy = (xy[0] + size[0] // 2 - self.icon_sprite.size()[0] // 2,
+                       xy[1] + size[1] // 2 - self.icon_sprite.size()[1] // 2)
+            self.icon_sprite = self.icon_sprite.update().update(new_model=spriteref.overworld_sheet().get_lock_icon(prog),
+                                                                new_x=icon_xy[0], new_y=icon_xy[1],
+                                                                new_color=icon_color, new_depth=0, new_scale=1)
+        else:
+            if self.icon_sprite is None or not isinstance(self.icon_sprite, sprites.TextSprite):
+                self.icon_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, str(self.level_num), x_kerning=0)
+
+            icon_xy = (xy[0] + size[0] // 2 - self.icon_sprite.size()[0] // 2,
+                    xy[1] + size[1] // 2 - self.icon_sprite.size()[1] // 2)
+            self.icon_sprite = self.icon_sprite.update(new_x=icon_xy[0], new_y=icon_xy[1], new_text=str(self.level_num),
+                                                       new_color=icon_color, new_depth=0, new_scale=1)
 
     def all_sprites(self):
-        for spr in self.icon_sprites:
+        for spr in self.border_sprites:
             if spr is not None:
                 yield spr
-        for spr in self.number_sprite.all_sprites():
+        for spr in self.icon_sprite.all_sprites():
             yield spr
 
     def get_size(self):
@@ -1100,7 +1157,7 @@ class OverworldInfoPanelElement(ui.UiElement):
     def get_node_to_show(self):
         if self.state.cell_under_mouse is not None:
             node = self.state.get_grid().get_node(self.state.cell_under_mouse)
-            if node is not None and node.is_level():
+            if node is not None and node.is_level() and node.is_enabled():
                 return node
 
         return self.state.get_selected_node()
@@ -1360,7 +1417,7 @@ class OverworldScene(scenes.Scene):
         if inputs.get_instance().mouse_was_pressed(button=1) and self.grid_ui_element.ticks_alive > 1:
             if mouse_grid_pos is not None:
                 node_at_click = self.state.get_grid().get_node(mouse_grid_pos)
-                if node_at_click is not None:
+                if node_at_click is not None and node_at_click.is_enabled():
                     if node_at_click.is_exit():
                         # click an exit -> go to the other overworld
                         # TODO only if exit is available
@@ -1379,7 +1436,7 @@ class OverworldScene(scenes.Scene):
         if mouse_grid_pos is not None:
             node_at_xy = self.state.get_grid().get_node(mouse_grid_pos)
             if node_at_xy is not None:
-                if node_at_xy.is_exit() or node_at_xy.is_selectable():
+                if node_at_xy.is_enabled() and (node_at_xy.is_exit() or node_at_xy.is_selectable()):
                     return const.CURSOR_HAND
         return super().get_cursor_id_at(xy)
 
@@ -1441,6 +1498,7 @@ class OverworldScene(scenes.Scene):
 
             if reload_levels:
                 state.reload_level_blueprints_from_disk()
+                state.refresh_unlocked_levels()
 
             new_scene = OverworldScene(state)
 

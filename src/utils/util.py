@@ -538,6 +538,18 @@ def tuplify(obj):
         return (obj,)
 
 
+def add_repeats(l, item_counts, copy_func=lambda x: x):
+    """add_repeats([a, b, c], [1, 2, 3]) --> [a, b, b, c, c, c]"""
+    if len(l) != len(item_counts):
+        raise ValueError("list length doesn't match length of item counts: {} != {}".format(len(l), len(item_counts)))
+    else:
+        res = []
+        for i in range(len(l)):
+            for _ in range(item_counts[i]):
+                res.append(copy_func(l[i]))
+        return res
+
+
 def index_into(l, val, wrap=False):
     if wrap:
         if val < 0:

@@ -720,6 +720,9 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.border_double_thin = []
         self.border_double_thick = []
 
+        self.lock_icons = []
+        self.lock_icons_with_anim_weights = []
+
     def get_connection_sprite(self, n=False, e=False, s=False, w=False):
         # TODO gray sprites?
         connections = (n, e, s, w)
@@ -727,6 +730,9 @@ class _OverworldSheet(spritesheets.SpriteSheet):
             return self.connectors[connections]
         else:
             return None
+
+    def get_lock_icon(self, prog=0):
+        return util.index_into(self.lock_icons_with_anim_weights, prog, wrap=False)
 
     def _make_pieces(self, rect, offs=(0, 0)):
         corner_size = 9
@@ -797,6 +803,10 @@ class _OverworldSheet(spritesheets.SpriteSheet):
 
         self.border_double_thin = self._make_borders([24, 72, 24, 24], 5, offs=start_pos)
         self.border_double_thick = self._make_borders([24, 96, 24, 24], 6, offs=start_pos)
+
+        # lock icons
+        self.lock_icons = [_img(48 + (i % 8) * 24, 72 + (i // 8) * 24, 24, 24, offs=start_pos) for i in range(0, 12)]
+        self.lock_icons_with_anim_weights = util.add_repeats(self.lock_icons, [32, 1, 1, 16, 2, 2, 2, 2, 2, 2, 2, 60])
 
 
 class _LevelBuilderSheet(spritesheets.SpriteSheet):
