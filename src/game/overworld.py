@@ -891,7 +891,9 @@ class LevelNodeElement(ui.UiElement):
 
         if selected:
             # once you select a level, cancel the unlocking animation.
-            self.freshly_unlocked_counter = LevelNodeElement.UNLOCK_ANIM_DURATION + 10
+            self.freshly_unlocked_counter = LevelNodeElement.UNLOCK_ANIM_DURATION * 2
+        elif self.freshly_unlocked_counter < LevelNodeElement.UNLOCK_ANIM_DURATION * 2:
+            self.freshly_unlocked_counter += 1
 
         if not unlocked or (not completed and not selected and self.freshly_unlocked_counter < LevelNodeElement.UNLOCK_ANIM_DURATION):
             if not unlocked:
@@ -901,7 +903,6 @@ class LevelNodeElement(ui.UiElement):
                 if prog > 0.5:
                     # fade out as it unlocks
                     icon_color = colors.darken(icon_color, min(0.5, (prog - 0.5)) / 0.5)
-                self.freshly_unlocked_counter += 1
 
             if self.icon_sprite is None or not isinstance(self.icon_sprite, sprites.ImageSprite):
                 self.icon_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
@@ -916,6 +917,11 @@ class LevelNodeElement(ui.UiElement):
 
             icon_xy = (xy[0] + size[0] // 2 - self.icon_sprite.size()[0] // 2,
                     xy[1] + size[1] // 2 - self.icon_sprite.size()[1] // 2)
+            if not completed:
+                if LevelNodeElement.UNLOCK_ANIM_DURATION <= self.freshly_unlocked_counter < 1.25 * LevelNodeElement.UNLOCK_ANIM_DURATION:
+                    # fade in after it unlocks
+                    fade_in_prog = (self.freshly_unlocked_counter - LevelNodeElement.UNLOCK_ANIM_DURATION) / (0.25 * LevelNodeElement.UNLOCK_ANIM_DURATION)
+                    icon_color = colors.darken(icon_color, util.bound(1 - fade_in_prog, 0, 1))
             self.icon_sprite = self.icon_sprite.update(new_x=icon_xy[0], new_y=icon_xy[1], new_text=str(self.level_num),
                                                        new_color=icon_color, new_depth=0, new_scale=1)
 
@@ -1146,7 +1152,6 @@ class OverworldInfoPanelElement(ui.UiElement):
         self.title_text_sprite = None
         self.description_text_sprite = None
 
-        self.play_text_sprite = None
         self.time_text_sprite = None
 
         self.bg_border_sprite = None
@@ -1252,21 +1257,6 @@ class OverworldInfoPanelElement(ui.UiElement):
             self.description_text_sprite.update(new_x=rect[0] + 6, new_y=y_pos, new_text=wrapped_text)
             y_pos += self.description_text_sprite.size()[1]
 
-        play_text = sprites.TextBuilder()
-        if self.can_play_visible_level():
-            play_text.add("Play", color=colors.PERFECT_RED)
-        else:
-            play_text.add("Locked", color=colors.DARK_GRAY)
-
-        # TODO this looks pretty bad...
-        if self.play_text_sprite is None:
-            self.play_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, play_text.text,
-                                                       color_lookup=play_text.colors, scale=1)
-        self.play_text_sprite.update(new_text=play_text.text, new_color_lookup=play_text.colors)
-        play_text_x = rect[0] + border_thickness[0] * 2
-        play_text_y = rect[1] + rect[3] - border_thickness[1] * 2 - self.play_text_sprite.size()[1]
-        self.play_text_sprite.update(new_x=play_text_x, new_y=play_text_y)
-
         level_time = self.get_visible_level_time()
         if self.time_text_sprite is None:
             self.time_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", x_kerning=1)
@@ -1284,9 +1274,6 @@ class OverworldInfoPanelElement(ui.UiElement):
                 yield spr
         if self.description_text_sprite is not None:
             for spr in self.description_text_sprite.all_sprites():
-                yield spr
-        if self.play_text_sprite is not None:
-            for spr in self.play_text_sprite.all_sprites():
                 yield spr
         if self.time_text_sprite is not None:
             for spr in self.time_text_sprite.all_sprites():
