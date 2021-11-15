@@ -144,9 +144,10 @@ class InstructionsScene(scenes.Scene):
             self.get_manager().set_next_scene(self.prev_scene)
             return
 
-        if self._ticks_active > 15 and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
-            self.get_manager().set_next_scene(self.next_scene)
-            return
+        if self._ticks_active > 15:
+            if inputs.get_instance().was_pressed(const.MENU_ACCEPT) or inputs.get_instance().mouse_was_pressed(button=1):
+                self.get_manager().set_next_scene(self.next_scene)
+                return
 
         self._ticks_active += 1
 
@@ -165,6 +166,9 @@ class InstructionsScene(scenes.Scene):
         if self._text_sprite is not None:
             for spr in self._text_sprite.all_sprites():
                 yield spr
+
+    def get_cursor_id_at(self, xy):
+        return const.CURSOR_HAND
 
 
 class OptionSelectScene(scenes.Scene):
