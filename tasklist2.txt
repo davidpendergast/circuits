@@ -24,6 +24,13 @@ mechanics
     ??? non-directional
     
     
+music + sound
+ - Split songs in 3-4 'layers' (e.g. instruments) each of which coorrespond to a character.
+   when a character is active (and not dead), the music will include that layer
+   (when all characters are dead, the music fades out)
+ - Can we smoothly fade into different versions of songs?
+    
+    
 (optional)
 - false blocks
     - blocks that don't have collision areas and fade when you step onto them

@@ -4,6 +4,7 @@ xcfs/*
 .idea/*
 *.mp4
 *.wav
+!assets/songs/*/*.wav
 *.lnk
 *.mmpz
 logs/*

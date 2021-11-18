@@ -18,6 +18,7 @@ import src.utils.util as util
 import src.game.globalstate as gs
 import src.game.const as const
 import src.game.menus as menus
+import src.game.songsystem as songsystem
 
 import src.game.spriteref as spriteref
 
@@ -130,6 +131,7 @@ class CircuitsGame(game.Game):
         gs.get_instance().load_data_from_disk()
 
         scenes.set_instance(menus.CircuitsSceneManager(menus.MainMenuScene()))
+        songsystem.get_instance().set_song(songsystem.MACHINATIONS)
 
     def get_sheets(self):
         return spriteref.initialize_sheets()
@@ -151,6 +153,17 @@ class CircuitsGame(game.Game):
     def update(self):
         scenes.get_instance().update()
         gs.get_instance().update()
+
+        songsystem.get_instance().update()
+
+        # TODO rm, just testing audio stuff
+        if inputs.get_instance().was_pressed(pygame.K_f):
+            import random
+            cur_song = songsystem.get_instance().current_song()
+            if cur_song is not None:
+                new_vols = [random.random() for _ in range(len(cur_song.sounds))]
+                songsystem.get_instance().set_song(cur_song.song_id, new_vols, fadeout=1)
+                print("TEST: setting volumes to {}".format(new_vols))
 
         return not gs.get_instance().should_exit()
 
