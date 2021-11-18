@@ -97,8 +97,6 @@ class LoopFader:
 
     def __init__(self):
         self.song_queue = []  # list of (song, volume_levels, time) tuples
-        self.seconds_counter = 0
-        self.last_update_time_ms = pygame.time.get_ticks()
 
     def current_song(self) -> MultiChannelSong:
         if len(self.song_queue) > 0:
@@ -115,7 +113,13 @@ class LoopFader:
             if to_remove[0] != self.song_queue[0][0]:
                 to_remove.stop()  # just in case
 
-    def set_song(self, song_id, volume_levels=1, fadeout=0, fadein=0):
+    def set_song(self, song_id: str, volume_levels=1, fadeout=0, fadein=0):
+        """
+        :param song_id: id of the next song to play.
+        :param volume_levels: sequence of volume levels, or a single number (to set all channels to the same volume).
+        :param fadeout: how long (in seconds) to fade-out the current song (ignored if next song == current song).
+        :param fadein: how long (in seconds) to fade-in the new song.
+        """
         cur_time = pygame.time.get_ticks()
         if song_id is None:
             song_id = SILENCE
@@ -125,26 +129,30 @@ class LoopFader:
         if isinstance(volume_levels, int) or isinstance(volume_levels, float):
             volume_levels = [volume_levels] * len(song.sounds)
 
-        if len(self.song_queue) == 0 or fadeout <= 0:
-            # just nuke the existing queue
+        if len(self.song_queue) == 0 or (fadeout <= 0 and self.song_queue[0][0] != song):
+            # nuke the existing queue and play the new song
             for s in self.song_queue:
                 s[0].stop()
             self.song_queue.clear()
-            if fadein <= 0 or song is SILENCE:
+            if fadein <= 0 or song == SILENCE:
                 self.song_queue.append((song, volume_levels, cur_time))
             else:
                 self.song_queue.append((song, [0] * len(song.sounds), cur_time))
                 self.song_queue.append((song, volume_levels, cur_time + int(fadein * 1000)))
+        elif self.song_queue[0][0] == song:
+            # song isn't changing, just fade volume
+            self.song_queue.clear()
+            self.song_queue.append((song, song.get_volumes(), cur_time))
+            self.song_queue.append((song, volume_levels, cur_time + int(fadein * 1000)))
         else:
-            # fade out what's currently playing
             cur_song_state = self.song_queue[0]
+
+            # fade out what's currently playing
             self.song_queue.clear()
             self.song_queue.append((cur_song_state[0], cur_song_state[0].get_volumes(), cur_time))
+            self.song_queue.append((cur_song_state[0], [0] * len(song.sounds), cur_time + int(fadeout * 1000)))
 
-            if cur_song_state[0] != song:
-                # if the song is changing, fade to 0
-                self.song_queue.append((cur_song_state[0], [0] * len(song.sounds), cur_time + int(fadeout * 1000)))
-
+            # fade in the next song if necessary
             if fadein <= 0 or song == SILENCE:
                 self.song_queue.append((song, volume_levels, cur_time + int(fadeout * 1000)))
             else:

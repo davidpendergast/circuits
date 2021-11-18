@@ -162,7 +162,7 @@ class CircuitsGame(game.Game):
             cur_song = songsystem.get_instance().current_song()
             if cur_song is not None:
                 new_vols = [random.random() for _ in range(len(cur_song.sounds))]
-                songsystem.get_instance().set_song(cur_song.song_id, new_vols, fadeout=1)
+                songsystem.get_instance().set_song(cur_song.song_id, new_vols, fadein=1)
                 print("TEST: setting volumes to {}".format(new_vols))
 
         return not gs.get_instance().should_exit()
