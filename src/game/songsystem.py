@@ -19,9 +19,14 @@ def get_instance() -> 'LoopFader':
 
 class MultiChannelSong:
 
-    def __init__(self, song_id, filenames):
+    def __init__(self, song_id, filenames, adjusted_volume=1):
         self.song_id = song_id
         self.sounds = [pygame.mixer.Sound(f) for f in filenames]
+
+        self._master_volume = 1
+        self._adjusted_volume = adjusted_volume  # some songs are intrinsically louder than others and need some EQ
+        self._volumes = [1 for _ in range(0, len(self.sounds))]
+
         self._playing = False
         lengths = set()
 
@@ -45,12 +50,33 @@ class MultiChannelSong:
         return MultiChannelSong(song_id, sound_paths)
 
     def get_volumes(self):
-        return [s.get_volume() for s in self.sounds]
+        return self._volumes  # would probably be better to return a copy but ggf
 
-    def set_volumes(self, volumes):
-        for i, v in enumerate(volumes):
+    def set_volumes(self, volumes, update_now=True):
+        if volumes != self._volumes:
+            self._volumes = volumes
+            if update_now:
+                self.update()
+            return True
+        else:
+            return False
+
+    def set_master_volume(self, v, update_now=True):
+        if v != self._master_volume:
+            self._master_volume = v
+            if update_now:
+                self.update()
+            return True
+        else:
+            return False
+
+    def update(self):
+        for i, v in enumerate(self._volumes):
             if i < len(self.sounds):
-                self.sounds[i].set_volume(v)
+                self.sounds[i].set_volume(v * self._master_volume * self._adjusted_volume)
+        if len(self._volumes) < len(self.sounds):
+            for i in range(len(self._volumes), len(self.sounds)):
+                self.sounds[i].set_volume(0)
 
     def is_playing(self):
         return self._playing
@@ -70,7 +96,12 @@ class MultiChannelSong:
 
 # Songs
 MACHINATIONS = "machinations"
-SILENCE = "silence"  # literally just silent
+
+SILENCE = "~silence~"                    # literally just silent
+CONTINUE_CURRENT = "~continue_current~"  # a no-op when passed to set_song
+
+MAIN_MENU_SONG = MACHINATIONS, [0.25, 0.5, 0, 0]
+INSTRUCTION_MENU_SONG = MACHINATIONS, [0.1, 0.25, 0, 0]
 
 
 _LOADED_SONGS = {}
@@ -97,12 +128,21 @@ class LoopFader:
 
     def __init__(self):
         self.song_queue = []  # list of (song, volume_levels, time) tuples
+        self.last_update_time = 0
+
+        self._master_volume = 1
+        self._target_master_volume = self._master_volume
+        self._master_volume_rate_of_change = 1  # per sec
 
     def current_song(self) -> MultiChannelSong:
         if len(self.song_queue) > 0:
             return self.song_queue[0][0]
         else:
             return None
+
+    def set_master_volume(self, volume, rate_of_change=0.1):
+        self._target_master_volume = volume
+        self._master_volume_rate_of_change = rate_of_change
 
     def _sort_and_refresh_queue(self, cur_time=None):
         if cur_time is None:
@@ -115,13 +155,20 @@ class LoopFader:
 
     def set_song(self, song_id: str, volume_levels=1, fadeout=0, fadein=0):
         """
-        :param song_id: id of the next song to play.
+        :param song_id: id of the next song to play, or (id, volume_levels) tuple
         :param volume_levels: sequence of volume levels, or a single number (to set all channels to the same volume).
         :param fadeout: how long (in seconds) to fade-out the current song (ignored if next song == current song).
         :param fadein: how long (in seconds) to fade-in the new song.
         """
         cur_time = pygame.time.get_ticks()
-        if song_id is None:
+
+        # sometimes it's convenient to pass in the id + volume levels as a single item
+        if isinstance(song_id, tuple):
+            song_id, volume_levels = song_id
+
+        if song_id == CONTINUE_CURRENT:
+            return  # no-op
+        elif song_id is None:
             song_id = SILENCE
 
         song = _get_song_lazily(song_id)
@@ -161,8 +208,12 @@ class LoopFader:
 
         self._sort_and_refresh_queue(cur_time)
 
+        self.last_update_time = cur_time
+
     def update(self):
         cur_time = pygame.time.get_ticks()
+        ellapsed_time_ms = cur_time - self.last_update_time
+
         self._sort_and_refresh_queue(cur_time)
 
         cur_song_info = self.song_queue[0] if len(self.song_queue) >= 1 else None
@@ -170,12 +221,15 @@ class LoopFader:
             return
         cur_song = cur_song_info[0]
 
+        do_start = False
+        needs_update = False
+
         next_song_info = self.song_queue[1] if len(self.song_queue) >= 2 else None
         if next_song_info is None or cur_time < cur_song_info[2] or cur_song != next_song_info[0]:
             # no fading is occurring, so just ensure the current song is playing
             if not cur_song.is_playing():
-                cur_song.set_volumes(cur_song_info[1])
-                cur_song.start()
+                needs_update |= cur_song.set_volumes(cur_song_info[1], update_now=False)
+                do_start = True
         else:
             # fading between two volume levels in the same song
             fade_duration = next_song_info[2] - cur_song_info[2]
@@ -185,8 +239,25 @@ class LoopFader:
                 prog = (cur_time - cur_song_info[2]) / fade_duration
             cur_volume_levels = util.linear_interp(cur_song_info[1], next_song_info[1], prog)
 
-            cur_song.set_volumes(cur_volume_levels)
+            needs_update |= cur_song.set_volumes(cur_volume_levels, update_now=False)
             if not cur_song.is_playing():
-                cur_song.start()
+                do_start = True
+
+        # handle master volume fades
+        if self._master_volume != self._target_master_volume:
+            if self._master_volume_rate_of_change == 0:
+                self._master_volume = self._target_master_volume
+            else:
+                change = self._master_volume_rate_of_change * ellapsed_time_ms * 1000.0
+                if self._master_volume < self._target_master_volume:
+                    self._master_volume = min(self._master_volume + change, self._target_master_volume)
+                else:
+                    self._master_volume = max(self._master_volume - change, self._target_master_volume)
+            needs_update |= cur_song.set_master_volume(self._master_volume, update_now=False)
+
+        if needs_update:
+            cur_song.update()
+        if do_start:
+            cur_song.start()
 
 

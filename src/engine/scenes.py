@@ -64,7 +64,7 @@ class Scene:
     def should_do_cursor_updates(self):
         return True
 
-    def get_cursor_id_at(self, xy):
+    def get_cursor_id_at(self, xy) -> str:
         return None
 
 
@@ -75,6 +75,7 @@ class SceneManager:
             raise ValueError("current scene can't be None")
         cur_scene._manager = self
         self._active_scene = cur_scene
+        cur_scene.became_active()
 
         self._next_scene = None
         self._next_scene_delay = 0

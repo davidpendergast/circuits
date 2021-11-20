@@ -24,10 +24,9 @@ import src.game.overworld as overworld
 import src.game.ui as ui
 import src.engine.spritesheets as spritesheets
 import src.game.worlds as worlds
-import src.engine.threedee as threedee
-import src.engine.threedeecine as threedeecine
 import src.game.cinematics as cinematics
 import src.game.dialog as dialog
+import src.game.songsystem as songsystem
 
 
 class CircuitsSceneManager(scenes.SceneManager):
@@ -120,6 +119,9 @@ class MainMenuScene(scenes.Scene):
         for spr in self.cine_seq.all_sprites():
             yield spr
 
+    def became_active(self):
+        songsystem.get_instance().set_song(songsystem.MAIN_MENU_SONG, fadein=0.5, fadeout=0.5)
+
 
 class InstructionsScene(scenes.Scene):
 
@@ -169,6 +171,9 @@ class InstructionsScene(scenes.Scene):
 
     def get_cursor_id_at(self, xy):
         return const.CURSOR_HAND
+
+    def became_active(self):
+        songsystem.get_instance().set_song(songsystem.INSTRUCTION_MENU_SONG, fadein=0.5, fadeout=0.5)
 
 
 class OptionSelectScene(scenes.Scene):
