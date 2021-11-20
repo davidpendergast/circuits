@@ -492,9 +492,14 @@ class _BaseGameScene(scenes.Scene):
         if self._world_view is not None:
             self._world_view.update()
 
+    def update_song(self):
+        pass
+
     def update(self):
         if self._world is not None:
             self._world.update()
+
+        self.update_song()
 
         # TODO why process inputs *after* updating world? because it never matters...?
         if inputs.get_instance().mouse_in_window():
@@ -560,7 +565,7 @@ class Statuses:
 
 class _GameState:
 
-    def __init__(self, bp, status=Statuses.WAITING):
+    def __init__(self, bp: blueprints.LevelBlueprint, status=Statuses.WAITING):
         self.bp = bp
 
         self._status = status
@@ -668,7 +673,7 @@ class _GameState:
         return self._currently_alive[player_idx]
 
     def is_dead(self, player_idx):
-        return player_idx <= self._active_player_idx and not self.is_alive(player_idx)
+        return not self.is_waiting() and player_idx <= self._active_player_idx and not self.is_alive(player_idx)
 
     def set_alive(self, player_idx, val):
         self._currently_alive[player_idx] = val
@@ -709,6 +714,20 @@ class _GameState:
                 self.set_playing_back(idx, False)
 
             self.set_alive(idx, player is not None)
+
+    def get_song(self):
+        song_id = self.bp.song_id()
+        if song_id is None:
+            return songsystem.SILENCE
+        else:
+            volumes = [0] * songsystem.num_instruments(song_id)
+            for i in range(0, self.get_active_player_idx() + 1):
+                if not self.is_dead(i):
+                    p_type = self.get_player_type(i)
+                    for inst_idx in self.bp.get_instruments(p_type.get_id()):
+                        if 0 <= inst_idx < len(volumes):
+                            volumes[inst_idx] = 1
+            return song_id, volumes
 
 
 class TopPanelUi(ui.UiElement):
@@ -869,6 +888,9 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         _BaseGameScene.update_sprites(self)
         dialog.DialogScene.update_sprites(self)
         self._update_ui()
+
+    def update_song(self):
+        songsystem.get_instance().set_song(self._state.get_song(), fadein=1)
 
     def update(self):
         dialog.DialogScene.update(self)

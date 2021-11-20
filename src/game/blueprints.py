@@ -692,6 +692,17 @@ TIME_LIMIT = "time_limit"       # time limit for level
 LEVEL_ID = "level_id"           # identifier for level
 DESCRIPTION = "description"     # level flavor text
 
+SONG_ID = "song_id"             # song associated with the level
+INSTRUMENTS = "instruments"     # mapping from player_id to instrument track(s) it controls
+
+
+_DEFAULT_INSTRUMENT_MAPPING = {
+    playertypes.PlayerTypes.FAST.get_id():   2,   # mid tone
+    playertypes.PlayerTypes.SMALL.get_id():  0,   # drums
+    playertypes.PlayerTypes.HEAVY.get_id():  1,   # bass
+    playertypes.PlayerTypes.FLYING.get_id(): 3    # hight tone
+}
+
 
 class LevelBlueprint:
 
@@ -717,6 +728,21 @@ class LevelBlueprint:
 
     def level_id(self):
         return util.read_string(self.json_blob, LEVEL_ID, "???")
+
+    def song_id(self):
+        return util.read_string(self.json_blob, SONG_ID, "machinations")  # TODO change to None
+
+    def get_instruments(self, player_ids):
+        if INSTRUMENTS in self.json_blob:
+            mapping = self.json_blob[INSTRUMENTS]
+        else:
+            mapping = _DEFAULT_INSTRUMENT_MAPPING
+
+        res = set()
+        for p_id in util.listify(player_ids):
+            if p_id in mapping:
+                res.update(util.listify(mapping[p_id]))
+        return res
 
     def copy_with(self, name=None, level_id=None, description=None, edits=None):
         if edits is None:

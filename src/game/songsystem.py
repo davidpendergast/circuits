@@ -124,6 +124,11 @@ def _get_song_lazily(song_id) -> MultiChannelSong:
     return _LOADED_SONGS[song_id]
 
 
+def num_instruments(song_id) -> int:
+    song = _get_song_lazily(song_id)
+    return len(song.sounds)
+
+
 class LoopFader:
 
     def __init__(self):
