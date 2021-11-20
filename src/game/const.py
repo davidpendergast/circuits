@@ -17,8 +17,10 @@ MENU_CANCEL = "menu_cancel"
 RESET = "reset"
 SOFT_RESET = "soft_reset"
 
+# debug keybinds
 NEXT_LEVEL_DEBUG = "next"
 TOGGLE_SPRITE_MODE_DEBUG = "toggle_sprite_mode"
+UNLOCK_ALL_DEBUG = "unlock_all"
 TOGGLE_PLAYER_TYPE = "toggle_player_type"
 TEST_KEY_1 = "test_1"
 TEST_KEY_2 = "test_2"

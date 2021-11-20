@@ -8,6 +8,8 @@ _SPRITE_MODES = [
     ("slope_only", re.compile(r".*slope.*"))
 ]
 
+_UNLOCK_ALL = False
+
 
 def toggle_debug_sprite_mode():
     global _CUR_SPRITE_MODE
@@ -21,3 +23,12 @@ def should_show_debug_sprite_with_name(name):
     else:
         regex = _SPRITE_MODES[_CUR_SPRITE_MODE][1]
         return re.match(regex, name)
+
+
+def do_unlock_all():
+    global _UNLOCK_ALL
+    _UNLOCK_ALL = True
+
+
+def is_all_unlocked():
+    return _UNLOCK_ALL

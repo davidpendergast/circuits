@@ -96,6 +96,7 @@ class MultiChannelSong:
 
 # Songs
 MACHINATIONS = "machinations"
+RADIATION = "radiation"
 
 SILENCE = "~silence~"                    # literally just silent
 CONTINUE_CURRENT = "~continue_current~"  # a no-op when passed to set_song
