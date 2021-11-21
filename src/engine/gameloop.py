@@ -219,11 +219,13 @@ class _GameLoop:
 
             globaltimer.inc_tick_count()
 
-            if globaltimer.tick_count() % configs.target_fps == 0:
+            if globaltimer.get_show_fps():
+                if globaltimer.tick_count() % 20 == 0:
+                    window.get_instance().set_caption_info("FPS", "{:.1f}".format(globaltimer.get_fps()))
+            elif globaltimer.tick_count() % configs.target_fps == 0:
                 if globaltimer.get_fps() < 0.9 * configs.target_fps and configs.is_dev and not slo_mo_mode:
                     print("WARN: fps drop: {} ({} sprites)".format(round(globaltimer.get_fps() * 10) / 10.0,
                                                                    renderengine.get_instance().count_sprites()))
-
             if slo_mo_mode:
                 self._slo_mo_timer += 1
             elif self._slo_mo_timer > 0:

@@ -502,6 +502,12 @@ class AbstractBlockEntity(Entity):
     def __init__(self, x, y, w=None, h=None):
         Entity.__init__(self, x, y, w=w, h=h)
 
+        # lighting calculations are a bit expensive, so we only update each block once per X frames,
+        # and we apply a random offset so they aren't all updating on the same frame.
+        self._cached_color_this_frame = [-1, colors.WHITE]
+        self._color_recalc_period = 10
+        self._color_recalc_offset = random.randint(0, self._color_recalc_period)
+
     def update(self):
         super().update()
 
@@ -524,23 +530,29 @@ class AbstractBlockEntity(Entity):
         elif not include_lighting or not gs.get_instance().settings().get(gs.Settings.SHOW_LIGHTING):
             return base_color
         else:
-            w = self.get_world()
-            dark_color = colors.darken(base_color, 0.333)
-            bright_color = colors.lighten(base_color, 0.333)
-            if w is not None:
-                light_sources = w.all_light_sources_at_pt(self.get_center(), exact=False)
-                # light_sources = w.all_light_sources_in_rect(self.get_rect(), exact=False)
-                max_dist_factor = 0
-                for l in light_sources:
-                    light_center, radius, color, strength = l
-                    # dist = util.dist_from_point_to_rect(light_center, self.get_rect())
-                    dist = util.dist(light_center, self.get_center())
-                    dist_factor = min(1, (1 - (dist / radius) ** 2) * strength)
-                    max_dist_factor = max(max_dist_factor, dist_factor)
+            cur_tick = gs.get_instance().tick_count()
+            last_recalc_tick = self._cached_color_this_frame[0]
+            if last_recalc_tick < 0 or (last_recalc_tick != cur_tick
+                                        and (cur_tick - self._color_recalc_offset) % self._color_recalc_period == 0):
+                w = self.get_world()
+                dark_color = colors.darken(base_color, 0.333)
+                bright_color = colors.lighten(base_color, 0.333)
+                if w is not None:
+                    light_sources = w.all_light_sources_at_pt(self.get_center(), exact=False)
+                    max_dist_factor = 0
+                    for l in light_sources:
+                        light_center, radius, color, strength = l
+                        # dist = util.dist_from_point_to_rect(light_center, self.get_rect())
+                        dist = util.dist(light_center, self.get_center())
+                        dist_factor = min(1, (1 - (dist / radius) ** 2) * strength)
+                        max_dist_factor = max(max_dist_factor, dist_factor)
 
-                color = util.linear_interp(dark_color, bright_color, max_dist_factor)
-                return colors.to_floatn(colors.to_intn(color))
-            return dark_color
+                    color = util.linear_interp(dark_color, bright_color, max_dist_factor)
+                    dark_color = colors.to_floatn(colors.to_intn(color))
+                self._cached_color_this_frame[0] = gs.get_instance().tick_count()
+                self._cached_color_this_frame[1] = dark_color
+
+            return self._cached_color_this_frame[1]
 
     def all_sprites(self):
         for spr in self.all_debug_sprites():

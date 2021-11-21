@@ -150,7 +150,8 @@ class Settings(SaveAndLoadJsonBlob):
         if Settings.SHOW_LIGHTING == attrib:
             return bool(new_val)
         else:
-            return super().clean(attrib, new_val)
+            return new_val
+            # return super().clean(attrib, new_val)
 
     def value_changed(self, attrib, old_val, new_val):
         if attrib in (Settings.MUTE_MUSIC, Settings.MUSIC_VOLUME):

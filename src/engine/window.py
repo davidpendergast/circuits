@@ -15,7 +15,7 @@ def create_instance(window_size=(640, 480), min_size=(0, 0)):
         raise ValueError("There is already a WindowState initialized.")
 
 
-def get_instance():
+def get_instance() -> 'WindowState':
     return _INSTANCE
 
 
@@ -27,6 +27,9 @@ class WindowState:
         self._min_size = min_size
 
         self._cached_fullscreen_size = None
+
+        self._caption = "Game"
+        self._caption_info = {}  # str -> str, for example "FPS" -> "60.0"
 
     def _get_mods(self):
         mods = pygame.OPENGL | pygame.HWSURFACE | pygame.DOUBLEBUF
@@ -41,6 +44,7 @@ class WindowState:
 
     def show(self):
         self._update_display_mode()
+        self._update_caption()
 
     def _update_display_mode(self):
         if self._is_fullscreen:
@@ -58,7 +62,27 @@ class WindowState:
             render_eng.reset_for_display_mode_change(new_surface)
 
     def set_caption(self, title):
-        pygame.display.set_caption(title)
+        if title != self._caption:
+            self._caption = title
+            self._update_caption()
+
+    def set_caption_info(self, name, value):
+        if value is None:
+            if name in self._caption_info:
+                del self._caption_info[name]
+                self._update_caption()
+        elif (name not in self._caption_info or self._caption_info[name] != value):
+            self._caption_info[name] = value
+            self._update_caption()
+
+    def _update_caption(self):
+        cap = self._caption
+        if len(self._caption_info) > 0:
+            info = []
+            for name in self._caption_info:
+                info.append("{}={}".format(name, self._caption_info[name]))
+            cap += " (" + ", ".join(info) + ")"
+        pygame.display.set_caption(cap)
 
     def set_icon(self, surface):
         pygame.display.set_icon(surface)

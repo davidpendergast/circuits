@@ -6,6 +6,8 @@ _TICK_COUNT = 0
 _TICK_TIMES = [time.time()] * 10
 _TICK_TIME_IDX = 0
 
+_SHOW_FPS = False
+
 
 def tick_count():
     """returns: How many 'ticks' the game has been running for. This number will never decrease on subsequent calls."""
@@ -34,3 +36,12 @@ def get_fps():
         return 999
     else:
         return (len(_TICK_TIMES) - 1) / elapsed_time
+
+
+def get_show_fps():
+    return _SHOW_FPS
+
+
+def set_show_fps(val):
+    global _SHOW_FPS
+    _SHOW_FPS = val

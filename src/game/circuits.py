@@ -13,6 +13,9 @@ import src.engine.inputs as inputs
 import src.engine.readme_writer as readme_writer
 import src.engine.cursors as cursors
 import src.engine.scenes as scenes
+import src.engine.globaltimer as globaltimer
+import src.engine.window as window
+import src.engine.renderengine as renderengine
 import src.utils.util as util
 
 import src.game.globalstate as gs
@@ -131,6 +134,9 @@ class CircuitsGame(game.Game):
             (const.CURSOR_INVIS, [32, 0, 16, 16], (0, 0))
         ])
 
+        if configs.is_dev:
+            globaltimer.set_show_fps(True)
+
         gs.get_instance().load_data_from_disk()
 
         scenes.set_instance(menus.CircuitsSceneManager(menus.MainMenuScene()))
@@ -159,6 +165,9 @@ class CircuitsGame(game.Game):
         gs.get_instance().update()
 
         songsystem.get_instance().update()
+
+        if configs.is_dev and globaltimer.tick_count() % 15 == 0:
+            window.get_instance().set_caption_info("SPRITES", renderengine.get_instance().count_sprites())
 
         return not gs.get_instance().should_exit()
 
