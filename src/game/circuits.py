@@ -50,6 +50,8 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
         keybinds.get_instance().set_binding(const.SOFT_RESET, [pygame.K_z, pygame.K_BACKSPACE])
 
+        keybinds.get_instance().set_binding(const.TOGGLE_MUTE, [pygame.K_m])
+
         # debug commands
         keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
@@ -151,6 +153,8 @@ class CircuitsGame(game.Game):
         yield layers.ImageLayer(spriteref.ULTRA_OMEGA_GAMMA_TOP_IMAGE_LAYER, 10005, sort_sprites=True)
 
     def update(self):
+        self._handle_global_keybinds()
+
         scenes.get_instance().update()
         gs.get_instance().update()
 
@@ -169,6 +173,14 @@ class CircuitsGame(game.Game):
             yield spr
         for spr in scenes.get_instance().all_sprites():
             yield spr
+
+    def _handle_global_keybinds(self):
+        if inputs.get_instance().was_pressed(const.TOGGLE_MUTE):
+            is_muted = (gs.get_instance().settings().get(gs.Settings.MUTE_MUSIC) and
+                        gs.get_instance().settings().get(gs.Settings.EFFECTS_VOLUME))
+            print(f"INFO: {'unmuting' if is_muted else 'muting'} audio")
+            gs.get_instance().settings().set(gs.Settings.MUTE_MUSIC, not is_muted)
+            gs.get_instance().settings().set(gs.Settings.MUTE_EFFECTS, not is_muted)
 
 
 def _update_readme():

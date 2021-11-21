@@ -3,6 +3,7 @@ import pygame
 
 import os
 import traceback
+import src.game.globalstate as gs
 
 import src.utils.util as util
 
@@ -71,9 +72,10 @@ class MultiChannelSong:
             return False
 
     def update(self):
+        volume_from_prefs = gs.get_instance().settings().music_volume()
         for i, v in enumerate(self._volumes):
             if i < len(self.sounds):
-                self.sounds[i].set_volume(v * self._master_volume * self._adjusted_volume)
+                self.sounds[i].set_volume(v * self._master_volume * self._adjusted_volume * volume_from_prefs)
         if len(self._volumes) < len(self.sounds):
             for i in range(len(self._volumes), len(self.sounds)):
                 self.sounds[i].set_volume(0)
@@ -140,6 +142,8 @@ class LoopFader:
         self._target_master_volume = self._master_volume
         self._master_volume_rate_of_change = 1  # per sec
 
+        self._dirty = False  # if true, means a volume refresh is needed
+
     def current_song(self) -> MultiChannelSong:
         if len(self.song_queue) > 0:
             return self.song_queue[0][0]
@@ -149,6 +153,9 @@ class LoopFader:
     def set_master_volume(self, volume, rate_of_change=0.1):
         self._target_master_volume = volume
         self._master_volume_rate_of_change = rate_of_change
+
+    def mark_dirty(self):
+        self._dirty = True
 
     def _sort_and_refresh_queue(self, cur_time=None):
         if cur_time is None:
@@ -228,7 +235,7 @@ class LoopFader:
         cur_song = cur_song_info[0]
 
         do_start = False
-        needs_update = False
+        needs_update = self._dirty
 
         next_song_info = self.song_queue[1] if len(self.song_queue) >= 2 else None
         if next_song_info is None or cur_time < cur_song_info[2] or cur_song != next_song_info[0]:
@@ -265,5 +272,7 @@ class LoopFader:
             cur_song.update()
         if do_start:
             cur_song.start()
+
+        self._dirty = False
 
 

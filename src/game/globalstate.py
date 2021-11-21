@@ -60,19 +60,31 @@ class SaveAndLoadJsonBlob:
             return self.get_default_val(attrib)
 
     def set(self, attrib, val):
+        if attrib in self.json_blob and self.json_blob != val:
+            old_val = self.json_blob[attrib]
+        else:
+            old_val = None
         self.json_blob[attrib] = val
+        self.value_changed(attrib, old_val, val)
+
+    def value_changed(self, attrib, old_val, new_val):
+        pass
 
 
 class SaveData(SaveAndLoadJsonBlob):
 
     COMPLETED_LEVELS = "completed_levels"
 
+    _DEFAULTS = {
+        COMPLETED_LEVELS: {}
+    }
+
     def __init__(self):
         super().__init__()
 
     def get_default_val(self, attrib):
-        if attrib == SaveData.COMPLETED_LEVELS:
-            return {}
+        if attrib in SaveData._DEFAULTS:
+            return SaveData._DEFAULTS[attrib]
         else:
             return None
 
@@ -111,12 +123,26 @@ class Settings(SaveAndLoadJsonBlob):
 
     SHOW_LIGHTING = "show_lighting"
 
+    MUTE_MUSIC = "mute_music"
+    MUSIC_VOLUME = "music_volume"
+
+    MUTE_EFFECTS = "mute_effects"
+    EFFECTS_VOLUME = "effects_volume"
+
+    _DEFAULTS = {
+        SHOW_LIGHTING: True,
+        MUTE_MUSIC: False,
+        MUSIC_VOLUME: 1,
+        MUTE_EFFECTS: False,
+        EFFECTS_VOLUME: 1
+    }
+
     def __init__(self):
         super().__init__()
 
     def get_default_val(self, attrib):
-        if attrib == Settings.SHOW_LIGHTING:
-            return True
+        if attrib in Settings._DEFAULTS:
+            return Settings._DEFAULTS[attrib]
         else:
             return None
 
@@ -125,6 +151,17 @@ class Settings(SaveAndLoadJsonBlob):
             return bool(new_val)
         else:
             return super().clean(attrib, new_val)
+
+    def value_changed(self, attrib, old_val, new_val):
+        if attrib in (Settings.MUTE_MUSIC, Settings.MUSIC_VOLUME):
+            import src.game.songsystem as songsystem
+            songsystem.get_instance().mark_dirty()
+
+    def music_volume(self):
+        return 0.0 if self.get(Settings.MUTE_MUSIC) else float(self.get(Settings.MUSIC_VOLUME))
+
+    def effects_volume(self):
+        return 0.0 if self.get(Settings.MUTE_EFFECTS) else float(self.get(Settings.EFFECTS_VOLUME))
 
 
 class GlobalState:
