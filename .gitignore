@@ -10,7 +10,7 @@ xcfs/*
 logs/*
 *.DS_Store
 texture_atlas.png
-**/songs/**/*.json
+songs/**/*.json
 testing/*
 unused_assets/*
 levels/custom_levels/*
