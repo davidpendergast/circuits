@@ -732,9 +732,10 @@ class _GameState:
 
 class TopPanelUi(ui.UiElement):
 
-    def __init__(self, state: _GameState):
+    def __init__(self, state: _GameState, layer_id):
         ui.UiElement.__init__(self)
         self._state = state
+        self._layer_id = layer_id
         self.bg_sprite = None
         self.clock_text_sprite = None
         self.character_panel_sprites = []
@@ -747,7 +748,7 @@ class TopPanelUi(ui.UiElement):
     def update(self):
         rect = self.get_rect(absolute=True)
         if self.bg_sprite is None:
-            self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
+            self.bg_sprite = sprites.ImageSprite.new_sprite(self._layer_id, depth=100)
         self.bg_sprite = self.bg_sprite.update(new_model=spriteref.ui_sheet().top_panel_bg,
                                                new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
 
@@ -755,7 +756,7 @@ class TopPanelUi(ui.UiElement):
         active_idx = self._state.get_active_player_idx()
 
         util.extend_or_empty_list_to_length(self.character_panel_sprites, len(player_types),
-                                            creator=lambda: sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER))
+                                            creator=lambda: sprites.ImageSprite.new_sprite(self._layer_id, depth=50))
         util.extend_or_empty_list_to_length(self.character_panel_animation_sprites, len(player_types),
                                             creator=lambda: None)
         for i in range(0, len(player_types)):
@@ -769,7 +770,7 @@ class TopPanelUi(ui.UiElement):
                                                                                      new_color=color)
             if i == active_idx or self._state.was_playing_back(i):
                 if self.character_panel_animation_sprites[i] is None:
-                    self.character_panel_animation_sprites[i] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+                    self.character_panel_animation_sprites[i] = sprites.ImageSprite.new_sprite(self._layer_id)
 
                 is_first = i == 0
                 is_last = i == len(player_types) - 1
@@ -792,14 +793,14 @@ class TopPanelUi(ui.UiElement):
                                                                             new_y=card_y,
                                                                             new_model=model,
                                                                             new_color=color,
-                                                                            new_depth=10)
+                                                                            new_depth=25)
                 self.character_panel_animation_sprites[i] = anim_spr
             else:
                 self.character_panel_animation_sprites[i] = None
 
         clock_text = self.get_clock_text()
         if self.clock_text_sprite is None:
-            self.clock_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, clock_text,
+            self.clock_text_sprite = sprites.TextSprite(self._layer_id, 0, 0, clock_text,
                                                         font_lookup=spritesheets.get_default_font(mono=True))
         self.clock_text_sprite.update(new_text=clock_text)
         clock_x = rect[0] + 270 - self.clock_text_sprite.size()[0]
@@ -821,20 +822,21 @@ class TopPanelUi(ui.UiElement):
 
 class ProgressBarUi(ui.UiElement):
 
-    def __init__(self, state):
+    def __init__(self, state, layer_id):
         ui.UiElement.__init__(self)
         self._state = state
+        self._layer_id = layer_id
         self.bg_sprite = None
         self.bar_sprite = None
 
     def update(self):
         rect = self.get_rect(absolute=True)
         if self.bg_sprite is None:
-            self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
+            self.bg_sprite = sprites.ImageSprite.new_sprite(self._layer_id, depth=80)
         self.bg_sprite = self.bg_sprite.update(new_model=spriteref.ui_sheet().top_panel_progress_bar_bg,
                                                new_x=rect[0], new_y=rect[1], new_color=colors.DARK_GRAY)
         if self.bar_sprite is None:
-            self.bar_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+            self.bar_sprite = sprites.ImageSprite.new_sprite(self._layer_id, depth=60)
         # active_color = const.get_player_color(self._state.get_active_player_type(), dark=False)
         active_color = colors.WHITE
         pcnt_remaining = self._state.get_pcnt_ticks_remaining()
@@ -1018,23 +1020,35 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         self.get_world_view().update()
 
     def _update_ui(self):
-        # account for vertical camera pans
-        # the UI bar should always be drawn at the top of the level, not the screen.
-        y0 = self.get_world_view().world_pos_to_screen_pos((0, 0))[1]
+        y0 = 0  # y-position in world to draw the UI panel (might need to make this dynamic at some point)
+
+        if self._top_panel_ui is None:
+            self._top_panel_ui = TopPanelUi(self._state, spriteref.WORLD_UI_LAYER)
+        top_panel_size = self._top_panel_ui.get_size()
+
+        camera_cx = self.get_world_view().get_camera_center_in_world()[0]
+        cx = camera_cx
+
+        # let the UI follow the camera on wide levels, but don't let it go out of bounds.
+        level_x_bounds = self.get_world().camera_min_xy[0], self.get_world().camera_max_xy[0]
+        insets = int((configs.optimal_window_size[0] / configs.optimal_pixel_scale - top_panel_size[0]) / 2)
+        if level_x_bounds[0] is not None and level_x_bounds[1] is not None:
+            shift_right = cx - top_panel_size[0] // 2 - insets < level_x_bounds[0]
+            shift_left = cx + top_panel_size[0] // 2 + insets >= level_x_bounds[1]
+            if shift_left and not shift_right:
+                cx = level_x_bounds[1] - insets - top_panel_size[0] // 2
+            elif shift_right and not shift_left:
+                cx = level_x_bounds[0] + insets + top_panel_size[0] // 2
 
         y = 4
-        if self._top_panel_ui is None:
-            self._top_panel_ui = TopPanelUi(self._state)
-        top_panel_size = self._top_panel_ui.get_size()
-        display_size = renderengine.get_instance().get_game_size()
-        self._top_panel_ui.set_xy((display_size[0] // 2 - top_panel_size[0] // 2, y0 + y))
+        self._top_panel_ui.set_xy((cx - top_panel_size[0] // 2, y0 + y))
         self._top_panel_ui.update()
         y += top_panel_size[1]
 
         if self._progress_bar_ui is None:
-            self._progress_bar_ui = ProgressBarUi(self._state)
+            self._progress_bar_ui = ProgressBarUi(self._state, spriteref.WORLD_UI_LAYER)
         prog_bar_size = self._progress_bar_ui.get_size()
-        self._progress_bar_ui.set_xy((display_size[0] // 2 - prog_bar_size[0] // 2, y0 + y))
+        self._progress_bar_ui.set_xy((cx - prog_bar_size[0] // 2, y0 + y))
         self._progress_bar_ui.update()
 
     def all_sprites(self):

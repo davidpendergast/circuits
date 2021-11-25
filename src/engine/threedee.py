@@ -47,8 +47,8 @@ class Camera3D:
 
 class ThreeDeeLayer(layers.ImageLayer):
 
-    def __init__(self, layer_id, layer_depth):
-        super().__init__(layer_id, layer_depth, sort_sprites=False, use_color=False)
+    def __init__(self, layer_id, layer_z):
+        super().__init__(layer_id, layer_z, sort_sprites=False, use_color=False)
         self.camera = Camera3D()
 
     def set_camera(self, cam):

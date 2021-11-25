@@ -14,15 +14,15 @@ def assert_int(val):
 
 class _Layer:
 
-    def __init__(self, layer_id, layer_depth, sort_sprites=True, use_color=True):
+    def __init__(self, layer_id, layer_height, sort_sprites=True, use_color=True):
         """
             layer_id: The string identifier for this layer.
-            layer_depth: The depth of this layer, in relation to other layers in the engine.
+            layer_z: The z-depth of this layer, in relation to other layers in the engine. Higher z = on top.
             sort_sprites: Whether the sprites in this layer should be sorted by their depth.
             use_color: Whether this layer should use the color information in its sprites.
         """
         self._layer_id = layer_id
-        self._layer_depth = layer_depth
+        self._layer_z = layer_height
 
         self._sort_sprites = sort_sprites
         self._use_color = use_color
@@ -66,8 +66,8 @@ class _Layer:
     def color_stride(self):
         raise NotImplementedError()
 
-    def get_layer_depth(self):
-        return self._layer_depth
+    def get_layer_z(self):
+        return self._layer_z
 
     def is_dirty(self):
         raise NotImplementedError()
@@ -99,8 +99,8 @@ class ImageLayer(_Layer):
         Layer for ImageSprites.
     """
 
-    def __init__(self, layer_id, layer_depth, sort_sprites=True, use_color=True):
-        _Layer.__init__(self, layer_id, layer_depth, sort_sprites=sort_sprites, use_color=use_color)
+    def __init__(self, layer_id, layer_z, sort_sprites=True, use_color=True):
+        _Layer.__init__(self, layer_id, layer_z, sort_sprites=sort_sprites, use_color=use_color)
 
         self.images = []  # ordered list of image ids
         self._image_set = set()  # set of image ids
@@ -241,14 +241,14 @@ class ImageLayer(_Layer):
         return len(self.images)
 
     def __repr__(self):
-        return "{}({}, {}, {}, {})".format(type(self).__name__, self.get_layer_id(), self.get_layer_depth(),
+        return "{}({}, {}, {}, {})".format(type(self).__name__, self.get_layer_id(), self.get_layer_z(),
                                            self.is_sorted(), self.is_color())
 
 
 class PolygonLayer(ImageLayer):
 
-    def __init__(self, layer_id, layer_depth, sort_sprites=True):
-        ImageLayer.__init__(self, layer_id, layer_depth, sort_sprites=sort_sprites, use_color=True)
+    def __init__(self, layer_id, layer_z, sort_sprites=True):
+        ImageLayer.__init__(self, layer_id, layer_z, sort_sprites=sort_sprites, use_color=True)
 
     def accepts_sprite_type(self, sprite_type):
         return sprite_type == sprites.SpriteTypes.TRIANGLE

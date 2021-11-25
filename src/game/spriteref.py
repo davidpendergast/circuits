@@ -8,23 +8,30 @@ import src.utils.artutils as artutils
 import src.game.const as const
 import src.game.colors as colors
 import src.game.particles as particles
+
 import configs
 
+# layers listed roughly from bottom to top
+
+THREEDEE_LAYER = "3d_layer"
+
+POLYGON_LAYER = "polygon_layer"
 BLOCK_LAYER = "block_layer"
 ENTITY_LAYER = "entity_layer"
-POLYGON_LAYER = "polygon_layer"
+WORLD_UI_LAYER = "world_ui_layer"
+
 POLYGON_UI_BG_LAYER = "polygon_ui_bg_layer"
+UI_BG_LAYER = "ui_bg_layer"
+UI_FG_LAYER = "ui_fg_layer"
 POLYGON_ULTRA_OMEGA_TOP_LAYER = "polygon_ui_fg_layer"
 ULTRA_OMEGA_GAMMA_TOP_IMAGE_LAYER = "actual_top_image_layer"
-UI_FG_LAYER = "ui_fg_layer"
-UI_BG_LAYER = "ui_bg_layer"
-THREEDEE_LAYER = "3d_layer"
 
 
 def all_world_layers():
     yield BLOCK_LAYER
     yield ENTITY_LAYER
     yield POLYGON_LAYER
+    yield WORLD_UI_LAYER
 
 
 def all_3d_layers():

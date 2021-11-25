@@ -126,13 +126,13 @@ class RenderEngine:
         self.layers[layer.get_layer_id()] = layer
         
         self.ordered_layers = list(self.layers.values())
-        self.ordered_layers.sort(key=lambda x: x.get_layer_depth())
+        self.ordered_layers.sort(key=lambda x: x.get_layer_z())
         
     def remove_layer(self, layer_id):
         del self.layers[layer_id]
         
         self.ordered_layers = list(self.layers.values())
-        self.ordered_layers.sort(key=lambda x: x.get_layer_depth())
+        self.ordered_layers.sort(key=lambda x: x.get_layer_z())
 
     def get_layer(self, layer_id):
         return self.layers[layer_id]

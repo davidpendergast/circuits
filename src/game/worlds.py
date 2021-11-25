@@ -145,8 +145,10 @@ class World:
         cs = gs.get_instance().cell_size
         if rect[2] <= 0 or rect[3] <= 0:
             return []
-        start_cell = (rect[0] // cs, rect[1] // cs)
-        end_cell = ((rect[0] + rect[2] - 1) // cs, (rect[1] + rect[3] - 1) // cs)
+        start_cell = (int(rect[0] / cs),
+                      int(rect[1] / cs))
+        end_cell = (int((rect[0] + rect[2] - 1) / cs),
+                    int((rect[1] + rect[3] - 1) / cs))
         for x in range(start_cell[0], end_cell[0] + 1):
             for y in range(start_cell[1], end_cell[1] + 1):
                 yield (x, y)

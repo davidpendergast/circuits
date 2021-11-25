@@ -51,8 +51,7 @@ class WorldView:
             player = self._world.get_player()
             if player is not None:
                 rect = player.get_rect()
-                # new_cam_center = (rect[0] + rect[2] // 2, rect[1] + rect[3] // 2)
-                new_cam_center = (rect[0] + rect[2] // 2, None)
+                new_cam_center = (rect[0] + rect[2] // 2, rect[1] + rect[3] // 2)
                 self.set_camera_center_in_world(new_cam_center)
                 self._world.constrain_camera(self)
 
