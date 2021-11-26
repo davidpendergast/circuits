@@ -171,8 +171,11 @@ class PlayerTypes:
         return PlayerTypes._ALL_TYPES
 
     @staticmethod
-    def get_type(ident):
+    def get_type(ident, or_else_throw=True):
         for ptype in PlayerTypes._ALL_TYPES:
             if ident == ptype.get_id() or str(ident).upper() == ptype.get_letter().upper():
                 return ptype
-        raise ValueError("unrecognized player type: {}".format(ident))
+        if or_else_throw:
+            raise ValueError("unrecognized player type: {}".format(ident))
+        else:
+            return None

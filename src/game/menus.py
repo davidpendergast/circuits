@@ -977,6 +977,22 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
     def handle_esc_pressed(self):
         self.on_level_exit()
 
+    def start_dialog(self, dialog_frag):
+        super().start_dialog(dialog_frag)
+
+        def _get_center():
+            p = self.get_world().get_player(must_be_active=True)
+            if p is not None:
+                return p.get_center()
+            else:
+                return None
+        self.get_world_view().set_temp_zoom(2, center=_get_center, delay=20)
+
+    def on_dialog_end(self):
+        super().on_dialog_end()
+
+        self.get_world_view().set_temp_zoom(None, delay=20)
+
     def setup_new_world_with_delay(self, bp, delay, new_state, runnable=lambda: None):
         self._queued_next_world = (bp, new_state, runnable)
         self._next_world_countdown = delay

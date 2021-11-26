@@ -3293,7 +3293,7 @@ class InfoEntity(Entity):
         self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh
 
         if self._dialog_id is not None and overlapping and self._should_show_text and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
-            d = dialog.get_dialog(self._dialog_id, p.get_player_type())
+            d = dialog.get_dialog(self._dialog_id, p.get_player_type(), self._info_type)
             if d is not None:
                 self._ticks_overlapping_player = -60  # so that we can't insta-reactivate dialog after this one is over
                 import src.engine.scenes as scenes

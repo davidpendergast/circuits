@@ -10,19 +10,53 @@ import src.engine.inputs as inputs
 import src.utils.util as util
 import src.game.globalstate as gs
 import configs
+import src.game.playertypes as playertypes
+
+
+_ALL_META_SPEAKER_IDS = []
+_ALL_NON_META_SPEAKER_IDS = []
+
+
+def _speaker_id(val, meta=False):
+    if meta:
+        _ALL_META_SPEAKER_IDS.append(val)
+    else:
+        _ALL_NON_META_SPEAKER_IDS.append(val)
+    return val
 
 
 class Speaker:
-    A = const.PLAYER_FAST
-    B = const.PLAYER_SMALL
-    C = const.PLAYER_HEAVY
-    D = const.PLAYER_FLYING
+    A = _speaker_id(const.PLAYER_FAST)
+    B = _speaker_id(const.PLAYER_SMALL)
+    C = _speaker_id(const.PLAYER_HEAVY)
+    D = _speaker_id(const.PLAYER_FLYING)
+
+    NONE = _speaker_id("none")
+    UNKNOWN = _speaker_id("unknown")
+
+    PLAYER = _speaker_id("player_type", meta=True)  # the type of the active player
+    OTHER = _speaker_id("speaker_type", meta=True)  # the type of the thing that was interacted with
+
+    @staticmethod
+    def resolve(obj):
+        if isinstance(obj, playertypes.PlayerType):
+            obj = obj.get_id()
+
+        from src.game.entities import InfoEntityType
+        if isinstance(obj, InfoEntityType):
+            obj = obj.get_id()
+
+        if isinstance(obj, str):
+            for s_id in _ALL_NON_META_SPEAKER_IDS:
+                if s_id == obj:
+                    return s_id
 
 
 class DialogFragment:
 
-    def __init__(self, text, speaker=None):
+    def __init__(self, text, speaker=None, id_resolver={}):
         self.speaker_id = speaker
+        self.id_resolver = id_resolver
         self.text = text
         self.next_options = []  # (answer, DialogFragment)
 
@@ -47,10 +81,14 @@ class DialogFragment:
             return None
 
     def get_speaker_sprites(self):
-        if self.speaker_id is None:
+        speaker_id = self.speaker_id
+        if speaker_id in self.id_resolver:
+            speaker_id = self.id_resolver[speaker_id]
+
+        if speaker_id is None:
             return []
         else:
-            return spriteref.object_sheet().get_speaker_portrait_sprites(self.speaker_id)
+            return spriteref.object_sheet().get_speaker_portrait_sprites(speaker_id)
 
 
 def link(*frags):
@@ -69,6 +107,7 @@ class DialogElement(ui.UiElement):
 
     def __init__(self, dialog: DialogFragment):
         super().__init__()
+
         self.current_dialog = dialog
 
         self.current_dialog_ticks = 0
@@ -106,8 +145,7 @@ class DialogElement(ui.UiElement):
 
         if self.speaker_sprite is None:
             self.speaker_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
-        speaker_id = self.current_dialog.speaker_id
-        all_sprites = spriteref.object_sheet().get_speaker_portrait_sprites(speaker_id)
+        all_sprites = self.current_dialog.get_speaker_sprites()
         speaker_img = all_sprites[gs.get_instance().anim_tick() // 8 % len(all_sprites)]
 
         speaker_sc = 3
@@ -224,7 +262,7 @@ class DialogScene(scenes.Scene):
         if configs.is_dev:
             import pygame
             if inputs.get_instance().was_pressed(pygame.K_F6):
-                self.dialog_manager.set_dialog(get_test_dialog())
+                self.dialog_manager.set_dialog(get_test_dialog())  # XXX no id lookups here
 
     def update_impl(self):
         raise NotImplementedError()
@@ -235,7 +273,11 @@ class DialogScene(scenes.Scene):
                 yield spr
 
 
-def get_test_dialog():
+def get_test_dialog(lookup={}):
+    return link(DialogFragment("Here's some test dialog.", speaker=Speaker.OTHER, id_resolver=lookup),
+                DialogFragment("And here's a test reply.", speaker=Speaker.PLAYER, id_resolver=lookup))
+
+def get_multi_char_test_dialog():
     return link(DialogFragment("Here's some test text.", speaker=Speaker.A),
                 DialogFragment("And here's a test reply.", speaker=Speaker.B),
                 DialogFragment("Dialog adds a lot of life to a game, don't you think? I'm just going to add a bit more "
@@ -244,5 +286,10 @@ def get_test_dialog():
                 DialogFragment("Err... life-mimicking CPU cycles, I mean.", speaker=Speaker.C))
 
 
-def get_dialog(dialog_id, player_type):
-    return get_test_dialog()
+def get_dialog(dialog_id, player_type, other_type):
+    lookup = {
+        Speaker.PLAYER: Speaker.resolve(player_type),
+        Speaker.OTHER: Speaker.resolve(other_type)
+    }
+
+    return get_test_dialog(lookup=lookup)

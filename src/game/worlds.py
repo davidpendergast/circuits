@@ -394,9 +394,8 @@ class World:
         else:
             return False
 
-    def constrain_camera(self, worldview):
+    def constrain_camera(self, cam_rect):
         if self.camera_min_xy[0] is not None:  # this will be none if the level is empty
-            cam_rect = worldview.get_camera_rect_in_world()
             new_cam_xy = [None, None]
             if cam_rect[2] < self.camera_max_xy[0] - self.camera_min_xy[0]:
                 if cam_rect[0] + cam_rect[2] > self.camera_max_xy[0]:
@@ -416,7 +415,9 @@ class World:
                 # camera is too tall to fit within the bounds, center it
                 new_cam_xy[1] = int((self.camera_min_xy[1] + self.camera_max_xy[1]) / 2 - cam_rect[3] / 2)
 
-            worldview.set_camera_pos_in_world(new_cam_xy)
+            return [new_cam_xy[0], new_cam_xy[1], cam_rect[2], cam_rect[3]]
+        else:
+            return cam_rect
 
 
 class _Contact:

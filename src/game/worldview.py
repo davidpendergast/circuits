@@ -11,6 +11,8 @@ import src.game.spriteref as spriteref
 import src.game.colors as colors
 
 
+_ZOOM_LEVELS = (0.5, 1, 2, 3, 4)
+
 class WorldView:
 
     def __init__(self, world):
@@ -21,10 +23,16 @@ class WorldView:
         self._show_grid = True
         self._grid_line_sprites = []
 
-        self._camera_xy = (0, 0)
+        # the "true" zoom
+        self._base_zoom_idx = 1
+        self._base_camera_xy = (0, 0)
 
-        self._camera_zoom_idx = 1
-        self._zoom_levels = (0.5, 1, 2, 3, 4)
+        # the "temp" zoom, during dialog and such
+        self._temp_zoom_idx = None
+        self._temp_zoom_center_provider = lambda: self.get_camera_center_in_world(ignore_temp_zoom=True)
+        self._temp_zoom_tick_count = 0
+        self._temp_zoom_delay = 20
+        self._use_temp_zoom = False
 
     def update(self):
         zoom_change = 0
@@ -33,7 +41,13 @@ class WorldView:
         if inputs.get_instance().was_pressed(pygame.K_EQUALS):
             zoom_change += 1
         if zoom_change != 0:
-            self.adjust_zoom(zoom_change)
+            self.adjust_base_zoom(zoom_change)
+
+        if self._temp_zoom_idx is not None:
+            self._temp_zoom_tick_count = min(self._temp_zoom_delay, self._temp_zoom_tick_count + 1)
+            if not self._use_temp_zoom and self._temp_zoom_tick_count >= self._temp_zoom_delay:
+                # remove temp zoom
+                self._temp_zoom_idx = None
 
         if inputs.get_instance().was_pressed(pygame.K_f):
             self._free_camera = not self._free_camera
@@ -53,7 +67,8 @@ class WorldView:
                 rect = player.get_rect()
                 new_cam_center = (rect[0] + rect[2] // 2, rect[1] + rect[3] // 2)
                 self.set_camera_center_in_world(new_cam_center)
-                self._world.constrain_camera(self)
+                cam_rect = self._world.constrain_camera(self.get_camera_rect_in_world(ignore_temp_zoom=True))
+                self.set_camera_pos_in_world((cam_rect[0], cam_rect[1]))
 
         cam_x, cam_y = self.get_camera_pos_in_world()
 
@@ -72,58 +87,131 @@ class WorldView:
     def set_free_camera(self, val):
         self._free_camera = val
 
-    def adjust_zoom(self, dz):
-        old_center = self.get_camera_center_in_world()
+    def adjust_base_zoom(self, dz: int):
+        old_center = self.get_camera_center_in_world(ignore_temp_zoom=True)
 
-        new_zoom_idx = util.bound(int(self._camera_zoom_idx + dz), 0, len(self._zoom_levels) - 1)
-        self._camera_zoom_idx = new_zoom_idx
+        new_zoom_idx = util.bound(int(self._base_zoom_idx + dz), 0, len(_ZOOM_LEVELS) - 1)
+        self._base_zoom_idx = new_zoom_idx
         self.set_camera_center_in_world(old_center)
 
-    def get_zoom(self):
-        return self._zoom_levels[self._camera_zoom_idx]
+    def set_temp_zoom(self, zoom_idx, center=None, delay=30):
+        if zoom_idx is None:
+            if self._use_temp_zoom:
+                # return to regular zoom
+                self._use_temp_zoom = False
+                self._temp_zoom_tick_count = 0
+                self._temp_zoom_delay = delay
+        else:
+            if center is None:
+                temp_center_provider = lambda: None
+            elif isinstance(center, (list, tuple)):
+                temp_center_provider = lambda: center
+            else:
+                temp_center_provider = center
+
+            self._use_temp_zoom = True
+            self._temp_zoom_center_provider = temp_center_provider
+            self._temp_zoom_tick_count = 0
+            self._temp_zoom_delay = delay
+            self._temp_zoom_idx = zoom_idx
+
+    def get_zoom(self, ignore_temp_zoom=False):
+        base_zoom = _ZOOM_LEVELS[self._base_zoom_idx]
+        temp_zoom_prog = self._get_temp_zoom_prog()
+        if ignore_temp_zoom or temp_zoom_prog == 0:
+            return base_zoom
+        else:
+            temp_zoom = _ZOOM_LEVELS[self._temp_zoom_idx]
+            return util.linear_interp(base_zoom, temp_zoom, temp_zoom_prog)
+
+    def _get_temp_zoom_prog(self):
+        if self._temp_zoom_idx is None:
+            return 0
+        elif self._use_temp_zoom:
+            return util.bound(self._temp_zoom_tick_count / self._temp_zoom_delay, 0, 1)
+        else:
+            return util.bound(1 - self._temp_zoom_tick_count / self._temp_zoom_delay, 0, 1)
+
+    def _get_temp_zoom(self):
+        return _ZOOM_LEVELS[self._temp_zoom_idx]
+
+    def _get_temp_zoom_xy(self):
+        center = self._temp_zoom_center_provider()
+        size = self._get_camera_size_in_world_for_zoom(self._get_temp_zoom())
+        return (center[0] - size[0] // 2, center[1] - size[1] // 2)
+
+    def _get_temp_zoom_center(self):
+        backup = self.get_camera_center_in_world(ignore_temp_zoom=True)
+        if self._temp_zoom_center_provider is None:
+            return backup
+        else:
+            temp_center = self._temp_zoom_center_provider()
+            return backup if temp_center is None else temp_center
 
     def set_zoom(self, zoom_level):
-        if zoom_level in self._zoom_levels:
-            self._camera_zoom_idx = self._zoom_levels.index(zoom_level)
+        if zoom_level in _ZOOM_LEVELS:
+            self._base_zoom_idx = _ZOOM_LEVELS.index(zoom_level)
         else:
             print("ERROR: invalid zoom level, ignoring request: {}".format(zoom_level))
 
-    def get_camera_pos_in_world(self):
-        return self._camera_xy
+    def get_camera_pos_in_world(self, ignore_temp_zoom=False):
+        base_xy = self._base_camera_xy
+        temp_zoom_prog = self._get_temp_zoom_prog()
+        if ignore_temp_zoom or temp_zoom_prog == 0:
+            return base_xy
+        else:
+            base_center = self.get_camera_center_in_world(ignore_temp_zoom=True)
+            temp_center = self._temp_zoom_center_provider()
+            cur_center = util.linear_interp(base_center, temp_center, temp_zoom_prog)
+            cur_zoom = self.get_zoom()
+            size = self._get_camera_size_in_world_for_zoom(cur_zoom, integer=False)
+
+            return util.round_vec((cur_center[0] - size[0] / 2, cur_center[1] - size[1] / 2))
 
     def set_camera_pos_in_world(self, xy):
-        new_x = xy[0] if xy[0] is not None else self._camera_xy[0]
-        new_y = xy[1] if xy[1] is not None else self._camera_xy[1]
-        self._camera_xy = (new_x, new_y)
+        new_x = xy[0] if xy[0] is not None else self._base_camera_xy[0]
+        new_y = xy[1] if xy[1] is not None else self._base_camera_xy[1]
+        self._base_camera_xy = (new_x, new_y)
 
     def set_camera_center_in_world(self, xy):
-        size = self.get_camera_size_in_world()
-        new_x = xy[0] - size[0] // 2 if xy[0] is not None else self._camera_xy[0]
-        new_y = xy[1] - size[1] // 2 if xy[1] is not None else self._camera_xy[1]
-        self._camera_xy = (new_x, new_y)
+        size = self.get_camera_size_in_world(ignore_temp_zoom=True)
+        new_x = xy[0] - size[0] // 2 if xy[0] is not None else self._base_camera_xy[0]
+        new_y = xy[1] - size[1] // 2 if xy[1] is not None else self._base_camera_xy[1]
+        self._base_camera_xy = (new_x, new_y)
 
     def move_camera_in_world(self, dxy):
-        cur_pos = self.get_camera_pos_in_world()
+        cur_pos = self.get_camera_pos_in_world(ignore_temp_zoom=True)
         new_x = cur_pos[0] + dxy[0] if dxy[0] is not None else None
         new_y = cur_pos[1] + dxy[1] if dxy[1] is not None else None
         self.set_camera_pos_in_world((new_x, new_y))
 
-    def get_camera_size_in_world(self, integer=True):
+    def get_camera_size_in_world(self, ignore_temp_zoom=False, integer=True):
+        zoom = self.get_zoom(ignore_temp_zoom=ignore_temp_zoom)
+        return self._get_camera_size_in_world_for_zoom(zoom, integer=integer)
+
+    def _get_camera_size_in_world_for_zoom(self, zoom, integer=True):
         game_size = renderengine.get_instance().get_game_size()
-        zoom = self.get_zoom()
         if integer:
             return (game_size[0] // zoom, game_size[1] // zoom)
         else:
             return (game_size[0] / zoom, game_size[1] / zoom)
 
-    def get_camera_center_in_world(self):
-        size = self.get_camera_size_in_world(integer=True)
-        xy = self.get_camera_pos_in_world()
-        return (xy[0] + size[0] // 2, xy[1] + size[1] // 2)
+    def get_camera_center_in_world(self, ignore_temp_zoom=False):
+        base_size = self.get_camera_size_in_world(ignore_temp_zoom=True, integer=True)
+        base_xy = self.get_camera_pos_in_world(ignore_temp_zoom=True)
+        base_center = (base_xy[0] + base_size[0] // 2, base_xy[1] + base_size[1] // 2)
 
-    def get_camera_rect_in_world(self, integer=True, expansion=0):
-        xy = self.get_camera_pos_in_world()
-        size = self.get_camera_size_in_world(integer=integer)
+        temp_zoom_prog = self._get_temp_zoom_prog()
+        if ignore_temp_zoom or temp_zoom_prog == 0:
+            return base_center
+        else:
+            return util.round_vec(
+                util.linear_interp(base_center, self._temp_zoom_center_provider(), temp_zoom_prog)
+            )
+
+    def get_camera_rect_in_world(self, integer=True, expansion=0, ignore_temp_zoom=False):
+        xy = self.get_camera_pos_in_world(ignore_temp_zoom=ignore_temp_zoom)
+        size = self.get_camera_size_in_world(ignore_temp_zoom=ignore_temp_zoom, integer=integer)
         return [xy[0] - expansion,
                 xy[1] - expansion,
                 size[0] + expansion * 2,
