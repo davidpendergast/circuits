@@ -299,6 +299,28 @@ class SlopedQuadBlockSpecType(SpecType):
                                             color_id=json_blob[COLOR_ID])
 
 
+class FalseBlockSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "false_block", required_keys=(X, Y, W, H), optional_keys={ART_ID: 0, COLOR_ID: 0})
+
+    def build_entities(self, json_blob):
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+
+        art_id = json_blob[ART_ID]
+        color_id = json_blob[COLOR_ID]
+
+        yield entities.FalseBlockEntity(x, y, w, h, art_id=art_id, color_id=color_id)
+
+    def get_art_ids(self, spec):
+        size = (spec[W] // gs.get_instance().cell_size, spec[H] // gs.get_instance().cell_size)
+        n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
+        return [i for i in range(0, n_block_sprites)]
+
+
 class StartBlockSpecType(SpecType):
 
     def __init__(self):
@@ -659,6 +681,7 @@ class SpecTypes:
     BLOCK = BlockSpecType()
     MOVING_BLOCK = MovingBlockSpecType()
     SLOPE_BLOCK_QUAD = SlopedQuadBlockSpecType()
+    FALSE_BLOCK = FalseBlockSpecType()
     PLAYER = PlayerSpecType()
     START_BLOCK = StartBlockSpecType()
     END_BLOCK = EndBlockSpecType()

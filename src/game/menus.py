@@ -1877,6 +1877,7 @@ class LevelEditGameScene(_BaseGameScene):
         res.append(blueprints.SpecTypes.TELEPORTER.get_default_blob())          # 0
 
         res.append(blueprints.SpecTypes.INFO.get_default_blob())                # shift + 1
+        res.append(blueprints.SpecTypes.FALSE_BLOCK.get_default_blob())         # shift + 2
 
         return res
 

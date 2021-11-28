@@ -3156,6 +3156,40 @@ class InfoEntityType:
         return self.ident
 
 
+class FalseBlockEntity(BlockEntity):
+    """Block that doesn't prevent movement and gradually disappears when you enter it"""
+
+    REVEAL_TIME = 60  # how long it takes to reveal
+
+    def is_block(self):
+        return False  # not a block in any real sense (collisions, mainly)
+
+    def __init__(self, x, y, w, h, art_id=0, color_id=0):
+        super().__init__(x, y, w=w, h=h, art_id=art_id, color_id=color_id)
+
+        self.reveal_ticks = 0
+
+        self.set_colliders([])  # nothing should collide with this
+
+        player_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR,))
+        self._player_sensor_id = player_sensor.get_id()
+        self._sensor_ent = SensorEntity([0, 0, w, h], [player_sensor], parent=self)
+
+    def get_color(self, ignore_override=False, include_lighting=True):
+        base_color = super().get_color(ignore_override=ignore_override, include_lighting=include_lighting)
+
+        # goes to black as it becomes more revealed
+        reveal_prog = util.bound(self.reveal_ticks / FalseBlockEntity.REVEAL_TIME, 0, 1)
+        return colors.darken(base_color, reveal_prog)
+
+    def update(self):
+        super().update()
+
+        # TODO check if it contains player, etc.
+
+
+
+
 class InfoEntityTypes:
 
     EXCLAM = InfoEntityType("exclam", False, lambda: spriteref.object_sheet().info_exclamation, floating_type=True)
