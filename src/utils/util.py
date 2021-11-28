@@ -794,6 +794,48 @@ def bfs(start_node, is_correct, get_neighbors,
         return path
 
 
+def djikstras(nodes, connections, start_nodes):
+    """
+    param nodes: iterable of all nodes
+    param connections: dict of node -> iterable of tuples (neighbor, distance)
+    param start_nodes: starting node(s)
+    return: dict of node -> tuple (distance from any start node, prev_node),
+            with distance = float('inf') for nodes that can't be reached.
+    """
+    c = {}
+    for n1 in connections:
+        c[n1] = set()
+        for n2_dist in connections[n1]:
+            if n2_dist[1] < 0:
+                raise ValueError("cannot have negative distances")
+            c[n1].add((n2_dist[0], n2_dist[1]))
+
+    res = {n: (float('inf'), None) for n in nodes}
+
+    H = []  # min-heap of (total_dist, from_node, to_node)
+
+    for s in start_nodes:
+        res[s] = (0, None)
+        if s in connections:
+            for n2_dist in connections[s]:
+                heapq.heappush(H, (n2_dist[1], s, n2_dist[0]))
+
+            del connections[s]
+
+    while len(H) > 0:
+        d, n1, n2 = heapq.heappop(H)
+        if d < res[n2][0]:
+            res[n2] = (d, n1)
+            if n2 in connections:
+                for n3_dist in connections[n2]:
+                    heapq.heappush(H, (d + n3_dist[1], n2, n3_dist[0]))
+                del connections[n2]
+        else:
+            pass  # we've already found a better path for this node
+
+    return res
+
+
 def add_to_list(val, the_list):
     the_list.append(val)
     return val

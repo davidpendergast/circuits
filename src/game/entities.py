@@ -490,6 +490,12 @@ class Entity:
         else:
             return False
 
+    def __lt__(self, other):
+        if isinstance(other, Entity):
+            return self._ent_id < other._ent_id
+        else:
+            return True
+
     def __hash__(self):
         return self._ent_id
 
@@ -3159,10 +3165,7 @@ class InfoEntityType:
 class FalseBlockEntity(BlockEntity):
     """Block that doesn't prevent movement and gradually disappears when you enter it"""
 
-    REVEAL_TIME = 60  # how long it takes to reveal
-
-    def is_block(self):
-        return False  # not a block in any real sense (collisions, mainly)
+    REVEAL_TIME = 16
 
     def __init__(self, x, y, w, h, art_id=0, color_id=0):
         super().__init__(x, y, w=w, h=h, art_id=art_id, color_id=color_id)
@@ -3172,8 +3175,16 @@ class FalseBlockEntity(BlockEntity):
         self.set_colliders([])  # nothing should collide with this
 
         player_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR,))
-        self._player_sensor_id = player_sensor.get_id()
+        self.player_sensor_id = player_sensor.get_id()
         self._sensor_ent = SensorEntity([0, 0, w, h], [player_sensor], parent=self)
+
+        self.last_revealed_tick = -1
+
+    def all_sub_entities(self):
+        yield self._sensor_ent
+
+    def is_block(self):
+        return False  # not a block in any real sense (collisions, mainly)
 
     def get_color(self, ignore_override=False, include_lighting=True):
         base_color = super().get_color(ignore_override=ignore_override, include_lighting=include_lighting)
@@ -3185,9 +3196,69 @@ class FalseBlockEntity(BlockEntity):
     def update(self):
         super().update()
 
-        # TODO check if it contains player, etc.
+        # every block auto-decays by one
+        if self.reveal_ticks > 0:
+            self.reveal_ticks -= 1
 
+        cur_tick = gs.get_instance().tick_count()
+        if self.last_revealed_tick == cur_tick:
+            pass  # already been updated by another linked block
+        elif len(self.get_world().get_sensor_state(self.player_sensor_id)) > 0:
+            # this block is responsible for updating its linked neighbors
+            for block, deg in self.self_and_all_linked_neighbors_with_degrees():
+                block.last_revealed_tick = cur_tick
 
+                # blocks closer to player get revealed faster
+                if deg == 0 or cur_tick % (2 ** deg) == 0:
+                    block.reveal_ticks = block.reveal_ticks + 1
+
+                # offset the auto-decay if it's connected at all, and apply an upper bound
+                block.reveal_ticks = min(block.reveal_ticks + 1, FalseBlockEntity.REVEAL_TIME + 1)
+
+    def self_and_all_linked_neighbors_with_degrees(self):
+        """
+        :return: (neighbor: FalseBlockEntity, degree: int)
+        """
+        graph = {}     # FalseBlockEntity -> set of linked FalseBlockEntity
+        all_nodes = set()
+        start_nodes = set()
+
+        q = [self]
+
+        seen = set()
+        seen.add(self)
+
+        while len(q) > 0:
+            block = q.pop()
+            all_nodes.add(block)
+            if len(self.get_world().get_sensor_state(block.player_sensor_id)) > 0:
+                start_nodes.add(block)
+
+            if block not in graph:
+                graph[block] = set()
+
+            for n in block.get_linked_neighbors():
+                graph[block].add((n, 1))
+
+                if n not in seen:
+                    seen.add(n)
+                    q.append(n)
+
+        distances = util.djikstras(all_nodes, graph, start_nodes)
+
+        res = []
+        for n in distances:
+            if distances[n][0] != float('inf'):
+                res.append((n, distances[n][0]))
+        res.sort(key=lambda n: n[1])
+
+        return res
+
+    def get_linked_neighbors(self) -> typing.List['FalseBlockEntity']:
+        search_rect = util.rect_expand(self.get_rect(with_xy_perturbs=False), all_expand=1)
+        for n in self.get_world().all_entities_in_rect(search_rect, cond=lambda e: isinstance(e, FalseBlockEntity)):
+            if n != self:
+                yield n
 
 
 class InfoEntityTypes:
