@@ -1665,6 +1665,7 @@ class LevelEditGameScene(_BaseGameScene):
             camera_zoom = self.get_world_view().get_zoom()
 
         super().setup_new_world(bp)
+        self.get_world().set_is_being_edited(True)
         self._refresh_entities()
 
         self.get_world_view().set_free_camera(True)

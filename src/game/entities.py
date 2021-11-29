@@ -8,6 +8,7 @@ import src as src  # for typing~
 
 import src.utils.util as util
 import src.engine.sprites as sprites
+import src.engine.spritesheets as spritesheets
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
 import configs as configs
@@ -3172,11 +3173,13 @@ class FalseBlockEntity(BlockEntity):
 
         self.reveal_ticks = 0
 
-        self.set_colliders([])  # nothing should collide with this
+        self.set_colliders([])  # nothing should ever collide with this
 
         player_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR,))
         self.player_sensor_id = player_sensor.get_id()
         self._sensor_ent = SensorEntity([0, 0, w, h], [player_sensor], parent=self)
+
+        self._x_sprite_for_editor = None
 
         self.last_revealed_tick = -1
 
@@ -3214,6 +3217,36 @@ class FalseBlockEntity(BlockEntity):
 
                 # offset the auto-decay if it's connected at all, and apply an upper bound
                 block.reveal_ticks = min(block.reveal_ticks + 1, FalseBlockEntity.REVEAL_TIME + 1)
+
+    def update_sprites(self):
+        super().update_sprites()
+
+        # add a signal in the editor to distinguish it from real blocks
+        if self.get_world().is_being_edited():
+            font = spritesheets.get_default_font(small=False, mono=True)
+            if self._x_sprite_for_editor is None:
+                self._x_sprite_for_editor = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, "x", scale=1,
+                                                               font_lookup=font)
+            char_size = font.get_char("X").size()
+            scale = 1
+            self._x_sprite_for_editor.update(new_color=colors.PERFECT_BLACK,
+                                             new_scale=scale,
+                                             new_outline_thickness=scale,
+                                             new_outline_color=colors.PERFECT_WHITE,
+                                             new_depth=-10)
+            c_xy = self.get_center()
+            self._x_sprite_for_editor.update(new_x=c_xy[0] - ((char_size[0] - 1) * scale) // 2,
+                                             new_y=c_xy[1] - ((char_size[1] + 1) * scale) // 2)
+        else:
+            self._x_sprite_for_editor = None
+
+    def all_sprites(self):
+        for spr in super().all_sprites():
+            yield spr
+        if self._x_sprite_for_editor is not None:
+            # it looks cooler if it flashes~
+            if (gs.get_instance().anim_tick() // 8) % 2 == 0:
+                yield self._x_sprite_for_editor
 
     def self_and_all_linked_neighbors_with_degrees(self):
         """

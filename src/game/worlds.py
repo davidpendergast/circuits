@@ -42,6 +42,7 @@ class World:
         self.kill_zones = []  # list of rects that kill actors when they enter (overriding safe zones)
 
         self._orig_blueprint = bp
+        self._is_being_edited = False
 
         self._tick = 0
 
@@ -57,6 +58,12 @@ class World:
             return True
         else:
             return state.is_waiting()
+
+    def set_is_being_edited(self, val):
+        self._is_being_edited = val
+
+    def is_being_edited(self):
+        return self._is_being_edited
 
     def set_safe_zones(self, safe_zones, kill_zones=()):
         self.safe_zones = safe_zones
