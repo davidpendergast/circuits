@@ -474,6 +474,9 @@ class Entity:
     def is_teleporter(self):
         return isinstance(self, TeleporterBlock)
 
+    def is_camera_bound_marker(self):
+        return isinstance(self, CameraBoundMarker)
+
     def can_be_picked_up(self):
         # might add more pick-uppdable things later, but for now it's just players
         return self.is_player() and self.get_player_type().can_be_grabbed()
@@ -3447,6 +3450,31 @@ class InfoEntity(Entity):
 
         for spr in self._point_sprite_list_for_editor:
             yield spr
+
+
+class CameraBoundMarker(Entity):
+
+    def __init__(self, x, y, idx):
+        super().__init__(x, y, w=16, h=16)
+        self.idx = idx
+
+        self._sprite = None
+
+    def get_idx(self):
+        return self.idx
+
+    def update_sprites(self):
+        if self.get_world().is_being_edited():
+            if self._sprite is None:
+                self._sprite = sprites.ImageSprite.new_sprite(spriteref.WORLD_UI_LAYER)
+            self._sprite = self._sprite.update(new_model=spriteref.object_sheet().get_camera_boundary_sprite(self.idx),
+                                               new_x=self.get_x(),
+                                               new_y=self.get_y())
+        else:
+            self._sprite = None
+
+    def all_sprites(self):
+        yield self._sprite
 
 
 class CollisionMask:

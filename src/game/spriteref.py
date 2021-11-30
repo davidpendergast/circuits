@@ -208,6 +208,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.info_question = (None, None)
 
         self.teleporter_blocks = []  # list of (rim, arrow, inner_detail, outer_detail)
+        self.camera_boundary_blocks = []
 
     def get_size(self, img_size):
         return (img_size[0] + self.extra_space[0], img_size[1] + self.extra_space[1])
@@ -409,6 +410,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             tp_sprites = tuple([_img(tp_xy[0] + j * 32, tp_xy[1] + i * 16, 32, 16, offs=start_pos) for j in range(4)])
             self.teleporter_blocks.append(tp_sprites)
 
+        self.camera_boundary_blocks = [_img(232 + 16 * (i % 5), 352 + 16 * (i // 5), 16, 16, offs=start_pos) for i in range(10)]
+
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
         all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms
         res = []
@@ -428,6 +431,9 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         :return: (main_sprite, arrow_fill, inner_detail, outer_detail)
         """
         return util.index_into(self.teleporter_blocks, angle_pcnt + 0.5 / len(self.teleporter_blocks), wrap=True)
+
+    def get_camera_boundary_sprite(self, idx):
+        return self.camera_boundary_blocks[idx % len(self.camera_boundary_blocks)]
 
     def get_particle_sprite(self, particle_type: particles.ParticleType, idx):
         sprites = self.particles[particle_type]
