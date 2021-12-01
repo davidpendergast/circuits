@@ -421,6 +421,32 @@ class TeleporterSpecType(SpecType):
         yield entities.TeleporterBlock(x, y, w, h, channel, not inverted, mode)
 
 
+class CameraBoundMarkerSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "camera_bound_marker", required_keys=(SUBTYPE_ID, X, Y, COLOR_ID),
+                          optional_keys={INVERTED: False})
+
+    def get_subtypes(self):
+        return ["{}X".format(i) for i in range(10)]
+
+    def get_color_ids(self, spec):
+        return [x for x in range(10)]
+
+    def build_entities(self, json_blob):
+        x = json_blob[X]
+        y = json_blob[Y]
+
+        show_timer = not json_blob[INVERTED]  # show timer by default
+
+        # SUBTYPE_ID and COLOR_ID gives a 2-digit ID number
+        idx_tens_place = int(json_blob[SUBTYPE_ID][0])
+        idx_ones_place = json_blob[COLOR_ID]
+        idx = idx_tens_place * 10 + idx_ones_place
+
+        yield entities.CameraBoundMarker(x, y, idx, show_timer=show_timer)
+
+
 class SpikeSpecType(SpecType):
 
     def __init__(self):
@@ -691,6 +717,7 @@ class SpecTypes:
     FALLING_BLOCK = FallingBlockSpecType()
     DIALOG_TRIGGER = DialogTriggerSpecType()
     TELEPORTER = TeleporterSpecType()
+    CAMERA_BOUND_MARKER = CameraBoundMarkerSpecType()
 
     DOOR_BLOCK = DoorBlockSpecType()
     KEY_BLOCK = KeySpecType()

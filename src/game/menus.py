@@ -1356,7 +1356,7 @@ class LevelEditGameScene(_BaseGameScene):
         self.resolution_options = [cs // 8, cs // 4, cs // 2, cs]  # essentially assumes cs >= 16
         self.camera_speed = 8  # ticks per move (smaller == faster)
 
-        self.object_pallette = self._load_object_pallette()
+        self.object_pallette = build_object_pallette()
         self.sidepanel = self._setup_sidepanel()
 
         self._dirty = False  # whether the current state is different from the last-saved state
@@ -1816,7 +1816,7 @@ class LevelEditGameScene(_BaseGameScene):
         if color_id is not None:
             return spriteref.get_color(color_id, dark=True)
         else:
-            return artutils.darker(ent.get_color(ignore_override=True), pcnt=0.30)
+            return colors.darken(ent.get_color(ignore_override=True), 0.30)
 
     def set_selected(self, spec, select=True):
         if spec is None:
@@ -1863,24 +1863,6 @@ class LevelEditGameScene(_BaseGameScene):
                 return
 
             self._world_view = worldview.WorldView(self._world)
-
-    def _load_object_pallette(self):
-        res = []
-        res.append(blueprints.SpecTypes.BLOCK.get_default_blob())               # 1
-        res.append(blueprints.SpecTypes.START_BLOCK.get_default_blob())         # 2
-        res.append(blueprints.SpecTypes.END_BLOCK.get_default_blob())           # 3
-        res.append(blueprints.SpecTypes.SLOPE_BLOCK_QUAD.get_default_blob())    # 4
-        res.append(blueprints.SpecTypes.MOVING_BLOCK.get_default_blob())        # 5
-        res.append(blueprints.SpecTypes.DOOR_BLOCK.get_default_blob())          # 6
-        res.append(blueprints.SpecTypes.KEY_BLOCK.get_default_blob())           # 7
-        res.append(blueprints.SpecTypes.SPIKES.get_default_blob())              # 8
-        res.append(blueprints.SpecTypes.FALLING_BLOCK.get_default_blob())       # 9
-        res.append(blueprints.SpecTypes.TELEPORTER.get_default_blob())          # 0
-
-        res.append(blueprints.SpecTypes.INFO.get_default_blob())                # shift + 1
-        res.append(blueprints.SpecTypes.FALSE_BLOCK.get_default_blob())         # shift + 2
-
-        return res
 
     def get_pallette_object(self, idx):
         if 0 <= idx < len(self.object_pallette):
@@ -2110,6 +2092,25 @@ class ObjectPlacementMouseMode(MouseMode):
                 self.scene.set_spec_type_to_place(None)
             else:
                 self.scene.set_spec_type_to_place(obj_type)
+
+
+def build_object_pallette():
+    return [
+        blueprints.SpecTypes.BLOCK.get_default_blob(),                  # 1
+        blueprints.SpecTypes.START_BLOCK.get_default_blob(),            # 2
+        blueprints.SpecTypes.END_BLOCK.get_default_blob(),              # 3
+        blueprints.SpecTypes.SLOPE_BLOCK_QUAD.get_default_blob(),       # 4
+        blueprints.SpecTypes.MOVING_BLOCK.get_default_blob(),           # 5
+        blueprints.SpecTypes.DOOR_BLOCK.get_default_blob(),             # 6
+        blueprints.SpecTypes.KEY_BLOCK.get_default_blob(),              # 7
+        blueprints.SpecTypes.SPIKES.get_default_blob(),                 # 8
+        blueprints.SpecTypes.FALLING_BLOCK.get_default_blob(),          # 9
+        blueprints.SpecTypes.TELEPORTER.get_default_blob(),             # 0
+
+        blueprints.SpecTypes.INFO.get_default_blob(),                   # shift + 1
+        blueprints.SpecTypes.FALSE_BLOCK.get_default_blob(),            # shift + 2
+        blueprints.SpecTypes.CAMERA_BOUND_MARKER.get_default_blob()     # shift + 3
+    ]
 
 
 class Test3DScene(scenes.Scene):

@@ -3454,14 +3454,23 @@ class InfoEntity(Entity):
 
 class CameraBoundMarker(Entity):
 
-    def __init__(self, x, y, idx):
+    def __init__(self, x, y, idx, show_timer=True):
         super().__init__(x, y, w=16, h=16)
         self.idx = idx
+        self.show_timer = show_timer
 
         self._sprite = None
+        self._number_sprites = []
+        self._timer_sprite = None
 
     def get_idx(self):
         return self.idx
+
+    def get_color(self, ignore_override=False):
+        if ignore_override:
+            return colors.PERFECT_WHITE
+        else:
+            return super().get_color(ignore_override=ignore_override)
 
     def update_sprites(self):
         if self.get_world().is_being_edited():
@@ -3469,12 +3478,42 @@ class CameraBoundMarker(Entity):
                 self._sprite = sprites.ImageSprite.new_sprite(spriteref.WORLD_UI_LAYER)
             self._sprite = self._sprite.update(new_model=spriteref.object_sheet().get_camera_boundary_sprite(self.idx),
                                                new_x=self.get_x(),
-                                               new_y=self.get_y())
+                                               new_y=self.get_y(),
+                                               new_color=self.get_color())
+            numbers = [int(c) for c in str(self.idx)]
+            util.extend_or_empty_list_to_length(
+                self._number_sprites,
+                len(numbers),
+                creator=lambda: sprites.ImageSprite.new_sprite(spriteref.WORLD_UI_LAYER, depth=-5))
+            for i, c in enumerate(numbers):
+                model = spriteref.level_builder_sheet().number_icons[c]
+                self._number_sprites[i] = self._number_sprites[i].update(
+                    new_model=model,
+                    new_x=self.get_x() + self.get_w() - 1 - (model.width() - 1) * (len(numbers) - i),
+                    new_y=self.get_y() + self.get_h() - model.height(),
+                    new_color=self.get_color())
+
+            if self.show_timer:
+                if self._timer_sprite is None:
+                    self._timer_sprite = sprites.ImageSprite.new_sprite(spriteref.WORLD_UI_LAYER, depth=-3)
+                model = spriteref.level_builder_sheet().clock_icon
+                self._timer_sprite = self._timer_sprite.update(
+                    new_model=model,
+                    new_x=self.get_x(),
+                    new_y=self.get_y() + self.get_h() - model.height(),
+                    new_color=self.get_color())
+            else:
+                self._timer_sprite = None
         else:
             self._sprite = None
+            self._number_sprites.clear()
+            self._timer_sprite = None
 
     def all_sprites(self):
         yield self._sprite
+        yield self._timer_sprite
+        for spr in self._number_sprites:
+            yield spr
 
 
 class CollisionMask:

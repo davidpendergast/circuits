@@ -410,7 +410,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             tp_sprites = tuple([_img(tp_xy[0] + j * 32, tp_xy[1] + i * 16, 32, 16, offs=start_pos) for j in range(4)])
             self.teleporter_blocks.append(tp_sprites)
 
-        self.camera_boundary_blocks = [_img(232 + 16 * (i % 5), 352 + 16 * (i // 5), 16, 16, offs=start_pos) for i in range(10)]
+        self.camera_boundary_blocks = [_img(232 + 16 * i, 352, 16, 16, offs=start_pos) for i in range(5)]
 
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
         all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms
@@ -838,6 +838,9 @@ class _LevelBuilderSheet(spritesheets.SpriteSheet):
         self.level_builder_expand_button = None
         self.level_builder_contract_button = None
 
+        self.number_icons = []
+        self.clock_icon = None
+
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
 
@@ -855,6 +858,10 @@ class _LevelBuilderSheet(spritesheets.SpriteSheet):
 
         self.level_builder_expand_button = _img(112, 16, 8, 24, offs=start_pos)
         self.level_builder_contract_button = _img(120, 16, 8, 24, offs=start_pos)
+
+        offs = (160, 96)
+        self.number_icons = [_img(offs[0] + 5 * i, offs[1], 5, 7, offs=start_pos) for i in range(10)]
+        self.clock_icon = _img(offs[0], offs[1] + 7, 7, 7, offs=start_pos)
 
 
 class _StarSheet(spritesheets.SpriteSheet):
