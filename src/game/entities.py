@@ -3516,6 +3516,82 @@ class CameraBoundMarker(Entity):
             yield spr
 
 
+class AbstractZoneEntity(Entity):
+
+    def __init__(self, x, y, w, h, must_be_fully_inside=True, entity_filter=lambda e: True):
+        super().__init__(x, y, w, h)
+        self.must_be_fully_inside = must_be_fully_inside
+        self.entity_filter = entity_filter
+
+        self._editor_icon_sprite = None
+        self._editor_rect_sprite = None
+
+    def update(self):
+        super().update()
+
+        my_rect = self.get_rect()
+        for e in self.get_world().all_entities_in_rect(my_rect, cond=self.entity_filter):
+            if not self.must_be_fully_inside or util.rect_contains(my_rect, e.get_rect(with_xy_perturbs=False)):
+                self.handle_entity(e)
+
+        self.update_sprites()
+
+    def update_sprites(self):
+        if self.get_world().is_being_edited():
+            if self._editor_rect_sprite is None:
+                self._editor_rect_sprite = sprites.RectangleOutlineSprite(spriteref.POLYGON_LAYER)
+            self._editor_rect_sprite = self._editor_rect_sprite.update(new_rect=self.get_rect(),
+                                                                       new_color=self.get_rect_color(),
+                                                                       new_outline=1)
+            icon_model = self.get_editor_icon_model()
+            if icon_model is not None:
+                if self._editor_icon_sprite is None:
+                    self._editor_icon_sprite = sprites.ImageSprite.new_sprite(spriteref.WORLD_UI_LAYER)
+                c_xy = self.get_center()
+                self._editor_icon_sprite = self._editor_icon_sprite.update(new_model=self.get_editor_icon_model(),
+                                                                           new_x=c_xy[0] - icon_model.width() // 2,
+                                                                           new_y=c_xy[1] - icon_model.height() // 2,
+                                                                           new_color=self.get_color())
+            else:
+                self._editor_icon_sprite = None
+        else:
+            self._editor_rect_sprite = None
+            self._editor_icon_sprite = None
+
+    def all_sprites(self):
+        for spr in super().all_sprites():
+            yield spr
+        if self._editor_icon_sprite is not None:
+            yield self._editor_icon_sprite
+        if self._editor_rect_sprite is not None:
+            yield self._editor_rect_sprite
+
+    def get_rect_color(self):
+        raise NotImplementedError()
+
+    def get_editor_icon_model(self):
+        raise NotImplementedError()
+
+    def handle_entity(self, ent):
+        raise NotImplementedError()
+
+
+class KillZoneEntity(AbstractZoneEntity):
+
+    def __init__(self, x, y, w, h):
+        super().__init__(x, y, w, h, must_be_fully_inside=True, entity_filter=lambda e: e.is_player())
+
+    def get_rect_color(self):
+        return colors.PERFECT_RED
+
+    def get_editor_icon_model(self):
+        return spriteref.object_sheet().skull_icon
+
+    def handle_entity(self, ent: PlayerEntity):
+        if isinstance(ent, PlayerEntity):
+            ent.set_death_reason(DeathReason.OUT_OF_BOUNDS)
+
+
 class CollisionMask:
 
     def __init__(self, name, is_solid=True, is_sensor=False, render_depth=20):

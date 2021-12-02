@@ -210,6 +210,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.teleporter_blocks = []  # list of (rim, arrow, inner_detail, outer_detail)
         self.camera_boundary_blocks = []
 
+        self.skull_icon = None
+
     def get_size(self, img_size):
         return (img_size[0] + self.extra_space[0], img_size[1] + self.extra_space[1])
 
@@ -411,6 +413,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             self.teleporter_blocks.append(tp_sprites)
 
         self.camera_boundary_blocks = [_img(232 + 16 * i, 352, 16, 16, offs=start_pos) for i in range(5)]
+        self.skull_icon = _img(232, 368, 16, 16, offs=start_pos)
 
     def get_spikes_with_length(self, length, tops=True, overflow_if_not_divisible=True):
         all_spikes = self.all_spike_tops if tops else self.all_spike_bottoms

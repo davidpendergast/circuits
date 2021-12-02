@@ -447,6 +447,37 @@ class CameraBoundMarkerSpecType(SpecType):
         yield entities.CameraBoundMarker(x, y, idx, show_timer=show_timer)
 
 
+class ZoneSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "zone", required_keys=(SUBTYPE_ID, X, Y, W, H),
+                          optional_keys={ART_ID: 0})
+
+    def get_subtypes(self):
+        return ["kill_zone"]
+
+    def get_art_ids(self, spec):
+        return [0]
+
+    def get_default_value(self, k):
+        if k == W or k == H:
+            return 32
+        else:
+            return super().get_default_value(k)
+
+    def build_entities(self, json_blob):
+        subtype_id = json_blob[SUBTYPE_ID]
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+
+        if subtype_id == "kill_zone":
+            yield entities.KillZoneEntity(x, y, w, h)
+        else:
+            raise NotImplementedError("unrecognized SUBTYPE_ID: {}".format(subtype_id))
+
+
 class SpikeSpecType(SpecType):
 
     def __init__(self):
@@ -717,10 +748,12 @@ class SpecTypes:
     FALLING_BLOCK = FallingBlockSpecType()
     DIALOG_TRIGGER = DialogTriggerSpecType()
     TELEPORTER = TeleporterSpecType()
-    CAMERA_BOUND_MARKER = CameraBoundMarkerSpecType()
-
     DOOR_BLOCK = DoorBlockSpecType()
     KEY_BLOCK = KeySpecType()
+
+    CAMERA_BOUND_MARKER = CameraBoundMarkerSpecType()
+    ZONE = ZoneSpecType()
+
 
     @staticmethod
     def get(type_id) -> SpecType:

@@ -189,8 +189,14 @@ def rect_expand(rect, all_expand=0, left_expand=0, right_expand=0, up_expand=0, 
             rect[3] + (up_expand + down_expand + 2 * all_expand)]
 
 
-def rect_contains(rect, v):
-    return rect[0] <= v[0] < rect[0] + rect[2] and rect[1] <= v[1] < rect[1] + rect[3]
+def rect_contains(rect, v_or_rect):
+    if len(v_or_rect) == 4:
+        r = v_or_rect
+        return (rect[0] <= r[0] <= rect[0] + rect[2] - r[2] and
+                rect[1] <= r[1] <= rect[1] + rect[3] - r[3])
+    else:
+        v = (v_or_rect[0], v_or_rect[1])
+        return rect[0] <= v[0] < rect[0] + rect[2] and rect[1] <= v[1] < rect[1] + rect[3]
 
 
 def constrain_point_to_rect(rect, p):
