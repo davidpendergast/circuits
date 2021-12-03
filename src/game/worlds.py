@@ -348,12 +348,12 @@ class World:
                     actor_rect = actor.get_rect()
                     actor_oob = False
                     if not actor_oob:
-                        any_safe_zone_contains = False
+                        any_safe_zone_intersects = False
                         for safe_rect in self.safe_zones:
-                            if util.rect_contains(safe_rect, actor_rect):
-                                any_safe_zone_contains = True
+                            if util.rects_intersect(safe_rect, actor_rect):
+                                any_safe_zone_intersects = True
                                 break
-                        if len(self.safe_zones) > 0 and not any_safe_zone_contains:
+                        if len(self.safe_zones) > 0 and not any_safe_zone_intersects:
                             actor_oob = True
                     if actor_oob:
                         actor.fell_out_of_bounds()
