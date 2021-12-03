@@ -13,6 +13,7 @@ import src.game.colors as colors
 
 _ZOOM_LEVELS = (0.5, 1, 2, 3, 4)
 
+
 class WorldView:
 
     def __init__(self, world):
@@ -22,6 +23,8 @@ class WorldView:
 
         self._show_grid = True
         self._grid_line_sprites = []
+
+        self._entities_to_render = []
 
         # the "true" zoom
         self._base_zoom_idx = 1
@@ -64,7 +67,6 @@ class WorldView:
         if not self._free_camera:
             player = self._world.get_player()
             if player is not None:
-
                 center = player.get_center()
                 for cb in self._world.all_camera_bounds_containing(center):
                     self._world.set_active_camera_idx(cb[0])
@@ -76,10 +78,13 @@ class WorldView:
                 cam_rect = self._world.constrain_camera(self.get_camera_rect_in_world(ignore_temp_zoom=True))
                 self.set_camera_pos_in_world((cam_rect[0], cam_rect[1]))
 
+        camera_bound_rect = self._world.get_camera_bound()
         cam_x, cam_y = self.get_camera_pos_in_world()
 
+        self._entities_to_render = [ent for ent in self._calc_entities_to_render_this_frame(inside_rect=camera_bound_rect)]
+
         # update the sprites of entities near the camera
-        for ent in self.get_entities_to_render_this_frame():
+        for ent in self._entities_to_render:
             ent.update_sprites()
 
         self._update_grid_line_sprites()
@@ -223,9 +228,11 @@ class WorldView:
                 size[0] + expansion * 2,
                 size[1] + expansion * 2]
 
-    def get_entities_to_render_this_frame(self):
+    def _calc_entities_to_render_this_frame(self, inside_rect=None):
         buffer_zone = gs.get_instance().cell_size * 4
         render_zone = self.get_camera_rect_in_world(integer=True, expansion=buffer_zone)
+        if inside_rect is not None:
+            render_zone = util.get_rect_intersect(render_zone, inside_rect)
         for ent in self._world.all_entities_in_rect(render_zone):
             yield ent
 
@@ -276,7 +283,7 @@ class WorldView:
             self._grid_line_sprites.clear()
 
     def all_sprites(self):
-        for ent in self.get_entities_to_render_this_frame():
+        for ent in self._entities_to_render:
             if gs.get_instance().debug_render:
                 for spr in ent.all_debug_sprites():
                     yield spr
