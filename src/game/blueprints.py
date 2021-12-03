@@ -905,22 +905,33 @@ class LevelBlueprint:
                 print("ERROR: failed to build blob: {}".format(blob))
                 traceback.print_exc()
 
-        camera_min_xy = [None, None]
-        camera_max_xy = [None, None]
+        has_camera_markers = False
+
+        min_xy_with_data = [None, None]
+        max_xy_with_data = [None, None]
         for ent in world.all_entities():
             if ent.is_block():
-                camera_min_xy[0] = min(camera_min_xy[0] if camera_min_xy[0] is not None else float('inf'), ent.get_rect()[0])
-                camera_max_xy[0] = max(camera_max_xy[0] if camera_max_xy[0] is not None else -float('inf'), ent.get_rect()[0] + ent.get_rect()[2])
-                camera_min_xy[1] = min(camera_min_xy[1] if camera_min_xy[1] is not None else float('inf'), ent.get_rect()[1])
-                camera_max_xy[1] = max(camera_max_xy[1] if camera_max_xy[1] is not None else -float('inf'), ent.get_rect()[1] + ent.get_rect()[3])
-        world.set_camera_bounds(camera_min_xy, camera_max_xy)
+                min_xy_with_data[0] = min(min_xy_with_data[0] if min_xy_with_data[0] is not None else float('inf'), ent.get_rect()[0])
+                max_xy_with_data[0] = max(max_xy_with_data[0] if max_xy_with_data[0] is not None else -float('inf'), ent.get_rect()[0] + ent.get_rect()[2])
+                min_xy_with_data[1] = min(min_xy_with_data[1] if min_xy_with_data[1] is not None else float('inf'), ent.get_rect()[1])
+                max_xy_with_data[1] = max(max_xy_with_data[1] if max_xy_with_data[1] is not None else -float('inf'), ent.get_rect()[1] + ent.get_rect()[3])
 
-        if camera_max_xy[0] is not None:
-            safe_zone = [camera_min_xy[0],
-                         camera_min_xy[1],
-                         camera_max_xy[0] - camera_min_xy[0],
-                         camera_max_xy[1] - camera_min_xy[1]]
-            safe_zone = util.rect_expand(safe_zone, gs.get_instance().cell_size * 0.5)
+            if ent.is_camera_bound_marker():
+                has_camera_markers = True
+
+        if not has_camera_markers and min_xy_with_data[0] is not None:
+            min_camera_block = entities.CameraBoundMarker(min_xy_with_data[0], min_xy_with_data[1], 0, show_timer=True)
+            max_camera_block = entities.CameraBoundMarker(max_xy_with_data[0] - min_camera_block.get_w(),
+                                                          max_xy_with_data[1] - min_camera_block.get_h(),
+                                                          0, show_timer=True)
+            # world.add_entity(min_camera_block, next_update=False)
+            # world.add_entity(max_camera_block, next_update=False)
+
+        if max_xy_with_data[0] is not None:
+            safe_zone = [min_xy_with_data[0],
+                         min_xy_with_data[1],
+                         max_xy_with_data[0] - min_xy_with_data[0],
+                         max_xy_with_data[1] - min_xy_with_data[1]]
             world.set_safe_zones([safe_zone])
 
         return world

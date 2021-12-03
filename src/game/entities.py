@@ -3466,6 +3466,9 @@ class CameraBoundMarker(Entity):
     def get_idx(self):
         return self.idx
 
+    def get_show_timer(self):
+        return self.show_timer
+
     def get_color(self, ignore_override=False):
         if ignore_override:
             return colors.PERFECT_WHITE

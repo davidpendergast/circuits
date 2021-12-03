@@ -1046,7 +1046,12 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         cx = camera_cx
 
         # let the UI follow the camera on wide levels, but don't let it go out of bounds.
-        level_x_bounds = self.get_world().camera_min_xy[0], self.get_world().camera_max_xy[0]
+        camera_bound = self.get_world().get_camera_bound()
+        if camera_bound is None:
+            level_x_bounds = None, None
+        else:
+            level_x_bounds = camera_bound[0], camera_bound[0] + camera_bound[2]
+
         insets = int((configs.optimal_window_size[0] / configs.optimal_pixel_scale - top_panel_size[0]) / 2)
         if level_x_bounds[0] is not None and level_x_bounds[1] is not None:
             shift_right = cx - top_panel_size[0] // 2 - insets < level_x_bounds[0]
@@ -1735,8 +1740,9 @@ class LevelEditGameScene(_BaseGameScene):
 
         if camera_move_x != 0 or camera_move_y != 0:
             zoom = self.get_world_view().get_zoom()
-            dx = 2 * gs.get_instance().cell_size // zoom * camera_move_x
-            dy = 2 * gs.get_instance().cell_size // zoom * camera_move_y
+            cells = 1 if inputs.get_instance().shift_is_held() else 2
+            dx = cells * gs.get_instance().cell_size // zoom * camera_move_x
+            dy = cells * gs.get_instance().cell_size // zoom * camera_move_y
             self.get_world_view().move_camera_in_world((dx, dy))
 
         sidepanel_size = self.sidepanel.get_size()

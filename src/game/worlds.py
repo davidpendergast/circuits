@@ -35,11 +35,10 @@ class World:
 
         self._light_sources = util.SpacialHashMap(gs.get_instance().cell_size * 5)
 
-        self.camera_min_xy = [None, None]
-        self.camera_max_xy = [None, None]
+        self.camera_bounds = {}  # idx: int -> (boundary: rect, show_timer: bool)
+        self.active_camera_idx = -1
 
         self.safe_zones = []  # list of rects that are safe for actors to be in. if empty, the entire world is safe
-        self.kill_zones = []  # list of rects that kill actors when they enter (overriding safe zones)
 
         self._orig_blueprint = bp
         self._is_being_edited = False
@@ -65,13 +64,61 @@ class World:
     def is_being_edited(self):
         return self._is_being_edited
 
-    def set_safe_zones(self, safe_zones, kill_zones=()):
+    def set_safe_zones(self, safe_zones):
         self.safe_zones = safe_zones
-        self.kill_zones = util.listify(kill_zones)
 
-    def set_camera_bounds(self, camera_min_xy, camera_max_xy):
-        self.camera_min_xy = camera_min_xy
-        self.camera_max_xy = camera_max_xy
+    def _update_camera_bounds(self, camera_bound_markers: typing.List[entities.CameraBoundMarker]=None):
+        if camera_bound_markers is None:
+            camera_bound_markers = [e for e in self.all_entities(cond=lambda e: e.is_camera_bound_marker())]
+
+        self.camera_bounds.clear()
+
+        if len(camera_bound_markers) == 0:
+            if len(self.safe_zones) > 0:  # XXX kind of hack to use safe_zones as the fallback camera bounds
+                self.camera_bounds[0] = (util.rect_union(self.safe_zones), True)
+        else:
+            idx_to_ents = {}
+            for e in sorted(camera_bound_markers, key=lambda e: e.get_idx()):
+                idx = e.get_idx()
+                if not idx in idx_to_ents:
+                    idx_to_ents[idx] = []
+                idx_to_ents[idx].append(e)
+
+            for idx in idx_to_ents:
+                pts = []
+                show_timer = False
+                for e in idx_to_ents[idx]:
+                    pts.append(e.get_xy())
+                    pts.append(util.add(e.get_xy(), e.get_size()))
+                    show_timer = show_timer or e.get_show_timer()
+                bound = util.get_rect_containing_points(pts)
+                self.camera_bounds[idx] = (bound, show_timer)
+
+    def set_active_camera_idx(self, idx):
+        self.active_camera_idx = idx
+
+    def get_camera_bound(self):
+        if self.active_camera_idx in self.camera_bounds:
+            rect, _ = self.camera_bounds[self.active_camera_idx]
+            return rect
+        else:
+            return None
+
+    def should_show_timer(self):
+        if self.active_camera_idx in self.camera_bounds:
+            _, should_show = self.camera_bounds[self.active_camera_idx]
+            return should_show
+        else:
+            return False
+
+    def all_camera_bounds_containing(self, pts):
+        """
+        yields: generator of (idx, rect, show_timer: bool) camera boundaries containing any of the given point(s)
+        """
+        if isinstance(pts[0], (int, float)):
+            pts = [pts]
+        cb = self.camera_bounds
+        return ((idx, cb[idx][0], cb[idx][1]) for idx in cb if any(util.rect_contains(cb[idx][0], pt) for pt in pts))
 
     def has_entity(self, ent):
         return self.has_entity_with_id(ent.get_ent_id())
@@ -295,19 +342,15 @@ class World:
         for dyna in dyna_ents:
             dyna.update_frame_of_reference_parents()
 
-        if len(self.safe_zones) > 0 or len(self.kill_zones) > 0:
+        if len(self.safe_zones) > 0:
             if entities.ACTOR_GROUP in phys_groups:
                 for actor in phys_groups[entities.ACTOR_GROUP]:
-                    c_xy = actor.get_center()
+                    actor_rect = actor.get_rect()
                     actor_oob = False
-                    for kill_rect in self.kill_zones:
-                        if util.rect_contains(kill_rect, c_xy):
-                            actor_oob = True
-                            break
                     if not actor_oob:
                         any_safe_zone_contains = False
                         for safe_rect in self.safe_zones:
-                            if util.rect_contains(safe_rect, c_xy):
+                            if util.rect_contains(safe_rect, actor_rect):
                                 any_safe_zone_contains = True
                                 break
                         if len(self.safe_zones) > 0 and not any_safe_zone_contains:
@@ -321,6 +364,7 @@ class World:
                 i.set_vel((0, 0))
                 i.was_crushed()
 
+        camera_bound_markers = []
         self._light_sources.clear()
         for ent in self.entities:
             n = 0
@@ -332,6 +376,10 @@ class World:
                     self._light_sources.put("{}_{}".format(ent.get_ent_id(), n),
                                             [xy[0] - radius, xy[1] - radius, radius * 2, radius * 2],
                                             (xy, radius, color, strength))
+            if ent.is_camera_bound_marker():
+                camera_bound_markers.append(ent)
+
+        self._update_camera_bounds(camera_bound_markers)
 
         if entities.ACTOR_GROUP in phys_groups:
             for ent in phys_groups[entities.ACTOR_GROUP]:
@@ -402,25 +450,28 @@ class World:
             return False
 
     def constrain_camera(self, cam_rect):
-        if self.camera_min_xy[0] is not None:  # this will be none if the level is empty
+        active_bound = self.get_camera_bound()
+        if active_bound is not None:
+            camera_min_xy = (active_bound[0], active_bound[1])
+            camera_max_xy = (active_bound[0] + active_bound[2], active_bound[1] + active_bound[3])
             new_cam_xy = [None, None]
-            if cam_rect[2] < self.camera_max_xy[0] - self.camera_min_xy[0]:
-                if cam_rect[0] + cam_rect[2] > self.camera_max_xy[0]:
-                    new_cam_xy[0] = self.camera_max_xy[0] - cam_rect[2]
-                if cam_rect[0] < self.camera_min_xy[0]:
-                    new_cam_xy[0] = self.camera_min_xy[0]
+            if cam_rect[2] < camera_max_xy[0] - camera_min_xy[0]:
+                if cam_rect[0] + cam_rect[2] > camera_max_xy[0]:
+                    new_cam_xy[0] = camera_max_xy[0] - cam_rect[2]
+                if cam_rect[0] < camera_min_xy[0]:
+                    new_cam_xy[0] = camera_min_xy[0]
             else:
                 # camera is too wide to fit within the bounds, so center it?
-                new_cam_xy[0] = int((self.camera_max_xy[0] + self.camera_min_xy[0]) / 2 - cam_rect[2] / 2)
+                new_cam_xy[0] = int((camera_max_xy[0] + camera_min_xy[0]) / 2 - cam_rect[2] / 2)
 
-            if cam_rect[3] < self.camera_max_xy[1] - self.camera_min_xy[1]:
-                if cam_rect[1] + cam_rect[3] > self.camera_max_xy[1]:
-                    new_cam_xy[1] = self.camera_max_xy[1] - cam_rect[3]
-                elif cam_rect[1] < self.camera_min_xy[1]:
-                    new_cam_xy[1] = self.camera_min_xy[1]
+            if cam_rect[3] < camera_max_xy[1] - camera_min_xy[1]:
+                if cam_rect[1] + cam_rect[3] > camera_max_xy[1]:
+                    new_cam_xy[1] = camera_max_xy[1] - cam_rect[3]
+                elif cam_rect[1] < camera_min_xy[1]:
+                    new_cam_xy[1] = camera_min_xy[1]
             else:
                 # camera is too tall to fit within the bounds, center it
-                new_cam_xy[1] = int((self.camera_min_xy[1] + self.camera_max_xy[1]) / 2 - cam_rect[3] / 2)
+                new_cam_xy[1] = int((camera_min_xy[1] + camera_max_xy[1]) / 2 - cam_rect[3] / 2)
 
             return [new_cam_xy[0], new_cam_xy[1], cam_rect[2], cam_rect[3]]
         else:

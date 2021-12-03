@@ -64,6 +64,12 @@ class WorldView:
         if not self._free_camera:
             player = self._world.get_player()
             if player is not None:
+
+                center = player.get_center()
+                for cb in self._world.all_camera_bounds_containing(center):
+                    self._world.set_active_camera_idx(cb[0])
+                    break
+
                 rect = player.get_rect()
                 new_cam_center = (rect[0] + rect[2] // 2, rect[1] + rect[3] // 2)
                 self.set_camera_center_in_world(new_cam_center)
