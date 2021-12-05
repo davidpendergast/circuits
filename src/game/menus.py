@@ -756,7 +756,7 @@ class TopPanelUi(ui.UiElement):
         active_idx = self._state.get_active_player_idx()
 
         util.extend_or_empty_list_to_length(self.character_panel_sprites, len(player_types),
-                                            creator=lambda: sprites.ImageSprite.new_sprite(self._layer_id, depth=50))
+                                            creator=lambda: sprites.ImageSprite.new_sprite(self._layer_id, depth=15))
         util.extend_or_empty_list_to_length(self.character_panel_animation_sprites, len(player_types),
                                             creator=lambda: None)
         for i in range(0, len(player_types)):
