@@ -1036,41 +1036,44 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         self.get_world_view().update()
 
     def _update_ui(self):
-        y0 = 0  # y-position in world to draw the UI panel (might need to make this dynamic at some point)
+        if self.get_world().should_show_timer():
+            if self._top_panel_ui is None:
+                self._top_panel_ui = TopPanelUi(self._state, spriteref.WORLD_UI_LAYER)
+            top_panel_size = self._top_panel_ui.get_size()
 
-        if self._top_panel_ui is None:
-            self._top_panel_ui = TopPanelUi(self._state, spriteref.WORLD_UI_LAYER)
-        top_panel_size = self._top_panel_ui.get_size()
+            camera_cx = self.get_world_view().get_camera_center_in_world()[0]
+            cx = camera_cx
 
-        camera_cx = self.get_world_view().get_camera_center_in_world()[0]
-        cx = camera_cx
+            # let the UI follow the camera on wide levels, but don't let it go out of bounds.
+            camera_bound = self.get_world().get_camera_bound()
+            if camera_bound is not None:
+                level_x_bounds = camera_bound[0], camera_bound[0] + camera_bound[2]
 
-        # let the UI follow the camera on wide levels, but don't let it go out of bounds.
-        camera_bound = self.get_world().get_camera_bound()
-        if camera_bound is None:
-            level_x_bounds = None, None
+                insets = int((configs.optimal_window_size[0] / configs.optimal_pixel_scale - top_panel_size[0]) / 2)
+                if level_x_bounds[0] is not None and level_x_bounds[1] is not None:
+                    shift_right = cx - top_panel_size[0] // 2 - insets < level_x_bounds[0]
+                    shift_left = cx + top_panel_size[0] // 2 + insets >= level_x_bounds[1]
+                    if shift_left and not shift_right:
+                        cx = level_x_bounds[1] - insets - top_panel_size[0] // 2
+                    elif shift_right and not shift_left:
+                        cx = level_x_bounds[0] + insets + top_panel_size[0] // 2
+
+            # y-position in world to draw the UI panel
+            y0 = 0 if camera_bound is None else camera_bound[1]
+
+            y = 4
+            self._top_panel_ui.set_xy((cx - top_panel_size[0] // 2, y0 + y))
+            self._top_panel_ui.update()
+            y += top_panel_size[1]
+
+            if self._progress_bar_ui is None:
+                self._progress_bar_ui = ProgressBarUi(self._state, spriteref.WORLD_UI_LAYER)
+            prog_bar_size = self._progress_bar_ui.get_size()
+            self._progress_bar_ui.set_xy((cx - prog_bar_size[0] // 2, y0 + y))
+            self._progress_bar_ui.update()
         else:
-            level_x_bounds = camera_bound[0], camera_bound[0] + camera_bound[2]
-
-        insets = int((configs.optimal_window_size[0] / configs.optimal_pixel_scale - top_panel_size[0]) / 2)
-        if level_x_bounds[0] is not None and level_x_bounds[1] is not None:
-            shift_right = cx - top_panel_size[0] // 2 - insets < level_x_bounds[0]
-            shift_left = cx + top_panel_size[0] // 2 + insets >= level_x_bounds[1]
-            if shift_left and not shift_right:
-                cx = level_x_bounds[1] - insets - top_panel_size[0] // 2
-            elif shift_right and not shift_left:
-                cx = level_x_bounds[0] + insets + top_panel_size[0] // 2
-
-        y = 4
-        self._top_panel_ui.set_xy((cx - top_panel_size[0] // 2, y0 + y))
-        self._top_panel_ui.update()
-        y += top_panel_size[1]
-
-        if self._progress_bar_ui is None:
-            self._progress_bar_ui = ProgressBarUi(self._state, spriteref.WORLD_UI_LAYER)
-        prog_bar_size = self._progress_bar_ui.get_size()
-        self._progress_bar_ui.set_xy((cx - prog_bar_size[0] // 2, y0 + y))
-        self._progress_bar_ui.update()
+            self._top_panel_ui = None
+            self._progress_bar_ui = None
 
     def all_sprites(self):
         for spr in _BaseGameScene.all_sprites(self):
