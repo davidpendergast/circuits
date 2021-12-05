@@ -8,6 +8,7 @@ import src.engine.sprites as sprites
 
 import src.game.globalstate as gs
 import src.game.spriteref as spriteref
+import src.engine.spritesheets as spritesheets
 import src.game.colors as colors
 
 
@@ -25,6 +26,9 @@ class WorldView:
         self._grid_line_sprites = []
 
         self._entities_to_render = []
+
+        self._hide_regions_outside_camera_bounds = True
+        self._out_of_bounds_blockers = [None] * 4  # top, right, bottom, left
 
         # the "true" zoom
         self._base_zoom_idx = 1
@@ -88,6 +92,7 @@ class WorldView:
             ent.update_sprites()
 
         self._update_grid_line_sprites()
+        self._update_out_of_bounds_blockers(camera_bound_rect)
 
         for layer_id in spriteref.all_world_layers():
             renderengine.get_instance().set_layer_scale(layer_id, self.get_zoom())
@@ -282,6 +287,62 @@ class WorldView:
         else:
             self._grid_line_sprites.clear()
 
+    def _update_out_of_bounds_blockers(self, camera_bounds, bg_color=colors.PERFECT_BLACK, insets=1):
+        camera_rect = self.get_camera_rect_in_world()
+        rects = [None] * 4
+        for i in range(0, 4):
+            if self._hide_regions_outside_camera_bounds and (camera_rect is not None and camera_bounds is not None):
+                """camera_rect
+                    *------------*---*
+                    | 0          | 1 |
+                    *---*--------*   |
+                    |   | bounds |   |
+                    |   *--------*---*
+                    | 3 |          2 |
+                    *---*------------*
+                """
+                if i == 0:  # top
+                    if camera_rect[1] < camera_bounds[1]:
+                        rects[i] = [camera_rect[0],
+                                    camera_rect[1],
+                                    camera_bounds[0] + camera_bounds[2] - camera_rect[0],
+                                    camera_rect[1] - camera_bounds[1]]
+                elif i == 1:  # right
+                    if camera_rect[0] + camera_rect[2] > camera_bounds[0] + camera_bounds[2]:
+                        rects[i] = [camera_bounds[0] + camera_bounds[2],
+                                    camera_rect[1],
+                                    camera_rect[0] + camera_rect[2] - camera_bounds[0] + camera_bounds[2],
+                                    camera_bounds[1] + camera_bounds[3] - camera_rect[1]]
+                elif i == 2:  # bottom
+                    if camera_rect[1] + camera_rect[3] > camera_bounds[1] + camera_bounds[3]:
+                        rects[i] = [camera_bounds[0],
+                                    camera_bounds[1] + camera_bounds[3],
+                                    camera_rect[0] + camera_rect[2] - camera_bounds[1],
+                                    camera_rect[1] + camera_rect[3] - (camera_bounds[1] + camera_bounds[3])]
+                elif i == 3:  # left
+                    if camera_rect[0] < camera_bounds[0]:
+                        rects[i] = [camera_rect[0],
+                                    camera_bounds[1],
+                                    camera_bounds[0] - camera_rect[0],
+                                    camera_rect[1] + camera_rect[3] - camera_bounds[1]]
+
+        for i in range(0, 4):
+            rect = rects[i]
+            if rect is not None:
+                if insets > 0:
+                    rect = util.rect_expand(rect, all_expand=insets)
+                if self._out_of_bounds_blockers[i] is None:
+                    self._out_of_bounds_blockers[i] = sprites.ImageSprite.new_sprite(spriteref.WORLD_UI_LAYER, depth=100)
+
+                self._out_of_bounds_blockers[i] = self._out_of_bounds_blockers[i].update(
+                    new_model=spritesheets.get_white_square_img(),
+                    new_x=rect[0],
+                    new_y=rect[1],
+                    new_color=bg_color,
+                    new_raw_size=(rect[2], rect[3]))
+            else:
+                self._out_of_bounds_blockers[i] = None
+
     def all_sprites(self):
         for ent in self._entities_to_render:
             if gs.get_instance().debug_render:
@@ -290,7 +351,8 @@ class WorldView:
             else:
                 for spr in ent.all_sprites():
                     yield spr
-
+        for spr in self._out_of_bounds_blockers:
+            yield spr
         for spr in self._grid_line_sprites:
             yield spr
 
