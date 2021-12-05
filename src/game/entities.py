@@ -2158,6 +2158,8 @@ class PlayerEntity(Entity):
             self._was_breaking_last_frame = currently_breaking
             self._adjust_colliders_for_breaking(currently_breaking)
 
+        self._handle_death_by_crowding()
+
     def is_grounded(self):
         return self.is_on_flat_ground() or self.is_on_sloped_ground()
 
@@ -2427,6 +2429,19 @@ class PlayerEntity(Entity):
         if self.is_holding_an_entity():
             self._try_to_grab_or_drop()
 
+    def _handle_death_by_crowding(self):
+        """
+        When you have two copies of the same player type directly on top of each other, it bricks the level
+        in a potentially confusing way (since there's no way to separate them). So we just kill both players.
+        """
+        for p in self.get_world().all_players(must_be_active=False,
+                                              with_type=self.get_player_type(),
+                                              in_rect=self.get_rect(with_xy_perturbs=False)):
+            if p is not self and p.get_rect(with_xy_perturbs=False) == self.get_rect(with_xy_perturbs=False):
+                if util.mag(util.sub(p.get_vel(), self.get_vel())) <= 0.001:
+                    self.set_death_reason(DeathReason.CROWDING)
+                    p.set_death_reason(DeathReason.CROWDING)
+
     def update_frame_of_reference_parents(self):
         # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
         # TODO touching your toe as you're (mostly) standing on a slop
@@ -2567,6 +2582,7 @@ class DeathReason:
     CRUSHED = "was crushed"
     OUT_OF_BOUNDS = "fell out of bounds"
     SPIKED = "was spiked"
+    CROWDING = "became one with itself"
     UNKNOWN = "was killed by the guardians"
 
 
