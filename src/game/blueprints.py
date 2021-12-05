@@ -407,7 +407,7 @@ class TeleporterSpecType(SpecType):
                           optional_keys={COLOR_ID: 0, INVERTED: False})
 
     def get_subtypes(self):
-        return ["one_way", "two_way"]
+        return ["two_way", "one_way"]
 
     def get_default_value(self, k):
         if k == W:
@@ -887,7 +887,7 @@ class LevelBlueprint:
         for blob_and_spec in self._cached_entities:
             yield blob_and_spec
 
-    def get_player_types(self):
+    def get_player_types(self) -> typing.List[playertypes.PlayerType]:
         res = []
         if PLAYERS in self.json_blob:
             for player_id in self.json_blob[PLAYERS]:

@@ -44,8 +44,8 @@ vertical slice:
     [x] some kind of spaceship graphics (or rocks)
         [x] design basically ripped from baba (where all my good ideas come from)
         [x] should be extremely modular
-    - levels should be locked until adjacent levels are beaten
-    - it should clearly show when levels are beaten
+    [x] levels should be locked until adjacent levels are beaten
+    [x] it should clearly show when levels are beaten
     [x] some kind of generated graphic for each level
  [x] in levels 
     [x] platforming phyiscs
@@ -56,7 +56,7 @@ vertical slice:
     [x] create / move / modify objects in the game
     [x] toggle between play mode and edit mode
     [x] some kind of in-editor console where you can modify stuff more directly
- - progress should save
+ [x] progress should save
  - music (royalty-free 'placeholder' is fine)
  - sound effects
  - content
@@ -72,7 +72,6 @@ puzzle archetypes:
     - resource exchanges (delivering something to a future ghost, or altering the environment to help a future ghost)
     - path alteration (changing the behavior of a past ghost by altering the environment)
         - ghost objectification (picking up another ghost, using to acomplish something else entirely)
-	    - REJECTED unless I can figure out how to do this without an action key
         - ghost nullification (stopping another ghost from doing something)
     - option-selects (using a route that will have different outcomes depending on the actions of a future ghost)
     - traditional platforming challenges (running, jumping, climbing trees)

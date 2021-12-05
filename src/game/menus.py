@@ -580,6 +580,7 @@ class _GameState:
         self._currently_satisfied = [False] * n_players
         self._recorded_runs = [None] * n_players  # list of PlaybackPlayerController
         self._currently_alive = [False] * n_players
+        self._has_ever_died = [False] * n_players
 
         self._total_ticks = bp.time_limit()
         self._time_elapsed = 0
@@ -611,6 +612,8 @@ class _GameState:
             self._currently_satisfied[i] = False
         for i in range(0, len(self._currently_playing)):
             self._currently_playing[i] = False
+        for i in range(0, len(self._currently_playing)):
+            self._has_ever_died[i] = False
         if all_players:
             self._active_player_idx = 0
             self._recorded_runs = [None] * self.num_players()
@@ -630,6 +633,12 @@ class _GameState:
 
     def get_player_type(self, player_idx):
         return self._players_in_level[player_idx]
+
+    def get_index_of_player_type(self, player_type):
+        if player_type in self._players_in_level:
+            return self._players_in_level.index(player_type)
+        else:
+            return None
 
     def num_players(self):
         return len(self._players_in_level)
@@ -655,7 +664,7 @@ class _GameState:
         return self.get_player_type(self.get_active_player_idx())
 
     def is_satisfied(self, player_idx):
-        return self._currently_satisfied[player_idx]
+        return self._currently_satisfied[player_idx] and not self.has_ever_died(player_idx)
 
     def all_satisfied(self):
         for idx in range(0, self.num_players()):
@@ -670,10 +679,25 @@ class _GameState:
         self._currently_playing[player_idx] = val
 
     def is_alive(self, player_idx):
+        """returns: Whether any copy of of a player are alive.
+        """
         return self._currently_alive[player_idx]
 
-    def is_dead(self, player_idx):
-        return not self.is_waiting() and player_idx <= self._active_player_idx and not self.is_alive(player_idx)
+    def is_dead(self, player_idx, or_has_ever_died=True):
+        """returns: Whether all copies of a player are dead.
+        """
+        if not self.is_waiting() and player_idx <= self._active_player_idx:
+            return not self.is_alive(player_idx) or (or_has_ever_died and self.has_ever_died(player_idx))
+
+    def has_ever_died(self, player_idx):
+        """returns: Whether any copies of a player have died.
+        """
+        return not self.is_waiting() and player_idx <= self._active_player_idx and self._has_ever_died[player_idx]
+
+    def set_player_died(self, player_type):
+        idx = self.get_index_of_player_type(player_type)
+        if idx is not None:
+            self._has_ever_died[idx] = True
 
     def set_alive(self, player_idx, val):
         self._currently_alive[player_idx] = val
@@ -685,7 +709,7 @@ class _GameState:
         self._currently_satisfied[player_idx] = val
 
     def is_active_character_satisfied(self):
-        return self._currently_satisfied[self._active_player_idx]
+        return self.is_satisfied(self._active_player_idx)
 
     def update(self, world):
         if self._next_status is not None and self._next_status_countdown <= 1:
@@ -700,20 +724,37 @@ class _GameState:
         if self.get_status().can_player_control:
             self._time_elapsed += 1
 
-        end_blocks = [eb for eb in world.all_entities(cond=lambda ent: ent.is_end_block())]
+        p_type_to_players_and_end_blocks = {p_type: ([], []) for p_type in self._players_in_level}
+        for p in world.all_players(must_be_active=False):
+            if p.get_player_type() in p_type_to_players_and_end_blocks:
+                p_type_to_players_and_end_blocks[p.get_player_type()][0].append(p)
+        for eb in world.all_entities(cond=lambda ent: ent.is_end_block()):
+            if eb.get_player_type() in p_type_to_players_and_end_blocks:
+                p_type_to_players_and_end_blocks[eb.get_player_type()][1].append(eb)
+
         for idx in range(0, self.num_players()):
-            player_type = self.get_player_type(idx)
-            for eb in end_blocks:
-                if eb.get_player_type() == player_type:
-                    self.set_satisfied(idx, eb.is_satisfied())
+            p_type = self.get_player_type(idx)
 
-            player = world.get_player(must_be_active=False, with_type=player_type)
-            if player is not None and not player.is_active() and not player.get_controller().is_finished(world.get_tick()):
-                self.set_playing_back(idx, True)
-            else:
-                self.set_playing_back(idx, False)
+            is_alive = len(p_type_to_players_and_end_blocks[p_type][0]) > 0
+            is_playing_back = False
 
-            self.set_alive(idx, player is not None)
+            # every copy of a player type must be satisfied for that character to be satisfied
+            all_satisfied = True and is_alive
+
+            for p in p_type_to_players_and_end_blocks[p_type][0]:
+                p_is_satisfied = False
+                for eb in p_type_to_players_and_end_blocks[p_type][1]:
+                    if eb.is_satisfied(by=p):
+                        p_is_satisfied = True
+                        break
+                all_satisfied = all_satisfied and p_is_satisfied
+
+                if not p.is_active() and not p.get_controller().is_finished(world.get_tick()):
+                    is_playing_back = True
+
+            self.set_satisfied(idx, all_satisfied)
+            self.set_playing_back(idx, is_playing_back)
+            self.set_alive(idx, is_alive)
 
     def get_song(self):
         song_id = self.bp.song_id()

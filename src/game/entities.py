@@ -1315,6 +1315,7 @@ class EndBlock(AbstractActorSensorBlock):
         if color_id < 0:
             color_id = player_type.get_color_id()
         self._is_satisfied = False
+        self._ent_ids_satisfying = []
 
         self._player_stationary_in_sensor_count = 0
         self._player_stationary_in_sensor_limit = 10
@@ -1332,9 +1333,12 @@ class EndBlock(AbstractActorSensorBlock):
 
     def update(self):
         super().update()
+        self._ent_ids_satisfying.clear()
 
-        if len([e for e in self.all_actors_currently_in_sensor()]) > 0:
+        ents_in_sensor = [e.get_ent_id() for e in self.all_actors_currently_in_sensor()]
+        if len(ents_in_sensor) == 1:  # must have exactly ONE copy of a player in it to be satisfied.
             self._player_stationary_in_sensor_count += 1
+            self._ent_ids_satisfying.extend(ents_in_sensor)
         else:
             self._player_stationary_in_sensor_count = 0
 
@@ -1344,8 +1348,8 @@ class EndBlock(AbstractActorSensorBlock):
         if not was_satisfied and self._is_satisfied:
             print("INFO: satisfied end block for player: {}".format(self.get_player_type()))
 
-    def is_satisfied(self):
-        return self._is_satisfied
+    def is_satisfied(self, by=None):
+        return self._is_satisfied and (by is None or by.get_ent_id() in self._ent_ids_satisfying)
 
     def get_player_type(self):
         return self._player_type
@@ -1363,6 +1367,8 @@ class EndBlock(AbstractActorSensorBlock):
 
 
 class TeleporterBlock(AbstractActorSensorBlock):
+    # XXX with ONE_WAY teleporters, it's possible to create infinite player-duplication machines.
+    # I'm not going to prevent that, but levels need to be built in a SANE and RESPONSIBLE manner.
 
     ONE_WAY = "one_way"
     TWO_WAY = "two_way"

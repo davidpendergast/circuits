@@ -384,7 +384,8 @@ class World:
         if entities.ACTOR_GROUP in phys_groups:
             for ent in phys_groups[entities.ACTOR_GROUP]:
                 if ent.is_player():
-                    ent.handle_death_if_necessary()
+                    if ent.handle_death_if_necessary():
+                        self.get_game_state().set_player_died(ent.get_player_type())
 
         if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
             self._tick += 1
@@ -415,15 +416,25 @@ class World:
         return self.all_entities_in_cells(cells, cond=cond)
 
     def get_player(self, must_be_active=True, with_type=None) -> entities.PlayerEntity:
-        for e in self.entities:
+        for p in self.all_players(must_be_active=must_be_active, with_type=with_type):
+            return p
+        return None
+
+    def all_players(self, must_be_active=True, with_type=None, in_rect=None, cond=None):
+        if in_rect is not None:
+            ents_to_check = self.all_entities_in_rect(in_rect)
+        else:
+            ents_to_check = self.entities
+
+        for e in ents_to_check:
             if isinstance(e, entities.PlayerEntity):
                 if must_be_active and not e.is_active():
                     continue
-                elif with_type is not None and e.get_player_type() != with_type:
+                if with_type is not None and e.get_player_type() != with_type:
                     continue
-                else:
-                    return e
-        return None
+                if cond is not None and not cond(e):
+                    continue
+                yield e
 
     def get_sensor_state(self, sensor_id) -> typing.List[entities.Entity]:
         if sensor_id not in self._sensor_states:
