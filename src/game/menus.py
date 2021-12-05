@@ -1985,6 +1985,8 @@ class NormalMouseMode(MouseMode):
             holding_shift = inputs.get_instance().shift_is_held()
             holding_ctrl = inputs.get_instance().ctrl_is_held()
             if len(specs_at_click) > 0:
+                top_prio = max(blueprints.SpecUtils.get_priority(spec) for spec in specs_at_click)
+                specs_at_click = [spec for spec in specs_at_click if blueprints.SpecUtils.get_priority(spec) >= top_prio]
                 if holding_shift or holding_ctrl:
                     for s in specs_at_click:
                         self.scene.set_selected(s, select=True)

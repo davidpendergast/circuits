@@ -137,6 +137,11 @@ class SpecType:
         else:
             return None
 
+    def get_priority(self):
+        """When multiple overlapping specs are clicked at the same time in the editor, determines which one should win.
+        """
+        return 0
+
     def get_minimum_size(self):
         return (4, 4)
 
@@ -320,6 +325,9 @@ class FalseBlockSpecType(SpecType):
         n_block_sprites = spriteref.block_sheet().num_block_sprites(size)
         return [i for i in range(0, n_block_sprites)]
 
+    def get_priority(self):
+        return -1
+
 
 class StartBlockSpecType(SpecType):
 
@@ -445,6 +453,9 @@ class CameraBoundMarkerSpecType(SpecType):
         idx = idx_tens_place * 10 + idx_ones_place
 
         yield entities.CameraBoundMarker(x, y, idx, show_timer=show_timer)
+
+    def get_priority(self):
+        return 10
 
 
 class ZoneSpecType(SpecType):
@@ -1242,6 +1253,14 @@ class SpecUtils:
             traceback.print_exc()
 
         return orig
+
+    @staticmethod
+    def get_priority(spec_blob, or_else=-1):
+        try:
+            return SpecTypes.get(spec_blob[TYPE_ID]).get_priority()
+        except Exception:
+            print("WARN: failed to get priority from spec_blob: {}".format(spec_blob))
+            return or_else
 
 
 def get_test_blueprint_0() -> LevelBlueprint:
