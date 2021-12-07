@@ -82,7 +82,6 @@ puzzle archetypes:
     	- and the flip-side, avoiding taking a path that will force a future ghost to interrupt it
 
 ideas for mechanics:
-    - killing other robots if you touch them
     - a robot that leaves a trail of spikes or corrupts blocks in some way (making it so other robots can't touch them)
     ? picking up other robots, throwing them
     - freezing other robots
