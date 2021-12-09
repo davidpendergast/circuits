@@ -390,6 +390,8 @@ class World:
         if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
             self._tick += 1
 
+    # TODO really need an efficient way to specify which "categories" of entities you're interested in.
+    # TODO looping over every single entity is becoming prohibitively expensive.
     def all_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
         for e in self.entities:
             if cond is None or cond(e):
