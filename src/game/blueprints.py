@@ -920,7 +920,7 @@ class LevelBlueprint:
 
         min_xy_with_data = [None, None]
         max_xy_with_data = [None, None]
-        for ent in world.all_entities():
+        for ent in world.all_entities(types=(entities.AbstractBlockEntity, entities.CameraBoundMarker)):
             if ent.is_block():
                 min_xy_with_data[0] = min(min_xy_with_data[0] if min_xy_with_data[0] is not None else float('inf'), ent.get_rect()[0])
                 max_xy_with_data[0] = max(max_xy_with_data[0] if max_xy_with_data[0] is not None else -float('inf'), ent.get_rect()[0] + ent.get_rect()[2])

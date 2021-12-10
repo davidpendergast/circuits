@@ -728,7 +728,7 @@ class _GameState:
         for p in world.all_players(must_be_active=False):
             if p.get_player_type() in p_type_to_players_and_end_blocks:
                 p_type_to_players_and_end_blocks[p.get_player_type()][0].append(p)
-        for eb in world.all_entities(cond=lambda ent: ent.is_end_block()):
+        for eb in world.all_end_blocks():
             if eb.get_player_type() in p_type_to_players_and_end_blocks:
                 p_type_to_players_and_end_blocks[eb.get_player_type()][1].append(eb)
 
@@ -1008,12 +1008,10 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         import src.game.entities as entities  # TODO pretty cringe
         for idx in player_idxes:
             player_type = self._state.get_player_type(idx)
-            anim = entities.PlayerFadeAnimation(0, 0, True, player_type, delay, False)
-
-            # it thinks its a player because it has a get_player_type function~
-            xy = self.get_world().get_player_start_position(anim)
-            anim.set_xy(xy)
-            self.get_world().add_entity(anim)
+            for xy in self.get_world().get_player_start_positions(player_type):
+                anim = entities.PlayerFadeAnimation(0, 0, True, player_type, delay, False)
+                anim.set_xy((xy[0] - anim.get_w() // 2, xy[1] - anim.get_h()))
+                self.get_world().add_entity(anim)
 
     def handle_esc_pressed(self):
         self.on_level_exit()
@@ -1064,14 +1062,14 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
                 controller = self._state.get_recording(i)
 
             if controller is not None:
-                player_ent = entities.PlayerEntity(0, 0, player_type, controller)
-                start_xy = world.get_player_start_position(player_ent)
-                player_ent.set_xy(start_xy)
-                world.add_entity(player_ent, next_update=False)
+                for xy in world.get_player_start_positions(player_type):
+                    player_ent = entities.PlayerEntity(0, 0, player_type, controller)
+                    player_ent.set_xy((xy[0] - player_ent.get_w() // 2, xy[1] - player_ent.get_h()))
+                    world.add_entity(player_ent, next_update=False)
 
-                if is_active:
-                    world.add_entity(entities.PlayerIndicatorEntity(player_ent), next_update=False)
-                    world.add_entity(entities.EndBlockIndicatorEntity(player_ent), next_update=False)
+                    if is_active:
+                        world.add_entity(entities.PlayerIndicatorEntity(player_ent), next_update=False)
+                        world.add_entity(entities.EndBlockIndicatorEntity(player_ent), next_update=False)
 
         world.update()
         self.get_world_view().update()

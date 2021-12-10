@@ -12,13 +12,16 @@ import src.engine.keybinds as keybinds
 import src.engine.inputs as inputs
 import src.game.playertypes as playertypes
 
-import random
-
 
 class World:
 
     def __init__(self, bp=None):
-        self.entities = set()    # set of entities in world
+        # the canonical place where entities are stored.
+        # tracks them by {type -> set of entities with that type} for efficient type-based lookups.
+        self._type_to_ents = {
+            entities.Entity: set()
+        }
+
         self._to_add = set()     # set of new entities to add next frame
         self._to_remove = set()  # set of entities to remove next frame
 
@@ -26,12 +29,12 @@ class World:
 
         self._sensor_states = {}  # sensor_id -> OrderedDict of entities
 
-        # regular hashing
+        # hashing by id, kept in sync with _type_to_ents at all times.
         self._ent_id_to_ent = {}  # ent_id -> entity
 
-        # spacial hashing
+        # spatial hashing, kept in sync with _type_to_ents at all times.
         self._entities_to_cells = {}  # ent -> set of cells (x, y) it's inside
-        self._cells_to_entities = {}   # (x, y) - set of entities inside
+        self._cells_to_entities = {}  # (x, y) - set of entities inside
 
         self._light_sources = util.SpacialHashMap(gs.get_instance().cell_size * 5)
 
@@ -69,7 +72,7 @@ class World:
 
     def _update_camera_bounds(self, camera_bound_markers: typing.List[entities.CameraBoundMarker]=None):
         if camera_bound_markers is None:
-            camera_bound_markers = [e for e in self.all_entities(cond=lambda e: e.is_camera_bound_marker())]
+            camera_bound_markers = [e for e in self.all_entities(types=(entities.CameraBoundMarker,))]
 
         self.camera_bounds.clear()
 
@@ -127,12 +130,16 @@ class World:
         return ident in self._ent_id_to_ent
 
     def add_entity(self, ent, next_update=True):
-        if ent is None or ent in self.entities:
+        if ent is None or self.has_entity(ent):
             raise ValueError("can't add entity, either because it's None or it's already in world: {}".format(ent))
         elif next_update:
             self._to_add.add(ent)
         else:
-            self.entities.add(ent)
+            for cls in type(ent).this_and_all_entity_superclasses():
+                if cls not in self._type_to_ents:
+                    self._type_to_ents[cls] = set()
+                self._type_to_ents[cls].add(ent)
+
             self.rehash_entity(ent)
             self._ent_id_to_ent[ent.get_ent_id()] = ent
             ent.set_world(self)
@@ -147,7 +154,11 @@ class World:
             self._to_remove.add(ent)
         else:
             ent.about_to_remove_from_world()
-            self.entities.remove(ent)
+
+            for cls in type(ent).this_and_all_entity_superclasses():
+                if cls in self._type_to_ents:
+                    self._type_to_ents[cls].remove(ent)
+
             self._unhash(ent)
             del self._ent_id_to_ent[ent.get_ent_id()]
             ent.set_world(None)
@@ -241,36 +252,40 @@ class World:
     def get_blueprint(self):
         return self._orig_blueprint
 
-    def get_start_block(self, player_type):
-        for b in self.all_entities(lambda ent: ent.is_start_block()):
-            if b.get_player_type() == player_type:
-                return b
-        return None
+    def all_start_blocks(self, player_types=(), cond=None):
+        def _cond(b):
+            if len(player_types) > 0 and b.get_player_type() not in player_types:
+                return False
+            return cond is None or cond(b)
+        return self.all_entities(cond=_cond, types=(entities.StartBlock,))
 
-    def get_end_blocks(self, player_type):
-        for b in self.all_entities(lambda ent: ent.is_end_block()):
-            if b.get_player_type() == player_type:
-                yield b
+    def all_end_blocks(self, player_types=(), cond=None):
+        def _cond(b):
+            if len(player_types) > 0 and b.get_player_type() not in player_types:
+                return False
+            return cond is None or cond(b)
+        return self.all_entities(cond=_cond, types=(entities.EndBlock,))
 
     def get_entity_by_id(self, ent_id):
         if ent_id in self._ent_id_to_ent:
             return self._ent_id_to_ent[ent_id]
 
     def get_teleporters_by_channel(self, channel):
-        # TODO pre-cache this
-        return self.all_entities(cond=lambda e: e.is_teleporter() and e.get_channel() == channel)
+        return self.all_entities(cond=lambda e: e.get_channel() == channel, types=(entities.TeleporterBlock,))
 
-    def get_player_start_position(self, player):
-        player_type = player.get_player_type()
-        start_block = self.get_start_block(player_type)
-        if start_block is None:
-            print("WARN: no start block for player type: {}".format(player_type))
-            return (0, 0)
-        else:
+    def get_player_start_positions(self, player_type):
+        res = []
+        for start_block in self.all_start_blocks(player_types=(player_type,)):
             block_rect = start_block.get_rect()
-            x = block_rect[0] + block_rect[2] // 2 - player.get_w() // 2
-            y = block_rect[1] - player.get_h()
-            return (x, y)
+            x = block_rect[0] + block_rect[2] // 2
+            y = block_rect[1]
+            res.append((x, y))
+
+        if len(res) == 0:
+            print("WARN: no start block for player type: {}".format(player_type))
+            res.append((0, 0))
+
+        return res
 
     def all_light_sources_at_pt(self, pt, exact=True):
         """yields: ((x, y), radius, color, strength) for each light source that may reach the given position."""
@@ -302,10 +317,11 @@ class World:
         self._to_add.clear()
 
         for ent in self._to_remove:
-            if ent in self.entities:
+            if self.has_entity(ent):
                 self.remove_entity(ent, next_update=False)
         self._to_remove.clear()
 
+        # TODO efficient lookup for dynamic ents? (to avoid iterating over every single thing here?)
         dyna_ents = [e for e in self.all_entities(cond=lambda _e: _e.is_dynamic())]
 
         phys_groups = {}
@@ -314,7 +330,7 @@ class World:
                 phys_groups[e.get_physics_group()] = []
             phys_groups[e.get_physics_group()].append(e)
 
-        for ent in self.entities:
+        for ent in self.all_entities():
             ent.update()
             ent._last_updated_at = self._tick
 
@@ -366,7 +382,7 @@ class World:
 
         camera_bound_markers = []
         self._light_sources.clear()
-        for ent in self.entities:
+        for ent in self.all_entities():
             n = 0
             for light_src in ent.get_light_sources():
                 if not isinstance(light_src, tuple) or len(light_src) != 4:
@@ -390,12 +406,12 @@ class World:
         if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
             self._tick += 1
 
-    # TODO really need an efficient way to specify which "categories" of entities you're interested in.
-    # TODO looping over every single entity is becoming prohibitively expensive.
-    def all_entities(self, cond=None) -> typing.Iterable[entities.Entity]:
-        for e in self.entities:
-            if cond is None or cond(e):
-                yield e
+    def all_entities(self, cond=None, types=(entities.Entity,)) -> typing.Iterable[entities.Entity]:
+        for t in types:
+            if t in self._type_to_ents:
+                for e in self._type_to_ents[t]:
+                    if cond is None or cond(e):
+                        yield e
 
     def all_entities_in_cells(self, cells, cond=None):
         res = set()
@@ -426,7 +442,7 @@ class World:
         if in_rect is not None:
             ents_to_check = self.all_entities_in_rect(in_rect)
         else:
-            ents_to_check = self.entities
+            ents_to_check = self.all_entities(types=(entities.PlayerEntity,))
 
         for e in ents_to_check:
             if isinstance(e, entities.PlayerEntity):
@@ -446,10 +462,9 @@ class World:
             return [e for e in self._sensor_states[sensor_id] if self.has_entity(e)]
 
     def is_door_unlocked(self, toggle_idx):
-        for e in self.all_entities():
-            if isinstance(e, entities.KeyEntity):
-                if e.get_toggle_idx() == toggle_idx and e.is_satisfied():
-                    return True
+        for e in self.all_entities(types=(entities.KeyEntity,)):
+            if e.get_toggle_idx() == toggle_idx and e.is_satisfied():
+                return True
         return False
 
     def is_dialog_active(self):

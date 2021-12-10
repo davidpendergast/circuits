@@ -506,6 +506,18 @@ class Entity:
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self._ent_id, self.get_rect())
 
+    @classmethod
+    def this_and_all_entity_superclasses(cls, _res=None):
+        if _res is None:
+            _res = set()
+        _res.add(cls)
+        for c in cls.__mro__:
+            if c is not cls and c not in _res and (c is Entity or issubclass(c, Entity)):
+                _res.add(c)
+                for _ in c.this_and_all_entity_superclasses(_res=_res):
+                    pass
+        return _res
+
 
 class AbstractBlockEntity(Entity):
 
@@ -1418,15 +1430,10 @@ class TeleporterBlock(AbstractActorSensorBlock):
                                                      xy_provider=lambda: (util.sample_triangular(0.2, 0.8), 1))
 
     def all_linked_teleporters(self) -> 'Iterable[TeleporterBlock]':
-        return self.get_world().all_entities(cond=lambda t: (t.is_teleporter()
-                                                             and t.get_channel() == self.get_channel()
-                                                             and t.is_sending() is not self.is_sending()))
+        return self.get_world().all_entities(cond=lambda t: t.get_channel() == self.get_channel() and t.is_sending() is not self.is_sending(), types=(TeleporterBlock,))
 
     def all_bro_teleporters(self) -> 'Iterable[TeleporterBlock]':
-        return self.get_world().all_entities(cond=lambda t: (t.is_teleporter()
-                                                             and t is not self
-                                                             and t.get_channel() == self.get_channel()
-                                                             and t.is_sending() is self.is_sending()))
+        return self.get_world().all_entities(cond=lambda t: t is not self and t.get_channel() == self.get_channel() and t.is_sending() is self.is_sending(), types=(TeleporterBlock,))
 
     def all_sub_entities(self):
         for s in super().all_sub_entities():
@@ -2381,6 +2388,7 @@ class PlayerEntity(Entity):
                 self.pickup_entity(to_pick_up)
 
     def _try_to_swap(self, target: Entity=None):
+        # TODO not used, delete?
         if target is None:
             other_actors_in_level = list(self.get_world().all_entities(
                 cond=lambda e: e.is_swappable() and e is not self and not e.is_held()))
@@ -3009,7 +3017,7 @@ class EndBlockIndicatorEntity(PlayerIndicatorEntity):
 
     def get_target_pts(self, player):
         res = []
-        for block in self.get_world().get_end_blocks(player.get_player_type()):
+        for block in self.get_world().all_end_blocks(player_types=(player.get_player_type(),)):
             pt = (block.get_center()[0], block.get_y())
             res.append(pt)
         return res
