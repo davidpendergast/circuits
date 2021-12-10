@@ -602,14 +602,14 @@ class _BlockSheet(spritesheets.SpriteSheet):
         def _make_blocks(size, x, y, n=1, offs=(0, 0)):
             return [_img(x + i * 16 * size[0], y, 16 * size[0], 16 * size[1], offs=offs) for i in range(0, n)]
 
-        self.blocks[(1, 1)] = _make_blocks((1, 1), 16, 0, n=7, offs=start_pos)
-        self.blocks[(2, 1)] = _make_blocks((2, 1), 0, 16, n=2, offs=start_pos)
+        self.blocks[(1, 1)] = _make_blocks((1, 1), 16, 0, n=6, offs=start_pos)
+        self.blocks[(2, 1)] = _make_blocks((2, 1), 0, 16, n=3, offs=start_pos)
         self.blocks[(3, 1)] = _make_blocks((3, 1), 0, 32, n=2, offs=start_pos)
 
         self.blocks[(2, 0.5)] = _make_blocks((2, 0.5), 0, 48, n=1, offs=start_pos)
 
-        self.blocks[(1, 2)] = _make_blocks((1, 2), 0, 64, n=2, offs=start_pos)
-        self.blocks[(2, 2)] = _make_blocks((2, 2), 0, 96, n=3, offs=start_pos)
+        self.blocks[(1, 2)] = _make_blocks((1, 2), 0, 64, n=6, offs=start_pos)
+        self.blocks[(2, 2)] = _make_blocks((2, 2), 0, 96, n=5, offs=start_pos)
         self.blocks[(3, 2)] = _make_blocks((3, 2), 0, 128, n=1, offs=start_pos)
 
         self.quad_blocks = _make_blocks((2, 2), 0, 160, n=3, offs=start_pos)
