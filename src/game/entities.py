@@ -202,6 +202,9 @@ class Entity:
         """whether this entity's movement is controlled by the physics system"""
         return False
 
+    def get_physics_group(self):
+        return UNKNOWN_GROUP
+
     def is_breaking(self):
         """whether this entity has any BREAKING colliders, or whether it possibly could"""
         return False
@@ -209,9 +212,6 @@ class Entity:
     def is_swappable(self):
         """whether this entity is a valid target for 'swap' actions"""
         return False
-
-    def get_physics_group(self):
-        return UNKNOWN_GROUP
 
     def set_frame_of_reference_parents(self, parents, horz=True, vert=True):
         parents = [] if parents is None else util.listify(parents)
@@ -356,13 +356,6 @@ class Entity:
                 continue
             yield c
 
-        # TODO hmm, should held objects have collisions?
-        # parent absorbs its child's colliders
-        # TODO will this work? aren't colliders relative to object position?
-        #if self._held_child is not None:
-        #    for c in self._held_child.all_colliders(solid=solid, sensor=sensor, enabled=enabled):
-        #        yield c
-
     def set_colliders(self, colliders):
         self._colliders = [c for c in colliders]
 
@@ -484,10 +477,6 @@ class Entity:
     def is_actor(self):
         return self.is_player()
 
-    def get_light_sources(self):
-        """returns: list of ((x, y), radius, (r, g, b))"""
-        return []
-
     def __eq__(self, other):
         if isinstance(other, Entity):
             return self._ent_id == other._ent_id
@@ -519,6 +508,19 @@ class Entity:
         return _res
 
 
+class DynamicEntity(Entity):
+
+    def is_dynamic(self):
+        return True
+
+
+class HasLightSourcesEntity(Entity):
+
+    def get_light_sources(self):
+        """returns: list of ((x, y), radius, (r, g, b))"""
+        return []
+
+
 class AbstractBlockEntity(Entity):
 
     def __init__(self, x, y, w=None, h=None):
@@ -532,9 +534,6 @@ class AbstractBlockEntity(Entity):
 
     def update(self):
         super().update()
-
-    def is_dynamic(self):
-        return False
 
     def get_debug_color(self):
         return colors.PERFECT_DARK_GRAY
@@ -700,109 +699,7 @@ class BreakableBlockEntity(BlockEntity):
                 # TODO sound
 
 
-class PushableBlockEntity(BlockEntity):
-    # TODO this has been re-worked, see FallingBlockEntity
-
-    def __init__(self, x, y, w, h, color_id=0):
-        vert_block_avoider = RectangleCollider([2, 0, w - 4, h],             # this avoids other blocks
-                                               CollisionMasks.ACTOR,
-                                               collides_with=CollisionMasks.BLOCK,
-                                               resolution_hint=CollisionResolutionHints.VERT_ONLY)
-        main_colliders = BlockEntity.build_colliders_for_rect([0, 0, w, h])  # this is what players collide with
-        vert_block_avoider.set_ignore_collisions_with(main_colliders)        # no self-collisions
-        main_colliders.append(vert_block_avoider)
-
-        self.breaking_collider = RectangleCollider([0, 0, w, h], CollisionMasks.BREAKING)  # so that breakables can sense us
-        main_colliders.append(self.breaking_collider)
-
-        left_block_sensor = RectangleCollider([-1, 0, 1, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.BLOCK)
-        right_block_sensor = RectangleCollider([w, 0, 1, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.BLOCK)
-        left_player_sensor = RectangleCollider([-4, 0, 4, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.ACTOR)
-        right_player_sensor = RectangleCollider([w, 0, 4, h], CollisionMasks.SENSOR, collides_with=CollisionMasks.ACTOR)
-        self.ground_sensor = RectangleCollider([2, h, w - 4, 1], CollisionMasks.SENSOR, collides_with=CollisionMasks.BLOCK)
-
-        slope_sensor = RectangleCollider([0, 0, w, h], CollisionMasks.SENSOR,
-                                         collides_with=(CollisionMasks.SLOPE_BLOCK_VERT, CollisionMasks.SLOPE_BLOCK_HORZ))
-
-        self.left_player_sensor_id = left_player_sensor.get_id()
-        self.right_player_sensor_id = right_player_sensor.get_id()
-        self.left_block_sensor_id = left_block_sensor.get_id()
-        self.right_block_sensor_id = right_block_sensor.get_id()
-        self.ground_sensor_id = self.ground_sensor.get_id()
-        self.slope_sensor_id = slope_sensor.get_id()
-
-        all_sensors = [left_player_sensor, right_player_sensor, left_block_sensor, right_block_sensor,
-                       self.ground_sensor, slope_sensor]
-
-        super().__init__(x, y, w, h, color_id=color_id)
-
-        self.set_colliders(main_colliders)
-        self._sensor_ent = SensorEntity([0, 0, w, h], all_sensors, parent=self)
-
-        self._is_currently_breaking = False
-        self._adjust_colliders_for_breaking(False)
-
-        self.fall_speed = 2
-        self.slide_speed = 3
-
-    def is_color_baked_into_sprites(self):
-        return True
-
-    def all_sub_entities(self):
-        yield self._sensor_ent
-
-    def update_frame_of_reference_parents(self):
-        blocks_upon = self.get_world().get_sensor_state(self.ground_sensor_id)
-        best_upon, _ = choose_best_frames_of_reference(self, blocks_upon, self.ground_sensor, max_n=5)
-        self.set_frame_of_reference_parents(best_upon, horz=False, vert=True)
-
-    def _adjust_colliders_for_breaking(self, breaking):
-        self._is_currently_breaking = breaking
-        self.breaking_collider.set_enabled(breaking)
-        all_colliders = [c for c in self.all_colliders()]
-        all_colliders.extend([c for c in self._sensor_ent.all_colliders(sensor=True)])
-
-        for c in all_colliders:
-            if c.collides_with_masks((CollisionMasks.BLOCK,)):
-                new_collides_with = [m for m in c.get_collides_with() if m != CollisionMasks.BREAKABLE]
-                if not breaking:
-                    # if we're breaking, we want to move through breaking blocks, so we can break them
-                    new_collides_with.append(CollisionMasks.BREAKABLE)
-                c.set_collides_with(new_collides_with)
-
-    def update(self):
-        super().update()
-
-        if self.get_world().is_waiting():
-            return
-
-        is_grounded = self.get_world().get_sensor_state(self.ground_sensor_id)
-
-        new_is_breaking = not is_grounded
-        if new_is_breaking != self._is_currently_breaking:
-            self._adjust_colliders_for_breaking(new_is_breaking)
-
-        if is_grounded:
-            self.set_y_vel(0)
-        else:
-            self.set_y_vel(self.fall_speed)
-
-    def is_dynamic(self):
-        return True
-
-    def was_crushed(self):
-        self.get_world().remove_entity(self)
-
-    def get_main_model(self):
-        if self._art_id is not None:
-            x_size = self.get_w() / gs.get_instance().cell_size
-            y_size = self.get_h() / gs.get_instance().cell_size
-            return spriteref.object_sheet().get_pushable_block_sprite((x_size, y_size), self.get_color_id())
-        else:
-            return super().get_main_model()
-
-
-class FallingBlockEntity(BlockEntity):
+class FallingBlockEntity(BlockEntity, DynamicEntity):
 
     def __init__(self, x, y, w, h, weight_thresh=1, color_id=0):
         super().__init__(x, y, w, h, color_id=color_id)
@@ -868,9 +765,6 @@ class FallingBlockEntity(BlockEntity):
             return spriteref.object_sheet().get_pushable_block_sprite((x_size, y_size), self.get_color_id())
         else:
             return super().get_main_model()
-
-    def is_dynamic(self):
-        return True
 
     def all_sub_entities(self):
         for e in super().all_sub_entities():
@@ -954,11 +848,11 @@ class FallingBlockEntity(BlockEntity):
                 c.set_collides_with(new_collides_with)
 
 
-class SensorEntity(Entity):
+class SensorEntity(DynamicEntity):
 
     def __init__(self, rect, sensors, parent=None):
         self.parent = parent
-        Entity.__init__(self, 0, 0, w=rect[2], h=rect[3])
+        super().__init__(0, 0, w=rect[2], h=rect[3])
 
         if self.parent is not None:
             self.set_xy((self.parent.get_x() + rect[0], self.parent.get_y() + rect[1]))
@@ -967,9 +861,6 @@ class SensorEntity(Entity):
             self.set_xy((rect[0], rect[1]))
 
         self.set_colliders(util.listify(sensors))
-
-    def is_dynamic(self):
-        return True
 
     def get_physics_group(self):
         return ACTOR_GROUP
@@ -1083,9 +974,6 @@ class MovingBlockEntity(BlockEntity):
 
         self._point_sprites_for_editor = []
 
-    def is_dynamic(self):
-        return False
-
     def update(self):
         tick_count = self.get_world().get_tick()
 
@@ -1124,7 +1012,7 @@ class MovingBlockEntity(BlockEntity):
             yield spr
 
 
-class DoorBlock(BlockEntity):
+class DoorBlock(BlockEntity, HasLightSourcesEntity):
 
     def __init__(self, x, y, w, h, toggle_idx, inverted=False):
         BlockEntity.__init__(self, x, y, w, h)
@@ -1247,7 +1135,7 @@ class KeyEntity(Entity):
                                                      new_color=color)
 
 
-class StartBlock(BlockEntity):
+class StartBlock(BlockEntity, HasLightSourcesEntity):
 
     def __init__(self, x, y, w, h, player_type, facing_dir=1, color_id=-1):
         cs = gs.get_instance().cell_size
@@ -1314,7 +1202,7 @@ class AbstractActorSensorBlock(CompositeBlockEntity):
         return True
 
 
-class EndBlock(AbstractActorSensorBlock):
+class EndBlock(AbstractActorSensorBlock, HasLightSourcesEntity):
 
     def __init__(self, x, y, w, h, player_type, color_id=-1):
         cs = gs.get_instance().cell_size
@@ -1906,7 +1794,7 @@ def choose_best_frames_of_reference(entity, candidate_list, sensor, max_n=1):
             return candidate_list, overlaps
 
 
-class PlayerEntity(Entity):
+class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
     LIGHT_RADIUS = 8 * gs.get_instance().cell_size
 
@@ -1915,7 +1803,7 @@ class PlayerEntity(Entity):
         w = int(cs * player_type.get_size()[0])
         h = int(cs * player_type.get_size()[1])
 
-        Entity.__init__(self, 0, 0, w=w, h=h)
+        super().__init__(0, 0, w=w, h=h)
 
         self._player_type = player_type
         self._controller = controller if controller is not None else PlayerController()
@@ -2119,9 +2007,6 @@ class PlayerEntity(Entity):
                     # if we're breaking, we want to move through breaking blocks, so we can break them
                     new_collides_with.append(CollisionMasks.BREAKABLE)
                 c.set_collides_with(new_collides_with)
-
-    def is_dynamic(self):
-        return True
 
     def get_physics_group(self):
         return ACTOR_GROUP
@@ -2594,10 +2479,10 @@ class DeathReason:
     UNKNOWN = "was killed by the guardians"
 
 
-class ParticleEntity(Entity):
+class ParticleEntity(DynamicEntity):
 
     def __init__(self, x, y, w, h, vel, duration=-1, initial_phasing=-1, color=colors.PERFECT_WHITE):
-        Entity.__init__(self, x, y, w, h)
+        super().__init__(x, y, w, h)
         self._x_vel = vel[0]
         self._y_vel = vel[1]
         self._initial_phasing = initial_phasing
@@ -2642,9 +2527,6 @@ class ParticleEntity(Entity):
 
     def get_sprite(self):
         return None
-
-    def is_dynamic(self):
-        return True
 
     def get_physics_group(self):
         return ACTOR_GROUP  # TODO add particle group?
@@ -2772,7 +2654,7 @@ class PlayerBodyPartParticle(RotatingParticleEntity):
         return spriteref.object_sheet().get_broken_player_sprite(self.player_id, self.part_idx, rotation=self.rotation)
 
 
-class PlayerFadeAnimation(Entity):
+class PlayerFadeAnimation(HasLightSourcesEntity):
 
     def __init__(self, cx, y_bottom, facing_right, player_type, duration, fade_out):
         super().__init__(cx - 2, y_bottom - 4, 4, 4)
@@ -2853,9 +2735,6 @@ class FloatingDustParticleEntity(Entity):
 
         self._sprite = None
 
-    def is_dynamic(self):
-        return False
-
     def calc_next_vel(self, cur_vel):
         sway_val_rads = 2 * (0.5 - random.random()) * self._max_sway / configs.target_fps
         vel_with_sway = util.rotate(cur_vel, sway_val_rads)
@@ -2899,7 +2778,7 @@ class FloatingDustParticleEntity(Entity):
         yield self._sprite
 
 
-class ParticleEmitterZone(Entity):
+class ParticleEmitterZone(DynamicEntity):
 
     def __init__(self, rect, particle_spawner, spawn_rate_per_sec, parent=None, max_particles=20,
                  xy_provider=lambda: (random.random(), 1)):
@@ -2918,9 +2797,6 @@ class ParticleEmitterZone(Entity):
             self.set_xy((rect[0], rect[1]))
 
         self._active_particle_ids = []
-
-    def is_dynamic(self):
-        return True
 
     def get_physics_group(self):
         return DECORATION_GROUP

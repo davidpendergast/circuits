@@ -322,7 +322,7 @@ class World:
         self._to_remove.clear()
 
         # TODO efficient lookup for dynamic ents? (to avoid iterating over every single thing here?)
-        dyna_ents = [e for e in self.all_entities(cond=lambda _e: _e.is_dynamic())]
+        dyna_ents = [e for e in self.all_entities(types=(entities.DynamicEntity,))]
 
         phys_groups = {}
         for e in dyna_ents:
@@ -382,7 +382,7 @@ class World:
 
         camera_bound_markers = []
         self._light_sources.clear()
-        for ent in self.all_entities():
+        for ent in self.all_entities(types=(entities.HasLightSourcesEntity,)):
             n = 0
             for light_src in ent.get_light_sources():
                 if not isinstance(light_src, tuple) or len(light_src) != 4:
