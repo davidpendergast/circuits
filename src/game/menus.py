@@ -10,6 +10,7 @@ import src.game.worldview as worldview
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
 import src.engine.sprites as sprites
+import src.engine.sounds as sounds
 import src.game.globalstate as gs
 import src.engine.renderengine as renderengine
 import src.game.const as const
@@ -27,6 +28,7 @@ import src.game.worlds as worlds
 import src.game.cinematics as cinematics
 import src.game.dialog as dialog
 import src.game.songsystem as songsystem
+import src.game.soundref as soundref
 
 
 class CircuitsSceneManager(scenes.SceneManager):
@@ -62,8 +64,10 @@ class MainMenuScene(scenes.Scene):
         overworld_scene = overworld.OverworldScene.create_new_from_path("overworlds")
         if do_instructions:
             next_scene = InstructionsScene(overworld_scene, self)
+            sounds.play_sound(soundref.MENU_ACCEPT)
         else:
             next_scene = overworld_scene
+            sounds.play_sound(soundref.MENU_START)
         self.jump_to_scene(next_scene)
 
     def should_do_cursor_updates(self):
@@ -144,11 +148,13 @@ class InstructionsScene(scenes.Scene):
     def update(self):
         if inputs.get_instance().was_pressed(const.MENU_CANCEL):
             self.get_manager().set_next_scene(self.prev_scene)
+            sounds.play_sound(soundref.MENU_BACK)
             return
 
         if self._ticks_active > 15:
             if inputs.get_instance().was_pressed(const.MENU_ACCEPT) or inputs.get_instance().mouse_was_pressed(button=1):
                 self.get_manager().set_next_scene(self.next_scene)
+                sounds.play_sound(soundref.MENU_START)
                 return
 
         self._ticks_active += 1
@@ -277,6 +283,7 @@ class LevelSelectForEditScene(OptionSelectScene):
     def update(self):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
             self.jump_to_scene(MainMenuScene())
+            sounds.play_sound(soundref.MENU_BACK)
         else:
             super().update()
 
@@ -337,11 +344,13 @@ class TextEditScene(scenes.Scene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_CANCEL)):
             if self.on_cancel is not None:
                 self.on_cancel(self.get_manager())
+                sounds.play_sound(soundref.MENU_BACK)
                 return
 
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_ACCEPT)):
             if self.on_accept is not None:
                 self.on_accept(self.get_manager(), self.text_box.get_text())
+                sounds.play_sound(soundref.MENU_ACCEPT)
                 return
 
     def all_sprites(self):

@@ -1,6 +1,7 @@
 import pygame
 import src.utils.util as util
 import traceback
+import random
 
 
 _MASTER_VOLUME = 1.0
@@ -30,10 +31,13 @@ def update():
 
 def play_sound(sound):
     """
-    :param sound: either an effect_path, or a tuple (effect_path, volume)
+    :param sound: either an effect_path, or a tuple (effect_path, volume), or a list of sounds (in which case one will be chosen randomly.)
     """
     if sound is None:
         return
+
+    if isinstance(sound, list):
+        sound = random.choice(sound)
 
     if isinstance(sound, tuple):
         effect_path = sound[0]

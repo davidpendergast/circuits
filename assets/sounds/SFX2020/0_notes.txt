@@ -1,0 +1,316 @@
+ya know what, I actually hate all of these
+
+AccessDeniedNow.wav  - death?
+AttentionVoltage.wav - death?
+BadLandingZone.wav 
+BeatMyFaceNESStyle.wav - block hitting ground?
+BotChangingDirection.wav - teleport?
+BreakThroughTheWall.wav - death?
+BulletBounce.wav 
+BulletDropOn.wav - death?
+BulletSlam.wav
+BulletSnappin.wav
+CatapultMiniBomb.wav
+CatchMeIfYouCan.wav  - transition?
+ChangingDirection.wav - mechanical activation?
+CheckMenuItem2.wav
+CheckMenuItem.wav
+CirclingPower.wav - teleport, kinda bad
+CloningScanningUnit.wav - level complete?
+CommandNotAvailable.wav - blip negative
+CommunicationLineReady.wav - high pitched activation
+ConfusedAttackStyle.wav - mechanical deactivation?
+ConfusingEnergyExchange.wav - death..?
+ConfusingFallingDown.wav - special transition
+ConnectionInterrupted.wav - error?
+ConstructionReady.wav - big, long mechanical sound
+CoordinatesReceived.wav - tiny high pitched
+CrystalDestroy.wav - loud bright death
+DataComputed2.wav - cool robot sound (dialog?)
+DataComputed3.wav - cool robot sound (dialog?)
+DataComputed.wav - cool activation (dialog?)
+DataStoredAndReady.wav - cool robot sound (dialog?)
+DefiniteHit2.wav
+DefiniteHit.wav
+DefiniteMissileLaunch.wav
+DefiniteShot2.wav
+DefiniteShot3.wav
+DefiniteShot4.wav
+DefiniteShot5.wav
+DefiniteShot.wav
+DeployingDetector.wav - small mechanical
+DeployingSpecialFieldArea.wav - tele/level success?
+DeploySensorsScanningArea.wav - ramping mech sound
+DestroyMonster2.wav - non-robot death?
+DestroyMonster.wav
+DigitalLaugh.wav - evil robot laugh?
+DigitalRearrange.wav - big explode
+DirectAttack.wav
+DirectFireBladeDamage.wav
+DirectLaserAttack.wav
+DirectLaserBladeAttack.wav
+DistanceIsTooFar.wav - tele?
+DontUnderstandYourLanguage.wav - robot noise?
+DoubleLaserShot.wav
+DoubleMegaLaserShot.wav
+DramaticHitpoint.wav
+DramaticSceneSound.wav - level start?
+DroneFly.wav - buzzing sound?
+DropLonger.wav
+DropMini.wav - high pitched blip
+ElasticShieldAttack2.wav
+ElasticShieldAttack.wav
+ElectricAttackDirect.wav
+ElectricAttack.wav
+ElectricDefense.wav - mech activation
+ElectricField.wav
+ElectricGatePowerOn.wav
+ElectricImpression2.wav
+ElectricImpression.wav - electric buzz
+ElectricityShort.wav - electric buzz
+Electricity.wav - electric buzz
+EndOfPowerShort.wav - deactivation
+EnemyFlyingMonsterSpecialAttack.wav
+EnergeticShield.wav - death?
+EnergetingCirclingUpload.wav - rotor startup
+EnergyChanging.wav
+EnergyDecreaseShot.wav
+EnergyLevelVeryLow.wav - slow death
+EnergyReloadedToMaximum.wav
+EnergyShieldActivated.wav
+EnergyUploadToMaxLevelShorter.wav - teleport
+EnergyUploadToMaxLevel.wav
+ExtraHitPoint.wav
+ExtremeInterruption.wav
+FallingDownAgain2.wav
+FallingDownAgain3.wav
+FallingDownAgain.wav
+FallinStarLonger.wav - explosion
+FallinStar.wav  - explosion
+FastMonsterSound.wav - screech
+FastSpaceShipsBesideMe.wav - ship noise
+file.txt
+FinalShieldDefense.wav - explosion
+FireBurnOut.wav
+FlipAttackStyle.wav
+FollowingCoordinates.wav
+ForceResourceGathering.wav
+FunkyExplosion.wav
+FunkyLaserAttack.wav
+GalacticGateInterruption.wav
+GatherBotsAttackEachOther.wav
+GatherUnitHurt.wav
+GetAPowerUp.wav
+GetExtraEnergyLevel.wav - blip?
+GetTheSpaceItem.wav
+GetUpPowerItem.wav
+GreaterHit.wav - death
+HappyUploadingBattery.wav - charging up
+HardRocketLaunch.wav
+HeliShipLanging.wav
+HeliShipLangingWrong.wav
+HitOnEnergeticShield.wav - blip
+HitOnMe.wav
+HitTheGround.wav
+IGetYourPower.wav
+ImmediateLaserAttack.wav
+ImpactMini.wav
+ImpactOnSteelShield.wav
+ImpactOnSteelSmooth.wav
+InsufficientEnergy.wav
+InsufficientTime.wav
+Interference.wav - long explosion
+InterruptionMethod2.wav
+InterruptionMethod.wav
+Interruption.wav
+InvalidTarget.wav - negative blip
+ItemSelected.wav - blip
+JumpOnIt.wav - blip-ish?
+JustALittleCoin.wav - collecting something
+JustASwish.wav - rising blip
+LaserAttackMini.wav
+LaserMiniShot.wav
+LaserMonsterAttack.wav
+LaserShot.wav
+LittleBitOfCrystalReward.wav
+LittleFallingDown.wav - death by falling
+LittleReward.wav - activation
+LongEnergeticRefresh.wav
+LowBassHit.wav - death
+MassGunShots.wav
+MechIsReady.wav - big enemy screech
+MechMovementReady.wav
+MegaMissileLaunch.wav
+MegaUploadPowerUp.wav
+MineDetected2.wav
+MineDetected.wav - small activation
+MiniBladeDirectAttack.wav
+MiniBotSystemFastRestart.wav
+MiniBotSystemsReady.wav
+MiniExplosionChainReaction.wav
+MiniHitImpact2.wav
+MiniHitImpact.wav
+MiniHitNice.wav
+MiniHitPoint.wav
+MiniHit.wav
+MiniLaserAttack2.wav
+MiniLaserAttack3.wav
+MiniLaserAttack4.wav
+MiniLaserAttack.wav
+MinimalSpaceWarp.wav
+MiniMonsterDestroy.wav
+MiniRocketFliesBesideMe.wav
+MiniShieldAttack2.wav
+MiniShieldAttack.wav
+MiniShot2.wav
+MiniShot3.wav
+MiniShot4.wav
+MiniShot.wav
+MiniSpaceBladeAttack.wav
+MissileBesideMe.wav
+MissileBurnOut.wav
+MissileFire.wav
+MissileLaunchFast.wav
+MissileLaunchMini2.wav
+MissileLaunchMini.wav
+MissileLaunch.wav
+MissileMini.wav
+MonsterChangingDirection.wav - picking up?
+MonsterDowngroundEffect.wav - putting down?
+MonsterEnergyReloadFull.wav
+MonsterEnergyReload.wav
+MonsterGoesWrongWay.wav
+MonsterHitMini.wav
+MonsterMovement.wav
+MonsterRunaway.wav - propeller?
+MonsterSelected.wav - small vocalization
+MonsterSpikeAttack.wav
+MonsterUnburrow.wav
+MonsterUpgroundEffect.wav
+MultipleInterruptionSignals.wav
+MultipleLaserAttack.wav
+MultiPowerUpGrade.wav
+MultiUpload.wav
+MyShieldIsStronger.wav
+NewAbilityOrUpgradeAvailable.wav - activation
+NewHitPoint.wav
+NoMorePowerRobot.wav
+NotEnoughEnergy.wav
+ObserverDetectAnImportantResource.wav - dialog noise?
+ObserverFallingDown.wav - death?
+ObserverFoundNewArea.wav - positive activation
+ObserverNewUpgradeReady.wav
+ObserverPowerOffAndDead.wav
+ObserverReporting.wav
+ObserverRunawayFromEnemy.wav
+ObserverRunaway.wav
+ObserverSelectMovement.wav - death?
+OptionSelect.wav - blip
+PathFindingBotWrongWay.wav - dialog
+PerfectShieldGuard.wav - anti blip
+PointSelected.wav - activation
+PowerOffShort.wav - fart?
+RadioConnectionOn.wav
+RecallTeleportAction.wav
+ReloadingMachineIsEmpty.wav
+ReloadOnBattery.wav
+ReloadRocketLaunchers.wav - propellers?
+RobotFoundAnObstacle.wav - robot noises?
+RobotLosesEnergy.wav
+RobotMalfunction.wav
+RobotOptionsSelect.wav
+RobotSlideOnDirectionChange.wav
+RocketBesideMe.wav
+RocketBurn.wav
+RocketLaunchMini.wav
+RocketMini.wav
+RocketShot.wav
+RocketSmoke.wav
+SecretMinePlanted.wav - blip?
+SelectAnOption2.wav
+SelectAnOption.wav - blip
+SelectAPoint.wav
+SelectMenuItemOrHover.wav - blip
+SendingMessageOutaSpace.wav - save?
+SharpBladeAttack.wav
+ShieldDefendsBullets.wav
+ShieldDetected.wav - mechanical activation
+ShieldMiniDefend.wav
+ShortCircuitRobot.wav
+ShortSelectButton.wav
+ShortSignalSound.wav
+ShotMeDown.wav
+ShotOnAMonster.wav
+SightRangeIncreased.wav
+SimpleMissileLaunch.wav
+SimplyTargetPoint.wav - blip
+SingleShot2.wav
+SingleShot3.wav
+SingleShot4.wav
+SingleShot.wav
+SmoothAttackStyle.wav
+SmoothLaserAttack.wav
+SmoothWeaponAttack.wav
+SomeLittleSpikeHurt2.wav
+SomeLittleSpikeHurt.wav
+SomeMissileImpacted.wav
+SpaceCoinDropped.wav
+SpaceDestroyMiniShip.wav
+SpaceGunFire2.wav
+SpaceGunFire.wav
+SpaceGunReload.wav
+SpaceHeliArrived.wav - propeller dialog
+SpaceObstacle2.wav - error blip
+SpaceObstacle.wav  - error blip
+SpacePoliceIsComing.wav
+SpaceShipElectricInterference.wav - death
+SpaceShipInterruption.wav
+SpecialBombHasBeenPlanted.wav - mech activation
+SpecialMiniReward.wav - secret found?
+SpecialNearlyAttackStyle.wav - block moving?
+SpecialRewardReloaded.wav  - secret found?
+SpecialRewardShort2.wav - nice activation blip
+SpecialRewardShort.wav
+SpecialReward.wav
+SpecialWeapon.wav
+StonesSlamToTheGround.wav - bonk
+StrangeSignalDetected.wav
+SuddenlyFallingDown.wav
+SupriseRewardShort.wav   - save?
+SupriseReward.wav  - save?
+TimeIsOutSoon.wav - timer low?
+TotalBurnOut.wav - explode
+UFODestroyedFallingDown.wav
+UFODestroyed.wav  - explode
+UFOFlyAboveMe.wav - dialog noise
+UnableLandingArea.wav
+UnableToGatherResource.wav - activation
+UnclearInstructions.wav - error activation
+UnitCantMoveOn.wav
+UnitFlip2.wav
+UnitFlip.wav - blip
+UnitLosesEnergeticShield.wav
+UnitsDetectInArea.wav
+UnitSelectedWithVeryLowPower.wav - powering down?
+UnknownAttakStyle.wav
+UnknownObjectsInArea.wav - secret found?
+UnknownPower.wav
+UnknownShotStyle.wav
+UnknownSignal2.wav
+UnknownSignal.wav
+UnkownResourceOrEnemyDetected.wav - quitting
+UnsureDirectionBot2.wav
+UnsureDirectionBot.wav
+UnsureSelect.wav
+UnusualCoinReward.wav
+UnusualRewardSound.wav
+UnusualShieldDetection.wav - dialog?
+UploadGunBeforeEnergeticExplosion.wav - larger, mech sound
+UploadingReadyBot.wav - positive activation
+VeryMassiveEnergeticShieldOn.wav - boss screech
+VeryShortImpact.wav - click
+VerySpecialItemDiscovered2.wav
+VerySpecialItemDiscovered.wav - secret?
+WeaponLaunchMini.wav
+WrongLangingZone.wav
+WrongWayBot.wav

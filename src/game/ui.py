@@ -7,10 +7,12 @@ import src.engine.keybinds as keybinds
 import src.engine.sprites as sprites
 import src.engine.globaltimer as globaltimer
 import src.engine.spritesheets as spritesheets
+import src.engine.sounds as sounds
 
 import src.game.const as const
 import src.game.spriteref as spriteref
 import src.game.colors as colors
+import src.game.soundref as soundref
 
 _ELEMENT_UID_COUNT = 0
 
@@ -256,7 +258,7 @@ class OptionsList(UiElement):
         if idx != self.selected_idx:
             self.selected_idx = 0 if len(self.options) == 0 else idx % len(self.options)
             if not silent:
-                pass  # TODO play sound
+                sounds.play_sound(soundref.MENU_BLIP_1)
 
     def get_cursor_id_at(self, xy):
         option_idx = self.get_option_idx_at(xy, absolute=False)
@@ -345,12 +347,19 @@ class OptionsList(UiElement):
         try:
             if is_enabled():
                 do_action()
+                if opt == self._esc_option:
+                    sounds.play_sound(soundref.MENU_BACK)
+                else:
+                    sounds.play_sound(soundref.MENU_ACCEPT)
                 return True
+            else:
+                sounds.play_sound(soundref.MENU_ERROR)
+                return False
         except Exception:
             print("ERROR: failed to activate option: {}".format(self.options[1]))
             traceback.print_exc()
+            sounds.play_sound(soundref.MENU_ERROR)
             return False
-        return False
 
 
 class MultiPageOptionsList(ElementGroup):
