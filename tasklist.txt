@@ -90,6 +90,31 @@ ideas for mechanics:
     - a boulder-type block that C can push
     - lasers that kill player, but can be blocked
     
+Knowledge Progression:
+
+0   - How to move / how to complete levels
+    - Switches
+    - Two player coordination w/ switches
+    - Walljumping
+    - Breaking thin blocks
+    - Flying
+    
+1   - Retroactive desyncing
+    - Falling blocks
+        - using falling blocks to activate switches?
+    - Teleporters
+    - Tight timing & coordination
+    - Picking up other players
+    
+2   - Tight platforming
+    - Duplication via teleporters
+    - Proactive desyncing
+    
+3   - Puzzles that abuse quirks of the game's physics system
+    - Extremely tight platforming
+    - Extremely proactive desynching
+    
+    
 Level editor:    
     [ ] (P1) increase / decrease duration for specs
     

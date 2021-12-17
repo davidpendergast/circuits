@@ -1074,7 +1074,8 @@ class KeyEntity(Entity):
         self._player_collide_thresh = 15
         self._player_collide_max = self._player_collide_thresh + 20
 
-        player_collider = RectangleCollider([0, 0, cs // 2, cs], CollisionMasks.SENSOR, collides_with=(CollisionMasks.ACTOR,))
+        player_collider = RectangleCollider([0, 0, cs // 2, cs], CollisionMasks.SENSOR,
+                                            collides_with=(CollisionMasks.ACTOR, CollisionMasks.BLOCK))
         self.player_sensor_id = player_collider.get_id()
         self._sensor_ent = SensorEntity([0, 0, cs // 2, cs], player_collider, parent=self)
 
@@ -1094,10 +1095,17 @@ class KeyEntity(Entity):
     def update(self):
         super().update()
 
-        if len(self.get_world().get_sensor_state(self.player_sensor_id)) > 0:
+        is_colliding = False
+        for s in self.get_world().get_sensor_state(self.player_sensor_id):
+            if s.is_player() or isinstance(s, (FallingBlockEntity, MovingBlockEntity, DoorBlock)):
+                is_colliding = True
+                break
+
+        if is_colliding:
             self._player_colliding_tick_count = min(self._player_collide_max, self._player_colliding_tick_count + 1)
         else:
             self._player_colliding_tick_count = max(0, self._player_colliding_tick_count - 1)
+
         if self.is_satisfied():
             # reset the cycle so it starts at the bottom when it resumes bobbing
             self._bob_tick_count = int(3 / 4 * self._bob_tick_period)
