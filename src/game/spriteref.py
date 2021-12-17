@@ -643,9 +643,6 @@ class _UiSheet(spritesheets.SpriteSheet):
         self._character_card_animations = {}    # (boolean first, boolean: last) -> list of ImageModel
         self._character_card_anim_done = None
 
-        self.translucent_squares = []
-        self.translucent_pixels = []
-
     def get_size(self, img_size):
         size = super().get_size(img_size)
         bar_size = _UiSheet.N_PROGRESS_BARS * 6
@@ -654,8 +651,8 @@ class _UiSheet(spritesheets.SpriteSheet):
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
 
-        self.title_img = _img(0, 0, 160, 80, offs=start_pos)
-        self.title_img_small = _img(0, 160, 80, 40, offs=start_pos)
+        self.title_img = _img(0, 0, 168, 56, offs=start_pos)
+        self.title_img_small = _img(0, 168, 88, 32, offs=start_pos)
 
         self.top_panel_bg = _img(16, 80, 288, 32, offs=start_pos)
         self.top_panel_progress_bar_bg = _img(16, 112, 288, 10, offs=start_pos)
@@ -819,6 +816,8 @@ class _OverworldSheet(spritesheets.SpriteSheet):
 
         self.border_double_thin = self._make_borders([24, 72, 24, 24], 5, offs=start_pos)
         self.border_double_thick = self._make_borders([24, 96, 24, 24], 6, offs=start_pos)
+
+        self.border_single_line = self._make_borders([0, 120, 24, 24], 1, offs=start_pos)
 
         # lock icons
         self.lock_icons = [_img(48 + (i % 8) * 24, 72 + (i // 8) * 24, 24, 24, offs=start_pos) for i in range(0, 12)]

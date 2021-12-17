@@ -1,7 +1,7 @@
 
 import os.path
 
-name_of_game = "Harvest the Sun"
+name_of_game = "ROBOSYNC"
 version = "1.0.0"
 
 

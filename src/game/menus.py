@@ -56,6 +56,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.update_sprites()
 
         self._option_pane_bg = None
+        self._option_pane_border = None
 
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
@@ -89,8 +90,9 @@ class MainMenuScene(scenes.Scene):
     def update_sprites(self):
         total_size = renderengine.get_instance().get_game_size()
 
+        title_scale = 1.5
         if self._title_element.get_sprite() is None:
-            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=1.5)
+            text_sprite = sprites.ImageSprite(spriteref.ui_sheet().title_img, 0, 0, spriteref.UI_FG_LAYER, scale=title_scale)
             self._title_element.set_sprite(text_sprite)
 
         title_w = self._title_element.get_size()[0]
@@ -100,7 +102,7 @@ class MainMenuScene(scenes.Scene):
         self._title_element.set_xy((title_x, title_y))
 
         options_xy = (total_size[0] // 2 - title_w // 4 - self._options_list.get_size()[0] // 2,
-                      title_y + 3 * title_h // 4)
+                      title_y + 48 * title_scale)
         self._options_list.set_xy(options_xy)
 
         if self._option_pane_bg is None:
@@ -108,11 +110,23 @@ class MainMenuScene(scenes.Scene):
             self._option_pane_bg = sprites.ImageSprite(model, options_xy[0], options_xy[1], spriteref.UI_BG_LAYER)
         bg_inset = 4
         options_size = self._options_list.get_size()
-        self._option_pane_bg = self._option_pane_bg.update(new_x=options_xy[0] - bg_inset,
-                                                           new_y=options_xy[1] - bg_inset,
+        options_bg_rect = [
+            options_xy[0] - bg_inset,
+            options_xy[1] - bg_inset,
+            options_size[0] + 2 * bg_inset,
+            options_size[1] + 2 * bg_inset
+        ]
+        self._option_pane_bg = self._option_pane_bg.update(new_x=options_bg_rect[0],
+                                                           new_y=options_bg_rect[1],
                                                            new_color=colors.PERFECT_BLACK,
-                                                           new_raw_size=(options_size[0] + 2 * bg_inset,
-                                                                         options_size[1] + 2 * bg_inset))
+                                                           new_raw_size=(options_bg_rect[2], options_bg_rect[3]))
+
+        if self._option_pane_border is None:
+            self._option_pane_border = sprites.BorderBoxSprite(spriteref.UI_BG_LAYER,
+                                                               rect=options_bg_rect,
+                                                               all_borders=spriteref.overworld_sheet().border_single_line,
+                                                               hollow_center=True,
+                                                               scale=2, color=colors.PERFECT_BLACK, depth=-10)
 
     def all_sprites(self):
         for spr in self._title_element.all_sprites_from_self_and_kids():
@@ -120,6 +134,7 @@ class MainMenuScene(scenes.Scene):
         for spr in self._options_list.all_sprites_from_self_and_kids():
             yield spr
         yield self._option_pane_bg
+        yield self._option_pane_border
         for spr in self.cine_seq.all_sprites():
             yield spr
 

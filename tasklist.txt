@@ -97,22 +97,95 @@ Knowledge Progression:
     - Two player coordination w/ switches
     - Walljumping
     - Breaking thin blocks
-    - Flying
     
 1   - Retroactive desyncing
     - Falling blocks
-        - using falling blocks to activate switches?
     - Teleporters
     - Tight timing & coordination
     - Picking up other players
+    - Flying
     
 2   - Tight platforming
     - Duplication via teleporters
-    - Proactive desyncing
+    - Proactive desyncing ("Ghostwalking~")
+    - Using falling blocks as tools
+        - Activate switches
+        - Desync other players
+        - Breaking thin blocks
+    - Preventing falling blocks from falling by standing on them
     
 3   - Puzzles that abuse quirks of the game's physics system
     - Extremely tight platforming
     - Extremely proactive desynching
+    - False blocks
+    
+Known Desync Methods:
+    - disabling / enabling a block using a switch
+    - preventing a switch from being deactivated
+        - by holding it down
+    - preventing a swtich from being activated
+        - by blocking the player that activates it
+    - causing block to fall
+    - preventing a block from falling
+        - by standing on it
+        - by putting something under it
+    - causing block to break
+        - by jumping through it (C only)
+        - by causing a falling block to fall through it
+    - preventing a block from breaking
+        - by blocking whatever breaks it
+    - picking up another player (C only)
+    - preventing another player from being picked up
+    - Preventing player from using teleporter (by using it first)
+    
+    
+Names:
+    Circuit = not googleable, already in use, TBH this is kinda ok
+    Circuits = not googleable, already in use
+    Harvest the Sun = not meaningful, unless I go with that story
+    
+    Nonsense Words:
+        base words: 
+            circuit, cycle, robot, puzzle, techno, 
+            repeat, loop, mech, sync, desync, sync
+            diverge, replay, digital
+        prefixes:
+            tech
+            techno
+            robo 
+            cyc
+            tetra (means 4~) results are too similar to tetris
+            inter
+            re
+            auto
+            sync
+        suffixes:
+            -acy
+            -ism
+            -er
+            -sion
+        
+    Circuitra - in use (name of font)
+    Tetraloop - in use (molecule)
+    interloop - in use (sock company)
+    Roboloop - availablish
+    Retechno
+    Repetra - available
+    SYNC - generic, used by 8 on itch io
+    DESYNC - generic, used by moderately large game on steam
+    intersync - company
+    autosync - app
+    DIVERGE - kinda overdone
+    ROBOSYNC - 5k results, company in india, probbaly ok
+    SYNCROBO
+    DESYNCHRO - yugioh card
+    What if - we call it DESYNC. And, we make a bigger deal about it, when
+    players diverge from their original paths?
+    
+    
+        
+            
+    
     
     
 Level editor:    

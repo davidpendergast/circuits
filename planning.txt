@@ -56,12 +56,14 @@ platformer mechanics:
     - so boring, are these necessary?
     - i actually hate switches so much
     - let's see if we can avoid having them
+    - oops
     
  - no switches, no buttons, how does the player influence the level?
     - must be position or impact-based
         - this problem has been solved actually:
             - mario-style action blocks you bonk on to activate?
             - mario-style "p-switches"
+            - oops
  
 core features:
  - easily edit / share levels (through cut and paste, like linerider)
