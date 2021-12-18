@@ -10,9 +10,9 @@
     ". 2 3 ~ ~ 5 6 . ",
     ". . | . . 7 8 e0",
     "e1~ 4 . . | . . ",
-    ". . . . . | . . ",
+    ". . . . . 9 . . ",
     ". . . * ~ * . . ",
-    ". . . 9 . . . . ",
+    ". . . c1 . . . . ",
     ". . . e2. . . . "
 ],
 "lvl_1": "arrival",
@@ -24,6 +24,7 @@
 "lvl_7": "stairway",
 "lvl_8": "patience",
 "lvl_9": "diversion",
+"lvl_c1": "c_introduction",
 "bg_triangles": {
     "top": [],
     "left": [],

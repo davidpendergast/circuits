@@ -726,12 +726,19 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.level_icon_empty_gray_pieces = []
         self.level_icon_full_gray_pieces = []
 
+        self.level_small_border = None
+        self.level_small_icon_exclam = None
+        self.level_small_icon_unit = None
+        self.level_small_icon_dot = None
+        self.level_small_icon_connections = []  # [up, right, south, left]
+
         self.connectors = {}  # (north: bool, east: bool, south: bool, west: bool) -> ImageModel
 
         self.border_thin = []
         self.border_thick = []
         self.border_double_thin = []
         self.border_double_thick = []
+        self.border_single_line = []
 
         self.lock_icons = []
         self.lock_icons_with_anim_weights = []
@@ -809,6 +816,12 @@ class _OverworldSheet(spritesheets.SpriteSheet):
         self.connectors[(False, True, False, False)] = _img(72, 48, 24, 24, offs=start_pos)
         self.connectors[(False, False, True, False)] = _img(96, 48, 24, 24, offs=start_pos)
         self.connectors[(False, False, False, True)] = _img(120, 48, 24, 24, offs=start_pos)
+
+        self.level_small_border = _img(0, 48, 12, 12, offs=start_pos)
+        self.level_small_icon_exclam = _img(12, 48, 12, 12, offs=start_pos)
+        self.level_small_icon_unit = _img(24, 48, 12, 12, offs=start_pos)
+        self.level_small_icon_dot = _img(36, 48, 12, 12, offs=start_pos)
+        self.level_small_icon_connections = [_img(192 + 24 * (i % 2), 0 + 24 * (i // 2), 24, 24, offs=start_pos) for i in range(4)]
 
         # borders
         self.border_thin = self._make_borders([0, 72, 24, 24], 4, offs=start_pos)

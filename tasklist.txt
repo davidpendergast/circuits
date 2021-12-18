@@ -168,9 +168,10 @@ Names:
     Circuitra - in use (name of font)
     Tetraloop - in use (molecule)
     interloop - in use (sock company)
-    Roboloop - availablish
+    ROBOLOOP - availablish
     Retechno
-    Repetra - available
+    REPETRA - available
+    REPETICA 
     SYNC - generic, used by 8 on itch io
     DESYNC - generic, used by moderately large game on steam
     intersync - company
@@ -181,6 +182,7 @@ Names:
     DESYNCHRO - yugioh card
     What if - we call it DESYNC. And, we make a bigger deal about it, when
     players diverge from their original paths?
+    REPETICA
     
     
         

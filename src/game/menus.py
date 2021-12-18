@@ -101,13 +101,16 @@ class MainMenuScene(scenes.Scene):
         title_y = total_size[1] // 4 - title_h // 2
         self._title_element.set_xy((title_x, title_y))
 
-        options_xy = (total_size[0] // 2 - title_w // 4 - self._options_list.get_size()[0] // 2,
-                      title_y + 48 * title_scale)
+        options_xy = (
+            total_size[0] // 2 - title_w // 4 - self._options_list.get_size()[0] // 2,
+            title_y + 48 * title_scale  # want it to be "connected" to bottom of title image's border
+        )
         self._options_list.set_xy(options_xy)
 
         if self._option_pane_bg is None:
             model = spritesheets.get_instance().get_sheet(spritesheets.WhiteSquare.SHEET_ID).get_sprite(opacity=0.5)
             self._option_pane_bg = sprites.ImageSprite(model, options_xy[0], options_xy[1], spriteref.UI_BG_LAYER)
+
         bg_inset = 4
         options_size = self._options_list.get_size()
         options_bg_rect = [
@@ -122,11 +125,11 @@ class MainMenuScene(scenes.Scene):
                                                            new_raw_size=(options_bg_rect[2], options_bg_rect[3]))
 
         if self._option_pane_border is None:
-            self._option_pane_border = sprites.BorderBoxSprite(spriteref.UI_BG_LAYER,
-                                                               rect=options_bg_rect,
+            self._option_pane_border = sprites.BorderBoxSprite(spriteref.UI_BG_LAYER, options_bg_rect,
                                                                all_borders=spriteref.overworld_sheet().border_single_line,
                                                                hollow_center=True,
-                                                               scale=2, color=colors.PERFECT_BLACK, depth=-10)
+                                                               scale=1, color=colors.PERFECT_BLACK, depth=-10)
+        self._option_pane_border.update(new_rect=options_bg_rect)
 
     def all_sprites(self):
         for spr in self._title_element.all_sprites_from_self_and_kids():

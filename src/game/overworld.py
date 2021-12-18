@@ -63,12 +63,27 @@ class OverworldGrid:
 
     class LevelNode(OverworldNode):
 
-        def __init__(self, xy, n):
+        def __init__(self, xy, overworld_id: str):
+            """
+            xy: grid position
+            overworld_id: ID of level in overworld (e.g. "3", "i1", "c1")
+            """
             OverworldGrid.OverworldNode.__init__(self, xy)
-            self.n = n
+            self.n = overworld_id
 
         def __repr__(self):
-            return str(self.n)
+            return self.n
+
+        @staticmethod
+        def is_valid_level_text(text):
+            if len(text) == 0:
+                return False
+            elif text.isnumeric():
+                return True
+            elif text[0] in ("i", "a", "b", "c", "d", "u") and text[1:].isnumeric():
+                return True
+            else:
+                return False
 
         def get_level_num(self):
             return self.n
@@ -78,6 +93,14 @@ class OverworldGrid:
             level_id = state.get_level_id_for_num(self.n)
             level_bp = state.get_level_blueprint(level_id)
             return (self.n, level_id, level_bp)
+
+        def get_pretty_level_num(self):
+            if self.n.isnumeric():
+                return self.n
+            elif self.n[0] == "i":
+                return "!"
+            else:
+                return "?"
 
         def is_level(self):
             return True
@@ -479,8 +502,8 @@ class OverworldBlueprint:
 
                     xy = (i, y)
 
-                    if node_text.isnumeric():
-                        parsed.append(OverworldGrid.LevelNode(xy, int(node_text)))
+                    if OverworldGrid.LevelNode.is_valid_level_text(node_text):
+                        parsed.append(OverworldGrid.LevelNode(xy, node_text))
                     elif OverworldGrid.ConnectionNode.is_valid_con_type(node_text):
                         parsed.append(OverworldGrid.ConnectionNode(xy, node_text))
                     elif OverworldGrid.ExitNode.is_valid_exit_text(node_text):
@@ -798,19 +821,50 @@ class LevelNodeElement(ui.UiElement):
         self.grid_xy = xy
         self.level_id = level_id
         self.level_num = level_num
-        self.state = overworld_state
+        self.state: OverworldState = overworld_state
 
+        self._cached_player_types = None
+
+    def get_icon_color(self, selected, completed, unlocked):
+        if completed:
+            return colors.LIGHT_GRAY
+        elif unlocked:
+            return colors.WHITE
+        else:
+            return colors.DARK_GRAY
+
+    def get_player_types(self):
+        if self._cached_player_types is None:
+            level_bp = self.state.get_level_blueprint(self.level_id)
+            self._cached_player_types = level_bp.get_player_types() if level_bp is not None else []
+
+        return self._cached_player_types
+
+    def get_size(self):
+        return (24, 24)
+
+    def update(self):
+        self.update_sprites()
+
+    def update_sprites(self):
+        pass  # subclasses should impl this
+
+    @staticmethod
+    def new_element(xy, level_id, level_num, state):
+        if level_num.isnumeric():
+            return NumberedLevelNodeElement(xy, level_id, level_num, state)
+        else:
+            return InfoLevelNodeElement(xy, level_id, level_num, state)
+
+
+class NumberedLevelNodeElement(LevelNodeElement):
+
+    def __init__(self, xy, level_id, level_num, overworld_state):
+        super().__init__(xy, level_id, level_num, overworld_state)
         self.border_sprites = [None] * 9
-
         self.icon_sprite = None
+
         self.freshly_unlocked_counter = 0
-
-        self._cached_player_types = None
-
-    def set_node(self, level_id, node):
-        self.level_id = level_id
-        self.level_num = node.n
-        self._cached_player_types = None
 
     def _get_border_img_and_color_at(self, idx, selected, completed, unlocked, players_in_level):
         corners = {
@@ -844,22 +898,7 @@ class LevelNodeElement(ui.UiElement):
         else:
             return empty_sprites[idx], color
 
-    def _get_icon_color(self, selected, completed, unlocked):
-        if completed:
-            return colors.LIGHT_GRAY
-        elif unlocked:
-            return colors.WHITE
-        else:
-            return colors.DARK_GRAY
-
-    def get_player_types(self):
-        if self._cached_player_types is None:
-            level_bp = self.state.get_level_blueprint(self.level_id)
-            self._cached_player_types = level_bp.get_player_types() if level_bp is not None else []
-
-        return self._cached_player_types
-
-    def update(self):
+    def update_sprites(self):
         selected = self.state.is_selected_at(self.grid_xy)
         unlocked = self.state.is_unlocked_at(self.grid_xy)
 
@@ -883,7 +922,7 @@ class LevelNodeElement(ui.UiElement):
             if i % 3 == 2:
                 i_y += self.border_sprites[i].height()
 
-        icon_color = self._get_icon_color(selected, completed, unlocked)
+        icon_color = self.get_icon_color(selected, completed, unlocked)
         size = self.get_size()
 
         if selected:
@@ -923,14 +962,99 @@ class LevelNodeElement(ui.UiElement):
                                                        new_color=icon_color, new_depth=0, new_scale=1)
 
     def all_sprites(self):
+        for spr in super().all_sprites():
+            yield spr
         for spr in self.border_sprites:
             if spr is not None:
                 yield spr
         for spr in self.icon_sprite.all_sprites():
             yield spr
 
-    def get_size(self):
-        return (24, 24)
+
+class InfoLevelNodeElement(LevelNodeElement):
+
+    def __init__(self, xy, level_id, level_num, overworld_state):
+        super().__init__(xy, level_id, level_num, overworld_state)
+        self.connection_sprites = [None] * 4
+        self.icon_sprite = None
+        self.icon_border_sprite = None
+
+    def _get_icon_model_and_color(self, selected, completed, unlocked):
+        letter = self.level_num[0]
+        color = self.get_icon_color(selected, completed, unlocked)
+        if letter in "uabcd":
+            model = spriteref.overworld_sheet().level_small_icon_unit
+            if unlocked:
+                color = spriteref.get_color("uabcd".index(letter), dark=completed)
+        else:
+            model = spriteref.overworld_sheet().level_small_icon_exclam
+
+        return model, color
+
+    def update_sprites(self):
+        selected = self.state.is_selected_at(self.grid_xy)
+        completed = self.state.is_complete(self.level_id)
+        unlocked = self.state.is_unlocked_at(self.grid_xy)
+
+        xy = self.get_xy(absolute=True)
+        size = self.get_size()
+
+        model, icon_color = self._get_icon_model_and_color(selected, completed, unlocked)
+        if self.icon_sprite is None:
+            self.icon_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+        self.icon_sprite = self.icon_sprite.update(new_model=model,
+                                                   new_x=xy[0] + size[0] // 2 - model.width() // 2,
+                                                   new_y=xy[1] + size[1] // 2 - model.height() // 2,
+                                                   new_color=icon_color)
+
+        border_color = colors.PERFECT_RED if selected else self.get_icon_color(selected, completed, unlocked)
+        border_model = spriteref.overworld_sheet().level_small_border
+        if self.icon_border_sprite is None:
+            self.icon_border_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, depth=5)
+        self.icon_border_sprite = self.icon_border_sprite.update(new_model=border_model,
+                                                                 new_x=xy[0] + size[0] // 2 - border_model.width() // 2,
+                                                                 new_y=xy[1] + size[1] // 2 - border_model.height() // 2,
+                                                                 new_color=border_color)
+
+        node_rect = [xy[0], xy[1], size[0], size[1]]
+        con_models = spriteref.overworld_sheet().level_small_icon_connections
+
+        n, e, s, w = self.state.get_grid().get_connected_directions(self.grid_xy)
+
+        self._update_connection_sprite(n, 0, con_models[0], node_rect, (0, -1))
+        self._update_connection_sprite(e, 1, con_models[1], node_rect, (1, 0))
+        self._update_connection_sprite(s, 2, con_models[2], node_rect, (0, 1))
+        self._update_connection_sprite(w, 3, con_models[3], node_rect, (-1, 0))
+
+    def _update_connection_sprite(self, connected, idx, model, rect, direction):
+        if not connected:
+            self.connection_sprites[idx] = None
+        else:
+            if self.connection_sprites[idx] is None:
+                self.connection_sprites[idx] = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+
+            node = self.state.get_grid().get_node(self.grid_xy)
+            neighbor = self.state.get_grid().get_connected_node_in_dir(self.grid_xy, direction,
+                                                                       selectable_only=True, enabled_only=True)
+            if (node is not None and node.is_enabled()
+                    and neighbor is not None and neighbor.is_enabled()):
+                color = colors.WHITE
+            else:
+                color = colors.DARK_GRAY
+
+            self.connection_sprites[idx] = self.connection_sprites[idx].update(
+                new_model=model,
+                new_x=rect[0] + rect[2] // 2 - model.width() // 2,
+                new_y=rect[1] + rect[3] // 2 - model.height() // 2,
+                new_color=color)
+
+    def all_sprites(self):
+        for spr in super().all_sprites():
+            yield spr
+        yield self.icon_sprite
+        yield self.icon_border_sprite
+        for spr in self.connection_sprites:
+            yield spr
 
 
 class OverworldGridElement(ui.UiElement):
@@ -963,10 +1087,14 @@ class OverworldGridElement(ui.UiElement):
                 if xy in level_nodes_to_clear:
                     level_nodes_to_clear.remove(xy)
                 level_id = self.state.get_level_id_for_num(node.n)
+
+                if xy in self.level_nodes and (self.level_nodes[xy].level_id != level_id or self.level_nodes[xy].level_num != node.n):
+                    self.remove_child(self.level_nodes[xy])
+                    del self.level_nodes[xy]
+
                 if xy not in self.level_nodes:
-                    self.level_nodes[xy] = LevelNodeElement(xy, level_id, node.n, self.state)
+                    self.level_nodes[xy] = LevelNodeElement.new_element(xy, level_id, node.n, self.state)
                     self.add_child(self.level_nodes[xy])
-                self.level_nodes[xy].set_node(level_id, node)
 
                 ele = self.level_nodes[xy]
                 ele.set_xy((xy[0] * cs, xy[1] * cs))
@@ -1167,7 +1295,8 @@ class OverworldInfoPanelElement(ui.UiElement):
     def get_title_text(self):
         node = self.get_node_to_show()
         if node is not None and isinstance(node, OverworldGrid.LevelNode):
-            level_num, _, level_bp = node.get_level_info(self.state)
+            _, _, level_bp = node.get_level_info(self.state)
+            level_num = node.get_pretty_level_num()
             if level_num is not None and level_bp is not None:
                 world_num = self.state.get_world_num()
                 return "{}-{} {}".format(world_num, level_num, level_bp.name())
