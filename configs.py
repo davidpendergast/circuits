@@ -7,7 +7,7 @@ version = "1.0.0"
 
 """ Display """
 default_window_size = (480*2, 240*2)  # size of window when the game starts.
-minimum_window_size = (480, 240)  # if the window is smaller than this, it will begin cropping the picture.
+minimum_window_size = (480*2, 240*2)  # if the window is smaller than this, it will begin cropping the picture.
 
 allow_fullscreen = True
 allow_window_resize = True

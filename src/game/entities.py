@@ -964,10 +964,11 @@ def _update_point_sprites_for_editor(show, sprite_list, points, size):
                                               new_depth=-500)
 
 
-class MovingBlockEntity(BlockEntity):
+class MoveBetweenPointsController:
 
-    def __init__(self, w, h, pts, period=90, loop=True, art_id=0, color_id=0):
-        BlockEntity.__init__(self, pts[0][0], pts[0][1], w, h, art_id=art_id, color_id=color_id)
+    def __init__(self, obj, pts, period=90, loop=True):
+        self.obj = obj
+
         self._pts = pts
         self._period = period
         self._loop = loop
@@ -975,7 +976,7 @@ class MovingBlockEntity(BlockEntity):
         self._point_sprites_for_editor = []
 
     def update(self):
-        tick_count = self.get_world().get_tick()
+        tick_count = self.obj.get_world().get_tick()
 
         step = tick_count // self._period
         cycle = step // len(self._pts)
@@ -994,21 +995,39 @@ class MovingBlockEntity(BlockEntity):
 
         pos = int(pos[0]), int(pos[1])  # otherwise it's super jerky when the player rides it
 
-        old_xy = self.get_xy(raw=True)
+        old_xy = self.obj.get_xy(raw=True)
 
-        self.set_xy(pos)
-        self.set_vel(util.sub(old_xy, pos))
-
-        super().update()
-
-    def update_sprites(self):
-        _update_point_sprites_for_editor(self.is_selected_in_editor(), self._point_sprites_for_editor, self._pts, self.get_size())
-        super().update_sprites()
+        self.obj.set_xy(pos)
+        self.obj.set_vel(util.sub(old_xy, pos))
 
     def all_sprites(self):
         for spr in self._point_sprites_for_editor:
             yield spr
+
+    def update_sprites(self):
+        _update_point_sprites_for_editor(self.obj.is_selected_in_editor(), self._point_sprites_for_editor,
+                                         self._pts, self.obj.get_size())
+
+
+class MovingBlockEntity(BlockEntity):
+
+    def __init__(self, w, h, pts, period=90, loop=True, art_id=0, color_id=0):
+        super().__init__(pts[0][0], pts[0][1], w, h, art_id=art_id, color_id=color_id)
+
+        self.controller = MoveBetweenPointsController(self, pts, period=period, loop=loop)
+
+    def update(self):
+        super().update()
+        self.controller.update()
+
+    def update_sprites(self):
+        super().update_sprites()
+        self.controller.update_sprites()
+
+    def all_sprites(self):
         for spr in super().all_sprites():
+            yield spr
+        for spr in self.controller.all_sprites():
             yield spr
 
 
@@ -2952,8 +2971,10 @@ class FloatingTextAlertEntity(Entity):
 
 class SpikeEntity(Entity):
 
-    def __init__(self, x, y, w, h, direction=(0, -1), color_id=0):
-        Entity.__init__(self, x, y, w, h)
+    def __init__(self, pts, w, h, direction=(0, -1), color_id=0, period=60, loop=True):
+        Entity.__init__(self, pts[0][0], pts[0][1], w, h)
+
+        self.controller = MoveBetweenPointsController(self, pts, period=period, loop=loop)
 
         direction = util.tuplify(direction)
         if direction not in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -2998,6 +3019,8 @@ class SpikeEntity(Entity):
 
     def update(self):
         super().update()
+        self.controller.update()
+
         ents_in_spikes = self.get_world().get_sensor_state(self._sensor_id)
         for e in ents_in_spikes:
             if isinstance(e, PlayerEntity):
@@ -3047,10 +3070,16 @@ class SpikeEntity(Entity):
         self._bot_sprites = new_bot_sprites
         self._top_sprites = new_top_sprites
 
+    def update_sprites(self):
+        super().update_sprites()
+        self.controller.update_sprites()
+
     def all_sprites(self):
         for spr in self._top_sprites:
             yield spr
         for spr in self._bot_sprites:
+            yield spr
+        for spr in self.controller.all_sprites():
             yield spr
 
 

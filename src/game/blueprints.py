@@ -493,20 +493,27 @@ class SpikeSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "spikes", required_keys=(SUBTYPE_ID, X, Y, W, H),
-                          optional_keys={COLOR_ID: 0})
+                          optional_keys={COLOR_ID: 0, POINTS: tuple(), DURATION: 90, LOOP: True})
 
     def get_subtypes(self):
         return [(0, -1), (1, 0), (0, 1), (-1, 0)]  # direction the spikes point
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
+        points = list(util.listify(json_blob[POINTS]))
+
         x = json_blob[X]
         y = json_blob[Y]
+        points.insert(0, (x, y))
+
         w = json_blob[W]
         h = json_blob[H]
         direction = json_blob[SUBTYPE_ID]
         color_id = json_blob[COLOR_ID]
 
-        yield entities.SpikeEntity(x, y, w, h, direction, color_id=color_id)
+        period = json_blob[DURATION]
+        loop = json_blob[LOOP]
+
+        yield entities.SpikeEntity(points, w, h, direction, color_id=color_id, period=period, loop=loop)
 
     def get_default_value(self, k):
         if k == W:
@@ -1085,6 +1092,7 @@ class SpecUtils:
             new_points = [pt for pt in spec_blob[POINTS]]
             new_points.append(xy)
             res[POINTS] = tuple(new_points)
+
         return res
 
     @staticmethod

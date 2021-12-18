@@ -1,14 +1,10 @@
 
 bugs:
- - triangle colliders are a pixel "wider" than rectangles I believe
- - should snap to vertical slopes too
  - hard to tell difference between cleared / uncleared levels
- - can make window very small, destroying the UI
- - timer always appears up on c_introduction?
+ - progress isn't saved when game exits via crash
  
  
 features:
- - let spikes move
  - animation when you teleport
  - message when you've died or lost the level
     - bg should change color?
