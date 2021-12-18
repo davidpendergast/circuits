@@ -380,7 +380,6 @@ class World:
                 i.set_vel((0, 0))
                 i.was_crushed()
 
-        camera_bound_markers = []
         self._light_sources.clear()
         for ent in self.all_entities(types=(entities.HasLightSourcesEntity,)):
             n = 0
@@ -392,10 +391,7 @@ class World:
                     self._light_sources.put("{}_{}".format(ent.get_ent_id(), n),
                                             [xy[0] - radius, xy[1] - radius, radius * 2, radius * 2],
                                             (xy, radius, color, strength))
-            if ent.is_camera_bound_marker():
-                camera_bound_markers.append(ent)
-
-        self._update_camera_bounds(camera_bound_markers)
+        self._update_camera_bounds()
 
         if entities.ACTOR_GROUP in phys_groups:
             for ent in phys_groups[entities.ACTOR_GROUP]:

@@ -8,6 +8,13 @@ bugs:
  
  
 features:
+ - let spikes move
+ - animation when you teleport
+ - message when you've died or lost the level
+    - bg should change color?
+ 
+ 
+features:
  - joypad support
     
  - pop-out editor
@@ -20,7 +27,6 @@ features:
     - make pop-out editor stretchy and make it remember its bounds
     
  - dialog
-    - make it zoom in when you're talking
     - make text appear letter-by-letter
     
  - sound
@@ -34,8 +40,8 @@ features:
     D: done?
     
  - secret areas
-    - invisiblocks
-    - camera pans to area only if it's visible?
+    [X] invisiblocks
+    [X] camera pans to area only if it's visible?
     - things to talk to
     
     
