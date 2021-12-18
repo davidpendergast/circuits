@@ -865,7 +865,7 @@ class LevelBlueprint:
 
     def time_limit(self):
         """returns: level's time limit in ticks"""
-        return 60 * 60
+        return util.read_int(self.json_blob, TIME_LIMIT, 60 * 60)
 
     def _recache_entity_specs(self, force=False):
         if force or self._cached_entities is None:

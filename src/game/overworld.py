@@ -1316,7 +1316,10 @@ class OverworldInfoPanelElement(ui.UiElement):
             if level_id is not None:
                 time = self.state.get_completion_time(level_id)
                 if time is not None:
-                    time_str = util.ticks_to_time_string(time, fps=configs.target_fps, n_decimals=2)
+                    time_str = util.ticks_to_time_string(time, fps=configs.target_fps,
+                                                         # showing minutes to make it obvious the number is a time
+                                                         show_minutes_if_zero=False,
+                                                         n_decimals=2)
                     res = sprites.TextBuilder()
                     res.add(time_str, color=colors.LIGHT_GRAY)
                     return res

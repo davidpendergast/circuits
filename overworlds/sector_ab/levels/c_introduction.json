@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast"],
-    "description": "???",
+    "description": "A stranger lurks in the shadows.\n",
     "entities": [
         {"color_id": 2, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 176},
@@ -222,5 +222,5 @@
     ],
     "level_id": "c_introduction",
     "name": "Introduction",
-    "time_limit": 3600
+    "time_limit": 36000
 }

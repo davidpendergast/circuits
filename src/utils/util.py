@@ -1143,7 +1143,33 @@ def diag_neighbors(x, y, dist=1):
     yield (x - dist, y - dist)
 
 
-def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False, n_decimals=0):
+def time_string_to_ticks(time_string: str, fps=60, or_else=-1):
+    try:
+        res = 0
+        parts = time_string.split(":")
+        for idx, val in enumerate(reversed(parts)):
+            if len(val) == 0:
+                continue
+
+            if idx == 0:  # seconds
+                res += int(fps * float(val))
+            elif idx == 1:  # minutes
+                res += 60 * fps * int(val)
+            elif idx == 2:  # hours
+                res += 3600 * fps * int(val)
+            else:
+                raise ValueError("Time string has too many sections (max 3, for H:M:S): {}".format(time_string))
+        return res
+    except Exception:
+        print("ERROR: failed to parse time string: {}".format(time_string))
+        traceback.print_exc()
+        return or_else
+
+
+def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False, show_minutes_if_zero=True, n_decimals=0):
+    neg = n_ticks < 0
+    n_ticks = abs(n_ticks)
+
     seconds = max(0, n_ticks // fps)
     hours = seconds // 3600
     seconds = seconds % 3600
@@ -1151,25 +1177,40 @@ def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False, n_decimals=0
     seconds = seconds % 60
     sub_seconds = n_ticks % fps
 
-    res = str(seconds)
+    res = ""
 
+    # handle hours
+    if hours > 0 or show_hours_if_zero:
+        res += str(hours)
+
+    # handle minutes
+    if len(res) > 0 or minutes > 0 or show_minutes_if_zero:
+        if len(res) > 0:
+            if minutes < 10:
+                res += ":0" + str(minutes)
+            else:
+                res += ":" + str(minutes)
+        else:
+            res += str(minutes)
+
+    # handle seconds
+    if len(res) > 0:
+        if seconds < 10:
+            res += ":0" + str(seconds)
+        else:
+            res += ":" + str(seconds)
+    else:
+        res += str(seconds)
+
+    # handle decimals
     if n_decimals > 0:
         res = res + "{:.{}f}".format(sub_seconds / fps, n_decimals)[1:]
 
-    if seconds < 10:
-        res = ":0" + res
-    else:
-        res = ":" + res
+    # handle negativity
+    if neg:
+        res = "-" + res
 
-    if minutes < 10 and (hours > 0 or show_hours_if_zero):
-        res = "0" + str(minutes) + res
-    else:
-        res = str(minutes) + res
-
-    if hours == 0:
-        return "0:" + res if show_hours_if_zero else res
-    else:
-        return str(hours) + ":" + res
+    return res
 
 
 def read_safely(json_blob, key, default, mapper=lambda x: x):

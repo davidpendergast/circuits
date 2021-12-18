@@ -1186,6 +1186,11 @@ class LevelMetaDataEditScene(OptionSelectScene):
         self._add_text_edit_option("level name: ", blueprints.NAME, bp)
         self._add_popout_text_edit_option("description: ", blueprints.DESCRIPTION, bp)
         self._add_text_edit_option("level ID: ", blueprints.LEVEL_ID, bp)
+        self._add_text_edit_option("Time Limit: ", blueprints.TIME_LIMIT, bp,
+                                   to_str=lambda t: util.ticks_to_time_string(t),
+                                   from_str=lambda t_str: util.time_string_to_ticks(t_str, or_else=3600),
+                                   char_limit=8,
+                                   allowed_chars="0123456789:")
         self._add_players_edit_option("Players: ", bp)
 
         self.add_option("back", lambda: self._on_exit(self._base_bp), esc_option=True)

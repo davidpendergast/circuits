@@ -2,6 +2,9 @@
 bugs:
  - triangle colliders are a pixel "wider" than rectangles I believe
  - should snap to vertical slopes too
+ - hard to tell difference between cleared / uncleared levels
+ - can make window very small, destroying the UI
+ - timer always appears up on c_introduction?
  
  
 features:
