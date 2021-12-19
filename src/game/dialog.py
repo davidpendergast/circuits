@@ -146,7 +146,10 @@ class DialogElement(ui.UiElement):
         if self.speaker_sprite is None:
             self.speaker_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
         all_sprites = self.current_dialog.get_speaker_sprites()
-        speaker_img = all_sprites[gs.get_instance().anim_tick() // 8 % len(all_sprites)]
+        if len(all_sprites) > 0:
+            speaker_img = all_sprites[gs.get_instance().anim_tick() // 8 % len(all_sprites)]
+        else:
+            speaker_img = spritesheets.get_white_square_img(0)
 
         speaker_sc = 3
         speaker_size = speaker_img.size(scale=speaker_sc)
