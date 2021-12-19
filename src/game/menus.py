@@ -699,6 +699,23 @@ class _GameState:
                 return False
         return True
 
+    def get_failure_message(self) -> str:
+        res = None
+        for idx in range(0, self._active_player_idx + 1):
+            player_type = self.get_player_type(idx)
+            if self.has_ever_died(idx):
+                res = f"{player_type.get_name()} was Destroyed."
+                break
+        if self.get_ticks_remaining() <= 0:
+            res = "Time Up!"
+
+        if res is not None:
+            if self._active_player_idx > 0:
+                res += f"\n[{keybinds.get_instance().get_keys(const.SOFT_RESET)}] to Retry"
+                res += f"\n[{keybinds.get_instance().get_keys(const.RESET)}] to Reset All"
+
+        return res
+
     def is_playing_back(self, player_idx):
         return self._currently_playing[player_idx]
 
@@ -942,6 +959,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         self._fadeout_duration = 90
 
         self.setup_new_world(bp)
+        self._handled_level_fail = False
 
         self._queued_next_world = None
         self._next_world_countdown = 0
@@ -953,6 +971,12 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
     def on_level_exit(self):
         if self._on_level_exit is not None:
             self._on_level_exit()
+
+    def on_level_fail(self):
+        self.get_world_view().set_bg_colors([colors.PERFECT_DARK_RED, colors.PERFECT_VERY_DARK_RED], period=15, loop=False)
+        # self.get_world_view().fade_to_bg_color(colors.PERFECT_VERY_DARK_RED, delay=20)
+        # TODO sound / music change
+        # TODO screenshake
 
     def update_sprites(self):
         _BaseGameScene.update_sprites(self)
@@ -991,6 +1015,8 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         hard_reset_keys = keybinds.get_instance().get_keys(const.RESET)
         soft_reset_keys = keybinds.get_instance().get_keys(const.SOFT_RESET)
 
+        fail_msg = self._state.get_failure_message()
+
         if inputs.get_instance().was_pressed(hard_reset_keys) and self._state.get_status().can_hard_reset:
             self._state.reset(all_players=True)
             self.setup_new_world(self._state.bp)
@@ -1002,6 +1028,12 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
             self._state.set_status(Statuses.TOTAL_SUCCESS)
             self.replace_players_with_fadeout(delay=self._fadeout_duration)
             self._state.set_status(Statuses.EXIT_NOW_SUCCESSFULLY, delay=self._fadeout_duration)
+
+        elif fail_msg is not None:
+            if not self._handled_level_fail:
+                self.on_level_fail()
+            self._handled_level_fail = True
+            # TODO display failure message
         else:
             active_satisfied = True
             for i in range(0, self._state.get_active_player_idx() + 1):
@@ -1066,6 +1098,8 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
     def setup_new_world(self, bp):
         old_show_grid = False if self.get_world_view() is None else self.get_world_view()._show_grid
         super().setup_new_world(bp)
+
+        self._handled_level_fail = False
 
         # assume we don't intentionally have another new world queued up
         self._next_world_countdown = 0
@@ -1152,6 +1186,9 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         if self._progress_bar_ui is not None:
             for spr in self._progress_bar_ui.all_sprites():
                 yield spr
+
+    def get_clear_color(self):
+        return self.get_world_view().get_current_bg_color()
 
 
 class DebugGameScene(RealGameScene):

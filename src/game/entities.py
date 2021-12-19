@@ -3140,7 +3140,7 @@ class FalseBlockEntity(BlockEntity):
 
         # goes to black as it becomes more revealed
         reveal_prog = util.bound(self.reveal_ticks / FalseBlockEntity.REVEAL_TIME, 0, 1)
-        return colors.darken(base_color, reveal_prog)
+        return colors.darken(base_color, reveal_prog * 0.85)
 
     def update(self):
         super().update()

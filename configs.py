@@ -1,7 +1,7 @@
 
 import os.path
 
-name_of_game = "ROBOSYNC"
+name_of_game = "RESYNC"
 version = "1.0.0"
 
 

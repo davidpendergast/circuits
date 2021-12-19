@@ -170,24 +170,24 @@ Names:
             -er
             -sion
         
+    Circuits - in use many times, generic, impossible to google
+    ABCD - impossible to google, also bad
     Circuitra - in use (name of font)
     Tetraloop - in use (molecule)
     interloop - in use (sock company)
     ROBOLOOP - availablish
-    Retechno
-    REPETRA - available
-    REPETICA 
+    Retechno - bad
+    REPETRA - available, but bad
+    REPETICA - sounds like gattica
     SYNC - generic, used by 8 on itch io
-    DESYNC - generic, used by moderately large game on steam
+    DESYNC - generic, used by moderately sized game on steam
+    RESYNC - somewhat generic, 1 game using it on itch ("reSYNC"). 0 on steam. Hmm
     intersync - company
     autosync - app
-    DIVERGE - kinda overdone
-    ROBOSYNC - 5k results, company in india, probbaly ok
-    SYNCROBO
+    DIVERGE - generic, overused (TV show I think)
+    ROBOSYNC - 5k results, company in india, probbaly ok. kinda bleh though
+    SYNCROBO - bad
     DESYNCHRO - yugioh card
-    What if - we call it DESYNC. And, we make a bigger deal about it, when
-    players diverge from their original paths?
-    REPETICA
     
     
         

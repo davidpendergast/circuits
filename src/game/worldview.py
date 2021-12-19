@@ -41,6 +41,11 @@ class WorldView:
         self._temp_zoom_delay = 20
         self._use_temp_zoom = False
 
+        self._bg_colors = [colors.PERFECT_BLACK]
+        self._bg_colors_period = 120
+        self._bg_colors_tick = 0
+        self._loop_bg_colors = True
+
     def update(self):
         zoom_change = 0
         if inputs.get_instance().was_pressed(pygame.K_MINUS):
@@ -55,6 +60,8 @@ class WorldView:
             if not self._use_temp_zoom and self._temp_zoom_tick_count >= self._temp_zoom_delay:
                 # remove temp zoom
                 self._temp_zoom_idx = None
+
+        self._bg_colors_tick += 1
 
         if inputs.get_instance().was_pressed(pygame.K_f):
             self._free_camera = not self._free_camera
@@ -102,6 +109,34 @@ class WorldView:
 
     def set_free_camera(self, val):
         self._free_camera = val
+
+    def set_bg_colors(self, colors, period=120, loop=True):
+        if colors is None:
+            colors = [colors.PERFECT_BLACK]
+        elif isinstance(colors, tuple):
+            colors = [colors]
+
+        self._bg_colors = colors
+        self._bg_colors_tick = 0
+        self._bg_colors_period = period
+        self._loop_bg_colors = loop
+
+    def fade_to_bg_color(self, color, delay):
+        self.set_bg_colors([self.get_current_bg_color(), color], period=delay, loop=False)
+
+    def get_current_bg_color(self):
+        n_colors = len(self._bg_colors)
+        if n_colors == 0:
+            return colors.PERFECT_BLACK
+        elif n_colors == 1:
+            return self._bg_colors[0]
+        elif not self._loop_bg_colors and self._bg_colors_tick >= self._bg_colors_period * n_colors:
+            return self._bg_colors[-1]
+        else:
+            idx1 = (self._bg_colors_tick // self._bg_colors_period) % n_colors
+            idx2 = (idx1 + 1) % n_colors if self._loop_bg_colors else min(idx1 + 1, n_colors - 1)
+            prog = (self._bg_colors_tick % self._bg_colors_period) / self._bg_colors_period
+            return util.linear_interp(self._bg_colors[idx1], self._bg_colors[idx2], prog)
 
     def adjust_base_zoom(self, dz: int):
         old_center = self.get_camera_center_in_world(ignore_temp_zoom=True)
