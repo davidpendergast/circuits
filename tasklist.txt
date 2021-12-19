@@ -2,6 +2,7 @@
 bugs:
  - hard to tell difference between cleared / uncleared levels
  - progress isn't saved when game exits via crash
+ - falling blocks and teleporters don't show up in level preview
  
  
 features:

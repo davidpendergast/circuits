@@ -13,6 +13,7 @@ import src.game.globalstate as gs
 import src.game.spriteref as spriteref
 import src.game.const as const
 import src.game.playertypes as playertypes
+import src.game.colors as colors
 
 
 # json keys
@@ -1036,14 +1037,20 @@ class SpecUtils:
 
     @staticmethod
     def get_preview_color(spec_blob):
-        color = (0.5, 0.5, 0.5)
+        color = colors.DARK_GRAY
+
         try:
+            dark = spec_blob[TYPE_ID] in (SpecTypes.FALLING_BLOCK.get_id(),
+                                          SpecTypes.TELEPORTER.get_id(),
+                                          SpecTypes.DOOR_BLOCK.get_id())
+
             if SUBTYPE_ID in spec_blob and any([c == spec_blob[SUBTYPE_ID] for c in const.ALL_PLAYER_IDS]):
-                color = spriteref.get_color(playertypes.PlayerTypes.get_type(spec_blob[SUBTYPE_ID]).get_color_id())
+                color = spriteref.get_color(playertypes.PlayerTypes.get_type(spec_blob[SUBTYPE_ID]).get_color_id(), dark=dark)
             elif COLOR_ID in spec_blob:
-                color = spriteref.get_color(spec_blob[COLOR_ID])
+                color = spriteref.get_color(spec_blob[COLOR_ID], dark=dark)
         except Exception:
             traceback.print_exc()
+
         return color
 
     @staticmethod

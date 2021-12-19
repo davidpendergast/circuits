@@ -1217,7 +1217,8 @@ class _EntityPreview():
         color = blueprints.SpecUtils.get_preview_color(self.blob)
         if self.spec_type in (blueprints.SpecTypes.BLOCK, blueprints.SpecTypes.MOVING_BLOCK,
                               blueprints.SpecTypes.START_BLOCK, blueprints.SpecTypes.END_BLOCK,
-                              blueprints.SpecTypes.DOOR_BLOCK):
+                              blueprints.SpecTypes.DOOR_BLOCK, blueprints.SpecTypes.FALLING_BLOCK,
+                              blueprints.SpecTypes.FALSE_BLOCK, blueprints.SpecTypes.TELEPORTER):
             util.extend_or_empty_list_to_length(self.sprites, 1,
                                                 creator=lambda: sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER))
             world_rect = blueprints.SpecUtils.get_rect(self.blob)
