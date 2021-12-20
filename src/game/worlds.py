@@ -397,7 +397,7 @@ class World:
             for ent in phys_groups[entities.ACTOR_GROUP]:
                 if ent.is_player():
                     if ent.handle_death_if_necessary():
-                        self.get_game_state().set_player_died(ent.get_player_type())
+                        self.get_game_state().set_player_died(ent.get_player_type(), ent.get_death_reason())
 
         if self.get_game_state() is not None and self.get_game_state().get_status().world_ticks_inc:
             self._tick += 1

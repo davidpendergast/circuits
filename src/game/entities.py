@@ -2475,15 +2475,17 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
     def set_death_reason(self, reason):
         self._death_reason = reason
 
+    def get_death_reason(self):
+        return self._death_reason
+
     def handle_death_if_necessary(self, silent=False):
         if self._death_reason is not None:
             player_id = self.get_player_type().get_id()
-            if not silent:
+            if not silent and self._death_reason is not DeathReason.OUT_OF_BOUNDS:
                 cx, cy = self.get_center()
                 for i in range(0, spriteref.object_sheet().num_broken_player_parts(player_id)):
                     self.get_world().add_entity(PlayerBodyPartParticle(cx, cy, player_id, i))
             self.get_world().remove_entity(self)
-            # TODO tell gs or someone we died?
             print("INFO: player {} {}.".format(player_id, self._death_reason))
             return True
         else:
@@ -2500,7 +2502,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
 class DeathReason:
     CRUSHED = "was crushed"
-    OUT_OF_BOUNDS = "fell out of bounds"
+    OUT_OF_BOUNDS = "fell into the void"
     SPIKED = "was spiked"
     CROWDING = "became one with itself"
     UNKNOWN = "was killed by the guardians"

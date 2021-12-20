@@ -16,7 +16,7 @@ def create_instance():
 class KeyBindings:
 
     def __init__(self):
-        self._binds = {}  # action_code -> list of keys
+        self._binds = {}  # action_code -> Binding
         self._global_bindings = {}  # int: key_code -> (str: name, lambda: action)
 
     def load_from_file(self, filepath):
@@ -98,6 +98,60 @@ def modifier_to_key(key):
         return []
 
 
+_KEYCODE_TO_KEYNAME = {}
+_KEYNAME_TO_KEYCODE = {}
+
+# big yikes
+for name in dir(pygame):
+    if name.startswith("K_"):
+        keycode = getattr(pygame, name)
+        if isinstance(keycode, int):
+            try:
+                keyname = name[2:]  # slice off the K_
+                if len(keyname) > 1:
+                    keyname = keyname.lower()
+                else:
+                    keyname = keyname.upper()
+
+                _KEYCODE_TO_KEYNAME[keycode] = keyname
+                _KEYNAME_TO_KEYCODE[keyname] = keycode
+            except Exception:
+                print("Failed to store key name/code: pygame.{} = {}".format(name, keycode))
+                traceback.print_exc()
+    elif name.startswith("KMOD_"):
+        keycode = getattr(pygame, name)
+        if isinstance(keycode, int):
+            keyname = None
+            if "CTRL" in name:
+                keyname = "ctrl"
+            elif "SHIFT" in name:
+                keyname = "shift"
+            elif "ALT" in name:
+                keyname = "alt"
+            elif "CAPS" in name:
+                keyname = "caps"
+            elif "META" in name:
+                keyname = "meta"
+
+            if keyname is not None:
+                _KEYCODE_TO_KEYNAME[keycode] = keyname
+                _KEYNAME_TO_KEYCODE[keyname] = keycode
+
+
+def get_pretty_key_name(keycode):
+    if keycode in _KEYCODE_TO_KEYNAME:
+        return _KEYCODE_TO_KEYNAME[keycode]
+    else:
+        return None
+
+
+def get_keycode(keyname):
+    if keyname in _KEYNAME_TO_KEYCODE:
+        return _KEYNAME_TO_KEYCODE[keyname]
+    else:
+        return None
+
+
 _ALL_MODS = [pygame.KMOD_CTRL, pygame.KMOD_LCTRL, pygame.KMOD_RCTRL,
              pygame.KMOD_SHIFT, pygame.KMOD_LSHIFT, pygame.KMOD_RSHIFT,
              pygame.KMOD_ALT, pygame.KMOD_LALT, pygame.KMOD_RALT,
@@ -122,6 +176,9 @@ class Binding:
         """
         self.keycode = util.tuplify(keycode)
         self.mods = util.tuplify(mods)
+
+    def __len__(self):
+        return len(self.keycode)
 
     def _mods_satisfied(self, input_state):
         for m in self.mods:
@@ -153,6 +210,26 @@ class Binding:
                 if min_time < 0:
                     return min_time
         return min_time
+
+    def get_pretty_names(self, ignore_mods=False):
+        res = []
+        for code in self.keycode:
+            name = ""
+            if not ignore_mods:
+                for mod in self.mods:
+                    modname = get_pretty_key_name(mod)
+                    if modname is not None:
+                        name += "{} + ".format(modname)
+            keyname = get_pretty_key_name(code)
+            if keyname is not None:
+                name += keyname
+                res.append(name)
+        return res
+
+    def __repr__(self):
+        for s in self.get_pretty_names():
+            return s  # return first binding
+        return " "    # if it's unbound
 
 
 def pg_const_val_to_var_name(const_val: int, starts_with="K_", default=None) -> str:

@@ -152,7 +152,7 @@ class InstructionsScene(scenes.Scene):
            "To pass a level, all robots must be at their goal simultaneously.\n\n" \
            "[WASD or ←↑↓→] to move.\n" \
            "[R] to reset the entire level.\n" \
-           "[Z] to reset the current robot."  # TODO swap in actual hotkeys
+           "[Z] to reset the current unit."  # TODO swap in actual hotkeys
 
     def __init__(self, next_scene, prev_scene):
         super().__init__()
@@ -607,7 +607,7 @@ class _GameState:
         self._currently_satisfied = [False] * n_players
         self._recorded_runs = [None] * n_players  # list of PlaybackPlayerController
         self._currently_alive = [False] * n_players
-        self._has_ever_died = [False] * n_players
+        self._has_ever_died = [None] * n_players  # list of DeathReasons
 
         self._total_ticks = bp.time_limit()
         self._time_elapsed = 0
@@ -640,7 +640,7 @@ class _GameState:
         for i in range(0, len(self._currently_playing)):
             self._currently_playing[i] = False
         for i in range(0, len(self._currently_playing)):
-            self._has_ever_died[i] = False
+            self._has_ever_died[i] = None
         if all_players:
             self._active_player_idx = 0
             self._recorded_runs = [None] * self.num_players()
@@ -699,22 +699,31 @@ class _GameState:
                 return False
         return True
 
-    def get_failure_message(self) -> str:
-        res = None
+    def get_failure_message(self):
+        """return: list of str (representing the lines in the failure message) or an empty list.
+        """
+        res_lines = []
         for idx in range(0, self._active_player_idx + 1):
-            player_type = self.get_player_type(idx)
-            if self.has_ever_died(idx):
-                res = f"{player_type.get_name()} was Destroyed."
-                break
-        if self.get_ticks_remaining() <= 0:
-            res = "Time Up!"
+            death_reason = self._has_ever_died[idx]
+            if death_reason is not None:
+                player_type = self.get_player_type(idx)
+                res_lines.append(f"Unit {player_type.get_name()} {death_reason}.")
 
-        if res is not None:
+        if len(res_lines) == 0 and self.get_ticks_remaining() <= 0:
+            res_lines.append("Time's Up!")
+
+        if len(res_lines) > 0:
+            active_player_type = self.get_player_type(self._active_player_idx)
+            soft_reset_keys = keybinds.get_instance().get_keys(const.SOFT_RESET)
+            if len(soft_reset_keys) > 0:
+                res_lines.append(f"[{soft_reset_keys}] to reset Unit {active_player_type.get_name()}")
+
             if self._active_player_idx > 0:
-                res += f"\n[{keybinds.get_instance().get_keys(const.SOFT_RESET)}] to Retry"
-                res += f"\n[{keybinds.get_instance().get_keys(const.RESET)}] to Reset All"
+                hard_reset_keys = keybinds.get_instance().get_keys(const.RESET)
+                if len(hard_reset_keys) > 0:
+                    res_lines.append(f"[{hard_reset_keys}] to reset all units")
 
-        return res
+        return res_lines
 
     def is_playing_back(self, player_idx):
         return self._currently_playing[player_idx]
@@ -736,12 +745,12 @@ class _GameState:
     def has_ever_died(self, player_idx):
         """returns: Whether any copies of a player have died.
         """
-        return not self.is_waiting() and player_idx <= self._active_player_idx and self._has_ever_died[player_idx]
+        return not self.is_waiting() and player_idx <= self._active_player_idx and self._has_ever_died[player_idx] is not None
 
-    def set_player_died(self, player_type):
+    def set_player_died(self, player_type, death_reason):
         idx = self.get_index_of_player_type(player_type)
         if idx is not None:
-            self._has_ever_died[idx] = True
+            self._has_ever_died[idx] = death_reason
 
     def set_alive(self, player_idx, val):
         self._currently_alive[player_idx] = val
@@ -956,6 +965,9 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         self._top_panel_ui = None
         self._progress_bar_ui = None
 
+        self._failure_message_text = None
+        self._failure_message_bg = None
+
         self._fadeout_duration = 90
 
         self.setup_new_world(bp)
@@ -1029,11 +1041,10 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
             self.replace_players_with_fadeout(delay=self._fadeout_duration)
             self._state.set_status(Statuses.EXIT_NOW_SUCCESSFULLY, delay=self._fadeout_duration)
 
-        elif fail_msg is not None:
+        elif len(fail_msg) > 0:
             if not self._handled_level_fail:
                 self.on_level_fail()
             self._handled_level_fail = True
-            # TODO display failure message
         else:
             active_satisfied = True
             for i in range(0, self._state.get_active_player_idx() + 1):
@@ -1168,12 +1179,40 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
 
             if self._progress_bar_ui is None:
                 self._progress_bar_ui = ProgressBarUi(self._state, spriteref.WORLD_UI_LAYER)
+
             prog_bar_size = self._progress_bar_ui.get_size()
             self._progress_bar_ui.set_xy((cx - prog_bar_size[0] // 2, y0 + y))
             self._progress_bar_ui.update()
         else:
             self._top_panel_ui = None
             self._progress_bar_ui = None
+
+        fail_msg = "\n".join(self._state.get_failure_message())
+        if len(fail_msg) > 0:
+            if self._failure_message_bg is None:
+                self._failure_message_bg = sprites.ImageSprite(spritesheets.get_white_square_img(0.5), 0, 0,
+                                                               spriteref.WORLD_UI_LAYER,
+                                                               color=colors.PERFECT_BLACK)
+            if self._failure_message_text is None:
+                self._failure_message_text = sprites.TextSprite(spriteref.WORLD_UI_LAYER, 0, 0, fail_msg,
+                                                                scale=1, depth=-10, color=colors.WHITE,
+                                                                alignment=sprites.TextSprite.CENTER,
+                                                                outline_color=colors.PERFECT_BLACK)
+            self._failure_message_text.update(new_text=fail_msg)
+
+            size = self._failure_message_text.size()
+            cxy = self.get_world_view().get_camera_center_in_world()
+            fail_rect = [cxy[0] - size[0] // 2, cxy[1] - size[1] // 2, size[0], size[1]]
+
+            bg_inset = 2
+            self._failure_message_bg = self._failure_message_bg.update(new_x=fail_rect[0] - bg_inset,
+                                                                       new_y=fail_rect[1] - bg_inset,
+                                                                       new_raw_size=(fail_rect[2] + bg_inset * 2,
+                                                                                     fail_rect[3] + bg_inset * 2))
+            self._failure_message_text.update(new_x=fail_rect[0], new_y=fail_rect[1])
+        else:
+            self._failure_message_bg = None
+            self._failure_message_text = None
 
     def all_sprites(self):
         for spr in _BaseGameScene.all_sprites(self):
@@ -1186,6 +1225,8 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         if self._progress_bar_ui is not None:
             for spr in self._progress_bar_ui.all_sprites():
                 yield spr
+        yield self._failure_message_text
+        yield self._failure_message_bg
 
     def get_clear_color(self):
         return self.get_world_view().get_current_bg_color()

@@ -822,8 +822,14 @@ class TextSprite(MultiSprite):
     DEFAULT_X_KERNING = 0
     DEFAULT_Y_KERNING = 0
 
+    # Alignments
+    LEFT = 0
+    CENTER = 1
+    RIGHT = 2
+
     def __init__(self, layer_id, x, y, text, scale=1.0, depth=0, color=(1, 1, 1), color_lookup=None, font_lookup=None,
-                 x_kerning=DEFAULT_X_KERNING, y_kerning=DEFAULT_Y_KERNING, outline_thickness=0, outline_color=(0, 0, 0)):
+                 x_kerning=DEFAULT_X_KERNING, y_kerning=DEFAULT_Y_KERNING, alignment=LEFT,
+                 outline_thickness=0, outline_color=(0, 0, 0)):
 
         MultiSprite.__init__(self, SpriteTypes.IMAGE, layer_id)
         self._x = x
@@ -833,6 +839,7 @@ class TextSprite(MultiSprite):
         self._depth = depth
         self._base_color = color
         self._color_lookup = color_lookup if color_lookup is not None else {}
+        self._alignment = alignment
         self._outline_thickness = outline_thickness
         self._outline_color = outline_color
         self._x_kerning = x_kerning
@@ -920,12 +927,39 @@ class TextSprite(MultiSprite):
                     self._bounding_rect[3] = max(self._bounding_rect[3], cur_y + math.ceil(char_size[1] * self._scale) - self._bounding_rect[1])
                     cur_x += math.ceil(char_size[0] * self._scale) + self._x_kerning
 
+        if self._alignment != TextSprite.LEFT:
+            self._realign_characters()
+
         for spr in old_sprites:
             spr = spr.update(new_model=False, new_x=self._bounding_rect[0], new_y=self._bounding_rect[1] + 16)
             self._unused_sprites.append(spr)
 
+    def _realign_characters(self):
+        y_to_chars = {}
+        for idx, c in enumerate(self._character_sprites):
+            y = c.y()
+            if y not in y_to_chars:
+                y_to_chars[y] = []
+            y_to_chars[y].append((c, idx))
+
+        x_min = self._bounding_rect[0]
+        x_max = x_min + self._bounding_rect[2]
+
+        for y in y_to_chars:
+            y_to_chars[y].sort(key=lambda c_idx: c_idx[0].x())
+            line_length = y_to_chars[y][-1][0].x() + y_to_chars[y][-1][0].width() - y_to_chars[y][0][0].x()
+            if self._alignment == TextSprite.RIGHT:
+                dx = x_max - x_min - line_length
+            elif self._alignment == TextSprite.CENTER:
+                dx = (self._bounding_rect[2] - line_length) // 2
+            else:
+                dx = 0
+
+            for c, idx in y_to_chars[y]:
+                self._character_sprites[idx] = c.update(new_x=c.x() + dx)
+
     def update(self, new_x=None, new_y=None, new_text=None, new_scale=None, new_depth=None,
-               new_color=None, new_color_lookup=None, new_font_lookup=None,
+               new_color=None, new_color_lookup=None, new_font_lookup=None, new_alignment=None,
                new_outline_thickness=None, new_outline_color=None,
                new_x_kerning=None, new_y_kerning=None):
 
@@ -955,6 +989,9 @@ class TextSprite(MultiSprite):
         if new_font_lookup is not None and new_font_lookup != self._font_lookup:
             did_change = True
             self._font_lookup = new_font_lookup
+        if new_alignment is not None and new_alignment != self._alignment:
+            did_change = True
+            self._alignment = new_alignment
         if new_outline_thickness is not None and new_outline_thickness != self._outline_thickness:
             did_change = True
             self._outline_thickness = new_outline_thickness
@@ -976,7 +1013,7 @@ class TextSprite(MultiSprite):
     def all_sprites_nullable(self):
         for spr in self._character_sprites:
             yield spr
-        for spr in self._unused_sprites:  # big yikes
+        for spr in self._unused_sprites:  # big yikes.. why?
             yield spr
 
     def __repr__(self):
