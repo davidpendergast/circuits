@@ -52,6 +52,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list.add_option("start", lambda: self._do_start())
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
+        self._options_list.add_option("credits", lambda: self.jump_to_scene(CreditsScene(self)))
         self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
         self._options_list.update_sprites()
 
@@ -198,6 +199,115 @@ class InstructionsScene(scenes.Scene):
 
     def became_active(self):
         songsystem.get_instance().set_song(songsystem.INSTRUCTION_MENU_SONG, fadein=0.5, fadeout=0.5)
+
+
+class CreditsScene(scenes.Scene):
+    # most of this is yoinked from Skeletris
+
+    SMALL = 1
+    NORMAL = 1.5
+
+    SLIDE_TEXT = [
+        ("created by", SMALL),
+        "David Pendergast",
+        ("2022", SMALL),
+        "",
+        ("art, coding, design, and music by", SMALL),
+        "David Pendergast",
+        "",
+        ("twitter", SMALL),
+        "@Ghast_NEOH",
+        "",
+        ("github", SMALL),
+        "davidpendergast",
+        "",
+        # TODO music/sound effect credits
+        ("made with pygame", SMALL),
+        "",
+        ("thanks for playing <3", SMALL)
+    ]
+
+    def __init__(self, next_scene, lines=None):
+        super().__init__()
+        self.scroll_speeds = (1.5, 4)  # pixels per tick
+        self.scroll_speed_idx = 0
+        self.tick_count = 0
+        self.empty_line_height = 160
+        self.text_y_spacing = 10
+
+        self.next_scene = next_scene
+
+        self.scroll_y_pos = 0  # distance from bottom of screen
+
+        self._text_lines = []
+        if lines is not None:
+            for l in lines:
+                if isinstance(l, (list, tuple)) and len(l) >= 2:
+                    text, size = l
+                    if isinstance(size, str):
+                        size = CreditsScene.SMALL if size.lower() == "small" else CreditsScene.NORMAL
+                else:
+                    text = str(l)
+                    size = CreditsScene.NORMAL
+                self._text_lines.append((text, size))
+        else:
+            self._text_lines.extend(CreditsScene.SLIDE_TEXT)
+
+        self._all_images = []
+
+        self._onscreen_img_indexes = set()
+
+        self.build_images()
+
+    def _scroll_speed(self):
+        return self.scroll_speeds[self.scroll_speed_idx]
+
+    def build_images(self):
+        for line in self._text_lines:
+            if line == "":
+                self._all_images.append(None)
+            else:
+                if isinstance(line, tuple):
+                    text = line[0]
+                    size = line[1]
+                else:
+                    text = line
+                    size = CreditsScene.NORMAL
+
+                self._all_images.append(sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, text, scale=size, color=colors.WHITE))
+
+    def update(self):
+        self.tick_count += 1
+
+        enter_keys = keybinds.get_instance().get_keys(const.MENU_ACCEPT)
+        if self.tick_count > 5 and inputs.get_instance().was_pressed(enter_keys):
+            self.scroll_speed_idx = (self.scroll_speed_idx + 1) % len(self.scroll_speeds)
+
+        self.scroll_y_pos += self._scroll_speed()
+
+        screen_size = renderengine.get_instance().get_game_size()
+        y_pos = screen_size[1] - int(self.scroll_y_pos)
+
+        for i in range(0, len(self._all_images)):
+            text_img = self._all_images[i]
+            if text_img is None:
+                y_pos += self.empty_line_height
+            else:
+                w = text_img.size()[0]
+                x_pos = screen_size[0] // 2 - w // 2
+                text_img = text_img.update(new_x=x_pos, new_y=y_pos)
+                self._all_images[i] = text_img
+
+                renderengine.get_instance().update(text_img)
+
+                y_pos += text_img.size()[1] + self.text_y_spacing
+
+        if y_pos < 0:
+            self.get_manager().set_next_scene(self.next_scene)
+
+    def all_sprites(self):
+        for text_spr in self._all_images:
+            yield text_spr
 
 
 class OptionSelectScene(scenes.Scene):

@@ -2,13 +2,11 @@
 bugs:
  - hard to tell difference between cleared / uncleared levels
  - progress isn't saved when game exits via crash
- - falling blocks and teleporters don't show up in level preview
  
  
 features:
  - animation when you teleport
- - message when you've died or lost the level
-    - bg should change color?
+ - players should have outlines
  
  
 features:
