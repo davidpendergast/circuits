@@ -144,6 +144,14 @@ class Entity:
         else:
             return (int(pt[0]), int(pt[1]))
 
+    def get_bottom_center(self, raw=False, with_xy_perturbs=False):
+        r = self.get_rect(raw=raw, with_xy_perturbs=with_xy_perturbs)
+        pt = (r[0] + r[2] / 2, r[1] + r[3])
+        if raw:
+            return pt
+        else:
+            return (int(pt[0]), int(pt[1]))
+
     def get_xy(self, raw=False, with_xy_perturbs=False):
         res = [self._x, self._y]
 
@@ -1326,17 +1334,11 @@ class TeleporterBlock(AbstractActorSensorBlock):
         self._post_tele_max_cooldown = 120
         self._post_tele_countdown = 0
 
+        self._particle_type = particles.ParticleTypes.CROSS_TINY
+
         def make_particle(xy):
             if self._sending:
-                return FloatingDustParticleEntity(xy, particles.ParticleTypes.CROSS_TINY, 60,
-                                                  (0, -1),
-                                                  self.get_color(include_lighting=False),
-                                                  end_color=colors.PERFECT_BLACK,
-                                                  anim_rate=4,
-                                                  fric=0.01,
-                                                  accel=(0, 0.025),
-                                                  max_speed=3,
-                                                  max_sway_per_second=3.1415 / 8)
+                return self.make_particle_at(xy)
             else:
                 return None
 
@@ -1344,11 +1346,26 @@ class TeleporterBlock(AbstractActorSensorBlock):
                                                      parent=self,
                                                      xy_provider=lambda: (util.sample_triangular(0.2, 0.8), 1))
 
-    def all_linked_teleporters(self) -> 'Iterable[TeleporterBlock]':
-        return self.get_world().all_entities(cond=lambda t: t.get_channel() == self.get_channel() and t.is_sending() is not self.is_sending(), types=(TeleporterBlock,))
+    def make_particle_at(self, xy, v=(0, -1)):
+        return FloatingDustParticleEntity(xy, self._particle_type, 60, v,
+                                          self.get_color(include_lighting=False),
+                                          end_color=colors.PERFECT_BLACK,
+                                          anim_rate=4,
+                                          fric=0.01,
+                                          accel=(0, 0.025),
+                                          max_speed=3,
+                                          max_sway_per_second=3.1415 / 8)
 
-    def all_bro_teleporters(self) -> 'Iterable[TeleporterBlock]':
-        return self.get_world().all_entities(cond=lambda t: t is not self and t.get_channel() == self.get_channel() and t.is_sending() is self.is_sending(), types=(TeleporterBlock,))
+    def all_linked_teleporters(self):
+        return self.get_world().all_entities(types=(TeleporterBlock,),
+                                             cond=lambda t: (t.get_channel() == self.get_channel()
+                                                             and t.is_sending() is not self.is_sending()))
+
+    def all_bro_teleporters(self):
+        return self.get_world().all_entities(types=(TeleporterBlock,),
+                                             cond=lambda t: (t is not self
+                                                             and t.get_channel() == self.get_channel()
+                                                             and t.is_sending() is self.is_sending()))
 
     def all_sub_entities(self):
         for s in super().all_sub_entities():
@@ -1487,9 +1504,15 @@ class TeleporterBlock(AbstractActorSensorBlock):
         new_actors = proto_actor.copy_for_teleport(final_positions, and_combine_with=other_actors)
         for a in actors_to_send:
             a.prepare_for_teleport()
+            if isinstance(a, PlayerEntity):
+                self.get_world().add_entity(PlayerFadeAnimation(a.get_center()[0], a.get_bottom_center()[1], a.dir_facing() >= 0, a.get_player_type(), 20, True))
             self.get_world().remove_entity(a)
         for a in new_actors:
             self.get_world().add_entity(a)
+            for i in range(0, random.randint(2, 4)):
+                v = util.rotate((0, -1), 3.1415 * 0.125 * (2 * random.random() - 1))
+                v = util.mult(v, 1 + random.random() * 0.8)
+                self.get_world().add_entity(self.make_particle_at(a.get_bottom_center(), v=v))
 
         for t in linked_teles + bro_teles + [self]:
             # XXX Using a mixture of two-way and non two-way teleporters can create a bizarre (but not necessarily

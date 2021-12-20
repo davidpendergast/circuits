@@ -5,6 +5,9 @@ bugs:
  
  
 features:
+ - hook up credits scene to final level
+    - what final level?
+    - shh
  - animation when you teleport
  - players should have outlines
  
