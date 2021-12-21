@@ -99,11 +99,12 @@ class MultiChannelSong:
 # Songs
 MACHINATIONS = "machinations"
 RADIATION = "radiation"
+SPACE = "space"
 
 SILENCE = "~silence~"                    # literally just silent
 CONTINUE_CURRENT = "~continue_current~"  # a no-op when passed to set_song
 
-MAIN_MENU_SONG = MACHINATIONS, [0.25, 0.5, 0, 0]
+MAIN_MENU_SONG = SPACE, [1]  # MACHINATIONS, [0.25, 0.5, 0, 0]
 INSTRUCTION_MENU_SONG = MACHINATIONS, [0.1, 0.25, 0, 0]
 
 
@@ -164,7 +165,7 @@ class LoopFader:
         while len(self.song_queue) >= 2 and self.song_queue[1][2] < cur_time:
             to_remove = self.song_queue.pop(0)
             if to_remove[0] != self.song_queue[0][0]:
-                to_remove.stop()  # just in case
+                to_remove[0].stop()  # just in case
 
     def set_song(self, song_id: str, volume_levels=1, fadeout=0, fadein=0):
         """
