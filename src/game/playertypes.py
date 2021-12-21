@@ -4,6 +4,9 @@ import src.utils.util as util
 import src.game.const as const
 import src.game.spriteref as spriteref
 
+import src.game.soundref as soundref
+import src.engine.sounds as sounds
+
 
 DEFAULT_GRAVITY = -0.15 / 16
 
@@ -15,7 +18,7 @@ class PlayerType:
                  jump_height=3.2, jump_duration=None, gravity=DEFAULT_GRAVITY,
                  can_walljump=False, can_fly=False, can_crouch=False, can_grab=False, can_be_grabbed=False,
                  can_swap=False, can_be_swapped_with=True,
-                 anim_rate_overrides=None, should_ever_xflip=True, breaks_blocks=False):
+                 anim_rate_overrides=None, should_ever_xflip=True, breaks_blocks=False, sound_overrides=None):
         self._name = name
         self._color_id = color_id
         self._id = id_num
@@ -52,6 +55,10 @@ class PlayerType:
         if anim_rate_overrides is not None:
             self._anim_rates.update(anim_rate_overrides)
 
+        self._sound_mappings = {}
+        if sound_overrides is not None:
+            self._sound_mappings.update(sound_overrides)
+
     def get_id(self):
         return self._id
 
@@ -63,6 +70,18 @@ class PlayerType:
 
     def get_letter(self):
         return self.get_name()
+
+    def translate_sound(self, sound_id):
+        if isinstance(sound_id, list):
+            effect_path, _ = sounds.resolve_path_and_volume(sound_id)
+            if effect_path in self._sound_mappings:
+                return self._sound_mappings[effect_path]
+            else:
+                return sound_id
+        elif isinstance(sound_id, (tuple, str)) and sound_id in self._sound_mappings:
+            return self._sound_mappings[sound_id]
+        else:
+            return sound_id
 
     def can_walljump(self):
         return self._can_walljump
@@ -148,7 +167,10 @@ class PlayerTypes:
     FAST = PlayerType("A", 1, const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
                       move_speed=7.5, jump_height=3.2)
     SMALL = PlayerType("B", 2, const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
-                       move_speed=5.5, jump_height=2.1)
+                       move_speed=5.5, jump_height=2.1,
+                       sound_overrides={
+                           soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_9,
+                       })
     HEAVY = PlayerType("C", 3, const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
                        move_speed=5, jump_height=3.2, can_crouch=True, breaks_blocks=True,
                        anim_rate_overrides={

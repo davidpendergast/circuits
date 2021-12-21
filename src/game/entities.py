@@ -11,9 +11,12 @@ import src.engine.sprites as sprites
 import src.engine.spritesheets as spritesheets
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
+import src.engine.sounds as sounds
+
 import configs as configs
 
 import src.game.spriteref as spriteref
+import src.game.soundref as soundref
 import src.game.playertypes as playertypes
 import src.game.colors as colors
 import src.game.globalstate as gs
@@ -704,7 +707,7 @@ class BreakableBlockEntity(BlockEntity):
                 self._add_broken_particles()
                 w.remove_entity(self)
                 print("INFO: breakable block broke! {}".format(self))
-                # TODO sound
+                sounds.play_sound(soundref.BLOCK_BREAK)
 
 
 class FallingBlockEntity(BlockEntity, DynamicEntity):
@@ -780,7 +783,7 @@ class FallingBlockEntity(BlockEntity, DynamicEntity):
         yield self._sensor_ent
 
     def was_crushed(self):
-        # TODO sound, particles
+        # XXX is this even possible?
         self.get_world().remove_entity(self)
 
     def update(self):
@@ -818,7 +821,7 @@ class FallingBlockEntity(BlockEntity, DynamicEntity):
         if not self._is_primed_to_fall:
             self._is_primed_to_fall = True
             self.set_xy_perturbs(util.get_shake_points(2, 10))
-            # TODO sound?
+            sounds.play_sound(soundref.BLOCK_PRIMED_TO_FALL)
 
     def start_falling(self):
         # TODO shake again?
@@ -1054,11 +1057,6 @@ class DoorBlock(BlockEntity, HasLightSourcesEntity):
         super().update()
         should_be_solid = (not self.get_world().is_door_unlocked(self._toggle_idx)) ^ self._inverted
         if self._is_solid != should_be_solid:
-            if should_be_solid:
-                # TODO kill any player within bounds after becoming solid
-                players = [p for p in self.get_world().all_entities_in_rect(self.get_rect(), cond=lambda e: e.is_player())]
-                if len(players) > 0:
-                    print("INFO: crushed players: {}".format(players))
             self.set_solid(should_be_solid)
 
     def is_solid(self):
@@ -1122,6 +1120,8 @@ class KeyEntity(Entity):
     def update(self):
         super().update()
 
+        was_satisfied = self.is_satisfied()
+
         is_colliding = False
         for s in self.get_world().get_sensor_state(self.player_sensor_id):
             if s.is_player() or isinstance(s, (FallingBlockEntity, MovingBlockEntity, DoorBlock)):
@@ -1133,9 +1133,14 @@ class KeyEntity(Entity):
         else:
             self._player_colliding_tick_count = max(0, self._player_colliding_tick_count - 1)
 
-        if self.is_satisfied():
+        is_satisfied = self.is_satisfied()
+
+        if is_satisfied:
             # reset the cycle so it starts at the bottom when it resumes bobbing
             self._bob_tick_count = int(3 / 4 * self._bob_tick_period)
+
+        if was_satisfied != is_satisfied:
+            sounds.play_sound(soundref.SWITCH_ACTIVATED if is_satisfied else soundref.SWITCH_DEACTIVATED)
 
         self._update_sprites()
 
@@ -1522,6 +1527,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
             t.reset_prog()
             t._post_tele_countdown = t._post_tele_max_cooldown
 
+        sounds.play_sound(soundref.TELEPORT)
         print("INFO: teleported {} to {}.".format(actors_to_send, new_actors))
 
     def get_sprite_infos(self):
@@ -2168,6 +2174,11 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
             y = y_bot - body_spr.height() + (carrying_rect[1] + carrying_rect[3]) * body_spr.scale() - entity.get_h()
             return (x, y)
 
+    def play_sound(self, sound_id: str, vol=1.0):
+        vol = (1.0 if self.is_active() else 0.25) * vol
+        sound_id = self.get_player_type().translate_sound(sound_id)
+        sounds.play_sound(sound_id, vol=vol)
+
     def _handle_inputs(self):
         if self.get_world().get_game_state() is not None and self.get_world().get_game_state().get_status().can_player_control:
             cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
@@ -2269,43 +2280,35 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
                 self.break_free_from_parent()
                 self.set_y_vel(self._jump_y_vel)
                 self._last_jump_time = 0
-
+                self.play_sound(soundref.PLAYER_JUMP)
             elif self.is_clinging_to_wall():
                 self.set_y_vel(self._wall_jump_y_vel)
                 self._last_jump_time = 0
-                # TODO add some way to cancel the x_vel on a wall jump?
                 if self.is_left_walled():
                     self.set_x_vel(self._wall_jump_x_vel)
                 if self.is_right_walled():
                     self.set_x_vel(-self._wall_jump_x_vel)
-
+                self.play_sound(soundref.PLAYER_JUMP)
             elif self.get_player_type().can_fly():
                 if self._fly_y_vel < self.get_y_vel():
                     self.set_y_vel(self._fly_y_vel)
                     self._last_jump_time = 0
-
+                    self.play_sound(soundref.PLAYER_FLY)
             elif self._air_time < self._post_jump_buffer:
                 # if you jumped too late, you get a penalty
                 jump_penalty = (1 - 0.5 * self._air_time / self._post_jump_buffer)
                 self.set_y_vel(self._jump_y_vel * jump_penalty)
                 self._last_jump_time = 0
+                self.play_sound(soundref.PLAYER_JUMP, vol=jump_penalty)
 
         # short hopping
         if self._y_vel < 0 and not holding_jump:
             self._y_vel *= self._bonus_y_fric_on_let_go
 
-        # TODO just for testing
-        import pygame
-        player_id = self.get_player_type().get_id()
-        if inputs.get_instance().was_pressed(pygame.K_k) and spriteref.object_sheet().num_broken_player_parts(player_id) > 0:
-            part_idx = random.randint(0, spriteref.object_sheet().num_broken_player_parts(player_id) - 1)
-            new_particle = PlayerBodyPartParticle(self.get_x(), self.get_y(), self.get_player_type().get_id(), part_idx)
-            self.get_world().add_entity(new_particle)
-
     def _try_to_grab_or_drop(self):
         if self.get_held_entity() is not None:
             self.pickup_entity(None)  # dropping held item
-            # TODO dropping sound / animation
+            self.play_sound(soundref.PLAYER_PUTDOWN)
         else:
             can_be_picked_up = []
             for e in self.get_world().all_entities_in_rect(self.get_pickup_range(),
@@ -2321,6 +2324,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
                 to_pick_up = can_be_picked_up[0]
                 self.pickup_entity(to_pick_up)
+                self.play_sound(soundref.PLAYER_PICKUP)
 
     def _try_to_swap(self, target: Entity=None):
         # TODO not used, delete?
@@ -2347,7 +2351,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
     def _try_to_alert(self):
         color_id = self.get_player_type().get_color_id()
         color = spriteref.get_color(color_id)
-        # TODO play alert sound
+        self.play_sound(soundref.PLAYER_ALERT)
 
         top_center_xy = (self.get_x() + self.get_w() // 2, self.get_y() - 2)
         alert_entity = FloatingTextAlertEntity(top_center_xy, "!", color, colors.darken(color, 0.4),
@@ -2382,8 +2386,8 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
                                               in_rect=self.get_rect(with_xy_perturbs=False)):
             if p is not self and p.get_rect(with_xy_perturbs=False) == self.get_rect(with_xy_perturbs=False):
                 if util.mag(util.sub(p.get_vel(), self.get_vel())) <= 0.001:
-                    self.set_death_reason(DeathReason.CROWDING)
-                    p.set_death_reason(DeathReason.CROWDING)
+                    self.set_death_reason(DeathReasons.CROWDING)
+                    p.set_death_reason(DeathReasons.CROWDING)
 
     def update_frame_of_reference_parents(self):
         # TODO should we care about slope blocks? maybe? otherwise you could get scooped up by a moving platform
@@ -2490,13 +2494,15 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
             return None
 
     def was_crushed(self):
-        self.set_death_reason(DeathReason.CRUSHED)
+        self.set_death_reason(DeathReasons.CRUSHED)
 
     def fell_out_of_bounds(self):
-        self.set_death_reason(DeathReason.OUT_OF_BOUNDS)
+        self.set_death_reason(DeathReasons.OUT_OF_BOUNDS)
 
-    def set_death_reason(self, reason):
+    def set_death_reason(self, reason, silent=False):
         self._death_reason = reason
+        if not silent and reason is not None:
+            self.play_sound(reason.get_sound())
 
     def get_death_reason(self):
         return self._death_reason
@@ -2504,12 +2510,12 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
     def handle_death_if_necessary(self, silent=False):
         if self._death_reason is not None:
             player_id = self.get_player_type().get_id()
-            if not silent and self._death_reason is not DeathReason.OUT_OF_BOUNDS:
+            if not silent and self._death_reason is not DeathReasons.OUT_OF_BOUNDS:
                 cx, cy = self.get_center()
                 for i in range(0, spriteref.object_sheet().num_broken_player_parts(player_id)):
                     self.get_world().add_entity(PlayerBodyPartParticle(cx, cy, player_id, i))
             self.get_world().remove_entity(self)
-            print("INFO: player {} {}.".format(player_id, self._death_reason))
+            print("INFO: player {} {}.".format(player_id, self._death_reason.get_description()))
             return True
         else:
             return False
@@ -2524,11 +2530,28 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
 
 class DeathReason:
-    CRUSHED = "was crushed"
-    OUT_OF_BOUNDS = "fell into the void"
-    SPIKED = "was spiked"
-    CROWDING = "became one with itself"
-    UNKNOWN = "was killed by the guardians"
+
+    def __init__(self, description, sound_id=soundref.PLAYER_DEATH):
+        self._desc = description
+        self._sound_id = sound_id
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self._desc})"
+
+    def get_description(self):
+        return self._desc
+
+    def get_sound(self):
+        return self._sound_id
+
+
+class DeathReasons:
+
+    CRUSHED = DeathReason("was crushed")
+    OUT_OF_BOUNDS = DeathReason("fell into the void")
+    SPIKED = DeathReason("was spiked")
+    CROWDING = DeathReason("became one with itself")
+    UNKNOWN = DeathReason("was killed by the guardians")
 
 
 class ParticleEntity(DynamicEntity):
@@ -3049,7 +3072,7 @@ class SpikeEntity(Entity):
         ents_in_spikes = self.get_world().get_sensor_state(self._sensor_id)
         for e in ents_in_spikes:
             if isinstance(e, PlayerEntity):
-                e.set_death_reason(DeathReason.SPIKED)
+                e.set_death_reason(DeathReasons.SPIKED)
 
         top_models = spriteref.object_sheet().get_spikes_with_length(self.get_length(), tops=True, overflow_if_not_divisible=True)
         bot_models = spriteref.object_sheet().get_spikes_with_length(self.get_length(), tops=False, overflow_if_not_divisible=True)
@@ -3560,7 +3583,7 @@ class KillZoneEntity(AbstractZoneEntity):
 
     def handle_entity(self, ent: PlayerEntity):
         if isinstance(ent, PlayerEntity):
-            ent.set_death_reason(DeathReason.OUT_OF_BOUNDS)
+            ent.set_death_reason(DeathReasons.OUT_OF_BOUNDS)
 
 
 class CollisionMask:

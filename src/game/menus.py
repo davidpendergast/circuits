@@ -817,7 +817,7 @@ class _GameState:
             death_reason = self._has_ever_died[idx]
             if death_reason is not None:
                 player_type = self.get_player_type(idx)
-                res_lines.append(f"Unit {player_type.get_name()} {death_reason}.")
+                res_lines.append(f"Unit {player_type.get_name()} {death_reason.get_description()}.")
 
         if len(res_lines) == 0 and self.get_ticks_remaining() <= 0:
             res_lines.append("Time's Up!")
@@ -1097,6 +1097,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
     def on_level_fail(self):
         self.get_world_view().set_bg_colors([colors.PERFECT_DARK_RED, colors.PERFECT_VERY_DARK_RED], period=15, loop=False)
         # self.get_world_view().fade_to_bg_color(colors.PERFECT_VERY_DARK_RED, delay=20)
+        sounds.play_sound(soundref.LEVEL_FAILED)
         # TODO sound / music change
         # TODO screenshake
 

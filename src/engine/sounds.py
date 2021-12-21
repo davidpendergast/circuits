@@ -29,22 +29,35 @@ def update():
         del _RECENTLY_PLAYED[effect]
 
 
-def play_sound(sound):
+def resolve_path_and_volume(sound, vol=1.0):
     """
-    :param sound: either an effect_path, or a tuple (effect_path, volume), or a list of sounds (in which case one will be chosen randomly.)
+    sound: either an effect_path, or a tuple (effect_path, volume), or a collection of sounds (also a path or tuple)
+           (in which case one will be chosen randomly).
+    vol: volume multiplier for the sound.
     """
-    if sound is None:
-        return
-
-    if isinstance(sound, list):
-        sound = random.choice(sound)
-
-    if isinstance(sound, tuple):
-        effect_path = sound[0]
-        volume = sound[1]
+    if sound is None or len(sound) == 0:
+        return None, 1.0
+    elif isinstance(sound, str):
+        return sound, vol
+    elif isinstance(sound, tuple) and len(sound) == 2 and isinstance(sound[1], (int, float)):
+        return sound[0], sound[1] * vol
     else:
-        effect_path = sound
-        volume = 1.0
+        # it's some kind of collection of sounds
+        # XXX hopefully it isn't recursive~
+        try:
+            all_sounds = [resolve_path_and_volume(item, vol=vol) for item in sound]
+            all_sounds = [s for s in all_sounds if s[0] is not None]
+            if len(all_sounds) > 0:
+                return random.choice(all_sounds)
+        except Exception:
+            print("ERROR: failed to resolve sound: {}".format(sound))
+            traceback.print_exc()
+
+    return None, vol
+
+
+def play_sound(sound, vol=1.0):
+    effect_path, volume = resolve_path_and_volume(sound, vol=vol)
 
     if _MASTER_VOLUME == 0 or volume <= 0 or effect_path is None:
         return
@@ -67,6 +80,6 @@ def play_sound(sound):
 
     if effect is not None:
         _RECENTLY_PLAYED[effect_path] = 0
-        # print("INFO: playing sound effect: {}".format(effect_path))
+        print("INFO: playing sound effect: {}".format(effect_path))
         effect.play()
 
