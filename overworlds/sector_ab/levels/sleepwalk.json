@@ -124,6 +124,6 @@
         {"art_id": 0, "color_id": 2, "h": 112, "type": "block", "w": 32, "x": 0, "y": 128}
     ],
     "level_id": "sleepwalk",
-    "name": "Sleepwalking",
+    "name": "Sleepwalk",
     "time_limit": 3600
 }

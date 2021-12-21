@@ -2,14 +2,19 @@
 bugs:
  - hard to tell difference between cleared / uncleared levels
  - progress isn't saved when game exits via crash
+ - question mark info entities (e.g. tips) shouldn't have dialog
+ - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
  
  
 features:
  - hook up credits scene to final level
     - what final level?
     - shh
- - animation when you teleport
  - players should have outlines
+    - should they??
+ - let you embed stuff (e.g. "{ACTION_KEY}" --> [Enter]) into dialog / info text.
+ - something there should be an indicator when a player desyncs / resyncs
+ - indicator when an action is available (e.g. when C stands next to B)?
  
  
 features:
