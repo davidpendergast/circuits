@@ -487,6 +487,23 @@ def linear_interp(v1, v2, a):
         return tuple([_lerp_num_safely(v1[i], v2[i], a) for i in range(0, len(v1))])
 
 
+def linear_interp_list(v_list, a, wrap=True):
+    n = len(v_list)
+    if n == 0:
+        return ValueError("cannot interpolate between 0 items")
+    elif n == 1 or a <= 0:
+        return v_list[0]
+    elif a >= 1:
+        return v_list[0] if wrap else v_list[-1]
+    else:
+        if wrap:
+            v_list += [v_list[0]]
+        idx1 = int(a * n)
+        idx2 = (idx1 + 1) % (n + 1)
+
+        return linear_interp(v_list[idx1], v_list[idx2], a * n - idx1)
+
+
 def _lerp_num_safely(n1, n2, a, tolerance=0.00001):
     if abs(n1 - n2) < tolerance:
         return (n1 + n2) / 2

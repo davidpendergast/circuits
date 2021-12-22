@@ -817,6 +817,7 @@ class OverworldState:
 class LevelNodeElement(ui.UiElement):
 
     UNLOCK_ANIM_DURATION = 180
+    COLOR_CYCLE_PERIOD = 180
 
     def __init__(self, xy, level_id, level_num, overworld_state):
         ui.UiElement.__init__(self)
@@ -827,9 +828,33 @@ class LevelNodeElement(ui.UiElement):
 
         self._cached_player_types = None
 
+    def get_cycling_player_color(self):
+        my_bp = self.state.get_level_blueprint(self.level_id)
+        if my_bp is not None:
+            my_colors = []
+            for p_type in my_bp.get_player_types():
+                my_colors.append(colors.WHITE)
+                my_colors.append(p_type.get_color())
+            if len(my_colors) > 0:
+                period = LevelNodeElement.COLOR_CYCLE_PERIOD
+                a = gs.get_instance().tick_count() % period / period
+                return util.linear_interp_list(my_colors, a, wrap=True)
+
+        return colors.WHITE
+
     def get_icon_color(self, selected, completed, unlocked):
         if completed:
-            return colors.LIGHT_GRAY
+            return colors.DARK_GRAY
+        elif unlocked:
+            return self.get_cycling_player_color()
+        else:
+            return colors.DARK_GRAY
+
+    def get_border_color(self, selected, completed, unlocked):
+        if selected:
+            return colors.PERFECT_RED
+        elif completed:
+            return colors.DARK_GRAY
         elif unlocked:
             return colors.WHITE
         else:
@@ -875,23 +900,16 @@ class NumberedLevelNodeElement(LevelNodeElement):
             6: playertypes.PlayerTypes.HEAVY,
             8: playertypes.PlayerTypes.FLYING
         }
-        if unlocked:
+        if unlocked and not completed:
             full_sprites = spriteref.overworld_sheet().level_icon_full_pieces
             empty_sprites = spriteref.overworld_sheet().level_icon_empty_pieces
         else:
             full_sprites = spriteref.overworld_sheet().level_icon_full_gray_pieces
             empty_sprites = spriteref.overworld_sheet().level_icon_empty_gray_pieces
 
-        if selected:
-            color = colors.PERFECT_RED
-        elif completed:
-            color = colors.LIGHT_GRAY
-        elif unlocked:
-            color = colors.PERFECT_WHITE  # XXX the sprites are drawn with off-white already
-        else:
-            color = colors.PERFECT_WHITE  # sprites are already colored
+        color = self.get_border_color(selected, completed, unlocked)
 
-        if idx in corners:
+        if idx in corners and unlocked:
             player_type = corners[idx]
             if player_type in players_in_level:
                 return full_sprites[idx], colors.PERFECT_WHITE
@@ -903,8 +921,8 @@ class NumberedLevelNodeElement(LevelNodeElement):
     def update_sprites(self):
         selected = self.state.is_selected_at(self.grid_xy)
         unlocked = self.state.is_unlocked_at(self.grid_xy)
-
         completed = self.state.is_complete(self.level_id)
+
         players = self.get_player_types()
 
         xy = self.get_xy(absolute=True)
@@ -1009,7 +1027,7 @@ class InfoLevelNodeElement(LevelNodeElement):
                                                    new_y=xy[1] + size[1] // 2 - model.height() // 2,
                                                    new_color=icon_color)
 
-        border_color = colors.PERFECT_RED if selected else self.get_icon_color(selected, completed, unlocked)
+        border_color = self.get_border_color(selected, completed, unlocked)
         border_model = spriteref.overworld_sheet().level_small_border
         if self.icon_border_sprite is None:
             self.icon_border_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, depth=5)

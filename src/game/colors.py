@@ -69,6 +69,7 @@ PERFECT_ORANGE = (1, 205 / 256, 117 / 256)
 
 WHITE = to_float(244, 244, 244)
 LIGHT_GRAY = to_float(196, 196, 196)
+MID_GRAY = to_float(128, 128, 128)
 DARK_GRAY = to_float(92, 92, 92)
 
 BLUE = to_float(148, 176, 194)

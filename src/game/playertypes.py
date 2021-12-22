@@ -65,6 +65,9 @@ class PlayerType:
     def get_color_id(self):
         return self._color_id
 
+    def get_color(self, dark=False):
+        return spriteref.get_color(self.get_color_id(), dark=dark)
+
     def get_name(self):
         return self._name
 
