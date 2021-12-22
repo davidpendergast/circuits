@@ -191,12 +191,13 @@ Names:
     SYNC - generic, used by 8 on itch io
     DESYNC - generic, used by moderately sized game on steam
     RESYNC - somewhat generic, 1 game using it on itch ("reSYNC"). 0 on steam. Hmm
-    intersync - company
-    autosync - app
+    intersync - company, bad, reminds me of 'smart devices'
+    autosync - app, bad
     DIVERGE - generic, overused (TV show I think)
     ROBOSYNC - 5k results, company in india, probbaly ok. kinda bleh though
     SYNCROBO - bad
     DESYNCHRO - yugioh card
+    TETRASYNC - used by a song, hmm
     
     
         
