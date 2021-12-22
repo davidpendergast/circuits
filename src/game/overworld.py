@@ -1539,16 +1539,20 @@ class OverworldScene(scenes.Scene):
                 if node_at_click is not None and node_at_click.is_enabled():
                     if node_at_click.is_exit():
                         # click an exit -> go to the other overworld
-                        # TODO only if exit is available
                         self.state.activate_exit_node(node_at_click.get_exit_id(), instantly=False)
+                        sounds.play_sound(soundref.MENU_SLIDE)
                     elif node_at_click.is_selectable():
-                        if self.state.get_selected_node() != node_at_click:
-                            # if it's not selected, select it
-                            self.state.set_selected_node(node_at_click)
-                        elif node_at_click.is_level():
-                            # if it's already selected, activate the level
+                        # ctrl + click opens the level editor in dev mode
+                        edit_mode = configs.is_dev and inputs.get_instance().ctrl_is_held()
+
+                        is_already_selected = self.state.get_selected_node() == node_at_click
+                        is_level = node_at_click.is_level()
+                        if is_level and (is_already_selected or edit_mode):
                             level_id = self.state.get_level_id_for_num(node_at_click.get_level_num())
-                            self.start_level(level_id)
+                            self.start_level(level_id, edit_mode=edit_mode)
+                        else:
+                            self.state.set_selected_node(node_at_click)
+                            sounds.play_sound(soundref.MENU_BLIP)
 
     def get_cursor_id_at(self, xy):
         mouse_grid_pos = self.grid_ui_element.get_grid_pos_at(xy, absolute=True)
@@ -1585,9 +1589,6 @@ class OverworldScene(scenes.Scene):
                         self.state.set_selected_node(new_node)
                         self.state.cell_under_mouse = None  # subtle QOL
                         sounds.play_sound(soundref.MENU_BLIP)
-                else:
-                    # TODO play sound
-                    pass
             else:
                 # this shouldn't really happen but ehh..
                 new_node = self.state.find_initial_selection()
@@ -1609,8 +1610,9 @@ class OverworldScene(scenes.Scene):
         if configs.is_dev and inputs.get_instance().was_pressed(const.UNLOCK_ALL_DEBUG):
             debug.do_unlock_all()
             self.state.refresh_unlocked_levels()
+            sounds.play_sound(soundref.MENU_START)
 
-    def start_level(self, level_id):
+    def start_level(self, level_id, edit_mode=False):
         level_bp = self.state.get_level_blueprint(level_id)
         state = self.state
 
@@ -1633,12 +1635,10 @@ class OverworldScene(scenes.Scene):
 
         if level_bp is not None:
             import src.game.menus as menus
-            if configs.is_dev and inputs.get_instance().ctrl_is_held():
-                # activate edit mode
+            if edit_mode:
                 next_scene = menus.LevelEditGameScene(level_bp,
                                                       prev_scene_provider=lambda: _updated_scene(reload_levels=True))
             else:
-                # enter the level normally
                 next_scene = menus.RealGameScene(level_bp,
                                                  lambda time: self.get_manager().set_next_scene(_updated_scene(new_time=time)),
                                                  lambda: self.get_manager().set_next_scene(_updated_scene()))
