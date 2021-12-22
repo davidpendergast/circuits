@@ -772,7 +772,7 @@ class OverworldState:
             xy = q.pop(-1)
             unlocked.add(xy)
             level_id = self.get_level_id_at(xy)
-            if level_id is None or xy == starting_xy or self.is_complete(level_id) or debug.is_all_unlocked():
+            if level_id is None or self.is_complete(level_id) or debug.is_all_unlocked():
                 for d in util.neighbors(0, 0):
                     neighbor = self.get_grid().get_connected_node_in_dir(xy, d, selectable_only=False, enabled_only=False)
                     if neighbor is not None:
