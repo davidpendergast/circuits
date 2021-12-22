@@ -258,7 +258,7 @@ class OptionsList(UiElement):
         if idx != self.selected_idx:
             self.selected_idx = 0 if len(self.options) == 0 else idx % len(self.options)
             if not silent:
-                sounds.play_sound(soundref.MENU_BLIP_1)
+                sounds.play_sound(soundref.MENU_BLIP)
 
     def get_cursor_id_at(self, xy):
         option_idx = self.get_option_idx_at(xy, absolute=False)

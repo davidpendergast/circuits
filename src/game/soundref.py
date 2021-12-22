@@ -493,20 +493,21 @@ class ModernUI:
             print(f"{refname} = _path_to(_p, _a, \"{l}\")")
 
 
-MENU_BLIP_1 = ModernUI.all_containing("ClickyButton")  # ModernUI.clicky_button_3a
-MENU_ACCEPT = ModernUI.all_containing("ClickyButton")
-MENU_ERROR = ModernUI.all_containing("Error")
-MENU_BACK = ModernUI.all_containing("ClickyButton")  # ModernUI.clicky_button_9b
-MENU_EXIT = ModernUI.all_containing("CloseOrDisable")  # ModernUI.close_or_disable_5
-MENU_START = ModernUI.all_containing("OpenOrEnable")  # ModernUI.open_or_enable_4a
+MENU_BLIP = ModernUI.clicky_button_3a
+MENU_ACCEPT = ModernUI.clicky_button_3b
+MENU_ERROR = ModernUI.error_1
+MENU_BACK = ModernUI.clicky_button_10b
+MENU_START = ModernUI.open_or_enable_4a
+MENU_SLIDE = ModernUI.little_swoosh_3
+
+LEVEL_START = ModernUI.open_or_enable_4b
+LEVEL_QUIT = ModernUI.close_or_disable_4
+LEVEL_FAILED = ModernUI.error_5
 
 BLOCK_BREAK = ModernUI.clicky_button_1b
 BLOCK_PRIMED_TO_FALL = ModernUI.clicky_button_2
-
-SWITCH_ACTIVATED = ModernUI.clicky_button_9a  # ModernUI.all_containing("ClickyButton")
-SWITCH_DEACTIVATED = ModernUI.clicky_button_9b  # ModernUI.all_containing("ClickyButton")
-
-LEVEL_FAILED = ModernUI.error_5
+SWITCH_ACTIVATED = ModernUI.clicky_button_9a   # TODO different sounds for different colored switches?
+SWITCH_DEACTIVATED = ModernUI.clicky_button_9b
 TELEPORT = ModernUI.all_containing("Success")
 
 PLAYER_JUMP = ModernUI.all_containing("GenericButton")

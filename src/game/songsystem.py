@@ -37,6 +37,9 @@ class MultiChannelSong:
         if len(lengths) > 1:
             raise ValueError("song's channels have different lengths: {}".format(lengths))
 
+    def __repr__(self):
+        return f"{type(self).__name__}({self.song_id}, {self.get_volumes()})"
+
     def __eq__(self, other):
         return isinstance(other, MultiChannelSong) and self.song_id == other.song_id
 
@@ -207,11 +210,12 @@ class LoopFader:
             self.song_queue.append((song, volume_levels, cur_time + int(fadein * 1000)))
         else:
             cur_song_state = self.song_queue[0]
+            cur_volumes = cur_song_state[0].get_volumes()
 
             # fade out what's currently playing
             self.song_queue.clear()
-            self.song_queue.append((cur_song_state[0], cur_song_state[0].get_volumes(), cur_time))
-            self.song_queue.append((cur_song_state[0], [0] * len(song.sounds), cur_time + int(fadeout * 1000)))
+            self.song_queue.append((cur_song_state[0], cur_volumes, cur_time))
+            self.song_queue.append((cur_song_state[0], [0] * len(cur_volumes), cur_time + int(fadeout * 1000)))
 
             # fade in the next song if necessary
             if fadein <= 0 or song == SILENCE:

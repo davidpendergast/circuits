@@ -312,9 +312,7 @@ class CreditsScene(scenes.Scene):
 
 class OptionSelectScene(scenes.Scene):
 
-    OPTS_PER_PAGE = 6
-
-    def __init__(self, title=None, description=None):
+    def __init__(self, title=None, description=None, opts_per_page=6):
         scenes.Scene.__init__(self)
         self.title_text = title
         self.title_sprite = None
@@ -327,7 +325,7 @@ class OptionSelectScene(scenes.Scene):
 
         self.vert_spacing = 32
 
-        self.option_pages = ui.MultiPageOptionsList(opts_per_page=OptionSelectScene.OPTS_PER_PAGE)
+        self.option_pages = ui.MultiPageOptionsList(opts_per_page=opts_per_page)
 
         self._esc_option = None
 
@@ -1195,7 +1193,9 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
                 self.get_world().add_entity(anim)
 
     def handle_esc_pressed(self):
+        # TODO should probably have like, a pause button..? Nah~
         self.on_level_exit()
+        sounds.play_sound(soundref.LEVEL_QUIT)
 
     def start_dialog(self, dialog_frag):
         super().start_dialog(dialog_frag)
@@ -1368,21 +1368,21 @@ class LevelMetaDataEditScene(OptionSelectScene):
         :param bp:
         :param on_exit: LevelBlueprint -> None
         """
-        OptionSelectScene.__init__(self, title="Edit Metadata")
+        OptionSelectScene.__init__(self, title="Edit Metadata", opts_per_page=7)
         self._base_bp = bp
         self._on_exit = on_exit
 
         self._add_text_edit_option("level name: ", blueprints.NAME, bp)
         self._add_popout_text_edit_option("description: ", blueprints.DESCRIPTION, bp)
         self._add_text_edit_option("level ID: ", blueprints.LEVEL_ID, bp)
-        self._add_text_edit_option("Time Limit: ", blueprints.TIME_LIMIT, bp,
+        self._add_text_edit_option("time limit: ", blueprints.TIME_LIMIT, bp,
                                    to_str=lambda t: util.ticks_to_time_string(t),
                                    from_str=lambda t_str: util.time_string_to_ticks(t_str, or_else=3600),
                                    char_limit=8,
                                    allowed_chars="0123456789:")
-        self._add_players_edit_option("Players: ", bp)
+        self._add_players_edit_option("players: ", bp)
 
-        self.add_option("back", lambda: self._on_exit(self._base_bp), esc_option=True)
+        self.add_option("save changes", lambda: self._on_exit(self._base_bp), esc_option=True)
 
     def _add_text_edit_option(self, name, attribute_id, bp, to_str=str, from_str=str, char_limit=32,
                               allowed_chars=ui.TextEditElement.ASCII_CHARS):
@@ -2055,6 +2055,7 @@ class LevelEditGameScene(_BaseGameScene):
                                                 _do_final_exit,
                                                 _new_editor_scene,
                                                 description=desc))
+        sounds.play_sound(soundref.MENU_BACK)
 
     def adjust_edit_resolution(self, increase):
         if self.edit_resolution in self.resolution_options:

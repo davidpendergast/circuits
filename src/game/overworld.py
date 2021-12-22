@@ -13,6 +13,7 @@ import src.game.worldview as worldview
 import src.engine.inputs as inputs
 import src.engine.keybinds as keybinds
 import src.engine.sprites as sprites
+import src.engine.sounds as sounds
 import src.game.globalstate as gs
 import src.engine.renderengine as renderengine
 import src.engine.spritesheets as spritesheets
@@ -24,6 +25,7 @@ import src.game.ui as ui
 import src.game.spriteref as spriteref
 import src.game.colors as colors
 import src.game.playertypes as playertypes
+import src.game.soundref as soundref
 
 
 class OverworldGrid:
@@ -1570,8 +1572,6 @@ class OverworldScene(scenes.Scene):
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.MENU_DOWN)):
             dy += 1
 
-        # TODO tab and shift-tab to jump to the next or prev level? ..what
-
         if dx != 0 or dy != 0:
             orig_node = self.state.get_selected_node()
             if orig_node is not None:
@@ -1580,9 +1580,11 @@ class OverworldScene(scenes.Scene):
                 if new_node is not None:
                     if new_node.is_exit():
                         self.state.activate_exit_node(new_node.get_exit_id())
+                        sounds.play_sound(soundref.MENU_SLIDE)
                     else:
                         self.state.set_selected_node(new_node)
                         self.state.cell_under_mouse = None  # subtle QOL
+                        sounds.play_sound(soundref.MENU_BLIP)
                 else:
                     # TODO play sound
                     pass
@@ -1641,6 +1643,7 @@ class OverworldScene(scenes.Scene):
                                                  lambda time: self.get_manager().set_next_scene(_updated_scene(new_time=time)),
                                                  lambda: self.get_manager().set_next_scene(_updated_scene()))
             self.get_manager().set_next_scene(next_scene)
+            sounds.play_sound(soundref.LEVEL_START)
 
     def _update_bg_triangles(self):
         size = renderengine.get_instance().get_game_size()
