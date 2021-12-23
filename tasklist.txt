@@ -7,6 +7,7 @@ bugs:
  - falling block is 'squished' in "Heist" preview img
  - player D should be able to "hug" the ceiling (y-vel doesn't get cancelled when colliding vertically)
     - (allows for consistent upward desyncs)
+ - when B dies in C's arms (T_T), C's arms remain raised
  
  
 features:
