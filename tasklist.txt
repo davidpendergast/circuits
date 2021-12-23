@@ -5,6 +5,8 @@ bugs:
  - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
  - falling blocks should be on different depth than blocks/spikes/moving blocks
  - falling block is 'squished' in "Heist" preview img
+ - player D should be able to "hug" the ceiling (y-vel doesn't get cancelled when colliding vertically)
+    - (allows for consistent upward desyncs)
  
  
 features:

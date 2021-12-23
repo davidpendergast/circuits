@@ -934,9 +934,13 @@ def copy_json(json_blob):
 
 
 def load_json_from_path(filepath):
-    with open(filepath, "r") as f:
-        data = json.load(f)
-        return data
+    try:
+        with open(filepath, "r") as f:
+            data = json.load(f)
+            return data
+    except json.decoder.JSONDecodeError as e:
+        print("ERROR: failed to load json from: {}".format(filepath))
+        raise e
 
 
 def save_json_to_path(json_blob, filepath, make_pretty=True):
