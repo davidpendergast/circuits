@@ -76,7 +76,7 @@
         {"art_id": 0, "h": 16, "inverted": false, "subtype": 0, "type": "door_block", "w": 32, "x": 384, "y": 128},
         {
             "art_id": 1,
-            "color_id": 3,
+            "color_id": 0,
             "duration": 90,
             "h": 8,
             "loop": true,

@@ -1915,6 +1915,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
         self._has_ever_moved = False
         self._was_breaking_last_frame = False
+        self._is_flying = False  # flying = airborne due to an air-jump
 
         self._death_reason = None  # if this gets set, the player will die and be removed at the end of that update cycle
 
@@ -2139,6 +2140,9 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
         # TODO crouch jumps? forced to crouch?
         return self.is_grounded() and self._holding_crouch
 
+    def is_flying(self):
+        return not self.is_grounded() and not self.is_clinging_to_wall() and self._is_flying
+
     def has_ever_moved(self):
         return self._has_ever_moved
 
@@ -2293,6 +2297,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
                 if self._fly_y_vel < self.get_y_vel():
                     self.set_y_vel(self._fly_y_vel)
                     self._last_jump_time = 0
+                    self._is_flying = True
                     self.play_sound(soundref.PLAYER_FLY)
             elif self._air_time < self._post_jump_buffer:
                 # if you jumped too late, you get a penalty
@@ -2304,6 +2309,10 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
         # short hopping
         if self._y_vel < 0 and not holding_jump:
             self._y_vel *= self._bonus_y_fric_on_let_go
+
+        if self._is_flying and not self.is_flying():
+            # stop "flying" when you touch the ground or a wall.
+            self._is_flying = False
 
     def _try_to_grab_or_drop(self):
         if self.get_held_entity() is not None:

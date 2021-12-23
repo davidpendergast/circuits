@@ -555,7 +555,9 @@ class CollisionResolver:
 
                     # something stopped us from moving vertically
                     if (0 < ent.get_y_vel()) == (next_positions[ent][1] < requested_next_positions[ent][1]):
-                        ent.set_y_vel(0)
+                        if not ent.is_player() or not ent.is_flying():
+                            # when flying, bonking the ceiling doesn't 0-out your velocity
+                            ent.set_y_vel(0)
             else:
                 ent.set_vel((0, 0))
                 invalids.append(ent)
