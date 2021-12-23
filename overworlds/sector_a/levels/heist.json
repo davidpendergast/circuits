@@ -1,0 +1,473 @@
+{
+    "characters": ["player_fast"],
+    "description": "Everyone's favorite league~\n",
+    "entities": [
+        {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 88, "y": 224},
+        {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 88, "x_dir": 1, "y": 176},
+        {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 368, "y": 216},
+        {"color_id": 1, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 96, "type": "block", "w": 16, "x": 464, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 96, "type": "block", "w": 16, "x": 464, "y": 144},
+        {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 144},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 80, "x": 0, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0},
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 64,
+            "loop": true,
+            "points": [
+                [128, 56],
+                [288, 56],
+                [352, 104],
+                [208, 104],
+                [208, 104]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 64,
+            "y": 104
+        },
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 64,
+            "loop": true,
+            "points": [
+                [184, 56],
+                [344, 56],
+                [408, 104],
+                [264, 104],
+                [264, 104]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 120,
+            "y": 104
+        },
+        {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 56, "y": 176},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 88, "y": 192},
+        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 104, "y": 176},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 16, "x": 120, "y": 176},
+        {
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [120, 48],
+                [280, 48],
+                [344, 96],
+                [200, 96],
+                [200, 96]
+            ],
+            "subtype": [0, -1],
+            "type": "spikes",
+            "w": 16,
+            "x": 56,
+            "y": 96
+        },
+        {
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [184, 48],
+                [344, 48],
+                [408, 96],
+                [264, 96],
+                [264, 96]
+            ],
+            "subtype": [0, -1],
+            "type": "spikes",
+            "w": 16,
+            "x": 120,
+            "y": 96
+        },
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 352, "y": 216},
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 56,
+            "loop": true,
+            "points": [
+                [208, 128],
+                [208, 128],
+                [208, 176],
+                [208, 176],
+                [208, 176]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 208,
+            "y": 176
+        },
+        {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 216, "y": 216},
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [200, 128],
+                [200, 128],
+                [200, 176],
+                [200, 176],
+                [200, 176]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 200,
+            "y": 176
+        },
+        {
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [200, 120],
+                [200, 120],
+                [200, 168],
+                [200, 168],
+                [200, 168]
+            ],
+            "subtype": [0, -1],
+            "type": "spikes",
+            "w": 16,
+            "x": 200,
+            "y": 168
+        },
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [272, 128],
+                [272, 128],
+                [272, 176],
+                [272, 176],
+                [272, 176]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 272,
+            "y": 176
+        },
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 56,
+            "loop": true,
+            "points": [
+                [264, 128],
+                [264, 128],
+                [264, 176],
+                [264, 176],
+                [264, 176]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 264,
+            "y": 176
+        },
+        {
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [264, 120],
+                [264, 120],
+                [264, 168],
+                [264, 168],
+                [264, 168]
+            ],
+            "subtype": [0, -1],
+            "type": "spikes",
+            "w": 16,
+            "x": 264,
+            "y": 168
+        },
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 56,
+            "loop": true,
+            "points": [
+                [200, 168],
+                [200, 168],
+                [200, 184],
+                [200, 184],
+                [200, 184]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 200,
+            "y": 184
+        },
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 56,
+            "loop": true,
+            "points": [
+                [272, 168],
+                [272, 168],
+                [272, 184],
+                [272, 184],
+                [272, 184]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 272,
+            "y": 184
+        },
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 24,
+            "loop": true,
+            "points": [
+                [208, 216],
+                [208, 216],
+                [208, 232],
+                [208, 232],
+                [208, 232]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 208,
+            "y": 232
+        },
+        {
+            "art_id": 1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 24,
+            "loop": true,
+            "points": [
+                [264, 216],
+                [264, 216],
+                [264, 232],
+                [264, 232],
+                [264, 232]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 264,
+            "y": 232
+        },
+        {"color_id": 0, "inverted": false, "subtype": "0X", "type": "camera_bound_marker", "x": 0, "y": 0},
+        {"color_id": 0, "inverted": false, "subtype": "0X", "type": "camera_bound_marker", "x": 464, "y": 224},
+        {"color_id": 1, "h": 32, "type": "falling_block", "w": 32, "x": 224, "y": 136},
+        {"subtype": 0, "type": "key", "x": 232, "y": 200},
+        {"art_id": 0, "h": 16, "inverted": false, "subtype": 0, "type": "door_block", "w": 32, "x": 368, "y": 176},
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [120, 56],
+                [280, 56],
+                [344, 104],
+                [200, 104],
+                [200, 104]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 56,
+            "y": 104
+        },
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [192, 56],
+                [352, 56],
+                [416, 104],
+                [272, 104],
+                [272, 104]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 128,
+            "y": 104
+        },
+        {
+            "color_id": 0,
+            "duration": 90,
+            "h": 48,
+            "loop": true,
+            "points": [
+                [120, 64],
+                [280, 64],
+                [344, 112],
+                [200, 112],
+                [200, 112]
+            ],
+            "subtype": [-1, 0],
+            "type": "spikes",
+            "w": 8,
+            "x": 56,
+            "y": 112
+        },
+        {
+            "color_id": 0,
+            "duration": 90,
+            "h": 48,
+            "loop": true,
+            "points": [
+                [192, 64],
+                [352, 64],
+                [416, 112],
+                [272, 112],
+                [272, 112]
+            ],
+            "subtype": [1, 0],
+            "type": "spikes",
+            "w": 8,
+            "x": 128,
+            "y": 112
+        },
+        {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 352, "y": 176},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 400, "y": 176},
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [352, 168],
+                [352, 168],
+                [336, 168],
+                [352, 168],
+                [352, 168]
+            ],
+            "type": "moving_block",
+            "w": 32,
+            "x": 352,
+            "y": 168
+        },
+        {
+            "art_id": 0,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [384, 168],
+                [384, 168],
+                [400, 168],
+                [384, 168],
+                [384, 168]
+            ],
+            "type": "moving_block",
+            "w": 32,
+            "x": 384,
+            "y": 168
+        },
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 72,
+            "loop": true,
+            "points": [
+                [344, 168],
+                [344, 176],
+                [344, 176],
+                [344, 176],
+                [344, 168]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 344,
+            "y": 168
+        },
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 72,
+            "loop": true,
+            "points": [
+                [416, 168],
+                [416, 176],
+                [416, 176],
+                [416, 176],
+                [416, 168]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 416,
+            "y": 168
+        },
+        {"art_id": 3, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 56, "y": 208},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 56, "y": 168},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 120, "y": 168},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 72, "y": 208},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 400, "y": 216},
+        {"art_id": 0, "color_id": 1, "h": 24, "type": "block", "w": 8, "x": 352, "y": 192},
+        {"art_id": 0, "color_id": 1, "h": 24, "type": "block", "w": 8, "x": 408, "y": 192},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 48, "x": 216, "y": 232},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 64, "x": 352, "y": 232},
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [120, 112],
+                [280, 112],
+                [344, 160],
+                [200, 160],
+                [200, 160]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 56,
+            "y": 160
+        },
+        {
+            "art_id": -1,
+            "color_id": 0,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [
+                [192, 112],
+                [352, 112],
+                [416, 160],
+                [272, 160],
+                [272, 160]
+            ],
+            "type": "moving_block",
+            "w": 8,
+            "x": 128,
+            "y": 160
+        }
+    ],
+    "level_id": "heist",
+    "name": "Heist",
+    "time_limit": 3600
+}

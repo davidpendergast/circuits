@@ -3,6 +3,8 @@ bugs:
  - progress isn't saved when game exits via crash
  - question mark info entities (e.g. tips) shouldn't have dialog
  - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
+ - falling blocks should be on different depth than blocks/spikes/moving blocks
+ - falling block is 'squished' in "Heist" preview img
  
  
 features:
@@ -179,7 +181,7 @@ Names:
             -er
             -sion
         
-    Circuits - in use many times, generic, impossible to google
+    CIRCUITS - in use many times, generic, impossible to google
     ABCD - impossible to google, also bad
     Circuitra - in use (name of font)
     Tetraloop - in use (molecule)
