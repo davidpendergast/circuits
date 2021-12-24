@@ -45,12 +45,17 @@ class MultiChannelSong:
 
     @staticmethod
     def load_from_disk(song_id, relpath="assets/songs/"):
-        base_dir = util.resource_path(os.path.join(relpath, song_id))
+        if song_id.startswith("Of Far Different Nature"):
+            base_dir = util.resource_path(os.path.join(relpath, "Of Far Different Nature Pack"))
+        else:
+            base_dir = util.resource_path(os.path.join(relpath, song_id))
+
         sound_paths = []
         for fname in os.listdir(base_dir):
-            if fname.endswith((".mp3", ".wav", ".ogg")):
+            if song_id in fname and fname.endswith((".mp3", ".wav", ".ogg")):
                 sound_paths.append(os.path.join(base_dir, fname))
         sound_paths.sort()
+
         return MultiChannelSong(song_id, sound_paths)
 
     def get_volumes(self):
@@ -99,16 +104,91 @@ class MultiChannelSong:
         self._playing = True
 
 
-# Songs
+# My (unused) Songs
 MACHINATIONS = "machinations"
 RADIATION = "radiation"
+HARVEST = "harvest"
 SPACE = "space"
+
+# Of Far Different Nature (that's the artist's name)'s tracks
+# https://fardifferent.itch.io/loops
+OFDN_0_TO_100 = "Of Far Different Nature - 0 to 100 (CC-BY)"
+OFDN_BACK_TO_ZERO = "Of Far Different Nature - Back To Zero (CC-BY)"
+OFDN_CHOPPIN = "Of Far Different Nature - Choppin (CC-BY)"
+OFDN_CRUISER = "Of Far Different Nature - Cruiser (CC-BY)"
+OFDN_DEPARTING_AT_DAWN = "Of Far Different Nature - Departing At Dawn (CC-BY)"
+OFDN_DREAM_FACTORY = "Of Far Different Nature - Dream Factory (CC-BY)"
+OFDN_ETHNIC_BEAT = "Of Far Different Nature - Ethnic Beat (CC-BY)"
+OFDN_FOCUS = "Of Far Different Nature - Focus (CC-BY)"
+OFDN_GANXTA = "Of Far Different Nature - Ganxta (CC-BY)"
+OFDN_LARGO = "Of Far Different Nature - Largo (CC-BY)"
+OFDN_LOW_GRAVITY = "Of Far Different Nature - Low Gravity (CC-BY)"
+OFDN_NO_TIME = "Of Far Different Nature - No Time (CC-BY)"
+OFDN_SHEHERAZADE = "Of Far Different Nature - Sheherazade (CC-BY)"
+OFDN_STREAM = "Of Far Different Nature - Stream (CC-BY)"
+OFDN_TIMED = "Of Far Different Nature - Timed (CC-BY)"
+OFDN_TIME_FLIES = "Of Far Different Nature - Time Flies (CC-BY)"
+OFDN_VOLTAGE = "Of Far Different Nature - Voltage (CC-BY)"
 
 SILENCE = "~silence~"                    # literally just silent
 CONTINUE_CURRENT = "~continue_current~"  # a no-op when passed to set_song
 
-MAIN_MENU_SONG = SPACE, [1]  # MACHINATIONS, [0.25, 0.5, 0, 0]
-INSTRUCTION_MENU_SONG = MACHINATIONS, [0.1, 0.25, 0, 0]
+MAIN_MENU_SONG = OFDN_DREAM_FACTORY
+INSTRUCTION_MENU_SONG = OFDN_DREAM_FACTORY, [0.75]
+
+_SONG_MAPPINGS_FOR_LEVELS = {
+    "silence": [SILENCE],
+    "menu_theme": [MAIN_MENU_SONG],
+    "sector_ab": [OFDN_DREAM_FACTORY, OFDN_0_TO_100, OFDN_ETHNIC_BEAT],
+    "sector_a": [OFDN_FOCUS],
+    "sector_abc": [OFDN_GANXTA, OFDN_LOW_GRAVITY, OFDN_LARGO],
+    "sector_abcd": [OFDN_STREAM, OFDN_TIME_FLIES, OFDN_VOLTAGE],
+    "custom": [OFDN_CHOPPIN, OFDN_CRUISER, OFDN_DEPARTING_AT_DAWN, OFDN_SHEHERAZADE, OFDN_TIMED]
+}
+
+
+def all_valid_song_ids_for_levels():
+    for key in _SONG_MAPPINGS_FOR_LEVELS:
+        for i in range(0, len(_SONG_MAPPINGS_FOR_LEVELS[key])):
+            if i == 0:
+                yield key
+            else:
+                yield key + "_{}".format(i)
+
+
+def get_song_id_for_level(overworld_id, level_pcnt: float=0.0, explicit_song_id=None):
+    """
+    :param overworld_id: ID of the overworld the level belongs to.
+    :param level_pcnt: the value N/M, where N is the level's chronological number and M is the number of levels in the world.
+    :param explicit_song_id: an explict ID for the song
+    """
+    if explicit_song_id is not None:
+        if explicit_song_id in _SONG_MAPPINGS_FOR_LEVELS:
+            return _SONG_MAPPINGS_FOR_LEVELS[explicit_song_id][0]
+        else:
+            try:
+                # it should look like "sector_ab_2", in which case we need to extract "sector_ab" and 2.
+                underscore_idx = explicit_song_id.rindex("_")
+                key = explicit_song_id[0:underscore_idx]
+                idx = int(explicit_song_id[underscore_idx + 1:])
+                if key in _SONG_MAPPINGS_FOR_LEVELS:
+                    n_songs = len(_SONG_MAPPINGS_FOR_LEVELS[key])
+                    return _SONG_MAPPINGS_FOR_LEVELS[key][util.bound(idx, -1, n_songs - 1)]
+                else:
+                    print("WARN: unrecognized song id: {}".format(explicit_song_id))
+            except Exception:
+                print("WARN: song id couldn't be parsed: {}".format(explicit_song_id))
+
+        # if we failed to resolve the explicit ID, just bail.
+        # TODO let you reference songs from within overworld packs as well?
+        return SILENCE
+
+    else:
+        if overworld_id in _SONG_MAPPINGS_FOR_LEVELS:
+            return util.index_into(_SONG_MAPPINGS_FOR_LEVELS[overworld_id], level_pcnt, wrap=False)
+        else:
+            # I guess?
+            return util.index_into(_SONG_MAPPINGS_FOR_LEVELS["custom"], level_pcnt, wrap=False)
 
 
 _LOADED_SONGS = {}

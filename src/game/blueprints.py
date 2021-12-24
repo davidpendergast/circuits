@@ -812,16 +812,19 @@ class LevelBlueprint:
         self.json_blob = json_blob
 
         self.directory = directory
-        self._cached_entities = None  # list of (blob, spec)
+
+        self.ephemeral_song_id = None
+        self._cached_entities = None      # list of (blob, spec)
 
     @staticmethod
-    def build(name, level_id, players, timelimit, desc, entity_specs, directory=None):
+    def build(name, level_id, players, timelimit, desc, song_id, entity_specs, directory=None):
         return LevelBlueprint({
             NAME: name,
             PLAYERS: [p.get_id() for p in players],
             LEVEL_ID: level_id,
             TIME_LIMIT: timelimit,
             DESCRIPTION: desc,
+            SONG_ID: song_id,
             ENTITIES: entity_specs
         }, directory=directory)
 
@@ -832,7 +835,10 @@ class LevelBlueprint:
         return util.read_string(self.json_blob, LEVEL_ID, "???")
 
     def song_id(self):
-        return util.read_string(self.json_blob, SONG_ID, "machinations")  # TODO change to None
+        return util.read_string(self.json_blob, SONG_ID, self.ephemeral_song_id)
+
+    def explicit_song_id(self):
+        return util.read_string(self.json_blob, SONG_ID, None)
 
     def get_instruments(self, player_ids):
         if INSTRUMENTS in self.json_blob:

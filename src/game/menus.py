@@ -922,14 +922,17 @@ class _GameState:
         if song_id is None:
             return songsystem.SILENCE
         else:
-            volumes = [0] * songsystem.num_instruments(song_id)
-            for i in range(0, self.get_active_player_idx() + 1):
-                if not self.is_dead(i):
-                    p_type = self.get_player_type(i)
-                    for inst_idx in self.bp.get_instruments(p_type.get_id()):
-                        if 0 <= inst_idx < len(volumes):
-                            volumes[inst_idx] = 1
-            return song_id, volumes
+            # TODO seems like we're not doing the multi-track song stuff, delete?
+            # volumes = [0] * songsystem.num_instruments(song_id)
+            # for i in range(0, self.get_active_player_idx() + 1):
+            #     if not self.is_dead(i):
+            #         p_type = self.get_player_type(i)
+            #         for inst_idx in self.bp.get_instruments(p_type.get_id()):
+            #             if 0 <= inst_idx < len(volumes):
+            #                 volumes[inst_idx] = 1
+
+            # soften music when you've failed
+            return song_id, [1] if not self.get_failure_message() else [0.666]
 
 
 class TopPanelUi(ui.UiElement):
@@ -1881,6 +1884,7 @@ class LevelEditGameScene(_BaseGameScene):
                                                self.orig_bp.get_player_types(),
                                                self.orig_bp.time_limit(),
                                                self.orig_bp.description(),
+                                               self.orig_bp.explicit_song_id(),
                                                self.all_spec_blobs,
                                                directory=self.orig_bp.directory)
 

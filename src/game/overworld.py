@@ -26,6 +26,7 @@ import src.game.spriteref as spriteref
 import src.game.colors as colors
 import src.game.playertypes as playertypes
 import src.game.soundref as soundref
+import src.game.songsystem as songsystem
 
 
 class OverworldGrid:
@@ -608,6 +609,12 @@ class OverworldBlueprint:
     def has_start_node(self):
         return self.grid.get_game_start_node_if_present() is not None
 
+    def get_level_num_for_id(self, level_id):
+        for n in self.levels:
+            if self.levels[n] == level_id:
+                return n
+        return None
+
     def __repr__(self):
         return "\n".join([
             "OverworldBlueprint: {}".format(self.ref_id),
@@ -676,8 +683,23 @@ class OverworldState:
     def reload_level_blueprints_from_disk(self):
         self.level_blueprints.clear()
         for overworld_bp in self.overworld_pack.all_overworlds():
+
+            overworld_id = overworld_bp.ref_id
             level_dir = os.path.join(overworld_bp.directory, "levels")
+
             loaded_levels = blueprints.load_all_levels_from_dir(level_dir)
+
+            # Assign default songs to the levels
+            for key in loaded_levels:
+                level = loaded_levels[key]
+                level_num = overworld_bp.get_level_num_for_id(level.level_id())
+                if level_num is not None:
+                    if str(level_num).isnumeric():
+                        n = int(level_num) / len(overworld_bp.levels)
+                    else:
+                        n = 1.0
+                    level.ephemeral_song_id = songsystem.get_song_id_for_level(overworld_id, n, explicit_song_id=level.explicit_song_id())
+
             self.level_blueprints.update(loaded_levels)
 
     def get_level_blueprint(self, level_id) -> blueprints.LevelBlueprint:

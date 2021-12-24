@@ -42,10 +42,12 @@ class _GameLoop:
         window_icon = pygame.image.load(util.resource_path("assets/icon.png"))
         pygame.display.set_icon(window_icon)
 
+        print("INFO: creating window...")
         window.create_instance(window_size=configs.default_window_size, min_size=configs.minimum_window_size)
         window.get_instance().set_caption(configs.name_of_game)
         window.get_instance().show()
 
+        print("INFO: creating render engine")
         render_eng = renderengine.create_instance()
         render_eng.init(*configs.default_window_size)
         render_eng.set_min_size(*configs.minimum_window_size)
