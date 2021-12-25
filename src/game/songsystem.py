@@ -130,6 +130,13 @@ OFDN_TIMED = "Of Far Different Nature - Timed (CC-BY)"
 OFDN_TIME_FLIES = "Of Far Different Nature - Time Flies (CC-BY)"
 OFDN_VOLTAGE = "Of Far Different Nature - Voltage (CC-BY)"
 
+OFDN_ALL_TITLES = [("0 to 100", "Back To Zero", "Choppin"),
+                   ("Cruiser", "Departing At Dawn"),
+                   ("Dream Factory", "Ethnic Beat", "Focus"),
+                   ("Ganxta", "Largo", "Low Gravity"),
+                   ("No Time", "Sheherazade", "Stream"),
+                   ("Timed", "Time Flies", "Voltage")]
+
 SILENCE = "~silence~"                    # literally just silent
 CONTINUE_CURRENT = "~continue_current~"  # a no-op when passed to set_song
 

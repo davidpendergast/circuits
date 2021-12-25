@@ -212,7 +212,7 @@ class CreditsScene(scenes.Scene):
         "David Pendergast",
         ("2022", SMALL),
         "",
-        ("art, coding, design, and music by", SMALL),
+        ("art, coding, and design by", SMALL),
         "David Pendergast",
         "",
         ("twitter", SMALL),
@@ -221,11 +221,21 @@ class CreditsScene(scenes.Scene):
         ("github", SMALL),
         "davidpendergast",
         "",
-        # TODO music/sound effect credits
-        ("made with pygame", SMALL),
+        ("music by", SMALL),
+        "Of Far Different Nature",
+        ("fardifferent.bandcamp.com", SMALL),
+        "",
+        "songs (CC-BY 4.0)"
+    ]
+    for titles in songsystem.OFDN_ALL_TITLES:
+        SLIDE_TEXT.append(("'" + "', '".join(titles) + "'", SMALL))
+    SLIDE_TEXT.append("")
+
+    SLIDE_TEXT.extend([
+        ("made with pygame and OpenGL", SMALL),
         "",
         ("thanks for playing <3", SMALL)
-    ]
+    ])
 
     def __init__(self, next_scene, lines=None):
         super().__init__()
