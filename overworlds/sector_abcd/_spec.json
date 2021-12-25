@@ -17,8 +17,10 @@
 ],
 "lvl_1": "fly",
 "lvl_2": "teleporter",
+"lvl_3": "patience",
 "lvl_4": "dichotomy",
-"lvl_7": "the_rack",
+"lvl_7": "pathways",
+"lvl_9": "the_rack",
 "bg_triangles": {
     "top": [],
     "left": [],

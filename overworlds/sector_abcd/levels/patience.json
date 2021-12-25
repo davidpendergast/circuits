@@ -69,7 +69,7 @@
             "y": 80
         },
         {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 144, "y": 160},
-        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 64, "x": 368, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 368, "y": 48},
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 64, "x": 400, "y": 224},
         {"art_id": 0, "h": 32, "inverted": false, "subtype": 2, "type": "door_block", "w": 16, "x": 416, "y": 128},
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 32, "x": 400, "y": 192},
@@ -80,9 +80,9 @@
             "type": "spikes",
             "w": 48,
             "x": 368,
-            "y": 80
+            "y": 64
         },
-        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 16, "x": 416, "y": 80},
+        {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 16, "x": 416, "y": 64},
         {
             "color_id": 0,
             "h": 8,
@@ -166,5 +166,6 @@
     ],
     "level_id": "patience",
     "name": "Patience",
+    "song_id": null,
     "time_limit": 3600
 }

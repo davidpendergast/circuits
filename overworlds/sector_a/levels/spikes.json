@@ -2,19 +2,19 @@
     "characters": ["player_fast"],
     "description": "If you like pointy things, this is the level for you!",
     "entities": [
-        {"color_id": 3, "h": 48, "type": "block", "w": 80, "x": 16, "y": 48},
-        {"color_id": 3, "h": 240, "type": "block", "w": 16, "x": 0, "y": 0},
-        {"color_id": 3, "h": 16, "type": "block", "w": 32, "x": 96, "y": 112},
-        {"color_id": 3, "h": 16, "type": "block", "w": 192, "x": 64, "y": 224},
-        {"color_id": 3, "h": 32, "type": "block", "w": 80, "x": 16, "y": 96},
-        {"color_id": 3, "h": 32, "type": "block", "w": 32, "x": 192, "y": 192},
-        {"color_id": 3, "h": 32, "type": "block", "w": 16, "x": 64, "y": 192},
+        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 16, "y": 48},
+        {"color_id": 1, "h": 240, "type": "block", "w": 16, "x": 0, "y": 0},
+        {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 96, "y": 112},
+        {"color_id": 1, "h": 16, "type": "block", "w": 192, "x": 64, "y": 224},
+        {"color_id": 1, "h": 32, "type": "block", "w": 80, "x": 16, "y": 96},
+        {"color_id": 1, "h": 32, "type": "block", "w": 32, "x": 192, "y": 192},
+        {"color_id": 1, "h": 32, "type": "block", "w": 16, "x": 64, "y": 192},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 16, "x_dir": 1, "y": 176},
-        {"color_id": 3, "h": 48, "type": "block", "w": 32, "x": 224, "y": 176},
-        {"color_id": 3, "h": 128, "type": "block", "w": 32, "x": 288, "y": 96},
-        {"color_id": 3, "h": 48, "type": "block", "w": 464, "x": 16, "y": 0},
-        {"color_id": 3, "h": 16, "type": "block", "w": 96, "x": 288, "y": 224},
-        {"art_id": 0, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 176, "y": 104},
+        {"color_id": 1, "h": 48, "type": "block", "w": 32, "x": 224, "y": 176},
+        {"color_id": 1, "h": 128, "type": "block", "w": 32, "x": 288, "y": 96},
+        {"color_id": 1, "h": 48, "type": "block", "w": 464, "x": 16, "y": 0},
+        {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 288, "y": 224},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 104},
         {
             "color_id": 2,
             "h": 8,
@@ -23,15 +23,6 @@
             "w": 16,
             "x": 176,
             "y": 96
-        },
-        {
-            "color_id": 2,
-            "h": 16,
-            "subtype": [-1, 0],
-            "type": "spikes",
-            "w": 8,
-            "x": 168,
-            "y": 104
         },
         {
             "color_id": 2,
@@ -60,7 +51,7 @@
             "x": 48,
             "y": 128
         },
-        {"art_id": 0, "color_id": 3, "h": 192, "type": "block", "w": 16, "x": 464, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 192, "type": "block", "w": 16, "x": 464, "y": 48},
         {
             "color_id": 2,
             "h": 8,
@@ -70,7 +61,7 @@
             "x": 256,
             "y": 48
         },
-        {"art_id": 0, "color_id": 3, "h": 32, "type": "block", "w": 32, "x": 320, "y": 128},
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 320, "y": 128},
         {
             "color_id": 2,
             "h": 32,
@@ -134,7 +125,7 @@
             "x": 96,
             "y": 48
         },
-        {"art_id": 0, "color_id": 3, "h": 16, "type": "block", "w": 48, "x": 240, "y": 96},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 240, "y": 96},
         {
             "color_id": 2,
             "h": 8,
@@ -153,7 +144,7 @@
             "x": 56,
             "y": 192
         },
-        {"art_id": 0, "color_id": 3, "h": 112, "type": "block", "w": 16, "x": 384, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 112, "type": "block", "w": 16, "x": 384, "y": 48},
         {
             "color_id": 2,
             "h": 32,
@@ -163,11 +154,11 @@
             "x": 376,
             "y": 128
         },
-        {"art_id": 0, "color_id": 3, "h": 48, "type": "block", "w": 16, "x": 384, "y": 192},
-        {"art_id": 0, "color_id": 3, "h": 8, "type": "block", "w": 16, "x": 432, "y": 200},
-        {"art_id": 0, "color_id": 3, "h": 8, "type": "block", "w": 16, "x": 424, "y": 152},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 16, "x": 384, "y": 192},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 432, "y": 200},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 424, "y": 152},
         {"color_id": -1, "h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 432, "y": 80},
-        {"art_id": 0, "color_id": 3, "h": 8, "type": "block", "w": 16, "x": 400, "y": 120},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 400, "y": 120},
         {
             "color_id": 2,
             "h": 8,
@@ -197,7 +188,7 @@
         },
         {
             "art_id": 0,
-            "color_id": 3,
+            "color_id": 1,
             "h": 32,
             "subtype": [2, 0, "horizontal"],
             "type": "sloped_2x2_block",
@@ -207,16 +198,30 @@
         },
         {
             "art_id": 0,
-            "color_id": 3,
+            "color_id": 1,
             "h": 32,
             "subtype": [2, 2, "horizontal"],
             "type": "sloped_2x2_block",
             "w": 32,
             "x": 432,
             "y": 96
-        }
+        },
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 8, "x": 376, "y": 64},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "question",
+            "text": "Every platformer needs at least\none level like this :)",
+            "type": "info",
+            "x": 112,
+            "y": 96
+        },
+        {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 352, "y": 224},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 320, "y": 224}
     ],
-    "level_id": "spike_test",
+    "level_id": "spikes",
     "name": "Spikes",
+    "song_id": null,
     "time_limit": 3600
 }

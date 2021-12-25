@@ -19,6 +19,7 @@
 "lvl_2": "machine",
 "lvl_3": "airlock",
 "lvl_4": "heist",
+"lvl_6": "spikes",
 "bg_triangles": {
     "top": [],
     "left": [],
