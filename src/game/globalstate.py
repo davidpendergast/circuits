@@ -132,7 +132,7 @@ class Settings(SaveAndLoadJsonBlob):
     _DEFAULTS = {
         SHOW_LIGHTING: True,
         MUTE_MUSIC: False,
-        MUSIC_VOLUME: 1,
+        MUSIC_VOLUME: 0.25,
         MUTE_EFFECTS: False,
         EFFECTS_VOLUME: 1
     }

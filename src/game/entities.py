@@ -3145,9 +3145,10 @@ _ALL_INFO_TYPES = {}
 
 class InfoEntityType:
 
-    def __init__(self, ident, turns, sprite_lookup, floating_type=False):
+    def __init__(self, ident, turns, sprite_lookup, floating_type=False, can_be_recolored=False):
         self.ident = ident
         self.faces_player = turns
+        self.recolorable = can_be_recolored
         self.sprite_lookup = sprite_lookup
         self.floating_type = floating_type
         _ALL_INFO_TYPES[ident] = self
@@ -3161,6 +3162,9 @@ class InfoEntityType:
 
     def turns_to_face_player(self):
         return self.faces_player
+
+    def can_be_recolored(self):
+        return self.recolorable
 
     def get_id(self):
         return self.ident
@@ -3299,8 +3303,8 @@ class FalseBlockEntity(BlockEntity):
 
 class InfoEntityTypes:
 
-    EXCLAM = InfoEntityType("exclam", False, lambda: spriteref.object_sheet().info_exclamation, floating_type=True)
-    QUESTION = InfoEntityType("question", False, lambda: spriteref.object_sheet().info_question, floating_type=True)
+    EXCLAM = InfoEntityType("exclam", False, lambda: spriteref.object_sheet().info_exclamation, floating_type=True, can_be_recolored=True)
+    QUESTION = InfoEntityType("question", False, lambda: spriteref.object_sheet().info_question, floating_type=True, can_be_recolored=True)
     PLAYER_FAST = InfoEntityType(const.PLAYER_FAST, True, lambda: spriteref.object_sheet().get_player_sprites(const.PLAYER_FAST, spriteref.PlayerStates.IDLE))
     PLAYER_SMALL = InfoEntityType(const.PLAYER_SMALL, True, lambda: spriteref.object_sheet().player_b[spriteref.PlayerStates.IDLE])
     PLAYER_HEAVY = InfoEntityType(const.PLAYER_HEAVY, True, lambda: spriteref.object_sheet().player_c[spriteref.PlayerStates.IDLE])
@@ -3349,6 +3353,12 @@ class InfoEntity(Entity):
 
     def get_color_id(self):
         return self._color_id
+
+    def get_color(self, ignore_override=False):
+        if self._info_type.can_be_recolored():
+            return super().get_color(ignore_override=ignore_override)
+        else:
+            return colors.PERFECT_WHITE
 
     def update_sprites(self):
         all_sprites = self._get_sprites()
@@ -3431,7 +3441,7 @@ class InfoEntity(Entity):
             if overlapping:
                 self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
 
-        self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh
+        self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh and len(self._text) > 0
 
         if self._dialog_id is not None and overlapping and self._should_show_text and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
             d = dialog.get_dialog(self._dialog_id, p.get_player_type(), self._info_type)
