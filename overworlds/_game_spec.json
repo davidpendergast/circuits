@@ -2,14 +2,16 @@
 "name": "Standard",
 "ref_id": "standard",
 "author": "Ghast",
-"overworlds": ["sector_ab", "sector_a", "sector_abc", "sector_ab_bonus", "sector_abcd"],
+"overworlds": ["sector_ab", "sector_a", "sector_abc", "sector_t", "sector_p"],
 "connections": {
     "sector_ab": {
         "e0": ["sector_a", "e0"],
         "e1": ["sector_abc", "e0"]
     },
     "sector_abc": {
-        "e2": ["sector_abcd", "e0"]
+        "e1": ["sector_p", "e0"],
+        "e2": ["sector_abcd", "e0"],
+        "e3": ["sector_t", "e0"]
     }
 }
 }

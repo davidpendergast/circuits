@@ -1,6 +1,6 @@
 {
-"name": "Sector AB (2)",
-"ref_id": "sector_ab_bonus", 
+"name": "Sector T",
+"ref_id": "sector_t",
 "author": "Ghast",
 "data_stride": 2,
 "data":[
@@ -10,12 +10,14 @@
     ". | . . | . . . ",
     ". | . . 3 . . . ",
     ". | . . 2 ~ 1 e0",
-    ". 6 7 ~ * . . . ",
+    ". 6 7 . . . . . ",
     ". 8 9 . . . . . ",
     ". . . . . . . . ",
     ". . . . . . . . "
 ],
-"lvl_2": "tele_intro",
+"lvl_1": "teleporter",
+"lvl_2": "duality",
+"lvl_3": "split",
 "bg_triangles": {
     "top": [],
     "left": [],
