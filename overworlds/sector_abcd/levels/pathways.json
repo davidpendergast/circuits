@@ -284,7 +284,8 @@
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 32, "x": 216, "y": 184},
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 32, "x": 144, "y": 184},
         {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 16, "x": 272, "y": 112},
-        {"art_id": 1, "color_id": 3, "h": 32, "type": "block", "w": 32, "x": 448, "y": 80}
+        {"art_id": 1, "color_id": 3, "h": 32, "type": "block", "w": 32, "x": 448, "y": 80},
+        {"art_id": 0, "h": 32, "inverted": true, "subtype": 2, "type": "door_block", "w": 32, "x": 16, "y": 192}
     ],
     "level_id": "pathways",
     "name": "Pathways",

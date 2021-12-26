@@ -150,7 +150,7 @@ class InstructionsScene(scenes.Scene):
 
     TEXT = "Objective:\n" \
            "Guide each unit to their respective goal, indicated by a capital letter. " \
-           "To pass a level, all robots must be at their goal simultaneously.\n\n" \
+           "To pass a level, all robots must be at their goals simultaneously.\n\n" \
            "[WASD or ←↑↓→] to move.\n" \
            "[R] to reset the entire level.\n" \
            "[Z] to reset the current unit."  # TODO swap in actual hotkeys

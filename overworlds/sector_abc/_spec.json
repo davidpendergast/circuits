@@ -15,11 +15,12 @@
     ". . . . 9 . . . ",
     ". . . . e2. . . "
 ],
-"lvl_1": "fragility",
-"lvl_2": "scaffolding",
-"lvl_3": "chimney",
+"lvl_1": "crush",
+"lvl_2": "fragility",
+"lvl_3": "scaffolding",
 "lvl_4": "help",
-"lvl_5": "channels",
+"lvl_5": "chimney",
+"lvl_6": "channels",
 "lvl_7": "sisyphus",
 "lvl_8": "blockage",
 "bg_triangles": {

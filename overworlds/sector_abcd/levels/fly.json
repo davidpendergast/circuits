@@ -325,7 +325,17 @@
         {"art_id": 0, "h": 32, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 176, "y": 208},
         {"art_id": 0, "h": 16, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 208, "y": 224},
         {"art_id": 0, "h": 16, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 240, "y": 224},
-        {"art_id": 0, "h": 16, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 272, "y": 224}
+        {"art_id": 0, "h": 16, "inverted": true, "subtype": 1, "type": "door_block", "w": 32, "x": 272, "y": 224},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "exclam",
+            "text": "Unit D can fly!",
+            "type": "info",
+            "x": 64,
+            "y": 96
+        }
     ],
     "level_id": "fly",
     "name": "Fly",

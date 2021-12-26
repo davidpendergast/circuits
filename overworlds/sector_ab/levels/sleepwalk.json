@@ -92,7 +92,7 @@
         {"subtype": 0, "type": "key", "x": 176, "y": 64},
         {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 400, "y": 48},
         {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 432, "y": 176},
-        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 96, "x": 144, "y": 224},
+        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 144, "y": 224},
         {"art_id": 2, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 240, "y": 224},
         {"art_id": 0, "color_id": 2, "h": 32, "type": "block", "w": 48, "x": 432, "y": 144},
         {
@@ -121,9 +121,41 @@
         {"color_id": 1, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
         {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0},
         {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 32, "x": 0, "y": 48},
-        {"art_id": 0, "color_id": 2, "h": 112, "type": "block", "w": 32, "x": 0, "y": 128}
+        {"art_id": 0, "color_id": 2, "h": 112, "type": "block", "w": 32, "x": 0, "y": 128},
+        {
+            "art_id": 1,
+            "color_id": 2,
+            "h": 32,
+            "subtype": [2, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 240,
+            "y": 176
+        },
+        {
+            "art_id": 0,
+            "color_id": 2,
+            "h": 32,
+            "subtype": [2, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 208,
+            "y": 192
+        },
+        {
+            "art_id": 0,
+            "color_id": 2,
+            "h": 32,
+            "subtype": [2, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 176,
+            "y": 208
+        },
+        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 208, "y": 224}
     ],
     "level_id": "sleepwalk",
     "name": "Sleepwalk",
+    "song_id": null,
     "time_limit": 3600
 }
