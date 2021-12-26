@@ -15,10 +15,11 @@
     ". . . . . . . . ",
     ". . . . . . . . "
 ],
-"lvl_1": "acrobatics",
+"lvl_1": "patience",
 "lvl_2": "machine",
 "lvl_3": "airlock",
 "lvl_4": "heist",
+"lvl_5": "acrobatics",
 "lvl_6": "spikes",
 "bg_triangles": {
     "top": [],

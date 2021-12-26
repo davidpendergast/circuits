@@ -312,6 +312,14 @@ class Entity:
         if len(self._perturbs) > 0:
             self._perturbs.pop(-1)
 
+        w = self.get_world()
+
+        # handle edge cases where an Entity dies while holding or being held by this entity.
+        if self.is_holding_an_entity() and not w.has_entity_with_id(self.get_held_entity().get_ent_id()):
+            self.pickup_entity(None)
+        if self.is_held() and not w.has_entity_with_id(self.get_held_by().get_ent_id()):
+            self.break_free_from_parent()
+
     def update_sprites(self):
         pass
 
@@ -352,6 +360,7 @@ class Entity:
         return [rect[0] + rect[2] // 2 - erect[2] // 2, rect[1] - erect[3]]
 
     def get_weight(self):
+        # TODO I don't think this matters for anything?
         if self.is_holding_an_entity():
             return 1 + self.get_held_entity().get_weight()
         else:
@@ -616,6 +625,9 @@ class BlockEntity(AbstractBlockEntity):
     def update(self):
         super().update()
 
+    def get_depth(self):
+        return 0
+
     def get_color_id(self):
         return self._color_id
 
@@ -637,7 +649,7 @@ class BlockEntity(AbstractBlockEntity):
             self._sprite = self._sprite.update(new_model=img,
                                                new_x=self.get_x(with_xy_perturbs=True),
                                                new_y=self.get_y(with_xy_perturbs=True),
-                                               new_scale=1, new_depth=0, new_color=self.get_color(),
+                                               new_scale=1, new_depth=self.get_depth(), new_color=self.get_color(),
                                                new_ratio=ratio)
         else:
             scale = 1
@@ -647,7 +659,9 @@ class BlockEntity(AbstractBlockEntity):
                 self._sprite = sprites.BorderBoxSprite(spriteref.BLOCK_LAYER, inner_rect,
                                                        all_borders=spriteref.block_sheet().border_sprites)
             self._sprite = self._sprite.update(new_rect=inner_rect, new_scale=scale,
-                                               new_color=self.get_color(), new_bg_color=self.get_color())
+                                               new_color=self.get_color(),
+                                               new_bg_color=self.get_color(),
+                                               new_depth=self.get_depth())
 
     def all_sprites(self):
         if self._sprite is not None:
@@ -785,6 +799,9 @@ class FallingBlockEntity(BlockEntity, DynamicEntity):
     def was_crushed(self):
         # XXX is this even possible?
         self.get_world().remove_entity(self)
+
+    def get_depth(self):
+        return 10  # want it to appear behind moving blocks, switches, spikes, etc.
 
     def update(self):
         super().update()

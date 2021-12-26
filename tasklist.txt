@@ -3,11 +3,8 @@ bugs:
  - progress isn't saved when game exits via crash
  - question mark info entities (e.g. tips) shouldn't have dialog
  - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
- - falling blocks should be on different depth than blocks/spikes/moving blocks
  - falling block is 'squished' in "Heist" preview img
- - player D should be able to "hug" the ceiling (y-vel doesn't get cancelled when colliding vertically)
-    - (allows for consistent upward desyncs)
- - when B dies in C's arms (T_T), C's arms remain raised
+ - info text is drawn behind timer text
  
  
 features:
@@ -16,7 +13,9 @@ features:
     - shh
  - players should have outlines
     - should they??
+    - maybe no, it's fine
  - let you embed stuff (e.g. "{ACTION_KEY}" --> [Enter]) into dialog / info text.
+    - with a special color
  - there should be an indicator when a player desyncs / resyncs
  - indicator when an action is available (e.g. when C stands next to B)?
     - wild idea, should C pick up B automatically? (if both aren't crouching)
