@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast"],
-    "description": "Everyone's favorite league~\n",
+    "description": "???\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 88, "y": 224},
@@ -469,5 +469,6 @@
     ],
     "level_id": "heist",
     "name": "Heist",
+    "song_id": null,
     "time_limit": 3600
 }

@@ -1395,7 +1395,7 @@ class LevelMetaDataEditScene(OptionSelectScene):
                                    allowed_chars="0123456789:")
         self._add_players_edit_option("players: ", bp)
 
-        self.add_option("save changes", lambda: self._on_exit(self._base_bp), esc_option=True)
+        self.add_option("apply", lambda: self._on_exit(self._base_bp), esc_option=True)
 
     def _add_text_edit_option(self, name, attribute_id, bp, to_str=str, from_str=str, char_limit=32,
                               allowed_chars=ui.TextEditElement.ASCII_CHARS):
