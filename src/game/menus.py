@@ -149,11 +149,11 @@ class MainMenuScene(scenes.Scene):
 class InstructionsScene(scenes.Scene):
 
     TEXT = "Objective:\n" \
-           "Guide each unit to their respective goal, indicated by a capital letter. " \
-           "To pass a level, all robots must be at their goals simultaneously.\n\n" \
+           "Guide each robot to their respective goal, indicated by a capital letter. " \
+           "To pass a level, all units must be at their goals simultaneously.\n\n" \
            "[WASD or ←↑↓→] to move.\n" \
            "[R] to reset the entire level.\n" \
-           "[Z] to reset the current unit."  # TODO swap in actual hotkeys
+           "[Z] to reset the current robot."  # TODO swap in actual hotkeys
 
     def __init__(self, next_scene, prev_scene):
         super().__init__()
@@ -221,17 +221,28 @@ class CreditsScene(scenes.Scene):
         ("github", SMALL),
         "davidpendergast",
         "",
+        ("itch", SMALL),
+        "ghastly.itch.io",
+        "",
         ("music by", SMALL),
         "Of Far Different Nature",
         ("fardifferent.bandcamp.com", SMALL),
         "",
-        "songs (CC-BY 4.0)"
+        ("songs (used under CC-BY 4.0)", SMALL)
     ]
     for titles in songsystem.OFDN_ALL_TITLES:
         SLIDE_TEXT.append(("'" + "', '".join(titles) + "'", SMALL))
     SLIDE_TEXT.append("")
 
     SLIDE_TEXT.extend([
+        ("sound effects by", SMALL),
+        "Andrea Baroni",
+        ("\"ModernUI Pack\"", SMALL),
+        ("andreabaroni.com", SMALL)
+    ])
+
+    SLIDE_TEXT.extend([
+        "",
         ("made with pygame and OpenGL", SMALL),
         "",
         ("thanks for playing <3", SMALL)
