@@ -11,6 +11,7 @@ import src.utils.util as util
 import src.game.globalstate as gs
 import configs
 import src.game.playertypes as playertypes
+import src.engine.keybinds as keybinds
 
 
 _ALL_META_SPEAKER_IDS = []
@@ -262,11 +263,6 @@ class DialogScene(scenes.Scene):
             # only update the underlying scene if dialog is inactive.
             self.update_impl()
 
-        if configs.is_dev:
-            import pygame
-            if inputs.get_instance().was_pressed(pygame.K_F6):
-                self.dialog_manager.set_dialog(get_test_dialog())  # XXX no id lookups here
-
     def update_impl(self):
         raise NotImplementedError()
 
@@ -290,9 +286,28 @@ def get_multi_char_test_dialog():
 
 
 def get_dialog(dialog_id, player_type, other_type):
-    lookup = {
-        Speaker.PLAYER: Speaker.resolve(player_type),
-        Speaker.OTHER: Speaker.resolve(other_type)
-    }
+    if dialog_id is None or len(dialog_id) == 0:
+        return None
+    else:
+        lookup = {
+            Speaker.PLAYER: Speaker.resolve(player_type),
+            Speaker.OTHER: Speaker.resolve(other_type)
+        }
 
-    return get_test_dialog(lookup=lookup)
+        return get_test_dialog(lookup=lookup)
+
+
+REPLACEMENTS = {
+    "{INTERACT_KEY}": lambda: keybinds.get_instance().get_keys(const.MENU_ACCEPT).to_pretty_string_for_display(),
+    "{INTERACT_KEYS}": lambda: keybinds.get_instance().get_keys(const.MENU_ACCEPT).to_pretty_string_for_display(first_only=False),
+    "{ACTION_KEY}": lambda: keybinds.get_instance().get_keys(const.ACTION).to_pretty_string_for_display(),
+    "{ACTION_KEYS}": lambda: keybinds.get_instance().get_keys(const.ACTION).to_pretty_string_for_display(first_only=False),
+    "{JUMP_KEY}": lambda: keybinds.get_instance().get_keys(const.JUMP).to_pretty_string_for_display()
+}
+
+
+def replace_placeholders(raw_text):
+    text = raw_text
+    for r in REPLACEMENTS:
+        text = text.replace(r, REPLACEMENTS[r]())
+    return text

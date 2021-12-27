@@ -1738,7 +1738,7 @@ class PlayerController:
                               keys.get_keys(const.MOVE_LEFT),
                               keys.get_keys(const.CROUCH),
                               keys.get_keys(const.MOVE_RIGHT),
-                              keys.get_keys(const.ACTION_1)]
+                              keys.get_keys(const.ACTION)]
         ints = []
         for k in keys_we_care_about:
             if inputs.get_instance().was_pressed(k):
@@ -3418,10 +3418,11 @@ class InfoEntity(Entity):
             self._text_sprite = None
             self._text_bg_sprite = None
         else:
+            text_to_use = dialog.replace_placeholders(self._text)
             if self._text_sprite is None:
-                self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, self._text, depth=WORLD_UI_DEPTH,
+                self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, text_to_use, depth=WORLD_UI_DEPTH,
                                                        font_lookup=spriteref.spritesheets.get_default_font(small=True))
-            self._text_sprite.update(new_text=self._text)
+            self._text_sprite.update(new_text=text_to_use)
             if len(self._points) == 0:
                 height = self._base_sprite.height() if self._base_sprite is not None else 0
                 height += self._top_sprite.height() if self._top_sprite is not None else 0
@@ -3450,18 +3451,23 @@ class InfoEntity(Entity):
                                          self._points, (8, 8))
 
         w = self.get_world()
-        p = None if w is None else w.get_player(must_be_active=True)
+        p = None if w is None else w.get_player(must_be_active=True)  # TODO doesn't work for multi-player
 
         overlapping = False
         if p is not None:
             overlapping = util.dist(p.get_center(), self.get_center()) <= self._activation_radius
             if overlapping:
                 self._ticks_overlapping_player = min(self._activation_thresh, self._ticks_overlapping_player + 2)
+            overlapping = self._ticks_overlapping_player >= self._activation_thresh
 
-        self._should_show_text = self._ticks_overlapping_player >= self._activation_thresh and len(self._text) > 0
+        self._should_show_text = overlapping and len(self._text) > 0
 
-        if self._dialog_id is not None and overlapping and self._should_show_text and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
-            d = dialog.get_dialog(self._dialog_id, p.get_player_type(), self._info_type)
+        if overlapping and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+            self.try_to_display_dialog(p)
+
+    def try_to_display_dialog(self, player):
+        if self._dialog_id is not None:
+            d = dialog.get_dialog(self._dialog_id, player.get_player_type(), self._info_type)
             if d is not None:
                 self._ticks_overlapping_player = -60  # so that we can't insta-reactivate dialog after this one is over
                 import src.engine.scenes as scenes

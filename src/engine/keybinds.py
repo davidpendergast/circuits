@@ -226,6 +226,26 @@ class Binding:
                 res.append(name)
         return res
 
+    def to_pretty_string_for_display(self, first_only=True, ignore_mods=False, delim=", ", final_delim=", or "):
+        all_keys = self.get_pretty_names(ignore_mods)
+        if len(all_keys) == 0:
+            return "?"
+        else:
+            first = all_keys[0]
+            if first_only:
+                # returns "[MOD1 + MOD2 + ... + MODN +] K1"
+                return first
+            else:
+                # returns "[MOD1 + MOD2 + ... + MODN +] K1, K2, ..., or KM"
+                all_keys = self.get_pretty_names(ignore_mods=True)[1:]
+                res = first
+                for i, k in enumerate(all_keys):
+                    if i < len(all_keys) - 1:
+                        res += delim + k
+                    else:
+                        res += final_delim + k
+                return res
+
     def __repr__(self):
         for s in self.get_pretty_names():
             return s  # return first binding
