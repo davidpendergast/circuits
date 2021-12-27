@@ -39,7 +39,8 @@ class _GameLoop:
         pygame.mixer.init()
         pygame.init()
 
-        window_icon = pygame.image.load(util.resource_path("assets/icon.png"))
+        window_icon = pygame.image.load(util.resource_path("assets/icon_16x16.png"))
+        window_icon.set_colorkey((255, 0, 0))
         pygame.display.set_icon(window_icon)
 
         print("INFO: creating window...")
