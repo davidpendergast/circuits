@@ -246,12 +246,12 @@ class GlobalState:
         return self._settings
 
     def load_data_from_disk(self):
-        self._save_data.load_from_disk(util.user_data_path(configs.save_data_path, localpath=configs.use_local_paths))
-        self._settings.load_from_disk(util.user_data_path(configs.settings_path, localpath=configs.use_local_paths))
+        self._save_data.load_from_disk(util.user_data_path(configs.save_data_path, forcelocal=configs.use_local_paths))
+        self._settings.load_from_disk(util.user_data_path(configs.settings_path, forcelocal=configs.use_local_paths))
 
     def save_data_to_disk(self):
-        self._save_data.save_to_disk(util.user_data_path(configs.save_data_path, localpath=configs.use_local_paths))
-        self._settings.save_to_disk(util.user_data_path(configs.settings_path, localpath=configs.use_local_paths))
+        self._save_data.save_to_disk(util.user_data_path(configs.save_data_path, forcelocal=configs.use_local_paths))
+        self._settings.save_to_disk(util.user_data_path(configs.settings_path, forcelocal=configs.use_local_paths))
 
     def quit_game_for_real(self):
         self._should_quit_for_real = True

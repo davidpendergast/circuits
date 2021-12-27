@@ -8,6 +8,8 @@ import heapq
 import traceback
 import copy
 
+import appdirs
+
 
 def bound(val, lower, upper):
     if upper is not None and val > upper:
@@ -921,12 +923,29 @@ def resource_path(relative_path):
     return os.path.normpath(os.path.join(base_path, relative_path))
 
 
-def user_data_path(relative_path, dirname="userdata", localpath=True):
-    if localpath:
-        return os.path.normpath(os.path.join(dirname, relative_path))
+_NAME_OF_GAME_FOR_USERDATA = None
+_AUTHOR_FOR_USERDATA = None
+
+
+def set_info_for_user_data_path(name_of_game, author):
+    global _NAME_OF_GAME_FOR_USERDATA, _AUTHOR_FOR_USERDATA
+    _NAME_OF_GAME_FOR_USERDATA = name_of_game
+    _AUTHOR_FOR_USERDATA = author
+
+
+def user_data_path(relative_path, forcelocal=False, local_subdir="userdata"):
+    if forcelocal:
+        return os.path.normpath(os.path.join(local_subdir, relative_path))
     else:
-        # TODO hookup fancy appdir stuff
-        raise NotImplementedError()
+        if _NAME_OF_GAME_FOR_USERDATA is None or _AUTHOR_FOR_USERDATA is None:
+            raise ValueError("Must call set_info_for_user_data_path(...) prior to user_data_path()")
+        try:
+            return appdirs.user_data_dir(appname=_NAME_OF_GAME_FOR_USERDATA,
+                                         appauthor=_AUTHOR_FOR_USERDATA)
+        except Exception:
+            print("ERROR: failed to get user's AppData directory")
+            traceback.print_exc()
+            return None
 
 
 def copy_json(json_blob):

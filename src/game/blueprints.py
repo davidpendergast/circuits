@@ -1364,7 +1364,7 @@ def get_test_blueprint_1() -> LevelBlueprint:
 
 
 def get_template_blueprint() -> LevelBlueprint:
-    level = load_level_from_file(util.resource_path("template_level.json"))
+    level = load_level_from_file(util.resource_path("assets/template_level.json"))
     level.directory = None
     return level
 

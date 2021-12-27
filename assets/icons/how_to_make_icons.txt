@@ -1,0 +1,5 @@
+Windows:
+
+1. DL ImageMagick: https://imagemagick.org/script/download.php
+2. run:
+    magick convert icon_16x16.png icon_24x24.png icon_32x32.png icon_48x48.png icon_72x72.png icon.ico

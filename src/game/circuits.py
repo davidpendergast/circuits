@@ -37,6 +37,8 @@ class CircuitsGame(game.Game):
         if configs.is_dev:
             _update_readme()
 
+        util.set_info_for_user_data_path(configs.name_of_game, "Ghast")
+
         keybinds.get_instance().set_binding(const.MOVE_LEFT, [pygame.K_LEFT, pygame.K_a])
         keybinds.get_instance().set_binding(const.MOVE_RIGHT, [pygame.K_RIGHT, pygame.K_d])
         keybinds.get_instance().set_binding(const.JUMP, [pygame.K_UP, pygame.K_w, pygame.K_SPACE])

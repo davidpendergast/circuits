@@ -8,19 +8,23 @@ bugs:
  
  
 features:
- - hook up credits scene to final level
-    - what final level?
-    - shh
- - players should have outlines
-    - should they??
-    - maybe no, it's fine
- - let you embed stuff (e.g. "{ACTION_KEY}" --> [Enter]) into dialog / info text.
+ - hook up stats + credits scene to final level
+    [x] what final level?
+ [x] let you embed stuff (e.g. "{ACTION_KEY}" --> [Enter]) into dialog / info text.
     - with a special color
  - there should be an indicator when a player desyncs / resyncs
- - indicator when an action is available (e.g. when C stands next to B)?
-    - wild idea, should C pick up B automatically? (if both aren't crouching)
-        - since no one else has special actions and this eliminates an entire button?!
- - default controls
+ - load controls from user-editable file, or otherwise make them editable
+ - choose real sounds for things (and make them louder? they don't really cut through the music currently)
+ - stats scene (total playtime, total best level time sum, levels completed)
+ - sector names + completion status
+ 
+ 
+ release checklist:
+ [x] make_exe for Windows
+ [ ] make_exe for Linux
+ [ ] make_exe for MacOS
+ [ ] display version number in game
+ 
  
  
 features:

@@ -38,9 +38,9 @@ def resolve_path_and_volume(sound, vol=1.0):
     if sound is None or len(sound) == 0:
         return None, 1.0
     elif isinstance(sound, str):
-        return sound, vol
+        return util.resource_path(sound), vol
     elif isinstance(sound, tuple) and len(sound) == 2 and isinstance(sound[1], (int, float)):
-        return sound[0], sound[1] * vol
+        return util.resource_path(sound[0]), sound[1] * vol
     else:
         # it's some kind of collection of sounds
         # XXX hopefully it isn't recursive~
@@ -79,7 +79,12 @@ def play_sound(sound, vol=1.0):
 
     if effect is not None:
         _RECENTLY_PLAYED[effect_path] = 0
-        print("INFO: playing sound effect: {}".format(effect_path))
+
+        # TODO remove
+        import configs
+        if configs.is_dev:
+            print("INFO: playing sound effect: {}".format(effect_path))
+
         effect.set_volume(_MASTER_VOLUME * volume)
         effect.play()
 
