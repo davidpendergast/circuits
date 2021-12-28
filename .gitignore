@@ -15,5 +15,7 @@ testing/*
 unused_assets/*
 levels/custom_levels/*
 userdata/*
+dist/*
+output.spec
 assets/sounds/Cyberleaf-ModernUISFX/Sounds/*.wav
 

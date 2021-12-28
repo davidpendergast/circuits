@@ -62,8 +62,10 @@ class MainMenuScene(scenes.Scene):
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
     def _do_start(self):
-        do_instructions = True  # TODO will probably disable this in dev
-        overworld_scene = overworld.OverworldScene.create_new_from_path("overworlds")
+        do_instructions = True
+        # TODO may want to just move this into assets (and del from make_exe too).
+        overworlds_base_dir = util.resource_path("overworlds")
+        overworld_scene = overworld.OverworldScene.create_new_from_path(overworlds_base_dir)
         if do_instructions:
             next_scene = InstructionsScene(overworld_scene, self)
             sounds.play_sound(soundref.MENU_ACCEPT)
