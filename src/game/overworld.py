@@ -628,6 +628,7 @@ class OverworldBlueprint:
 
 
 class OverworldState:
+    # TODO it's quite bug-prone that we reuse this object when the current OW changes
 
     def __init__(self, overworld_pack: OverworldPack, came_from=None):
         self.overworld_pack = overworld_pack
@@ -638,10 +639,11 @@ class OverworldState:
         self.level_blueprints = {}
         self.reload_level_blueprints_from_disk()
 
-        self.selected_cell = self.find_initial_selection(came_from_exit_id=came_from)
+        self.entrance_xy = None
+        self.selected_xy = self.find_initial_selection(came_from_exit_id=came_from)
 
         self._unlocked_nodes = set()
-        self.refresh_unlocked_levels()
+        self.refresh_unlocked_levels(came_from_exit_id=came_from)
 
         self.cell_under_mouse = None
 
@@ -651,8 +653,12 @@ class OverworldState:
     def get_overworld(self) -> OverworldBlueprint:
         return self.current_overworld
 
-    def refresh_unlocked_levels(self):
-        self._unlocked_nodes = self._calc_unlocked_nodes(self.selected_cell)
+    def refresh_unlocked_levels(self, came_from_exit_id="keep_current"):
+        if came_from_exit_id != "keep_current":
+            entrance_node = self.get_grid().get_exit_node(came_from_exit_id)
+            self.entrance_xy = None if entrance_node is None else entrance_node.get_xy()
+
+        self._unlocked_nodes = self._calc_unlocked_nodes(self.selected_xy, entrance_xy=self.entrance_xy)
         for n in self.get_grid().get_all_level_nodes():
             n.set_enabled(n.get_xy() in self._unlocked_nodes)
         for n in self.get_grid().get_all_exit_nodes():
@@ -705,10 +711,10 @@ class OverworldState:
         new_overworld = self.overworld_pack.get_overworld_with_id(overworld.ref_id)
         if new_overworld is not None:
             self.current_overworld = new_overworld
-            self.selected_cell = self.find_initial_selection(came_from_exit_id=entry_num)
+            self.selected_xy = self.find_initial_selection(came_from_exit_id=entry_num)
             self.cell_under_mouse = None
             self.requested_overworld = None
-            self.refresh_unlocked_levels()
+            self.refresh_unlocked_levels(came_from_exit_id=entry_num)
         else:
             print("WARN: unrecognized overworld_id: {}".format(overworld.ref_id))
 
@@ -763,14 +769,14 @@ class OverworldState:
         return gs.get_instance().save_data().is_completed(level_id)
 
     def is_selected_at(self, xy):
-        if self.selected_cell is None:
+        if self.selected_xy is None:
             return False
         else:
-            return xy == self.selected_cell
+            return xy == self.selected_xy
 
     def get_selected_node(self) -> OverworldGrid.OverworldNode:
-        if self.selected_cell is not None:
-            return self.get_grid().get_node(self.selected_cell)
+        if self.selected_xy is not None:
+            return self.get_grid().get_node(self.selected_xy)
         else:
             return None
 
@@ -794,9 +800,9 @@ class OverworldState:
 
     def set_selected_node(self, node):
         if node is None:
-            self.selected_cell = None
+            self.selected_xy = None
         else:
-            self.selected_cell = node.get_xy()
+            self.selected_xy = node.get_xy()
 
     def is_unlocked_at(self, xy):
         return xy in self._unlocked_nodes
@@ -814,12 +820,14 @@ class OverworldState:
             gs.get_instance().save_data().set_completed(level_id, time)
             self.refresh_unlocked_levels()
 
-    def _calc_unlocked_nodes(self, starting_xy):
+    def _calc_unlocked_nodes(self, starting_xy, entrance_xy=None):
         unlocked = set()
         q = [starting_xy]
+        if entrance_xy is not None:
+            q.append(entrance_xy)
 
         seen = set()
-        seen.add(starting_xy)
+        seen.update(q)
 
         while len(q) > 0:
             xy = q.pop(-1)
@@ -832,6 +840,7 @@ class OverworldState:
                         if neighbor.get_xy() not in seen:
                             seen.add(neighbor.get_xy())
                             q.append(neighbor.get_xy())
+
         return unlocked
 
     def get_nodes_with_id(self, level_id):
