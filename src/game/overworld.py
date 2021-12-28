@@ -487,6 +487,7 @@ class OverworldBlueprint:
             json_blob = util.load_json_from_path(os.path.join(path, "_spec.json"))
 
             name = util.read_string(json_blob, "name", "Unnamed World")
+            abbrev = util.read_string(json_blob, "abbrev_name", "?")
             ident = str(json_blob["ref_id"])
             author = util.read_string(json_blob, "author", "Unknown")
 
@@ -581,20 +582,21 @@ class OverworldBlueprint:
                     print("ERROR: failed to load bg_triangles")
                     traceback.print_exc()
 
-            return OverworldBlueprint(ident, name, author, grid, levels, bg_triangles, path)
+            return OverworldBlueprint(ident, name, abbrev, author, grid, levels, bg_triangles, path)
 
         except Exception:
             print("ERROR: failed to load overworld \"{}\"".format(path))
             traceback.print_exc()
             return None
 
-    def __init__(self, ref_id, name, author, grid, level_lookup, bg_triangles, directory):
+    def __init__(self, ref_id, name, abbrev, author, grid, level_lookup, bg_triangles, directory):
         """
         :param grid: an OverworldGrid
         :param level_lookup: map of level_num -> level_id
         :param bg_triangles: list of (p1, p2, p3, color)
         """
         self.name = name
+        self.abbrev = abbrev
         self.ref_id = ref_id
         self.author = author
         self.grid = grid
@@ -754,9 +756,8 @@ class OverworldState:
             else:
                 return None
 
-    def get_world_num(self):
-        # TODO figure out a better way to display the active sector
-        return 1
+    def get_abbrev_overworld_name(self) -> str:
+       return self.get_overworld().abbrev
 
     def is_complete(self, level_id):
         return gs.get_instance().save_data().is_completed(level_id)
@@ -1371,8 +1372,8 @@ class OverworldInfoPanelElement(ui.UiElement):
             _, _, level_bp = node.get_level_info(self.state)
             level_num = node.get_pretty_level_num()
             if level_num is not None and level_bp is not None:
-                world_num = self.state.get_world_num()
-                return "{}-{} {}".format(world_num, level_num, level_bp.name())
+                abbrev_name = self.state.get_abbrev_overworld_name()
+                return "{}-{} {}".format(abbrev_name, level_num, level_bp.name())
 
         return None
 

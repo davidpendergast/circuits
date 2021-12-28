@@ -1,5 +1,6 @@
 {
 "name": "Sector A",
+"abbrev_name": "A",
 "ref_id": "sector_a", 
 "author": "Ghast",
 "data_stride": 2,
