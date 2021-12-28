@@ -5,6 +5,7 @@ bugs:
  - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
  - falling block is 'squished' in "Heist" preview img
  - info text is drawn behind timer text
+ - falling blocks are inconsistently destroyed when a door block is activated on top of them
  
  
 features:

@@ -937,7 +937,7 @@ class TextSprite(MultiSprite):
     def _realign_characters(self):
         y_to_chars = {}
         for idx, c in enumerate(self._character_sprites):
-            y = c.y()
+            y = c.y() // c.height()
             if y not in y_to_chars:
                 y_to_chars[y] = []
             y_to_chars[y].append((c, idx))

@@ -660,6 +660,36 @@ class OverworldState:
         """returns: (OverworldBlueprint, entry_num)"""
         return self.requested_overworld
 
+    def get_level_stats(self, overworld_id=None):
+        """
+        returns: n_complete, n_total, total_time_in_ticks
+        """
+        n_complete = 0
+        n_total = 0
+        time = 0
+        for level_id in self.all_level_ids(overworld_id=overworld_id):
+            n_total += 1
+            if self.is_complete(level_id):
+                n_complete += 1
+            if time is not None:
+                level_time = self.get_completion_time(level_id)
+                if level_time is not None:
+                    time += level_time
+                else:
+                    time = None
+        return n_complete, n_total, time
+
+    def all_level_ids(self, overworld_id=None):
+        if overworld_id is None:
+            for overworld in self.overworld_pack.all_overworlds():
+                for level_id in overworld.levels.values():
+                    yield level_id
+        else:
+            overworld = self.overworld_pack.get_overworld_with_id(overworld_id)
+            if overworld is not None:
+                for level_id in overworld.levels.values():
+                    yield level_id
+
     def activate_exit_node(self, exit_num, instantly=False):
         new_overworld = self.overworld_pack.get_neighbor(self.current_overworld, exit_num)
         if new_overworld is not None:
@@ -1471,6 +1501,8 @@ class OverworldScene(scenes.Scene):
 
         self.grid_ui_element = OverworldGridElement(self.state)
         self.info_panel_element = OverworldInfoPanelElement(self.state)
+        self.sector_info_text_sprite = None
+        self.sector_info_text_bg_sprite = None
 
         self.fade_overlay = None
 
@@ -1504,11 +1536,23 @@ class OverworldScene(scenes.Scene):
             yield spr
         for spr in self.info_panel_element.all_sprites_from_self_and_kids():
             yield spr
+        yield self.sector_info_text_sprite
+        yield self.sector_info_text_bg_sprite
         if self.fade_overlay is not None:
             yield self.fade_overlay
         for l in self.bg_triangle_sprites:
             for spr in l:
                 yield spr
+
+    def get_sector_info_text(self):
+        name = self.state.current_overworld.name
+        n_completed, n_levels, total_ticks = self.state.get_level_stats(self.state.current_overworld.ref_id)
+        res = f"{name}"
+        res += f"\nCompleted: {n_completed}/{n_levels}"
+        if n_completed == n_levels and total_ticks is not None:
+            time_str = util.ticks_to_time_string(total_ticks, n_decimals=1)
+            res += f"\nTime: {time_str}"
+        return res
 
     def update(self):
         self._handle_mouse_inputs()
@@ -1525,6 +1569,29 @@ class OverworldScene(scenes.Scene):
         info_xy = (screen_size[0] - self.info_panel_element.get_size()[0], 0)
         self.info_panel_element.set_xy(info_xy)
         self.info_panel_element.update_self_and_kids()
+
+        sector_info_text = self.get_sector_info_text()
+        if self.sector_info_text_sprite is None:
+            self.sector_info_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, sector_info_text, scale=1,
+                                                              depth=-15, color=colors.WHITE,
+                                                              alignment=sprites.TextSprite.RIGHT,
+                                                              outline_thickness=1, outline_color=colors.PERFECT_BLACK)
+        self.sector_info_text_sprite.update(new_text=sector_info_text)
+        sector_info_text_rect = self.sector_info_text_sprite.get_rect()
+        self.sector_info_text_sprite.update(new_x=info_xy[0] - sector_info_text_rect[2] - 4,
+                                            new_y=screen_size[1] - sector_info_text_rect[3] - 10)
+        sector_info_text_rect = self.sector_info_text_sprite.get_rect()
+
+        if self.sector_info_text_bg_sprite is None:
+            self.sector_info_text_bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+        square = spritesheets.get_white_square_img(0.5)
+        self.sector_info_text_bg_sprite = self.sector_info_text_bg_sprite.update(
+            new_model=square,
+            new_x=sector_info_text_rect[0] - 5,
+            new_y=sector_info_text_rect[1],
+            new_raw_size=(sector_info_text_rect[2] + 5, sector_info_text_rect[3]),
+            new_depth=0,
+            new_color=colors.PERFECT_BLACK)
 
         if self.fading_in is None and self.state.next_requested_overworld() is not None:
             ow, num = self.state.next_requested_overworld()
