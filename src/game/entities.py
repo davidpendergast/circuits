@@ -3420,7 +3420,7 @@ class InfoEntity(Entity):
         else:
             text_to_use = dialog.replace_placeholders(self._text)
             if self._text_sprite is None:
-                self._text_sprite = sprites.TextSprite(spriteref.ENTITY_LAYER, 0, 0, text_to_use, depth=WORLD_UI_DEPTH,
+                self._text_sprite = sprites.TextSprite(spriteref.WORLD_UI_LAYER, 0, 0, text_to_use, depth=-9,
                                                        font_lookup=spriteref.spritesheets.get_default_font(small=True))
             self._text_sprite.update(new_text=text_to_use)
             if len(self._points) == 0:
@@ -3436,8 +3436,9 @@ class InfoEntity(Entity):
             text_rect = self._text_sprite.get_rect()
             bg_rect = util.rect_expand(text_rect, all_expand=0)
             if self._text_bg_sprite is None:
-                self._text_bg_sprite = sprites.BorderBoxSprite(spriteref.ENTITY_LAYER, bg_rect,
-                                                               all_borders=spriteref.overworld_sheet().border_thin)
+                self._text_bg_sprite = sprites.BorderBoxSprite(spriteref.WORLD_UI_LAYER, bg_rect,
+                                                               all_borders=spriteref.overworld_sheet().border_thin,
+                                                               depth=-8)
             self._text_bg_sprite.update(new_rect=bg_rect)
 
     def update(self):
