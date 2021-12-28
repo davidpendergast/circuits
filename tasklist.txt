@@ -16,7 +16,8 @@ features:
  - load controls from user-editable file, or otherwise make them editable
  - choose real sounds for things (and make them louder? they don't really cut through the music currently)
  - stats scene (total playtime, total best level time sum, levels completed)
- - sector names + completion status
+ - teleporters getting blocked
+ - teleporting while holding something
  
  
  release checklist:
