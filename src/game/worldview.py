@@ -99,7 +99,7 @@ class WorldView:
             ent.update_sprites()
 
         self._update_grid_line_sprites()
-        self._update_out_of_bounds_blockers(camera_bound_rect)
+        self._update_out_of_bounds_blockers(camera_bound_rect, bg_color=self.get_current_bg_color())
 
         for layer_id in spriteref.all_world_layers():
             renderengine.get_instance().set_layer_scale(layer_id, self.get_zoom())
@@ -323,43 +323,32 @@ class WorldView:
             self._grid_line_sprites.clear()
 
     def _update_out_of_bounds_blockers(self, camera_bounds, bg_color=colors.PERFECT_BLACK, insets=1):
-        camera_rect = self.get_camera_rect_in_world()
-        rects = [None] * 4
-        for i in range(0, 4):
-            if self._hide_regions_outside_camera_bounds and (camera_rect is not None and camera_bounds is not None):
-                """camera_rect
-                    *------------*---*
-                    | 0          | 1 |
-                    *---*--------*   |
-                    |   | bounds |   |
-                    |   *--------*---*
-                    | 3 |          2 |
-                    *---*------------*
-                """
-                if i == 0:  # top
-                    if camera_rect[1] < camera_bounds[1]:
-                        rects[i] = [camera_rect[0],
-                                    camera_rect[1],
-                                    camera_bounds[0] + camera_bounds[2] - camera_rect[0],
-                                    camera_rect[1] - camera_bounds[1]]
-                elif i == 1:  # right
-                    if camera_rect[0] + camera_rect[2] > camera_bounds[0] + camera_bounds[2]:
-                        rects[i] = [camera_bounds[0] + camera_bounds[2],
-                                    camera_rect[1],
-                                    camera_rect[0] + camera_rect[2] - camera_bounds[0] + camera_bounds[2],
-                                    camera_bounds[1] + camera_bounds[3] - camera_rect[1]]
-                elif i == 2:  # bottom
-                    if camera_rect[1] + camera_rect[3] > camera_bounds[1] + camera_bounds[3]:
-                        rects[i] = [camera_bounds[0],
-                                    camera_bounds[1] + camera_bounds[3],
-                                    camera_rect[0] + camera_rect[2] - camera_bounds[1],
-                                    camera_rect[1] + camera_rect[3] - (camera_bounds[1] + camera_bounds[3])]
-                elif i == 3:  # left
-                    if camera_rect[0] < camera_bounds[0]:
-                        rects[i] = [camera_rect[0],
-                                    camera_bounds[1],
-                                    camera_bounds[0] - camera_rect[0],
-                                    camera_rect[1] + camera_rect[3] - camera_bounds[1]]
+        fov_rect = self.get_camera_rect_in_world()
+        if self._hide_regions_outside_camera_bounds and (fov_rect is not None and camera_bounds is not None):
+            """fov_rect
+                x1y1---------*---*
+                | 0          | 1 |
+                *---x2y2-----*   |
+                |   | bounds |   |
+                |   *-----x3y3---*
+                | 3 |          2 |
+                *---*---------x4y4
+            """
+            x1, y1 = fov_rect[0:2]
+            x2, y2 = camera_bounds[0:2]
+            x3, y3 = x2 + camera_bounds[2], y2 + camera_bounds[3]
+            x4, y4 = x1 + fov_rect[2], y1 + fov_rect[3]
+
+            rects = [
+                [x1, y1, x3 - x1, y2 - y1],
+                [x3, y1, x4 - x3, y3 - y1],
+                [x2, y3, x4 - x2, y4 - y3],
+                [x1, y2, x2 - x1, y4 - y2]
+            ]
+
+            rects = [(r if (r[2] > 0 and r[3] > 0) else None) for r in rects]
+        else:
+            rects = [None] * 4
 
         for i in range(0, 4):
             rect = rects[i]
