@@ -80,7 +80,7 @@ vertical slice:
     [x] toggle between play mode and edit mode
     [x] some kind of in-editor console where you can modify stuff more directly
  [x] progress should save
- - music (royalty-free 'placeholder' is fine)
+ [x] music (royalty-free 'placeholder' is fine)
  - sound effects
  - content
     [x] finish AB levels and overworld

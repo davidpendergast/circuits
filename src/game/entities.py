@@ -1240,6 +1240,7 @@ class AbstractActorSensorBlock(CompositeBlockEntity):
                                             name=sensor_name)
         self._player_sensor_id = player_collider.get_id()
         self._sensor_ent = SensorEntity([nub_w, 0, w - nub_w * 2, dip_h + 2], player_collider, parent=self)
+        self.dip_h = dip_h
 
     def all_sub_entities(self):
         yield self._sensor_ent
@@ -1358,6 +1359,21 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
         self._particle_type = particles.ParticleTypes.CROSS_TINY
 
+        # block sensor that deactivates the teleporter
+        # TODO this should account for the player's actual dest position
+        # TODO color effect when it's blocked
+        block_sensor_w = w - 4 * 2
+        block_sensor_h = 30
+        block_sensor_rect = [(w - block_sensor_w) // 2,
+                             -block_sensor_h + self.dip_h,
+                             block_sensor_w, block_sensor_h]
+
+        block_collider = RectangleCollider([0, 0, block_sensor_w, block_sensor_h], CollisionMasks.SENSOR,
+                                           collides_with=CollisionMasks.BLOCK,
+                                           name="teleporter_block_sensor")
+        self._block_sensor_id = block_collider.get_id()
+        self._block_sensor_ent = SensorEntity(block_sensor_rect, block_collider, parent=self)
+
         def make_particle(xy):
             if self._sending:
                 return self.make_particle_at(xy)
@@ -1367,6 +1383,15 @@ class TeleporterBlock(AbstractActorSensorBlock):
         self._particle_emitter = ParticleEmitterZone([0, 3, w, 1], make_particle, 2,
                                                      parent=self,
                                                      xy_provider=lambda: (util.sample_triangular(0.2, 0.8), 1))
+
+    def all_sub_entities(self):
+        for sub in super().all_sub_entities():
+            yield sub
+        yield self._block_sensor_ent
+        yield self._particle_emitter
+
+    def get_block_sensor_id(self):
+        return self._block_sensor_id
 
     def make_particle_at(self, xy, v=(0, -1)):
         return FloatingDustParticleEntity(xy, self._particle_type, 60, v,
@@ -1378,24 +1403,24 @@ class TeleporterBlock(AbstractActorSensorBlock):
                                           max_speed=3,
                                           max_sway_per_second=3.1415 / 8)
 
-    def all_linked_teleporters(self):
+    def all_linked_teleporters(self, unblocked_only=False):
         return self.get_world().all_entities(types=(TeleporterBlock,),
                                              cond=lambda t: (t.get_channel() == self.get_channel()
-                                                             and t.is_sending() is not self.is_sending()))
+                                                             and t.is_sending() is not self.is_sending()
+                                                             and (not unblocked_only or not t.is_blocked())))
 
-    def all_bro_teleporters(self):
+    def all_bro_teleporters(self, unblocked_only=False):
         return self.get_world().all_entities(types=(TeleporterBlock,),
                                              cond=lambda t: (t is not self
                                                              and t.get_channel() == self.get_channel()
-                                                             and t.is_sending() is self.is_sending()))
-
-    def all_sub_entities(self):
-        for s in super().all_sub_entities():
-            yield s
-        yield self._particle_emitter
+                                                             and t.is_sending() is self.is_sending()
+                                                             and (not unblocked_only or not t.is_blocked())))
 
     def is_sending(self):
         return self._sending
+
+    def is_blocked(self):
+        return len(self.get_world().get_sensor_state(self.get_block_sensor_id())) > 0
 
     def set_sending(self, val):
         self._sending = val
@@ -1434,7 +1459,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
         if self._sending:
             return len(self.get_actors_ready_to_send()) == 1
         else:
-            return True
+            return not self.is_blocked()
 
     def update(self):
         super().update()
