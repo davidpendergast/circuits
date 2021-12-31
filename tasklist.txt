@@ -16,8 +16,27 @@ features:
  - load controls from user-editable file, or otherwise make them editable
  - choose real sounds for things (and make them louder? they don't really cut through the music currently)
  - stats scene (total playtime, total best level time sum, levels completed)
- - teleporters getting blocked
+ [x] teleporters getting blocked
  - teleporting while holding something
+ 
+ feedback:
+ [x] tried to climb right wall with B on level 2
+ - hard/confusing to remember which character is which letter (colorblind)
+    - fix w/ story?
+ [_] tried to fit through gaps in maze
+    - it's fine
+ [x] too easy to accidentally reset all
+ [_] maze was tricky (colorblind?)
+    - it's fine
+ [_] - trying to squat jump in boulders
+    - confusing... but fine?
+    - should we bite the bullet and just remove crouching?
+    - or redraw it so you don't look smaller?
+ [x] lil walkoff on boulders was hard
+    - scooched it over
+ [x] clipping boulders while jumping over them causes them to fall
+ - fast fwd button
+    - would be nice, not sure how technically feasible this would be though
  
  
  release checklist:

@@ -819,7 +819,7 @@ class FallingBlockEntity(BlockEntity, DynamicEntity):
             else:
                 current_weight_on_top = 0
                 for a in self.get_world().get_sensor_state(self.actor_sensor_id):
-                    if isinstance(a, PlayerEntity) and a.is_grounded():
+                    if isinstance(a, PlayerEntity) and a.is_grounded() and a.get_y_vel() > -0.1:
                         current_weight_on_top += a.get_weight()
                 if ground_collisions:
                     self._is_primed_to_fall = False

@@ -52,8 +52,8 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.MENU_ACCEPT, [pygame.K_RETURN])
         keybinds.get_instance().set_binding(const.MENU_CANCEL, [pygame.K_ESCAPE])
 
-        keybinds.get_instance().set_binding(const.RESET, [pygame.K_r])
-        keybinds.get_instance().set_binding(const.SOFT_RESET, [pygame.K_z, pygame.K_BACKSPACE])
+        keybinds.get_instance().set_binding(const.RESET, keybinds.Binding(pygame.K_r, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.SOFT_RESET, [pygame.K_r])
 
         keybinds.get_instance().set_binding(const.TOGGLE_MUTE, [pygame.K_m])
 

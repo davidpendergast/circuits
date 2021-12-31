@@ -852,7 +852,7 @@ class _GameState:
             if self._active_player_idx > 0:
                 hard_reset_keys = keybinds.get_instance().get_keys(const.RESET)
                 if len(hard_reset_keys) > 0:
-                    res_lines.append(f"[{hard_reset_keys}] to reset all units")
+                    res_lines.append(f"[{hard_reset_keys}] to reset all")
 
         return res_lines
 
