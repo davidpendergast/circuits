@@ -1360,8 +1360,6 @@ class TeleporterBlock(AbstractActorSensorBlock):
         self._particle_type = particles.ParticleTypes.CROSS_TINY
 
         # block sensor that deactivates the teleporter
-        # TODO this should account for the player's actual dest position
-        # TODO color effect when it's blocked
         block_sensor_w = w - 4 * 2
         block_sensor_h = 30
         block_sensor_rect = [(w - block_sensor_w) // 2,
@@ -1420,7 +1418,11 @@ class TeleporterBlock(AbstractActorSensorBlock):
         return self._sending
 
     def is_blocked(self):
-        return len(self.get_world().get_sensor_state(self.get_block_sensor_id())) > 0
+        if self.is_sending():
+            # only receivers can be blocked
+            return False
+        else:
+            return len(self.get_world().get_sensor_state(self.get_block_sensor_id())) > 0
 
     def set_sending(self, val):
         self._sending = val
@@ -1459,7 +1461,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
         if self._sending:
             return len(self.get_actors_ready_to_send()) == 1
         else:
-            return not self.is_blocked()
+            return True
 
     def update(self):
         super().update()
@@ -1529,7 +1531,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
                         return  # multiple types of players are queued to be sent
                     actors_to_send.add(actor_to_send)
                     senders.append((t, actor_to_send))
-            else:
+            elif not t.is_blocked():
                 receivers.append(t)
 
         if len(senders) == 0 or len(receivers) == 0 or len(types_to_send) > 1:
@@ -1561,6 +1563,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
                 v = util.mult(v, 1 + random.random() * 0.8)
                 self.get_world().add_entity(self.make_particle_at(a.get_bottom_center(), v=v))
 
+        # important that we invert blocked teleporters in this logic too
         for t in linked_teles + bro_teles + [self]:
             # XXX Using a mixture of two-way and non two-way teleporters can create a bizarre (but not necessarily
             # incorrect) situation after teleporting, might consider disallowing this. Hmm.
@@ -1585,16 +1588,18 @@ class TeleporterBlock(AbstractActorSensorBlock):
                 spr = spriteref.object_sheet().get_teleporter_sprites(0.5 + anim_prog / 2)[idx]
 
             if idx == 0:
+                # outer rim should just be the block's color id
                 return (spr, None)
             else:
                 ticks = (self._pulse_ticks - (idx - 1) * self._pulse_offset) % self._pulse_interval
                 color = self._pulse_colors[-1][0]
-                for color_and_duration in self._pulse_colors:
-                    if ticks <= color_and_duration[1]:
-                        color = color_and_duration[0]
-                        break
-                    else:
-                        ticks -= color_and_duration[1]
+                if not self.is_blocked():
+                    for color_and_duration in self._pulse_colors:
+                        if ticks <= color_and_duration[1]:
+                            color = color_and_duration[0]
+                            break
+                        else:
+                            ticks -= color_and_duration[1]
                 return (spr, color)
 
         return [CompositeBlockEntity.BlockSpriteInfo(
