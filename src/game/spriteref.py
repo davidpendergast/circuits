@@ -377,10 +377,10 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.character_arrow_fills[const.PLAYER_HEAVY] = _img(48, 440, 24, 24, offs=start_pos)
         self.character_arrow_fills[const.PLAYER_FLYING] = _img(72, 440, 24, 24, offs=start_pos)
 
-        self.goal_arrows[const.PLAYER_FAST] = self._make_transparent_sprites([96, 424, 16, 16], sheet, 10, atlas)
-        self.goal_arrows[const.PLAYER_SMALL] = self._make_transparent_sprites([112, 424, 16, 16], sheet, 10, atlas)
-        self.goal_arrows[const.PLAYER_HEAVY] = self._make_transparent_sprites([128, 424, 16, 16], sheet, 10, atlas)
-        self.goal_arrows[const.PLAYER_FLYING] = self._make_transparent_sprites([144, 424, 16, 16], sheet, 10, atlas)
+        self.goal_arrows[const.PLAYER_FAST] = self._make_transparent_sprites([96, 416, 16, 24], sheet, 10, atlas)
+        self.goal_arrows[const.PLAYER_SMALL] = self._make_transparent_sprites([112, 416, 16, 24], sheet, 10, atlas)
+        self.goal_arrows[const.PLAYER_HEAVY] = self._make_transparent_sprites([128, 416, 16, 24], sheet, 10, atlas)
+        self.goal_arrows[const.PLAYER_FLYING] = self._make_transparent_sprites([144, 416, 16, 24], sheet, 10, atlas)
 
         self.phasing_sprites[(const.PLAYER_FAST, True)] = self._handle_phasing_sprites(self.player_a[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=True)
         self.phasing_sprites[(const.PLAYER_SMALL, True)] = self._handle_phasing_sprites(self.player_b[PlayerStates.IDLE][0].rect(), 30, atlas, fade_out=True)
