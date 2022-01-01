@@ -1348,6 +1348,8 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
         self._pulse_offset = 10
         self._pulse_colors = ((colors.WHITE, 15), (colors.LIGHT_GRAY, 15), (colors.DARK_GRAY, 60))
+        self._deactivated_pulse_colors = ((colors.PERFECT_DARK_RED, 90),)
+        self._was_blocked_last_frame = False
         self._pulse_interval = sum([x[1] for x in self._pulse_colors])
         self._pulse_ticks = (channel * self._pulse_interval) // 5
 
@@ -1466,6 +1468,12 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
         if self.get_world().is_waiting():
             return
+
+        # play sound if it just got blocked
+        blocked = self.is_blocked()
+        if blocked != self._was_blocked_last_frame:
+            sounds.play_sound(soundref.TELEPORT_BLOCKED if blocked else soundref.TELEPORT_UNBLOCKED)
+            self._was_blocked_last_frame = blocked
 
         if self._post_tele_countdown > 0:
             self._post_tele_countdown -= 1
@@ -1590,14 +1598,17 @@ class TeleporterBlock(AbstractActorSensorBlock):
                 return (spr, None)
             else:
                 ticks = (self._pulse_ticks - (idx - 1) * self._pulse_offset) % self._pulse_interval
-                color = self._pulse_colors[-1][0]
-                if not self.is_blocked():
-                    for color_and_duration in self._pulse_colors:
-                        if ticks <= color_and_duration[1]:
-                            color = color_and_duration[0]
-                            break
-                        else:
-                            ticks -= color_and_duration[1]
+                pulse_colors = self._pulse_colors if not self.is_blocked() else self._deactivated_pulse_colors
+
+                color = pulse_colors[-1][0]
+
+                for color_and_duration in pulse_colors:
+                    if ticks <= color_and_duration[1]:
+                        color = color_and_duration[0]
+                        break
+                    else:
+                        ticks -= color_and_duration[1]
+
                 return (spr, color)
 
         return [CompositeBlockEntity.BlockSpriteInfo(

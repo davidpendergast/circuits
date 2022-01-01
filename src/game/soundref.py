@@ -508,9 +508,12 @@ BLOCK_BREAK = ModernUI.clicky_button_1b
 BLOCK_PRIMED_TO_FALL = ModernUI.clicky_button_2
 SWITCH_ACTIVATED = ModernUI.clicky_button_9a   # TODO different sounds for different colored switches?
 SWITCH_DEACTIVATED = ModernUI.clicky_button_9b
-TELEPORT = ModernUI.all_containing("Success")
 
-PLAYER_JUMP = ModernUI.all_containing("GenericButton")
+TELEPORT = ModernUI.success_2
+TELEPORT_BLOCKED = ModernUI.close_or_disable_3
+TELEPORT_UNBLOCKED = ModernUI.open_or_enable_3
+
+PLAYER_JUMP = ModernUI.all_containing("Button")
 PLAYER_DIALOG = ModernUI.little_noise
 PLAYER_DEATH = ModernUI.all_containing("Error", exclude_text=("5",))
 PLAYER_ALERT = ModernUI._a
