@@ -1,7 +1,7 @@
 {
-"name": "Sector ABCD",
-"abbrev_name": "ABCD",
-"ref_id": "sector_abcd", 
+"name": "Sector 4",
+"abbrev_name": "4",
+"ref_id": "sector_4", 
 "author": "Ghast",
 "data_stride": 2,
 "data":[
@@ -10,10 +10,10 @@
     ". . . . 1 2 . . ",
     ". 6 5 ~ 4 3 . . ",
     ". 7 8 . . . . . ",
-    ". . | . . . . . ",
-    ". . * ~ * . . . ",
-    ". . . . | . * i1",
-    ". . . . 9 ~ * . ",
+    ". . | . . . * i1",
+    ". . * ~ 9 ~ * . ",
+    ". . . . . . . . ",
+    ". . . . . . . . ",
     ". . . . . . . . "
 ],
 "lvl_1": "fly",

@@ -764,7 +764,10 @@ class _GameState:
     def status_changed_this_frame(self):
         return self._status_elapsed_time <= 1
 
-    def reset(self, all_players=False):
+    def reset(self, idx=-1):
+        if idx == -1:
+            idx = self.get_active_player_idx()
+
         self._time_elapsed = 0
         for i in range(0, len(self._currently_satisfied)):
             self._currently_satisfied[i] = False
@@ -772,7 +775,7 @@ class _GameState:
             self._currently_playing[i] = False
         for i in range(0, len(self._currently_playing)):
             self._has_ever_died[i] = None
-        if all_players:
+        if idx == 0:  # reset all players
             self._active_player_idx = 0
             self._recorded_runs = [None] * self.num_players()
         self.set_status(Statuses.WAITING)
@@ -1125,6 +1128,9 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         # TODO sound / music change
         # TODO screenshake
 
+    def get_state(self) -> _GameState:
+        return self._state
+
     def update_sprites(self):
         _BaseGameScene.update_sprites(self)
         dialog.DialogScene.update_sprites(self)
@@ -1165,10 +1171,10 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         fail_msg = self._state.get_failure_message()
 
         if inputs.get_instance().was_pressed(hard_reset_keys) and self._state.get_status().can_hard_reset:
-            self._state.reset(all_players=True)
+            self._state.reset(idx=0)
             self.setup_new_world(self._state.bp)
         elif inputs.get_instance().was_pressed(soft_reset_keys) and self._state.get_status().can_soft_reset:
-            self._state.reset(all_players=False)
+            self._state.reset(idx=-1)  # just current player
             self.setup_new_world(self._state.bp)
 
         elif self._state.all_satisfied():
@@ -1385,6 +1391,28 @@ class DebugGameScene(RealGameScene):
 
     def handle_esc_pressed(self):
         self.get_manager().set_next_scene(self.edit_scene)
+
+
+class GamePausedScene(OptionSelectScene):
+
+    def __init__(self, game_scene: RealGameScene, on_exit):
+        self._game_scene = game_scene
+        self._on_exit = on_exit
+
+        OptionSelectScene.__init__(self, title="Paused")
+        self.add_option("continue", lambda: self.jump_to_scene(game_scene), esc_option=True)
+
+        def _do_reset(player_idx):
+            self._game_scene.get_state().reset_player_idx(player_idx)
+            self.jump_to_scene(self._game_scene)
+
+        # iterate over [active_idx, active_idx - 1, active_idx - 2, ..., 1]
+        active_idx = game_scene.get_state().get_active_player_idx()
+        for i in range(active_idx, 0, -1):
+            player_type = self._game_scene.get_state().get_player_type(i)
+            self.add_option("reset Unit {}".format(player_type.get_name()), lambda idx=i: _do_reset(idx))
+        self.add_option("restart level", lambda: _do_reset(0))
+        self.add_option("quit", lambda: self._on_exit())
 
 
 class LevelMetaDataEditScene(OptionSelectScene):
