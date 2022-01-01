@@ -1373,7 +1373,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
         self._block_sensor_ent = SensorEntity(block_sensor_rect, block_collider, parent=self)
 
         def make_particle(xy):
-            if self._sending:
+            if self._sending and not self.is_blocked():
                 return self.make_particle_at(xy)
             else:
                 return None
@@ -1418,11 +1418,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
         return self._sending
 
     def is_blocked(self):
-        if self.is_sending():
-            # only receivers can be blocked
-            return False
-        else:
-            return len(self.get_world().get_sensor_state(self.get_block_sensor_id())) > 0
+        return len(self.get_world().get_sensor_state(self.get_block_sensor_id())) > 0
 
     def set_sending(self, val):
         self._sending = val
@@ -1498,17 +1494,17 @@ class TeleporterBlock(AbstractActorSensorBlock):
             self._handle_actual_teleports_if_last_to_update()
 
     def _handle_actual_teleports_if_last_to_update(self):
-        if not self.is_ready_to_teleport():
+        if not self.is_ready_to_teleport() and not self.is_blocked():
             return
         linked_teles = []
         for linked in self.all_linked_teleporters():
-            if self._last_updated_at < linked._last_updated_at and linked.is_ready_to_teleport():
+            if self._last_updated_at < linked._last_updated_at and (linked.is_ready_to_teleport() or linked.is_blocked()):
                 linked_teles.append(linked)
             else:
                 return  # we aren't last, or linked isn't ready
         bro_teles = []
         for bro in self.all_bro_teleporters():
-            if self._last_updated_at < bro._last_updated_at and bro.is_ready_to_teleport():
+            if self._last_updated_at < bro._last_updated_at and (bro.is_ready_to_teleport() or bro.is_blocked()):
                 bro_teles.append(bro)
             else:
                 return  # not last, or bro isn't ready
@@ -1519,6 +1515,8 @@ class TeleporterBlock(AbstractActorSensorBlock):
         receivers = []
 
         for t in linked_teles + bro_teles + [self]:
+            if t.is_blocked():
+                continue
             if t.is_sending():
                 actor_to_send = self.get_world().get_entity_by_id(t.get_actors_ready_to_send()[0])
                 if actor_to_send is None:
@@ -1531,7 +1529,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
                         return  # multiple types of players are queued to be sent
                     actors_to_send.add(actor_to_send)
                     senders.append((t, actor_to_send))
-            elif not t.is_blocked():
+            else:
                 receivers.append(t)
 
         if len(senders) == 0 or len(receivers) == 0 or len(types_to_send) > 1:
