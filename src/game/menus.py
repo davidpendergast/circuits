@@ -783,8 +783,8 @@ class _GameState:
     def active_player_succeeded(self, recording):
         self._recorded_runs[self._active_player_idx] = recording
 
-        self.reset()
         self._active_player_idx += 1
+        self.reset()
 
     def has_recording(self, player_idx):
         return self._recorded_runs[player_idx] is not None

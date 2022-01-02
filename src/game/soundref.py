@@ -513,12 +513,13 @@ TELEPORT = ModernUI.success_2
 TELEPORT_BLOCKED = ModernUI.close_or_disable_3
 TELEPORT_UNBLOCKED = ModernUI.open_or_enable_3
 
-PLAYER_JUMP = ModernUI.all_containing("Button")
+PLAYER_JUMP = ModernUI.generic_button_7
 PLAYER_DIALOG = ModernUI.little_noise
 PLAYER_DEATH = ModernUI.all_containing("Error", exclude_text=("5",))
+
 PLAYER_ALERT = ModernUI._a
-PLAYER_PICKUP = ModernUI.all_containing("ClickyButton")
-PLAYER_PUTDOWN = ModernUI.all_containing("ClickyButton")
+PLAYER_PICKUP = ModernUI.clicky_button_3a
+PLAYER_PUTDOWN = ModernUI.clicky_button_3b
 PLAYER_FLY = ModernUI.all_containing("Popup")
 
 

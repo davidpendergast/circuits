@@ -37,6 +37,17 @@ features:
  [x] clipping boulders while jumping over them causes them to fall
  - fast fwd button
     - would be nice, not sure how technically feasible this would be though
+    
+    
+ level ideas:
+ - single room with many moving platforms
+    - like https://youtu.be/eYJAnXgI0AU?t=1577
+ - complex desyncs involving blocking / unblocking teleporters
+ - complex desyncing involving teleporting/carrying players
+    - B goes, does some stuff
+    - C goes, picks up B, doesn't teleport
+    - A goes, allows C to teleport with B
+    
  
  
  release checklist:

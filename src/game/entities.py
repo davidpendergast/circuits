@@ -1325,13 +1325,9 @@ class EndBlock(AbstractActorSensorBlock, HasLightSourcesEntity):
 
 
 class TeleporterBlock(AbstractActorSensorBlock):
-    # XXX with ONE_WAY teleporters, it's possible to create infinite player-duplication machines.
-    # I'm not going to prevent that, but levels need to be built in a SANE and RESPONSIBLE manner.
-
-    ONE_WAY = "one_way"
     TWO_WAY = "two_way"
 
-    def __init__(self, x, y, w, h, channel, sending, mode):
+    def __init__(self, x, y, w, h, channel, sending):
         cs = gs.get_instance().cell_size
         if w != cs * 2:
             raise ValueError("illegal width for teleporter: {}".format(w))
@@ -1342,7 +1338,6 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
         self._channel = channel
         self._sending = sending
-        self._mode = mode
 
         self._arrow_rot = 0.0
 
@@ -1363,7 +1358,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
         # block sensor that deactivates the teleporter
         block_sensor_w = w - 4 * 2
-        block_sensor_h = 30
+        block_sensor_h = 15
         block_sensor_rect = [(w - block_sensor_w) // 2,
                              -block_sensor_h + self.dip_h,
                              block_sensor_w, block_sensor_h]
@@ -1428,13 +1423,8 @@ class TeleporterBlock(AbstractActorSensorBlock):
     def get_channel(self):
         return self._channel
 
-    def get_mode(self):
-        return self._mode
-
     def get_prog(self, for_anim=False):
-        if for_anim and not self.is_two_way():
-            return 0
-        elif self._sending:
+        if self._sending:
             max_time_in_sensor = max(self._players_in_sensor.values(), default=0)
             if max_time_in_sensor >= self._activation_thresh:
                 return 1.0
@@ -1445,9 +1435,6 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
     def reset_prog(self):
         self._players_in_sensor.clear()
-
-    def is_two_way(self):
-        return self.get_mode() == TeleporterBlock.TWO_WAY
 
     def get_actors_ready_to_send(self) -> List[int]:
         if self._sending and self._post_tele_countdown <= 0:
@@ -1571,10 +1558,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
 
         # important that we invert blocked teleporters in this logic too
         for t in linked_teles + bro_teles + [self]:
-            # XXX Using a mixture of two-way and non two-way teleporters can create a bizarre (but not necessarily
-            # incorrect) situation after teleporting, might consider disallowing this. Hmm.
-            if t.get_mode() == TeleporterBlock.TWO_WAY:
-                t.set_sending(not t.is_sending())
+            t.set_sending(not t.is_sending())
             t.reset_prog()
             t._post_tele_countdown = t._post_tele_max_cooldown
 
@@ -1587,10 +1571,7 @@ class TeleporterBlock(AbstractActorSensorBlock):
             if self._sending:
                 spr = spriteref.object_sheet().get_teleporter_sprites(self.get_prog(for_anim=True) / 2)[idx]
             else:
-                if self.is_two_way():
-                    anim_prog = min([t.get_prog() for t in self.all_linked_teleporters()], default=0)
-                else:
-                    anim_prog = 0
+                anim_prog = min([t.get_prog() for t in self.all_linked_teleporters()], default=0)
                 spr = spriteref.object_sheet().get_teleporter_sprites(0.5 + anim_prog / 2)[idx]
 
             if idx == 0:
@@ -2265,11 +2246,16 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
             self._last_jump_request_time += 1
 
         if request_action:
-            self._try_to_alert()
-            if self.get_player_type().can_grab():
-                self._try_to_grab_or_drop()
-            if self.get_player_type().can_swap():
-                self._try_to_swap()
+            did_action = False
+            if not did_action and self.get_player_type().can_grab():
+                did_action = self._try_to_grab_or_drop()
+
+            if not did_action and self.get_player_type().can_swap():
+                # XXX this action was scrapped, can probably delete
+                did_action = self._try_to_swap()
+
+            if not did_action:
+                self._try_to_alert()
 
         if self.is_grounded():
             self._air_time = 0
@@ -2374,6 +2360,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
         if self.get_held_entity() is not None:
             self.pickup_entity(None)  # dropping held item
             self.play_sound(soundref.PLAYER_PUTDOWN)
+            return True
         else:
             can_be_picked_up = []
             for e in self.get_world().all_entities_in_rect(self.get_pickup_range(),
@@ -2390,6 +2377,8 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
                 to_pick_up = can_be_picked_up[0]
                 self.pickup_entity(to_pick_up)
                 self.play_sound(soundref.PLAYER_PICKUP)
+                return True
+        return False
 
     def _try_to_swap(self, target: Entity=None):
         # TODO not used, delete?
@@ -2412,6 +2401,9 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
             other_new_xy = (my_bottom_center[0] - target.get_w() // 2, my_bottom_center[1] - target.get_h())
             target.set_xy(other_new_xy)
+            return True
+        else:
+            return False
 
     def _try_to_alert(self):
         color_id = self.get_player_type().get_color_id()

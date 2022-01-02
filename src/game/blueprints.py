@@ -408,7 +408,7 @@ class TeleporterSpecType(SpecType):
                           optional_keys={COLOR_ID: 0, INVERTED: False})
 
     def get_subtypes(self):
-        return ["two_way", "one_way"]
+        return ["two_way"]
 
     def get_default_value(self, k):
         if k == W:
@@ -419,7 +419,6 @@ class TeleporterSpecType(SpecType):
             return super().get_default_value(k)
 
     def build_entities(self, json_blob) -> typing.Iterable[entities.Entity]:
-        mode = entities.TeleporterBlock.ONE_WAY if json_blob[SUBTYPE_ID] == "one_way" else entities.TeleporterBlock.TWO_WAY
         x = json_blob[X]
         y = json_blob[Y]
         w = json_blob[W]
@@ -427,7 +426,7 @@ class TeleporterSpecType(SpecType):
         inverted = json_blob[INVERTED]
         channel = json_blob[COLOR_ID]
 
-        yield entities.TeleporterBlock(x, y, w, h, channel, not inverted, mode)
+        yield entities.TeleporterBlock(x, y, w, h, channel, not inverted)
 
 
 class CameraBoundMarkerSpecType(SpecType):
