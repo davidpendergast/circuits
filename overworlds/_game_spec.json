@@ -8,11 +8,11 @@
         "e1": ["sector_2", "e0"]
     },
     "sector_2": {
-        "e1": ["sector_3", "e0"]
+        "e1": ["sector_3", "e0"],
+        "e2": ["sector_a", "e0"]
     },
     "sector_3": {
-        "e1": ["sector_4", "e0"],
-        "e2": ["sector_a", "e0"]
+        "e1": ["sector_4", "e0"]
     }
 }
 }
