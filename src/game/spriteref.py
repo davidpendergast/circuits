@@ -174,6 +174,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
 
         self.thin_block_broken_pieces_horz = []
         self.thin_block_broken_pieces_vert = []
+        self.falling_block_pieces = []  # TL, TR, BL, BR
 
         self.toggle_block_bases = []
         self.toggle_block_icons = []
@@ -336,6 +337,8 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         temp = self._handle_rotated_player_pieces([624, 128, 8, 8], 2, 8, atlas, start_pos)
         self.thin_block_broken_pieces_horz = temp[0]
         self.thin_block_broken_pieces_vert = temp[1]
+        self.falling_block_pieces = self._handle_rotated_player_pieces([624, 136, 8, 8], 2, 8, atlas, start_pos) + \
+                                    self._handle_rotated_player_pieces([624, 144, 8, 8], 2, 8, atlas, start_pos)
 
         self.player_orb_sprites = [(_img(32, 368 + i * 8, 8, 8, offs=start_pos),
                                     _img(40, 368 + i * 8, 8, 8, offs=start_pos),

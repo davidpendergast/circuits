@@ -801,8 +801,31 @@ class FallingBlockEntity(BlockEntity, DynamicEntity):
         yield self._sensor_ent
 
     def was_crushed(self):
-        # XXX is this even possible?
         self.get_world().remove_entity(self)
+        self._add_broken_particles()
+
+    def _add_broken_particles(self, max_num=9):
+        model_size = spriteref.object_sheet().falling_block_pieces[0][0].size()
+        all_positions = []
+        for x in range(0, self.get_w() // model_size[0] + 1):
+            for y in range(0, self.get_h() // model_size[1] + 1):
+                all_positions.append((self.get_x() + x * model_size[0], self.get_y() + y * model_size[1]))
+
+        if max_num < 0 or len(all_positions) < max_num:
+            positions = all_positions
+        else:
+            positions = random.sample(all_positions, max_num)
+
+        particles = []
+        for xy in positions:
+            anims = random.choice(spriteref.object_sheet().falling_block_pieces)
+            particles.append(RotatingParticleEntity(xy[0], xy[1], anims,
+                                                    color=self.get_color(), duration=45, initial_phasing=60))
+
+        w = self.get_world()
+        if w is not None:
+            for p in particles:
+                w.add_entity(p)
 
     def get_depth(self):
         return FALLING_BLOCK_DEPTH
