@@ -1276,10 +1276,15 @@ class LevelPreviewElement(ui.UiElement):
 
 
 class _EntityPreview():
+
     def __init__(self, blob, spec_type):
         self.blob = blob
         self.spec_type = spec_type
         self.sprites = []
+
+    DEPTH_OVERRIDES = {
+        blueprints.SpecTypes.MOVING_BLOCK: -10
+    }
 
     @staticmethod
     def _xform_point(xy, vis_rect_in_level, canvas_rect):
@@ -1297,6 +1302,8 @@ class _EntityPreview():
 
     def update_sprites(self, vis_rect_in_level, canvas):
         color = blueprints.SpecUtils.get_preview_color(self.blob)
+        depth = _EntityPreview.DEPTH_OVERRIDES[self.spec_type] if self.spec_type in _EntityPreview.DEPTH_OVERRIDES else 0
+
         if self.spec_type in (blueprints.SpecTypes.BLOCK, blueprints.SpecTypes.MOVING_BLOCK,
                               blueprints.SpecTypes.START_BLOCK, blueprints.SpecTypes.END_BLOCK,
                               blueprints.SpecTypes.DOOR_BLOCK, blueprints.SpecTypes.FALLING_BLOCK,
@@ -1312,7 +1319,7 @@ class _EntityPreview():
                 canvas_rect = util.rect_expand(canvas_rect, down_expand=down_expand, right_expand=right_expand)
             else:
                 canvas_rect = [0, 0, 0, 0]
-            self.sprites[0] = self.sprites[0].update(new_rect=canvas_rect, new_color=color)
+            self.sprites[0] = self.sprites[0].update(new_rect=canvas_rect, new_color=color, new_depth=depth)
         elif self.spec_type == blueprints.SpecTypes.SLOPE_BLOCK_QUAD:
             util.extend_or_empty_list_to_length(self.sprites, 2, creator=lambda: None)
             if self.sprites[0] is None:
@@ -1330,7 +1337,7 @@ class _EntityPreview():
                 down_expand = -1 if not triangle_down and canvas_rect[1] + canvas_rect[3] < canvas[1] + canvas[3] else 0
                 right_expand = -1 if not triangle_right and canvas_rect[0] + canvas_rect[2] < canvas[0] + canvas[2] else 0
                 canvas_rect = util.rect_expand(canvas_rect, down_expand=down_expand, right_expand=right_expand)
-                self.sprites[0].update(new_rect=canvas_rect, new_color=color)
+                self.sprites[0].update(new_rect=canvas_rect, new_color=color, new_depth=depth)
             if util.rect_intersects_triangle(vis_rect_in_level, world_triangle):
                 canvas_triangle = [_EntityPreview._xform_point(p, vis_rect_in_level, canvas) for p in world_triangle]
                 bounding_rect = util.get_rect_containing_points(canvas_triangle, inclusive=True)
@@ -1344,7 +1351,7 @@ class _EntityPreview():
                     right_expand = -1 if bounding_rect[0] + bounding_rect[2] < canvas[0] + canvas[2] else -1
                 bounding_rect = util.rect_expand(bounding_rect, down_expand=down_expand, right_expand=right_expand)
                 canvas_triangle = [util.constrain_point_to_rect(bounding_rect, p) for p in canvas_triangle]
-                self.sprites[1] = self.sprites[1].update(new_points=canvas_triangle, new_color=color)
+                self.sprites[1] = self.sprites[1].update(new_points=canvas_triangle, new_color=color, new_depth=depth)
 
     def all_sprites(self):
         for spr in self.sprites:

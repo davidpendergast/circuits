@@ -46,7 +46,11 @@ DECORATION_GROUP = 20
 WORLD_UI_DEPTH = -5
 PLAYER_DEPTH = 0
 PARTICLE_DEPTH = 2
-BLOCK_DEPTH = 10
+
+BLOCK_DEPTH = 0
+FALLING_BLOCK_DEPTH = -2
+SPIKE_BLOCK_DEPTH = -5
+MOVING_BLOCK_DEPTH = -10
 
 
 class Entity:
@@ -626,7 +630,7 @@ class BlockEntity(AbstractBlockEntity):
         super().update()
 
     def get_depth(self):
-        return 0
+        return BLOCK_DEPTH
 
     def get_color_id(self):
         return self._color_id
@@ -801,7 +805,7 @@ class FallingBlockEntity(BlockEntity, DynamicEntity):
         self.get_world().remove_entity(self)
 
     def get_depth(self):
-        return 10  # want it to appear behind moving blocks, switches, spikes, etc.
+        return FALLING_BLOCK_DEPTH
 
     def update(self):
         super().update()
@@ -1051,6 +1055,9 @@ class MovingBlockEntity(BlockEntity):
     def update_sprites(self):
         super().update_sprites()
         self.controller.update_sprites()
+
+    def get_depth(self):
+        return MOVING_BLOCK_DEPTH
 
     def all_sprites(self):
         for spr in super().all_sprites():
@@ -3134,8 +3141,8 @@ class SpikeEntity(Entity):
         top_models = spriteref.object_sheet().get_spikes_with_length(self.get_length(), tops=True, overflow_if_not_divisible=True)
         bot_models = spriteref.object_sheet().get_spikes_with_length(self.get_length(), tops=False, overflow_if_not_divisible=True)
 
-        util.extend_or_empty_list_to_length(self._top_sprites, len(top_models), creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
-        util.extend_or_empty_list_to_length(self._bot_sprites, len(top_models), creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER))
+        util.extend_or_empty_list_to_length(self._top_sprites, len(top_models), creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER, depth=SPIKE_BLOCK_DEPTH))
+        util.extend_or_empty_list_to_length(self._bot_sprites, len(top_models), creator=lambda: sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER, depth=SPIKE_BLOCK_DEPTH))
 
         xpos = self.get_x()
         ypos = self.get_y()
