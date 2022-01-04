@@ -1,8 +1,10 @@
 
 bugs:
  - progress isn't saved when game exits via crash
- - question mark info entities (e.g. tips) shouldn't have dialog
  - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
+ - players can splat if they hit the ground with too much speed
+
+p3 bugs:
  - falling block is 'squished' in "Heist" preview img
  - falling blocks are inconsistently destroyed when a door block is activated on top of them
  

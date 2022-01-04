@@ -1170,12 +1170,10 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
 
         fail_msg = self._state.get_failure_message()
 
-        if inputs.get_instance().was_pressed(hard_reset_keys) and self._state.get_status().can_hard_reset:
-            self._state.reset(idx=0)
-            self.setup_new_world(self._state.bp)
-        elif inputs.get_instance().was_pressed(soft_reset_keys) and self._state.get_status().can_soft_reset:
-            self._state.reset(idx=-1)  # just current player
-            self.setup_new_world(self._state.bp)
+        if inputs.get_instance().was_pressed(hard_reset_keys):
+            self.do_reset(idx=0)
+        elif inputs.get_instance().was_pressed(soft_reset_keys):
+            self.do_reset(idx=-1)  # just current player
 
         elif self._state.all_satisfied():
             self._state.set_status(Statuses.TOTAL_SUCCESS)
@@ -1207,6 +1205,15 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
                 else:
                     print("WARN: active player is satisfied but has no recording. hopefully we're in dev mode?")
 
+    def do_reset(self, idx=-1):
+        if ((idx == 0 and not self._state.get_status().can_hard_reset)
+                or (idx != 0 and not self._state.get_status().can_soft_reset)):
+            return False
+        else:
+            self._state.reset(idx=idx)
+            self.setup_new_world(self._state.bp)
+            return True
+
     def replace_players_with_fadeout(self, delay=60):
         for i in range(0, self._state.get_active_player_idx() + 1):
             player_type = self._state.get_player_type(i)
@@ -1225,9 +1232,11 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
                 self.get_world().add_entity(anim)
 
     def handle_esc_pressed(self):
-        # TODO should probably have like, a pause button..? Nah~
-        self.on_level_exit()
-        sounds.play_sound(soundref.LEVEL_QUIT)
+        def _on_quit():
+            self.on_level_exit()
+            sounds.play_sound(soundref.LEVEL_QUIT)
+        sounds.play_sound(soundref.MENU_BACK)  # pause sound
+        self.jump_to_scene(GamePausedScene(self, _on_quit))
 
     def start_dialog(self, dialog_frag):
         super().start_dialog(dialog_frag)
@@ -1402,8 +1411,10 @@ class GamePausedScene(OptionSelectScene):
         OptionSelectScene.__init__(self, title="Paused")
         self.add_option("continue", lambda: self.jump_to_scene(game_scene), esc_option=True)
 
+        self._bg_sprite = None
+
         def _do_reset(player_idx):
-            self._game_scene.get_state().reset_player_idx(player_idx)
+            self._game_scene.do_reset(idx=player_idx)
             self.jump_to_scene(self._game_scene)
 
         # iterate over [active_idx, active_idx - 1, active_idx - 2, ..., 1]
@@ -1414,6 +1425,22 @@ class GamePausedScene(OptionSelectScene):
         self.add_option("restart level", lambda: _do_reset(0))
         self.add_option("quit", lambda: self._on_exit())
 
+    def update_sprites(self):
+        if self._bg_sprite is None:
+            self._bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER, depth=500)
+        model = spritesheets.get_white_square_img(0.75)
+        size = renderengine.get_instance().get_game_size()
+        self._bg_sprite = self._bg_sprite.update(new_model=model,
+                                                 new_color=colors.PERFECT_BLACK,
+                                                 new_raw_size=size)
+        self._game_scene.update_sprites()
+
+    def all_sprites(self):
+        for spr in self._game_scene.all_sprites():
+            yield spr
+        yield self._bg_sprite
+        for spr in super().all_sprites():
+            yield spr
 
 class LevelMetaDataEditScene(OptionSelectScene):
 

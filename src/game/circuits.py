@@ -135,6 +135,7 @@ class CircuitsGame(game.Game):
             (const.CURSOR_HAND, [16, 0, 16, 16], (5, 3)),
             (const.CURSOR_INVIS, [32, 0, 16, 16], (0, 0))
         ])
+        cursors.set_cursor(const.CURSOR_DEFAULT)
 
         if configs.is_dev:
             globaltimer.set_show_fps(True)

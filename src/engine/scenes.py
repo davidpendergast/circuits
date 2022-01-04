@@ -111,5 +111,4 @@ class SceneManager:
         if self._active_scene.should_do_cursor_updates() and inputs.get_instance().mouse_in_window():
             mouse_xy = inputs.get_instance().mouse_pos()
             cursor_key = self._active_scene.get_cursor_id_at(mouse_xy)
-            cursor_image = cursors.get_cursor(cursor_key)
-            pygame.mouse.set_cursor(*cursor_image)
+            cursors.set_cursor(cursor_key)
