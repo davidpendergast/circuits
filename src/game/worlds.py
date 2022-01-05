@@ -246,8 +246,8 @@ class World:
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_PLAYER_TYPE)):
             self._do_debug_player_type_toggle()
         if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.TOGGLE_SHOW_LIGHTING)):
-            showing = gs.get_instance().settings().get(gs.Settings.SHOW_LIGHTING)
-            gs.get_instance().settings().set(gs.Settings.SHOW_LIGHTING, not showing)
+            showing = gs.get_instance().get_settings().get(gs.Settings.SHOW_LIGHTING)
+            gs.get_instance().get_settings().set(gs.Settings.SHOW_LIGHTING, not showing)
 
     def get_blueprint(self):
         return self._orig_blueprint

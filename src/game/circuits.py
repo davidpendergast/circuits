@@ -188,11 +188,11 @@ class CircuitsGame(game.Game):
 
     def _handle_global_keybinds(self):
         if inputs.get_instance().was_pressed(const.TOGGLE_MUTE):
-            is_muted = (gs.get_instance().settings().get(gs.Settings.MUTE_MUSIC) and
-                        gs.get_instance().settings().get(gs.Settings.EFFECTS_VOLUME))
+            is_muted = (gs.get_instance().get_settings().get(gs.Settings.MUTE_MUSIC) and
+                        gs.get_instance().get_settings().get(gs.Settings.EFFECTS_VOLUME))
             print(f"INFO: {'unmuting' if is_muted else 'muting'} audio")
-            gs.get_instance().settings().set(gs.Settings.MUTE_MUSIC, not is_muted)
-            gs.get_instance().settings().set(gs.Settings.MUTE_EFFECTS, not is_muted)
+            gs.get_instance().get_settings().set(gs.Settings.MUTE_MUSIC, not is_muted)
+            gs.get_instance().get_settings().set(gs.Settings.MUTE_EFFECTS, not is_muted)
 
 
 def _update_readme():

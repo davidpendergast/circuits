@@ -451,7 +451,7 @@ class OverworldPack:
         else:
             return None
 
-    def all_overworlds(self):
+    def all_overworlds(self) -> typing.Iterable['OverworldBlueprint']:
         for ov_id in self.overworlds:
             yield self.overworlds[ov_id]
 
@@ -668,7 +668,7 @@ class OverworldState:
         """returns: (OverworldBlueprint, entry_num)"""
         return self.requested_overworld
 
-    def get_level_stats(self, overworld_id=None):
+    def get_sector_stats(self, overworld_id=None):
         """
         returns: n_complete, n_total, total_time_in_ticks
         """
@@ -679,12 +679,9 @@ class OverworldState:
             n_total += 1
             if self.is_complete(level_id):
                 n_complete += 1
-            if time is not None:
-                level_time = self.get_completion_time(level_id)
-                if level_time is not None:
-                    time += level_time
-                else:
-                    time = None
+            level_time = self.get_completion_time(level_id)
+            if level_time is not None:
+                time += level_time
         return n_complete, n_total, time
 
     def all_level_ids(self, overworld_id=None):
@@ -766,7 +763,7 @@ class OverworldState:
        return self.get_overworld().abbrev
 
     def is_complete(self, level_id):
-        return gs.get_instance().save_data().is_completed(level_id)
+        return gs.get_instance().get_save_data().is_completed(level_id)
 
     def is_selected_at(self, xy):
         if self.selected_xy is None:
@@ -808,7 +805,7 @@ class OverworldState:
         return xy in self._unlocked_nodes
 
     def get_completion_time(self, level_id):
-        completed_levels = gs.get_instance().save_data().completed_levels()
+        completed_levels = gs.get_instance().get_save_data().completed_levels()
         if level_id in completed_levels:
             return completed_levels[level_id]
         else:
@@ -817,7 +814,8 @@ class OverworldState:
     def set_completed(self, level_id, time):
         cur_time = self.get_completion_time(level_id)
         if cur_time is None or cur_time > time:
-            gs.get_instance().save_data().set_completed(level_id, time)
+            gs.get_instance().get_save_data().set_completed(level_id, time)
+            gs.get_instance().save_data_to_disk()
             self.refresh_unlocked_levels()
 
     def _calc_unlocked_nodes(self, starting_xy, entrance_xy=None):
@@ -1563,7 +1561,7 @@ class OverworldScene(scenes.Scene):
 
     def get_sector_info_text(self):
         name = self.state.current_overworld.name
-        n_completed, n_levels, total_ticks = self.state.get_level_stats(self.state.current_overworld.ref_id)
+        n_completed, n_levels, total_ticks = self.state.get_sector_stats(self.state.current_overworld.ref_id)
         res = f"{name}"
         res += f"\nCompleted: {n_completed}/{n_levels}"
         if n_completed == n_levels and total_ticks is not None:

@@ -572,7 +572,7 @@ class AbstractBlockEntity(Entity):
         base_color = super().get_color(ignore_override=ignore_override)
         if not ignore_override and self.get_color_override() is not None:
             return base_color
-        elif not include_lighting or not gs.get_instance().settings().get(gs.Settings.SHOW_LIGHTING):
+        elif not include_lighting or not gs.get_instance().get_settings().get(gs.Settings.SHOW_LIGHTING):
             return base_color
         else:
             cur_tick = gs.get_instance().tick_count()

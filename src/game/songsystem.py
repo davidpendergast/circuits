@@ -80,7 +80,7 @@ class MultiChannelSong:
             return False
 
     def update(self):
-        volume_from_prefs = gs.get_instance().settings().music_volume()
+        volume_from_prefs = gs.get_instance().get_settings().music_volume()
         for i, v in enumerate(self._volumes):
             if i < len(self.sounds):
                 self.sounds[i].set_volume(v * self._master_volume * self._adjusted_volume * volume_from_prefs)

@@ -51,7 +51,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list = ui.OptionsList(outlined=True)
         self._options_list.add_option("start", lambda: self._do_start())
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
-        self._options_list.add_option("options", lambda: self.jump_to_scene(Test3DScene()))
+        self._options_list.add_option("stats", lambda: self.jump_to_scene(self._make_stats_scene()))
         self._options_list.add_option("credits", lambda: self.jump_to_scene(CreditsScene(self)))
         self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
         self._options_list.update_sprites()
@@ -61,11 +61,14 @@ class MainMenuScene(scenes.Scene):
 
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
-    def _do_start(self):
-        do_instructions = True
+    def _make_overworlds_scene(self):
         # TODO may want to just move this into assets (and del from make_exe too).
         overworlds_base_dir = util.resource_path("overworlds")
-        overworld_scene = overworld.OverworldScene.create_new_from_path(overworlds_base_dir)
+        return overworld.OverworldScene.create_new_from_path(overworlds_base_dir)
+
+    def _do_start(self):
+        do_instructions = True
+        overworld_scene = self._make_overworlds_scene()
         if do_instructions:
             next_scene = InstructionsScene(overworld_scene, self)
             sounds.play_sound(soundref.MENU_ACCEPT)
@@ -73,6 +76,10 @@ class MainMenuScene(scenes.Scene):
             next_scene = overworld_scene
             sounds.play_sound(soundref.MENU_START)
         self.jump_to_scene(next_scene)
+
+    def _make_stats_scene(self):
+        overworld_scene = self._make_overworlds_scene()
+        return StatsScene(overworld_scene.state, self, title="Stats")
 
     def should_do_cursor_updates(self):
         return True
@@ -345,6 +352,8 @@ class OptionSelectScene(scenes.Scene):
         self.desc_sprite = None
         self.desc_scale = 1
         self.desc_horz_inset = 32
+        self.desc_alignment = sprites.TextSprite.LEFT
+        self.desc_wrap = True
 
         self.vert_spacing = 32
 
@@ -355,6 +364,12 @@ class OptionSelectScene(scenes.Scene):
     def add_option(self, text, do_action, is_enabled=lambda: True, esc_option=False):
         self.option_pages.add_option(text, do_action, is_enabled=is_enabled, esc_option=esc_option)
 
+    def set_description(self, text, scale=1, alignment=sprites.TextSprite.LEFT, wrap=True):
+        self.desc_text = text
+        self.desc_scale = scale
+        self.desc_alignment = alignment
+        self.desc_wrap = wrap
+
     def update(self):
         if self.title_sprite is None:
             self.title_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, self.title_text, scale=self.title_scale)
@@ -364,14 +379,19 @@ class OptionSelectScene(scenes.Scene):
         self.title_sprite.update(new_x=title_x, new_y=title_y)
         y_pos = title_y + self.title_sprite.size()[1] + self.vert_spacing
 
-        if self.desc_text is None:
+        if self.desc_text is None or len(self.desc_text) == 0:
             self.desc_sprite = None
         else:
             if self.desc_sprite is None:
                 self.desc_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self.desc_scale)
-            wrapped_desc = sprites.TextSprite.wrap_text_to_fit(self.desc_text, screen_size[0] - self.desc_horz_inset * 2,
-                                                               scale=self.desc_scale)
-            self.desc_sprite.update(new_text="\n".join(wrapped_desc))
+            if self.desc_wrap:
+                wrapped_desc = sprites.TextSprite.wrap_text_to_fit(self.desc_text,
+                                                                   screen_size[0] - self.desc_horz_inset * 2,
+                                                                   scale=self.desc_scale)
+                desc_text_to_use = "\n".join(wrapped_desc)
+            else:
+                desc_text_to_use = self.desc_text
+            self.desc_sprite.update(new_text=desc_text_to_use, new_alignment=self.desc_alignment)
             desc_x = screen_size[0] // 2 - self.desc_sprite.size()[0] // 2
             desc_y = y_pos
             self.desc_sprite.update(new_x=desc_x, new_y=desc_y)
@@ -1141,6 +1161,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
 
     def update(self):
         dialog.DialogScene.update(self)
+        gs.get_instance().inc_in_game_playtime()
 
     def update_impl(self):
         if self._queued_next_world is not None:
@@ -1441,6 +1462,42 @@ class GamePausedScene(OptionSelectScene):
         yield self._bg_sprite
         for spr in super().all_sprites():
             yield spr
+
+
+class StatsScene(OptionSelectScene):
+
+    def __init__(self, overworld_state: overworld.OverworldState, next_scene, title="Stats"):
+        super().__init__(title=title)
+        self.set_description(self._calc_stats_text(overworld_state), alignment=sprites.TextSprite.CENTER, wrap=False)
+        self.add_option("continue", lambda: self.jump_to_scene(next_scene), esc_option=True)
+
+    def _calc_stats_text(self, overworld_state):
+        n_completed = 0
+        n_total = 0
+        total_level_time = 0
+        total_playtime = gs.get_instance().get_save_data().get_total_playtime()
+        in_game_playtime = gs.get_instance().get_save_data().get_total_in_game_playtime()
+        for ow in overworld_state.overworld_pack.all_overworlds():
+            n_completed_in_sector, n_levels_in_sector, total_ticks_in_sector = overworld_state.get_sector_stats(ow.ref_id)
+            n_completed += n_completed_in_sector
+            n_total += n_levels_in_sector
+            total_level_time += total_ticks_in_sector
+
+        if n_completed < n_total:
+            completed_str = "{:.1f}%".format(100 * n_completed / n_total)
+            best_time_str = None  # no reason to show this if you haven't 100%ed the game
+        else:
+            completed_str = f"{n_completed}/{n_total}"
+            best_time_str = f"{util.ticks_to_time_string(total_level_time, show_minutes_if_zero=True)}"
+
+        return "\n".join(s for s in [
+            f"levels completed: {completed_str}",
+            None if best_time_str is None else "sum of best times: {best_time_str}",
+            "",
+            f"total playtime: {util.ticks_to_time_string(total_playtime, show_minutes_if_zero=True)}",
+            f"active playtime: {util.ticks_to_time_string(in_game_playtime, show_minutes_if_zero=True)}"
+        ] if s is not None)
+
 
 class LevelMetaDataEditScene(OptionSelectScene):
 
