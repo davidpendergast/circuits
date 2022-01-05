@@ -846,8 +846,10 @@ class FallingBlockEntity(BlockEntity, DynamicEntity):
             else:
                 current_weight_on_top = 0
                 for a in self.get_world().get_sensor_state(self.actor_sensor_id):
-                    if isinstance(a, PlayerEntity) and a.is_grounded() and a.get_y_vel() > -0.1:
-                        current_weight_on_top += a.get_weight()
+                    if isinstance(a, PlayerEntity) and a.is_grounded():
+                        # don't want blocks to fall when the player merely brushes past them
+                        if a.get_y_vel() > -0.1 or a.how_long_since_last_jump() <= 1:
+                            current_weight_on_top += a.get_weight()
                 if ground_collisions:
                     self._is_primed_to_fall = False
                 elif current_weight_on_top >= self.weight_thresh and not self._is_primed_to_fall:
@@ -2209,6 +2211,9 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
     def is_flying(self):
         return not self.is_grounded() and not self.is_clinging_to_wall() and self._is_flying
+
+    def how_long_since_last_jump(self):
+        return self._last_jump_time
 
     def has_ever_moved(self):
         return self._has_ever_moved
