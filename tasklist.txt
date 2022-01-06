@@ -20,6 +20,23 @@ features:
  - stats scene (total playtime, total best level time sum, levels completed)
  [x] teleporters getting blocked
  - teleporting while holding something
+
+ story:
+ - you are: a group of scavenger/scout robots who explore space, searching for materials
+   - metals, gadgets, etc.
+   - once served an unknown "higher purpose", but that purpose is long forgotten
+ - while attempting to approach a massive structure in space, the group's ship crash-lands into it,
+   scattering the crew members and damaging the ship.
+ - discover the purpose of the megastructure, repair the ship, and escape
+ 
+ resolution:
+ - the megastructure is the crew's home/birthplace
+ - it was a factory, whose purpose was to build panels that would be used to enwrap the nearby star (dyson sphere)
+ - the lifeforms running it (humanlike) gradually went extinct before the project was completed, and the last survivors deactivated it (sending remote workers adrift)
+ - does your crew reactivate the factory, and achieve their purpose (to harvest the sun), or drift forever
+
+ ethical dilemma:
+ - should we fulfill our own "purpose", at the possible expense of others, or abandon it so others might live
  
  feedback:
  [x] tried to climb right wall with B on level 2
