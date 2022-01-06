@@ -2220,6 +2220,10 @@ class LevelEditGameScene(_BaseGameScene):
         for s in all_selects:
             self.set_selected(s, select=False)
 
+    def select_all(self):
+        for s in self.all_spec_blobs:
+            self.set_selected(s, select=True)
+
     def _get_selected_entity_color(self, ent):
         color_id = ent.get_color_id()
         if color_id is not None:
@@ -2434,6 +2438,8 @@ class NormalMouseMode(MouseMode):
             self.scene.delete_selection()
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ADVANCED_EDIT)):
             self.scene.handle_advanced_edit_pressed()
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SELECT_ALL)):
+            self.scene.select_all()
 
         cycle_type_steps = inputs.get_instance().was_pressed_four_way(
             right=keybinds.get_instance().get_keys(const.CYCLE_SELECTION_SUBTYPE_FORWARD),
@@ -2478,7 +2484,6 @@ class ObjectPlacementMouseMode(MouseMode):
         self.spec_type = spec_type_to_place
 
     def activate(self):
-        # self.scene.deselect_all()
         pass
 
     def deactivate(self):
