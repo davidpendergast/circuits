@@ -556,6 +556,45 @@ class InfoSpecType(SpecType):
         yield entities.InfoEntity(x, y, points, text, subtype, color_id=color_id, dialog_id=dialog_id)
 
 
+class DecorationSpecType(SpecType):
+
+    def __init__(self):
+        SpecType.__init__(self, "decoration", required_keys=(X, Y, W, H, ART_ID, COLOR_ID),
+                          optional_keys={INVERTED: False})
+
+    def get_color_ids(self, spec):
+        return [0, 1, 2, 3, 4, 5]
+
+    def get_art_ids(self, spec):
+        size = (spec[W], spec[H])
+        if size not in spriteref.decoration_sheet().sprites:
+            return [0]
+        else:
+            n = len(spriteref.decoration_sheet().sprites[size])
+            return [i for i in range(n)]
+
+    def get_default_value(self, k):
+        if k == W:
+            return 16
+        elif k == H:
+            return 16
+        elif k == COLOR_ID:
+            return 5
+        else:
+            return super().get_default_value(k)
+
+    def build_entities(self, json_blob):
+        x = json_blob[X]
+        y = json_blob[Y]
+        w = json_blob[W]
+        h = json_blob[H]
+        art_id = json_blob[ART_ID]
+        color_id = json_blob[COLOR_ID]
+        inverted = json_blob[INVERTED]
+
+        yield entities.DecorationEntity(x, y, w, h, color_id=color_id, art_id=art_id, xflip=inverted)
+
+
 # XXX pretty sure this isn't used, delete?
 class DialogTriggerSpecType(SpecType):
 
@@ -762,6 +801,7 @@ class SpecTypes:
     END_BLOCK = EndBlockSpecType()
     SPIKES = SpikeSpecType()
     INFO = InfoSpecType()
+    DECORATION = DecorationSpecType()
     PUSHABLE_BLOCK = PushableBlockSpecType()
     FALLING_BLOCK = FallingBlockSpecType()
     DIALOG_TRIGGER = DialogTriggerSpecType()

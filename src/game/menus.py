@@ -2526,7 +2526,8 @@ def build_object_pallette():
         blueprints.SpecTypes.INFO.get_default_blob(),                   # shift + 1
         blueprints.SpecTypes.FALSE_BLOCK.get_default_blob(),            # shift + 2
         blueprints.SpecTypes.CAMERA_BOUND_MARKER.get_default_blob(),    # shift + 3
-        blueprints.SpecTypes.ZONE.get_default_blob()                    # shift + 4
+        blueprints.SpecTypes.ZONE.get_default_blob(),                   # shift + 4
+        blueprints.SpecTypes.DECORATION.get_default_blob()              # shift + 5
     ]
 
 

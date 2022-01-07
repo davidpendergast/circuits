@@ -53,6 +53,8 @@ def get_color(color_id, dark=False):
         return colors.GREEN if not dark else colors.DARK_GREEN
     elif color_id == 4:
         return colors.PURPLE if not dark else colors.DARK_PURPLE
+    elif color_id == 5:
+        return colors.DARK_GRAY if not dark else colors.LIGHT_GRAY
     else:
         return colors.PERFECT_RED
 
@@ -207,6 +209,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
 
         self.info_exclamation = (None, None)
         self.info_question = (None, None)
+        self.info_invis = (None, None)
 
         self.teleporter_blocks = []  # list of (rim, arrow, inner_detail, outer_detail)
         self.camera_boundary_blocks = []
@@ -408,6 +411,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
 
         self.info_exclamation = (_img(160, 438, 8, 2, offs=start_pos), _img(160, 416, 8, 16, offs=start_pos))
         self.info_question = (_img(168, 438, 8, 2, offs=start_pos), _img(168, 416, 8, 16, offs=start_pos))
+        self.info_invis = (_img(160, 462, 8, 2, offs=start_pos), _img(160, 440, 8, 16, offs=start_pos))
 
         tp_xy = (232, 224)
         self.teleporter_blocks = []
@@ -624,6 +628,34 @@ class _BlockSheet(spritesheets.SpriteSheet):
             self.start_blocks[(2, 1, player_id)] = start_block
         for end_block, player_id in zip(_make_blocks((2, 1), 0, 416, n=4, offs=start_pos), player_ids):
             self.end_blocks[(2, 1, player_id)] = end_block
+
+
+class _DecorationSheet(spritesheets.SpriteSheet):
+
+    def __init__(self):
+        spritesheets.SpriteSheet.__init__(self, "decorations", "assets/decorations.png")
+
+        self.sprites = {}  # (w, h) -> list of ImageModels
+
+    def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
+        super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
+
+        def _make_blocks(xy, dims, n=1, offs=(0, 0)):
+            return [_img(xy[0] + i * dims[0], xy[1], dims[0], dims[1], offs=offs) for i in range(0, n)]
+
+        self.sprites.clear()
+        self.sprites[(16, 16)] = _make_blocks((0, 0), (16, 16), n=2, offs=start_pos)
+        self.sprites[(16, 8)] = _make_blocks((0, 16), (16, 8), n=3, offs=start_pos)
+        self.sprites[(24, 8)] = _make_blocks((0, 24), (24, 8), n=2, offs=start_pos)
+        self.sprites[(8, 8)] = _make_blocks((0, 32), (8, 8), n=3, offs=start_pos)
+        self.sprites[(32, 32)] = _make_blocks((0, 40), (32, 32), n=2, offs=start_pos)
+        self.sprites[(32, 16)] = _make_blocks((0, 72), (32, 16), n=3, offs=start_pos)
+
+    def get_sprite(self, size, idx):
+        if size in self.sprites:
+            return self.sprites[size][idx % len(self.sprites[size])]
+        else:
+            return None
 
 
 class _UiSheet(spritesheets.SpriteSheet):
@@ -1014,6 +1046,7 @@ _PLAYER_C = None
 _BLOCKS = None
 _OVERWORLD = None
 _UI = None
+_DECORATIONS = None
 _LEVEL_BUILDER = None
 _STARS = None
 
@@ -1041,6 +1074,10 @@ def ui_sheet() -> _UiSheet:
     return _UI
 
 
+def decoration_sheet() -> _DecorationSheet:
+    return _DECORATIONS
+
+
 def level_builder_sheet() -> _LevelBuilderSheet:
     return _LEVEL_BUILDER
 
@@ -1055,16 +1092,17 @@ def cutscene_image(sheet_type) -> sprites.ImageModel:
 
 
 def initialize_sheets() -> typing.List[spritesheets.SpriteSheet]:
-    global _OBJECTS, _PLAYER_C, _BLOCKS, _OVERWORLD, _CUTSCENES, _UI, _LEVEL_BUILDER, _STARS
+    global _OBJECTS, _PLAYER_C, _BLOCKS, _OVERWORLD, _CUTSCENES, _UI, _DECORATIONS, _LEVEL_BUILDER, _STARS
     _OBJECTS = _ObjectSheet()
     _PLAYER_C = _PlayerCSheet()
     _BLOCKS = _BlockSheet()
     _UI = _UiSheet()
+    _DECORATIONS = _DecorationSheet()
     _OVERWORLD = _OverworldSheet()
     _LEVEL_BUILDER = _LevelBuilderSheet()
     _STARS = _StarSheet()
 
-    all_sheets = [_OBJECTS, _PLAYER_C, _BLOCKS, _OVERWORLD, _UI, _LEVEL_BUILDER, _STARS]
+    all_sheets = [_OBJECTS, _PLAYER_C, _BLOCKS, _OVERWORLD, _UI, _DECORATIONS, _LEVEL_BUILDER, _STARS]
 
     for sheet_id in CutsceneTypes.ALL_TYPES:
         _CUTSCENES[sheet_id] = spritesheets.SingleImageSheet(sheet_id)

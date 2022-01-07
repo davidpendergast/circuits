@@ -3223,34 +3223,36 @@ class SpikeEntity(Entity):
             yield spr
 
 
-_ALL_INFO_TYPES = {}
+class DecorationEntity(Entity):
 
+    def __init__(self, x, y, w, h, color_id=0, art_id=0, xflip=False):
+        super().__init__(x, y, w, h)
+        self.color_id = color_id
+        self.art_id = art_id
+        self.xflip = xflip
 
-class InfoEntityType:
+        self._sprite = None
 
-    def __init__(self, ident, turns, sprite_lookup, floating_type=False, can_be_recolored=False):
-        self.ident = ident
-        self.faces_player = turns
-        self.recolorable = can_be_recolored
-        self.sprite_lookup = sprite_lookup
-        self.floating_type = floating_type
-        _ALL_INFO_TYPES[ident] = self
+    def get_color_id(self):
+        return self.color_id
 
-    def get_entity_sprites(self):
-        all_sprites = [] if self.sprite_lookup is None else self.sprite_lookup()
-        if self.floating_type or len(all_sprites) == 0:
-            return all_sprites
+    def update_sprites(self):
+        if self._sprite is None:
+            self._sprite = sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER, depth=0)
+        model = spriteref.decoration_sheet().get_sprite(self.get_size(), self.art_id)
+        if model is None:
+            model = spritesheets.get_white_square_img(opacity=0.75)
+            self._sprite = self._sprite.update(new_model=model, new_x=self.get_x(), new_y=self.get_y(),
+                                               new_raw_size=self.get_size(), new_color=self.get_color())
         else:
-            return [all_sprites[(gs.get_instance().anim_tick() // 8) % len(all_sprites)]]
+            self._sprite = self._sprite.update(new_model=model, new_x=self.get_x(), new_y=self.get_y(),
+                                               new_color=self.get_color(), new_xflip=self.xflip)
 
-    def turns_to_face_player(self):
-        return self.faces_player
+    def all_sprites(self):
+        yield self._sprite
 
-    def can_be_recolored(self):
-        return self.recolorable
-
-    def get_id(self):
-        return self.ident
+    def is_dynamic(self):
+        return False
 
 
 class FalseBlockEntity(BlockEntity):
@@ -3384,10 +3386,45 @@ class FalseBlockEntity(BlockEntity):
                 yield n
 
 
+_ALL_INFO_TYPES = {}
+
+
+class InfoEntityType:
+
+    def __init__(self, ident, turns, sprite_lookup, floating_type=False, can_be_recolored=False, invisible=False):
+        self.ident = ident
+        self.faces_player = turns
+        self.recolorable = can_be_recolored
+        self.sprite_lookup = sprite_lookup
+        self.floating_type = floating_type
+        self.invisible = invisible
+        _ALL_INFO_TYPES[ident] = self
+
+    def get_entity_sprites(self):
+        all_sprites = [] if self.sprite_lookup is None else self.sprite_lookup()
+        if self.floating_type or len(all_sprites) == 0:
+            return all_sprites
+        else:
+            return [all_sprites[(gs.get_instance().anim_tick() // 8) % len(all_sprites)]]
+
+    def turns_to_face_player(self):
+        return self.faces_player
+
+    def can_be_recolored(self):
+        return self.recolorable
+
+    def is_hidden(self):
+        return self.invisible
+
+    def get_id(self):
+        return self.ident
+
+
 class InfoEntityTypes:
 
     EXCLAM = InfoEntityType("exclam", False, lambda: spriteref.object_sheet().info_exclamation, floating_type=True, can_be_recolored=True)
     QUESTION = InfoEntityType("question", False, lambda: spriteref.object_sheet().info_question, floating_type=True, can_be_recolored=True)
+    INVISIBLE = InfoEntityType("invisible", False, lambda: spriteref.object_sheet().info_invis, floating_type=True, can_be_recolored=True, invisible=True)
     PLAYER_FAST = InfoEntityType(const.PLAYER_FAST, True, lambda: spriteref.object_sheet().get_player_sprites(const.PLAYER_FAST, spriteref.PlayerStates.IDLE))
     PLAYER_SMALL = InfoEntityType(const.PLAYER_SMALL, True, lambda: spriteref.object_sheet().player_b[spriteref.PlayerStates.IDLE])
     PLAYER_HEAVY = InfoEntityType(const.PLAYER_HEAVY, True, lambda: spriteref.object_sheet().player_c[spriteref.PlayerStates.IDLE])
@@ -3432,7 +3469,10 @@ class InfoEntity(Entity):
 
     def _get_sprites(self):
         """returns: (top_sprite, base_sprite) or [sprite]"""
-        return self._info_type.get_entity_sprites()
+        if self.get_world().is_being_edited() or not self._info_type.is_hidden():
+            return self._info_type.get_entity_sprites()
+        else:
+            return None, None
 
     def get_color_id(self):
         return self._color_id
