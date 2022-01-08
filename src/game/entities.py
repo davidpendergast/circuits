@@ -1803,6 +1803,13 @@ class PlayerController:
 
         return PlayerInputs.from_ints(ints)
 
+    def compare_or_store_state(self, player_state, tick) -> bool:
+        """
+        If this is a playback controller, returns whether the player_state is 'synced' to the recording.
+        If it's a recording controller, stores the state and returns True.
+        """
+        return True
+
     def get_recording(self):
         return None
 
@@ -1817,10 +1824,11 @@ class RecordingPlayerController(PlayerController):
     def __init__(self):
         self._pool = {}
         self._recorded_inputs = []
+        self._recorded_player_states = []  # list of lists of player_states
 
         self._did_print_warning = False
 
-    def store(self, tick, player_inputs):
+    def store_inputs(self, tick, player_inputs):
         # conserve objects
         if player_inputs == PlayerController.EMPTY_INPUT:
             player_inputs = PlayerController.EMPTY_INPUT
@@ -1829,7 +1837,9 @@ class RecordingPlayerController(PlayerController):
         else:
             self._pool[player_inputs] = player_inputs
 
-        if 0 <= tick <= RecordingPlayerController.HARD_LIMIT:
+        if tick < 0:
+            pass  # level hasn't started yet
+        elif tick <= RecordingPlayerController.HARD_LIMIT:
             if len(self._recorded_inputs) == tick:
                 self._recorded_inputs.append(player_inputs)
             elif len(self._recorded_inputs) > tick:
@@ -1851,18 +1861,31 @@ class RecordingPlayerController(PlayerController):
 
     def get_inputs(self, tick) -> PlayerInputs:
         res = super().get_inputs(tick)
-        self.store(tick, res)
+        self.store_inputs(tick, res)
         return res
 
+    def compare_or_store_state(self, player_state, tick) -> bool:
+        if tick < 0:
+            pass
+        elif tick <= RecordingPlayerController.HARD_LIMIT:
+            if tick > len(self._recorded_player_states):
+                util.extend_or_empty_list_to_length(self._recorded_player_states, tick, creator=lambda: [])
+            elif tick == len(self._recorded_player_states):
+                self._recorded_player_states.append([])
+            self._recorded_player_states[tick].append(player_state)
+        return True  # always 'synced' while recording
+
     def get_recording(self) -> 'PlaybackPlayerController':
-        recording = list(self._recorded_inputs)
-        return PlaybackPlayerController(recording)
+        input_recording = list(self._recorded_inputs)
+        state_recording = list(self._recorded_player_states)
+        return PlaybackPlayerController(input_recording, state_recording)
 
 
 class PlaybackPlayerController(PlayerController):
 
-    def __init__(self, input_list):
+    def __init__(self, input_list, player_states):
         self._input_list = input_list
+        self._state_list = player_states
 
     def __len__(self):
         return len(self._input_list)
@@ -1872,6 +1895,17 @@ class PlaybackPlayerController(PlayerController):
             return self._input_list[tick]
         else:
             return PlayerController.EMPTY_INPUT
+
+    def compare_or_store_state(self, player_state, tick) -> bool:
+        if tick >= len(self._state_list):
+            # when we've run out of recorded frames, test against last
+            # recorded frame from that point forward.
+            tick = len(self._state_list) - 1
+
+        if tick < 0:
+            return True
+        else:
+            return self._state_list[tick] is not None and player_state in self._state_list[tick]
 
     def is_finished(self, tick):
         return tick >= len(self._input_list)
@@ -1923,7 +1957,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
     LIGHT_RADIUS = 8 * gs.get_instance().cell_size
 
-    def __init__(self, x, y, player_type: playertypes.PlayerType, controller=None, align_to_cells=True):
+    def __init__(self, x, y, player_type: playertypes.PlayerType, controller=None, align_to_cells=True, is_synced=True):
         cs = gs.get_instance().cell_size
         w = int(cs * player_type.get_size()[0])
         h = int(cs * player_type.get_size()[1])
@@ -1932,6 +1966,9 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
         self._player_type = player_type
         self._controller = controller if controller is not None else PlayerController()
+
+        self._is_synced = is_synced
+        self._sync_tracker = [is_synced] * 5
 
         self._sprites = {}  # id -> Sprite
         self._dir_facing = 1
@@ -1986,7 +2023,7 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
         self._was_breaking_last_frame = False
         self._is_flying = False  # flying = airborne due to an air-jump
 
-        self._death_reason = None  # if this gets set, the player will die and be removed at the end of that update cycle
+        self._death_reason = None  # if this gets set, the player dies and will be removed at the end of the frame.
 
         w_inset = int(self.get_w() * 0.2)  # 0.15
 
@@ -2134,6 +2171,9 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
                     new_collides_with.append(CollisionMasks.BREAKABLE)
                 c.set_collides_with(new_collides_with)
 
+    def get_state_for_recording(self):
+        return (self.get_xy(), self.is_holding_an_entity())
+
     def get_physics_group(self):
         return ACTOR_GROUP
 
@@ -2257,7 +2297,17 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
 
     def _handle_inputs(self):
         if self.get_world().get_game_state() is not None and self.get_world().get_game_state().get_status().can_player_control:
-            cur_inputs = self.get_controller().get_inputs(self.get_world().get_tick())
+            tick = self.get_world().get_tick()
+            cur_inputs = self.get_controller().get_inputs(tick)
+
+            # handle sync tracking
+            cur_state = self.get_state_for_recording()
+            synced_this_frame = self.get_controller().compare_or_store_state(cur_state, tick)
+            self._sync_tracker[tick % len(self._sync_tracker)] = synced_this_frame
+            if synced_this_frame != self._is_synced:
+                if all(v == synced_this_frame for v in self._sync_tracker):
+                    # if you've been synced/desynced for n consecutive frames, do the switch
+                    self._handle_sync_change(synced_this_frame)
         else:
             cur_inputs = self.get_controller().EMPTY_INPUT
 
@@ -2391,6 +2441,15 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
             # stop "flying" when you touch the ground or a wall.
             self._is_flying = False
 
+    def _handle_sync_change(self, sync):
+        print(f"INFO: player {self.get_player_type().get_name()} {'resynced' if sync else 'desynced'}!")
+        self._is_synced = sync
+        self._try_to_alert(sound=soundref.PLAYER_RESYNC if sync else soundref.PLAYER_DESYNC,
+                           symbol="*" if sync else "?")
+
+    def is_synced(self):
+        return self._is_synced
+
     def _try_to_grab_or_drop(self):
         if self.get_held_entity() is not None:
             self.pickup_entity(None)  # dropping held item
@@ -2440,13 +2499,13 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
         else:
             return False
 
-    def _try_to_alert(self):
+    def _try_to_alert(self, sound=soundref.PLAYER_ALERT, symbol="!"):
         color_id = self.get_player_type().get_color_id()
         color = spriteref.get_color(color_id)
-        self.play_sound(soundref.PLAYER_ALERT)
+        self.play_sound(sound)
 
         top_center_xy = (self.get_x() + self.get_w() // 2, self.get_y() - 2)
-        alert_entity = FloatingTextAlertEntity(top_center_xy, "!", color, colors.darken(color, 0.4),
+        alert_entity = FloatingTextAlertEntity(top_center_xy, symbol, color, colors.darken(color, 0.4),
                                                depth=WORLD_UI_DEPTH, fadeout_time=15, fadeout_dir=(0, -4))
         self.get_world().add_entity(alert_entity)
 

@@ -1,8 +1,8 @@
 
 bugs:
- - progress isn't saved when game exits via crash
  - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
  - players can splat if they hit the ground with too much speed
+	- would be ok, but it's not super consistent
 
 p3 bugs:
  - falling block is 'squished' in "Heist" preview img
@@ -15,12 +15,12 @@ features:
     [x] what final level?
  [x] let you embed stuff (e.g. "{ACTION_KEY}" --> [Enter]) into dialog / info text.
     - with a special color
- - there should be an indicator when a player desyncs / resyncs
+	  - relax
+ [x] there should be an indicator when a player desyncs / resyncs
  - load controls from user-editable file, or otherwise make them editable
  - choose real sounds for things (and make them louder? they don't really cut through the music currently)
- - stats scene (total playtime, total best level time sum, levels completed)
+ [x] stats scene (total playtime, total best level time sum, levels completed)
  [x] teleporters getting blocked
- - teleporting while holding something
 
  story:
  - you are: a group of scavenger/scout robots who explore space, searching for materials
