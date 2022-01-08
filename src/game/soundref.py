@@ -521,6 +521,8 @@ PLAYER_ALERT = ModernUI._a
 PLAYER_PICKUP = ModernUI.clicky_button_3a
 PLAYER_PUTDOWN = ModernUI.clicky_button_3b
 PLAYER_FLY = ModernUI.all_containing("Popup")
+PLAYER_DESYNC = ModernUI.all_containing("Disable")
+PLAYER_RESYNC = ModernUI.all_containing("Enable")
 
 
 if __name__ == "__main__":
