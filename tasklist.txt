@@ -7,6 +7,7 @@ bugs:
 p3 bugs:
  - falling block is 'squished' in "Heist" preview img
  - falling blocks are inconsistently destroyed when a door block is activated on top of them
+ - sector text gets misaligned at certain window heights
  
  
 features:
