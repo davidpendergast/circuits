@@ -363,13 +363,13 @@ class CreditsScene(scenes.Scene):
 
 class OptionSelectScene(scenes.Scene):
 
-    def __init__(self, title=None, description=None, opts_per_page=6):
+    def __init__(self, title=None, opts_per_page=6):
         scenes.Scene.__init__(self)
         self.title_text = title
         self.title_sprite = None
         self.title_scale = 2
 
-        self.desc_text = description
+        self.desc_text = None
         self.desc_sprite = None
         self.desc_scale = 1
         self.desc_horz_inset = 32
@@ -386,6 +386,9 @@ class OptionSelectScene(scenes.Scene):
         self.option_pages.add_option(text, do_action, is_enabled=is_enabled, esc_option=esc_option)
 
     def set_description(self, text, scale=1, alignment=sprites.TextSprite.LEFT, wrap=True):
+        """Sets the description text for the menu.
+        text: str or TextBuilder, or None to disable it.
+        """
         self.desc_text = text
         self.desc_scale = scale
         self.desc_alignment = alignment
@@ -405,14 +408,22 @@ class OptionSelectScene(scenes.Scene):
         else:
             if self.desc_sprite is None:
                 self.desc_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self.desc_scale)
-            if self.desc_wrap:
-                wrapped_desc = sprites.TextSprite.wrap_text_to_fit(self.desc_text,
-                                                                   screen_size[0] - self.desc_horz_inset * 2,
-                                                                   scale=self.desc_scale)
-                desc_text_to_use = "\n".join(wrapped_desc)
+
+            if isinstance(self.desc_text, sprites.TextBuilder):
+                desc_text_to_use = self.desc_text.text
+                desc_color_lookup = self.desc_text.colors
             else:
                 desc_text_to_use = self.desc_text
-            self.desc_sprite.update(new_text=desc_text_to_use, new_alignment=self.desc_alignment)
+                desc_color_lookup = None
+
+            if self.desc_wrap:
+                wrapped_desc = sprites.TextSprite.wrap_text_to_fit(desc_text_to_use,
+                                                                   screen_size[0] - self.desc_horz_inset * 2,
+                                                                   scale=self.desc_scale)
+                desc_color_lookup = None  # TODO impl text wrapping with per-char colors
+                desc_text_to_use = "\n".join(wrapped_desc)
+
+            self.desc_sprite.update(new_text=desc_text_to_use, new_color_lookup=desc_color_lookup, new_alignment=self.desc_alignment)
             desc_x = screen_size[0] // 2 - self.desc_sprite.size()[0] // 2
             desc_y = y_pos
             self.desc_sprite.update(new_x=desc_x, new_y=desc_y)
@@ -462,21 +473,25 @@ class ControlsScene(OptionSelectScene):
         left_movement_controls = "WASD"
         left_action_controls = "J"
         right_movement_controls = "←↑↓→"
-        right_action_controls = "C"
+        right_action_controls = "F"
+        alt_action_controls = "Enter"
         jump = "Space"
         toggle_fullscreen = "F4"
         reset = "R"
         hard_reset = "Shift + R"
         mute_song = "M"
-        return "\n".join([
-            f"Move: [{right_movement_controls}] or [{left_movement_controls}]",
-            f"Interact: [{right_action_controls}] or [{left_action_controls}]",
-            f"Jump (alt): [{jump}]",
+        text = "\n".join([
+            f"move: [{right_movement_controls}] or [{left_movement_controls}] or [{jump}]",
+            f"interact: [{right_action_controls}] or [{left_action_controls}] or [{alt_action_controls}]",
             "",
-            f"Reset: [{reset}] and [{hard_reset}]",
-            f"Toggle Fullscreen: [{toggle_fullscreen}]",
-            f"Mute Music: [{mute_song}]"
+            f"reset: [{reset}] and [{hard_reset}]",
+            f"toggle fullscreen: [{toggle_fullscreen}]",
+            f"toggle music: [{mute_song}]"
         ])
+
+        # re-color the keys to make them stand out
+        return sprites.TextBuilder(text=text).recolor_chars_between("[", "]", colors.KEYBIND_COLOR,
+                                                                    preserve_outer_chars=False)
 
 
 class LevelSelectForEditScene(OptionSelectScene):
@@ -528,7 +543,8 @@ class LevelEditorPauseMenu(OptionSelectScene):
         :param on_quit: () -> None
         :param edit_scene_provider: new_bp -> Scene
         """
-        super().__init__(title="editing {}".format(level_bp.name()), description=description)
+        super().__init__(title="editing {}".format(level_bp.name()))
+        self.set_description(description)
         self.add_option("resume", lambda: on_cancel(level_bp), esc_option=True)
         self.add_option("edit metadata", lambda: self.jump_to_scene(
             LevelMetaDataEditScene(level_bp, lambda new_bp: self.jump_to_scene(edit_scene_provider(new_bp)))
