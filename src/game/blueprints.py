@@ -833,6 +833,9 @@ TIME_LIMIT = "time_limit"       # time limit for level
 LEVEL_ID = "level_id"           # identifier for level
 DESCRIPTION = "description"     # level flavor text
 
+SPECIAL = "special"             # list of special strings
+_ROLL_CREDITS_FLAG = "roll_credits"
+
 SONG_ID = "song_id"             # song associated with the level
 INSTRUMENTS = "instruments"     # mapping from player_id to instrument track(s) it controls
 
@@ -856,7 +859,7 @@ class LevelBlueprint:
         self._cached_entities = None      # list of (blob, spec)
 
     @staticmethod
-    def build(name, level_id, players, timelimit, desc, song_id, entity_specs, directory=None):
+    def build(name, level_id, players, timelimit, desc, song_id, entity_specs, special=(), directory=None):
         return LevelBlueprint({
             NAME: name,
             PLAYERS: [p.get_id() for p in players],
@@ -864,7 +867,8 @@ class LevelBlueprint:
             TIME_LIMIT: timelimit,
             DESCRIPTION: desc,
             SONG_ID: song_id,
-            ENTITIES: entity_specs
+            ENTITIES: entity_specs,
+            SPECIAL: [s for s in special]
         }, directory=directory)
 
     def name(self):
@@ -878,6 +882,9 @@ class LevelBlueprint:
 
     def explicit_song_id(self):
         return util.read_string(self.json_blob, SONG_ID, None)
+
+    def special_flags(self):
+        return util.read_strings(self.json_blob, SPECIAL, [])
 
     def get_instruments(self, player_ids):
         if INSTRUMENTS in self.json_blob:
@@ -907,14 +914,17 @@ class LevelBlueprint:
             json_copy[key] = edits[key]
         return LevelBlueprint(json_copy, directory=self.directory)
 
-    def get_attribute(self, attrib_id):
+    def get_attribute(self, attrib_id, default=None):
         if attrib_id in self.json_blob:
             return self.json_blob[attrib_id]
         else:
-            return None
+            return default
 
     def description(self):
         return util.read_string(self.json_blob, DESCRIPTION, "???")
+
+    def should_roll_credits_when_beat_for_first_time(self):
+        return _ROLL_CREDITS_FLAG in self.special_flags()
 
     def time_limit(self):
         """returns: level's time limit in ticks"""
@@ -1045,7 +1055,6 @@ def write_level_to_file(level, filepath):
     try:
         util.save_json_to_path(level.json_blob, filepath)
         return True
-
     except Exception:
         traceback.print_exc()
         return False

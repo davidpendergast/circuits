@@ -1035,6 +1035,10 @@ def read_string(json_blob, key, default):
     return read_safely(json_blob, key, default, mapper=lambda x: str(x))
 
 
+def read_strings(json_blob, key, default):
+    return read_list_safely(json_blob, key, default, item_mapper=lambda x: str(x))
+
+
 def read_bool(json_blob, key, default):
     return read_safely(json_blob, key, default, mapper=lambda x: bool(x))
 
@@ -1261,6 +1265,17 @@ def read_safely(json_blob, key, default, mapper=lambda x: x):
             return mapper(json_blob[key])
         except Exception:
             return default
+
+
+def read_list_safely(json_blob, key, default, item_mapper=lambda x: x, accept_non_lists=True):
+    def _mapper(value):
+        if isinstance(value, list):
+            return [item_mapper(v) for v in value]
+        elif accept_non_lists:
+            return item_mapper(value)
+        else:
+            return default
+    return read_safely(json_blob, key, default, mapper=_mapper)
 
 
 def python_version_string():

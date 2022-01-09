@@ -67,5 +67,7 @@
     ],
     "level_id": "the_rack",
     "name": "The Rack",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

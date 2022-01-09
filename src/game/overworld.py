@@ -1740,20 +1740,27 @@ class OverworldScene(scenes.Scene):
 
         def _updated_scene(new_time=None, reload_levels=False):
             old_time = state.get_completion_time(level_id)
+            roll_credits = False
             if new_time is not None and (old_time is None or new_time < old_time):
                 state.set_completed(level_id, new_time)
+                if old_time is None:
+                    roll_credits = level_bp.should_roll_credits_when_beat_for_first_time()
 
             if reload_levels:
                 state.reload_level_blueprints_from_disk()
                 state.refresh_unlocked_levels()
 
-            new_scene = OverworldScene(state)
+            new_overworld_scene = OverworldScene(state)
 
-            nodes = new_scene.state.get_nodes_with_id(level_id)
+            nodes = new_overworld_scene.state.get_nodes_with_id(level_id)
             if len(nodes) > 0:
-                new_scene.state.set_selected_node(nodes[0])
+                new_overworld_scene.state.set_selected_node(nodes[0])
 
-            return new_scene
+            if not roll_credits:
+                return new_overworld_scene
+            else:
+                print("INFO: showing credits and stats")
+                return menus.EndOfGameScene(lambda: new_overworld_scene)
 
         if level_bp is not None:
             import src.game.menus as menus

@@ -42,6 +42,12 @@ class CircuitsSceneManager(scenes.SceneManager):
         super().set_next_scene(scene, delay=delay)
 
 
+def _make_overworlds_scene():
+    # TODO may want to just move this into assets (and del from make_exe too).
+    overworlds_base_dir = util.resource_path("overworlds")
+    return overworld.OverworldScene.create_new_from_path(overworlds_base_dir)
+
+
 class MainMenuScene(scenes.Scene):
 
     def __init__(self):
@@ -61,14 +67,9 @@ class MainMenuScene(scenes.Scene):
 
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
-    def _make_overworlds_scene(self):
-        # TODO may want to just move this into assets (and del from make_exe too).
-        overworlds_base_dir = util.resource_path("overworlds")
-        return overworld.OverworldScene.create_new_from_path(overworlds_base_dir)
-
     def _do_start(self):
         do_instructions = True
-        overworld_scene = self._make_overworlds_scene()
+        overworld_scene = _make_overworlds_scene()
         if do_instructions:
             next_scene = InstructionsScene(overworld_scene, self)
             sounds.play_sound(soundref.MENU_ACCEPT)
@@ -78,8 +79,7 @@ class MainMenuScene(scenes.Scene):
         self.jump_to_scene(next_scene)
 
     def _make_stats_scene(self):
-        overworld_scene = self._make_overworlds_scene()
-        return StatsScene(overworld_scene.state, self, title="Stats")
+        return StatsScene(None, self, title="Stats")
 
     def should_do_cursor_updates(self):
         return True
@@ -557,11 +557,16 @@ class CutsceneScene(scenes.Scene):
     def get_bg_image_scale(self) -> int:
         return 1
 
+    def get_text_scale(self) -> int:
+        return 1
+
     def handle_inputs(self):
         if self.tick_count > 5 and inputs.get_instance().was_anything_pressed():
             self.jump_to_scene(self.get_next_scene())
 
     def update_sprites(self):
+        game_size = renderengine.get_instance().get_game_size()
+
         bg_img = self.get_bg_image()
         if bg_img is None:
             self._bg_sprite = None
@@ -569,7 +574,6 @@ class CutsceneScene(scenes.Scene):
             if self._bg_sprite is None:
                 self._bg_sprite = sprites.ImageSprite(bg_img, 0, 0, spriteref.UI_BG_LAYER)
 
-            game_size = renderengine.get_instance().get_game_size()
             bg_x = game_size[0] // 2 - self._bg_sprite.width() // 2
             bg_y = 0
             bg_scale = self.get_bg_image_scale()
@@ -582,21 +586,76 @@ class CutsceneScene(scenes.Scene):
             self._text_bg_sprite = None
         else:
             if self._text_sprite is None:
-                self._text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, cur_text)
+                self._text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc")
             if self._text_bg_sprite is None:
-                self._text_bg_sprite = sprites.ImageSprite(spriteref.UI_BG_LAYER, 0, 0, spriteref.UI_BG_LAYER)
+                self._text_bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER)
 
-            # TODO text
+            text_w = int(game_size[0] * 0.8)
+            text_scale = self.get_text_scale()
+            wrapped_text = sprites.TextSprite.wrap_text_to_fit(cur_text.text, text_w, scale=text_scale)
+            text_color = colors.WHITE if 0 not in cur_text.colors else cur_text.colors[0]  # TODO nuking per-char colors
+            self._text_sprite.update(new_text="\n".join(wrapped_text),
+                                     new_scale=text_scale,
+                                     new_color=text_color)
+
+            text_w = self._text_sprite.get_rect()[2]
+            text_h = self._text_sprite.get_rect()[3]
+
+            if self._bg_sprite is not None:
+                space_remaining = game_size[1] - (self._bg_sprite.y() + self._bg_sprite.height())
+                if space_remaining >= text_h:
+                    # if there's room under the image, put the text there.
+                    target_y = self._bg_sprite.y() + self._bg_sprite.height() + space_remaining // 2
+                else:
+                    target_y = int(game_size[3] * 0.9) - text_h  # otherwise just cram it in
+            else:
+                target_y = game_size[1] // 2  # center it
+
+            self._text_sprite.update(new_x=game_size[0] // 2 - text_w // 2,
+                                     new_y=target_y - text_h // 2)
 
     def all_sprites(self):
         yield self._bg_sprite
-        yield self._text_bg_sprite
-        if self._text_sprite is not None:
-            for spr in self._text_sprite:
-                yield spr
+        # yield self._text_bg_sprite
+        yield self._text_sprite
 
 
-class IntroCutsceneScene(CutsceneScene):
+class MultiPageCutsceneScene(CutsceneScene):
+
+    def __init__(self, pages, page=0, next_scene_provider=None):
+        CutsceneScene.__init__(self)
+        if page < 0 or page >= len(pages):
+            raise ValueError("page out of bounds: {}".format(page))
+        self.all_pages = pages
+        self.page = page
+        self.next_scene_provider = next_scene_provider
+
+    def get_text(self) -> sprites.TextBuilder:
+        text = self.all_pages[self.page][1]
+        if text is None:
+            return None
+        else:
+            res = sprites.TextBuilder()
+            res.add(text, color=colors.WHITE)
+            return res
+
+    def get_bg_image(self) -> sprites.ImageModel:
+        img_type = self.all_pages[self.page][0]
+        if img_type is not None:
+            return spriteref.cutscene_image(img_type)
+        else:
+            return None
+
+    def get_next_scene(self) -> scenes.Scene:
+        if self.page < len(self.all_pages) - 1:
+            return MultiPageCutsceneScene(self.all_pages, self.page + 1, next_scene_provider=self.next_scene_provider)
+        elif self.next_scene_provider is not None:
+            return self.next_scene_provider()
+        else:
+            return MainMenuScene()
+
+
+class IntroCutsceneScene(MultiPageCutsceneScene):
 
     _PAGES = [
         (spriteref.CutsceneTypes.SUN, "The sun."),
@@ -608,35 +667,27 @@ class IntroCutsceneScene(CutsceneScene):
         (spriteref.CutsceneTypes.SPLIT, "Done")
     ]
 
-    def __init__(self, page=0, next_scene_provider=None):
-        CutsceneScene.__init__(self)
-        if page < 0 or page >= len(IntroCutsceneScene._PAGES):
-            raise ValueError("page out of bounds: {}".format(page))
-        self.page = page
-        self.next_scene_provider = next_scene_provider
+    def __init__(self, next_scene_provider):
+        super().__init__(IntroCutsceneScene._PAGES, next_scene_provider=next_scene_provider)
 
-    def get_text(self) -> sprites.TextBuilder:
-        text = IntroCutsceneScene._PAGES[self.page][1]
-        if text is None:
-            return None
-        else:
-            res = sprites.TextBuilder()
-            res.add(text, color=colors.WHITE)
 
-    def get_bg_image(self) -> sprites.ImageModel:
-        img_type = IntroCutsceneScene._PAGES[self.page][0]
-        if img_type is not None:
-            return spriteref.cutscene_image(img_type)
-        else:
-            return None
+class EndOfGameScene(MultiPageCutsceneScene):
 
-    def get_next_scene(self) -> scenes.Scene:
-        if self.page < len(IntroCutsceneScene._PAGES) - 1:
-            return IntroCutsceneScene(self.page + 1, next_scene_provider=self.next_scene_provider)
-        elif self.next_scene_provider is not None:
-            return self.next_scene_provider()
-        else:
-            return MainMenuScene()
+    ENDING_TURN_ON = "turn_on"
+    ENDING_LEAVE_OFF = "leave_off"
+
+    def __init__(self, next_scene_provider, ending=None):
+        pages = [(None, "You win!")]
+        # TODO alt endings
+
+        def _get_next_scene():
+            if next_scene_provider is not None:
+                final_scene = next_scene_provider()
+            else:
+                final_scene = MainMenuScene()
+            return StatsScene(None, CreditsScene(final_scene))
+
+        super().__init__(pages, next_scene_provider=_get_next_scene)
 
 
 class _BaseGameScene(scenes.Scene):
@@ -1468,6 +1519,9 @@ class StatsScene(OptionSelectScene):
 
     def __init__(self, overworld_state: overworld.OverworldState, next_scene, title="Stats"):
         super().__init__(title=title)
+        if overworld_state is None:
+            overworld_scene = _make_overworlds_scene()  # XXX eesh
+            overworld_state = overworld_scene.state
         self.set_description(self._calc_stats_text(overworld_state), alignment=sprites.TextSprite.CENTER, wrap=False)
         self.add_option("continue", lambda: self.jump_to_scene(next_scene), esc_option=True)
 
@@ -2021,6 +2075,7 @@ class LevelEditGameScene(_BaseGameScene):
                                                self.orig_bp.description(),
                                                self.orig_bp.explicit_song_id(),
                                                self.all_spec_blobs,
+                                               self.orig_bp.special_flags(),
                                                directory=self.orig_bp.directory)
 
     def get_specs_at(self, world_xy):
