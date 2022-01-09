@@ -51,6 +51,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list = ui.OptionsList(outlined=True)
         self._options_list.add_option("start", lambda: self._do_start())
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
+        self._options_list.add_option("controls", lambda: self.jump_to_scene(ControlsScene(self)))
         self._options_list.add_option("stats", lambda: self.jump_to_scene(self._make_stats_scene()))
         self._options_list.add_option("credits", lambda: self.jump_to_scene(CreditsScene(self)))
         self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
@@ -435,6 +436,47 @@ class OptionSelectScene(scenes.Scene):
 
     def get_cursor_id_at(self, xy):
         return self.option_pages.get_cursor_id_from_self_and_kids(xy, absolute=True)
+
+
+class ControlsScene(OptionSelectScene):
+
+    def __init__(self, next_scene):
+        self.next_scene = next_scene
+
+        super().__init__(title="Controls")
+        self.set_description(self._build_desc(), alignment=sprites.TextSprite.CENTER, wrap=False)
+        # TODO add ability to edit controls in-game
+        # TODO (did anyone EVER actually do this in skeletris? not that I saw~)
+
+        self._ticks_active = 0
+
+    def update(self):
+        super().update()
+
+        if self._ticks_active > 5 and inputs.get_instance().was_pressed((const.MENU_ACCEPT, const.MENU_CANCEL)):
+            self.jump_to_scene(self.next_scene)
+
+        self._ticks_active += 1
+
+    def _build_desc(self):
+        left_movement_controls = "WASD"
+        left_action_controls = "J"
+        right_movement_controls = "←↑↓→"
+        right_action_controls = "C"
+        jump = "Space"
+        toggle_fullscreen = "F4"
+        reset = "R"
+        hard_reset = "Shift + R"
+        mute_song = "M"
+        return "\n".join([
+            f"Move: [{right_movement_controls}] or [{left_movement_controls}]",
+            f"Interact: [{right_action_controls}] or [{left_action_controls}]",
+            f"Jump (alt): [{jump}]",
+            "",
+            f"Reset: [{reset}] and [{hard_reset}]",
+            f"Toggle Fullscreen: [{toggle_fullscreen}]",
+            f"Mute Music: [{mute_song}]"
+        ])
 
 
 class LevelSelectForEditScene(OptionSelectScene):
