@@ -80,7 +80,7 @@ class InputState:
         elif isinstance(key, int):
             return key in self._held_keys
         elif isinstance(key, str):
-            binding = keybinds.get_instance().get_binding(key)
+            binding = keybinds.get_instance().get_binding_or_none(key)
             return binding is not None and binding.is_held(self)
         else:
             raise ValueError("Unrecognized key type: {}".format(key))
@@ -97,7 +97,7 @@ class InputState:
             else:
                 return self._current_time - self._held_keys[key]
         elif isinstance(key, str):
-            binding = keybinds.get_instance().get_binding(key)
+            binding = keybinds.get_instance().get_binding_or_none(key)
             return binding is not None and binding.time_held(self)
         else:
             raise ValueError("Unrecognized key type: {}".format(key))
@@ -115,7 +115,7 @@ class InputState:
             # it's a single key, hopefully
             return key in self._pressed_this_frame and self._pressed_this_frame[key] > 0
         elif isinstance(key, str):
-            binding = keybinds.get_instance().get_binding(key)
+            binding = keybinds.get_instance().get_binding_or_none(key)
             return binding is not None and binding.was_pressed(self)
         else:
             raise ValueError("Unrecognized key type: {}".format(key))

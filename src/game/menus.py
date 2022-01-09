@@ -178,13 +178,6 @@ class MainMenuScene(scenes.Scene):
 
 class InstructionsScene(scenes.Scene):
 
-    TEXT = "Objective:\n" \
-           "Guide each robot to their respective goal, indicated by a capital letter. " \
-           "To pass a level, all units must be at their goals simultaneously.\n\n" \
-           "[WASD or ←↑↓→] to move.\n" \
-           "[R] to reset the entire level.\n" \
-           "[Z] to reset the current robot."  # TODO swap in actual hotkeys
-
     def __init__(self, next_scene, prev_scene):
         super().__init__()
         self.next_scene = next_scene
@@ -193,6 +186,16 @@ class InstructionsScene(scenes.Scene):
         self._text_scale = 1
         self._text_sprite = None
         self._ticks_active = 0
+
+    def _build_text(self):
+        wasd_keys, arrow_keys, jump_alt = gs.get_instance().get_user_friendly_movement_keys()
+        reset_key, hard_reset_key, *_ = gs.get_instance().get_user_friendly_misc_keys()
+        return "Objective:\n" \
+               "Guide each robot to their respective goal, indicated by a capital letter. " \
+               "To pass a level, all units must be at their goals simultaneously.\n\n" \
+               f"[{wasd_keys}] or [{arrow_keys}] and [{jump_alt}] to move.\n" \
+               f"[{reset_key}] to reset the current unit.\n" \
+               f"[{hard_reset_key}] to reset the entire level."
 
     def update(self):
         if inputs.get_instance().was_pressed(const.MENU_CANCEL):
@@ -211,11 +214,14 @@ class InstructionsScene(scenes.Scene):
         if self._text_sprite is None:
             self._text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self._text_scale)
 
+        # XXX wrapping before removing the []s, kinda cringe~
         screen_size = renderengine.get_instance().get_game_size()
-        wrapped_text = sprites.TextSprite.wrap_text_to_fit(InstructionsScene.TEXT,
-                                                           int(screen_size[0] * 0.8),
-                                                           scale=self._text_scale)
-        self._text_sprite = self._text_sprite.update(new_text="\n".join(wrapped_text))
+        wrapped_text = "\n".join(sprites.TextSprite.wrap_text_to_fit(self._build_text(),
+                                                                     width=screen_size[0] * 0.8,
+                                                                     scale=self._text_scale))
+        colored_text = sprites.TextBuilder(text=wrapped_text).recolor_chars_between("[", "]", colors.KEYBIND_COLOR)
+
+        self._text_sprite = self._text_sprite.update(new_text=colored_text.text, new_color_lookup=colored_text.colors)
         self._text_sprite = self._text_sprite.update(new_x=screen_size[0] // 2 - self._text_sprite.size()[0] // 2,
                                                      new_y=screen_size[1] // 2 - self._text_sprite.size()[1] // 2)
 
@@ -470,28 +476,22 @@ class ControlsScene(OptionSelectScene):
         self._ticks_active += 1
 
     def _build_desc(self):
-        left_movement_controls = "WASD"
-        left_action_controls = "J"
-        right_movement_controls = "←↑↓→"
-        right_action_controls = "F"
-        alt_action_controls = "Enter"
-        jump = "Space"
-        toggle_fullscreen = "F4"
-        reset = "R"
-        hard_reset = "Shift + R"
-        mute_song = "M"
+        wasd_keys, arrow_keys, alt_jump = gs.get_instance().get_user_friendly_movement_keys()
+        right_action_key, left_action_key, alt_action_key = gs.get_instance().get_user_friendly_action_keys()
+        reset_key, hard_reset_key, pause_key, mute_key, fullscreen_key = gs.get_instance().get_user_friendly_misc_keys()
+
         text = "\n".join([
-            f"move: [{right_movement_controls}] or [{left_movement_controls}] or [{jump}]",
-            f"interact: [{right_action_controls}] or [{left_action_controls}] or [{alt_action_controls}]",
+            f"move: [{arrow_keys}] or [{wasd_keys}] or [{alt_jump}]",
+            f"interact: [{right_action_key}] or [{left_action_key}] or [{alt_action_key}]",
             "",
-            f"reset: [{reset}] and [{hard_reset}]",
-            f"toggle fullscreen: [{toggle_fullscreen}]",
-            f"toggle music: [{mute_song}]"
+            f"reset: [{reset_key}] and [{hard_reset_key}]",
+            f"toggle fullscreen: [{fullscreen_key}]",
+            f"mute music: [{mute_key}]",
+            f"pause: [{pause_key}]"
         ])
 
         # re-color the keys to make them stand out
-        return sprites.TextBuilder(text=text).recolor_chars_between("[", "]", colors.KEYBIND_COLOR,
-                                                                    preserve_outer_chars=False)
+        return sprites.TextBuilder(text=text).recolor_chars_between("[", "]", colors.KEYBIND_COLOR)
 
 
 class LevelSelectForEditScene(OptionSelectScene):
@@ -500,7 +500,7 @@ class LevelSelectForEditScene(OptionSelectScene):
         """
         :param dirpaths: map of name -> path
         """
-        OptionSelectScene.__init__(self, "create level")
+        OptionSelectScene.__init__(self, "Create Level")
 
         self.all_levels = {}
 

@@ -2,9 +2,10 @@ import traceback
 import os
 
 import configs
+import src.game.const as const
 import src.utils.util as util
 import src.game.colors as colors
-
+import src.engine.keybinds as keybinds
 
 class SaveAndLoadJsonBlob:
 
@@ -259,6 +260,37 @@ class GlobalState:
 
     def get_settings(self) -> Settings:
         return self._settings
+
+    def get_user_friendly_movement_keys(self):
+        """ returns: [wasd_keys, arrow_keys, alt_jump_key]"""
+        jump_keys = keybinds.get_instance().get_keys(const.JUMP).get_pretty_names()
+        left_keys = keybinds.get_instance().get_keys(const.MOVE_LEFT).get_pretty_names()
+        down_keys = keybinds.get_instance().get_keys(const.CROUCH).get_pretty_names()
+        right_keys = keybinds.get_instance().get_keys(const.MOVE_RIGHT).get_pretty_names()
+
+        # XXX this relies on keybindings not using modifiers or keys with long names, but whatever
+        res = ["", "", ""]
+        for i, s in enumerate(res):
+            for keyset in [jump_keys, left_keys, down_keys, right_keys]:
+                if i < len(keyset):
+                    res[i] = res[i] + keyset[i]
+        return res
+
+    def get_user_friendly_action_keys(self):
+        """ returns: right_action_key, left_action_key, alt_action_key"""
+        keys = keybinds.get_instance().get_keys(const.ACTION).get_pretty_names()
+        return util.extend_or_empty_list_to_length(keys, 3, lambda: "")
+
+    def get_user_friendly_misc_keys(self):
+        """ returns: reset_key, hard_reset_key, pause_key, mute_key, fullscreen_key"""
+        keysets = [
+            keybinds.get_instance().get_keys(const.SOFT_RESET).get_pretty_names(),
+            keybinds.get_instance().get_keys(const.RESET).get_pretty_names(),
+            keybinds.get_instance().get_keys(const.MENU_CANCEL).get_pretty_names(),
+            keybinds.get_instance().get_keys(const.TOGGLE_MUTE).get_pretty_names(),
+            ["F4"],  # XXX this one is kinda weird...
+        ]
+        return [(s[0] if len(s) > 0 else "") for s in keysets]
 
     def load_data_from_disk(self):
         self._save_data.load_from_disk(util.user_data_path(configs.save_data_path, forcelocal=configs.use_local_paths))
