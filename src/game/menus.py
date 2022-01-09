@@ -59,6 +59,9 @@ class MainMenuScene(scenes.Scene):
         self._option_pane_bg = None
         self._option_pane_border = None
 
+        self._version_text_sprite = None
+        self._version_text_bg = None
+
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
     def _make_overworlds_scene(self):
@@ -141,6 +144,21 @@ class MainMenuScene(scenes.Scene):
                                                                scale=1, color=colors.PERFECT_BLACK, depth=-10)
         self._option_pane_border.update(new_rect=options_bg_rect)
 
+        if self._version_text_sprite is None:
+            self._version_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0,
+                                                           "v" + configs.version,
+                                                           color=colors.LIGHT_GRAY,
+                                                           font_lookup=spritesheets.get_default_font(mono=False, small=True))
+        version_text_rect = self._version_text_sprite.get_rect()
+        self._version_text_sprite.update(new_x=total_size[0] - version_text_rect[2],
+                                         new_y=total_size[1] - version_text_rect[3])
+        if self._version_text_bg is None:
+            self._version_text_bg = sprites.ImageSprite(spritesheets.get_white_square_img(opacity=0.5), 0, 0, spriteref.UI_BG_LAYER)
+        self._version_text_bg = self._version_text_bg.update(new_x=version_text_rect[0],
+                                                             new_y=version_text_rect[1],
+                                                             new_color=colors.PERFECT_BLACK,
+                                                             new_raw_size=version_text_rect[2:4])
+
     def all_sprites(self):
         for spr in self._title_element.all_sprites_from_self_and_kids():
             yield spr
@@ -148,6 +166,8 @@ class MainMenuScene(scenes.Scene):
             yield spr
         yield self._option_pane_bg
         yield self._option_pane_border
+        yield self._version_text_bg
+        yield self._version_text_sprite
         for spr in self.cine_seq.all_sprites():
             yield spr
 
