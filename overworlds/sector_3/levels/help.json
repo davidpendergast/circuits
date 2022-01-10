@@ -170,7 +170,7 @@
             "dialog": "",
             "points": [],
             "subtype": "exclam",
-            "text": "Unit C can pick up Unit B\nwith [{ACTION_KEY}]",
+            "text": "Unit C can pick up Unit B\nwith [{INTERACT_KEYS}]",
             "type": "info",
             "x": 72,
             "y": 152
@@ -181,5 +181,6 @@
     ],
     "level_id": "help",
     "name": "Help",
+    "song_id": null,
     "time_limit": 3600
 }

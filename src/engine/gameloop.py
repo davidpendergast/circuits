@@ -87,7 +87,7 @@ class _GameLoop:
             keybinds.get_instance().set_global_action(pygame.K_F1, "toggle profiling", lambda: self._toggle_profiling())
 
         if configs.allow_fullscreen:
-            keybinds.get_instance().set_global_action(pygame.K_F4, "toggle fullscreen",
+            keybinds.get_instance().set_global_action(pygame.K_F4, "fullscreen",
                                                       lambda: self._request_fullscreen_toggle())
 
     def _calc_pixel_scale(self, screen_size):

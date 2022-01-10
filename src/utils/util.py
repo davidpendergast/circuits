@@ -640,11 +640,14 @@ def remove_all_from_list_in_place(l, elements):
     del l[(last_element + 1):]
 
 
-def extend_or_empty_list_to_length(l, n, creator=None):
+def extend_or_empty_list_to_length(l, n, creator=None, in_place=True):
+    if not in_place:
+        l = list(l)
     while len(l) > n:
         l.pop(-1)
     while len(l) < n:
         l.append(None if creator is None else creator())
+    return l
 
 
 def cells_between(p1, p2, include_endpoints=True):

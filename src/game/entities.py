@@ -3583,11 +3583,11 @@ class InfoEntity(Entity):
             self._text_sprite = None
             self._text_bg_sprite = None
         else:
-            text_to_use = dialog.replace_placeholders(self._text)
+            tb_to_use = dialog.replace_placeholders(self._text)
             if self._text_sprite is None:
-                self._text_sprite = sprites.TextSprite(spriteref.WORLD_UI_LAYER, 0, 0, text_to_use, depth=-9,
+                self._text_sprite = sprites.TextSprite(spriteref.WORLD_UI_LAYER, 0, 0, "asdf", depth=-9,
                                                        font_lookup=spriteref.spritesheets.get_default_font(small=True))
-            self._text_sprite.update(new_text=text_to_use)
+            self._text_sprite.update(new_text=tb_to_use.text, new_color=colors.WHITE, new_color_lookup=tb_to_use.colors)
             if len(self._points) == 0:
                 height = self._base_sprite.height() if self._base_sprite is not None else 0
                 height += self._top_sprite.height() if self._top_sprite is not None else 0

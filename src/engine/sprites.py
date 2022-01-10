@@ -1091,9 +1091,9 @@ class TextSprite(MultiSprite):
 
 class TextBuilder:
 
-    def __init__(self):
-        self.text = ""
-        self.colors = {}
+    def __init__(self, text="", colors=None):
+        self.text = text
+        self.colors = {} if colors is None else colors
 
     def add(self, new_text, color=None):
         if color is not None:
@@ -1102,8 +1102,48 @@ class TextBuilder:
         self.text += new_text
         return self
 
+    def get_color_at(self, idx):
+        if idx in self.colors:
+            return self.colors[idx]
+        else:
+            return None
+
     def addLine(self, new_text, color=None):
         return self.add(new_text + "\n", color=color)
+
+    def recolor_chars(self, chars, new_color) -> 'TextBuilder':
+        res = self.copy()
+        for i, c in enumerate(res.text):
+            if c in chars:
+                res.colors[i] = new_color
+        return res
+
+    def recolor_chars_between(self, start_chars, end_chars, new_color, preserve_outer_chars=False) -> 'TextBuilder':
+        res = TextBuilder()
+
+        recoloring = False
+        for i, c in enumerate(self.text):
+            if c in start_chars:
+                recoloring = True
+                if preserve_outer_chars:
+                    res.add(c, color=self.get_color_at(i))
+            elif c in end_chars:
+                recoloring = False
+                if preserve_outer_chars:
+                    res.add(c, color=self.get_color_at(i))
+            else:
+                res.add(c, color=new_color if recoloring else self.get_color_at(i))
+
+        return res
+
+    def copy(self) -> 'TextBuilder':
+        return TextBuilder(self.text, dict(self.colors))
+
+    def __iter__(self):
+        return self.text
+
+    def __len__(self):
+        return len(self.text)
 
     def __repr__(self):
         return "TextBuilder({}, {})".format(self.text, self.colors)

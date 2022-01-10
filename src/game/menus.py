@@ -57,6 +57,7 @@ class MainMenuScene(scenes.Scene):
         self._options_list = ui.OptionsList(outlined=True)
         self._options_list.add_option("start", lambda: self._do_start())
         self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
+        self._options_list.add_option("controls", lambda: self.jump_to_scene(ControlsScene(self)))
         self._options_list.add_option("stats", lambda: self.jump_to_scene(self._make_stats_scene()))
         self._options_list.add_option("credits", lambda: self.jump_to_scene(CreditsScene(self)))
         self._options_list.add_option("exit", lambda: gs.get_instance().quit_game_for_real(), esc_option=True)
@@ -64,6 +65,9 @@ class MainMenuScene(scenes.Scene):
 
         self._option_pane_bg = None
         self._option_pane_border = None
+
+        self._version_text_sprite = None
+        self._version_text_bg = None
 
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
@@ -141,6 +145,21 @@ class MainMenuScene(scenes.Scene):
                                                                scale=1, color=colors.PERFECT_BLACK, depth=-10)
         self._option_pane_border.update(new_rect=options_bg_rect)
 
+        if self._version_text_sprite is None:
+            self._version_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0,
+                                                           "v" + configs.version,
+                                                           color=colors.LIGHT_GRAY,
+                                                           font_lookup=spritesheets.get_default_font(mono=False, small=True))
+        version_text_rect = self._version_text_sprite.get_rect()
+        self._version_text_sprite.update(new_x=total_size[0] - version_text_rect[2],
+                                         new_y=total_size[1] - version_text_rect[3])
+        if self._version_text_bg is None:
+            self._version_text_bg = sprites.ImageSprite(spritesheets.get_white_square_img(opacity=0.5), 0, 0, spriteref.UI_BG_LAYER)
+        self._version_text_bg = self._version_text_bg.update(new_x=version_text_rect[0],
+                                                             new_y=version_text_rect[1],
+                                                             new_color=colors.PERFECT_BLACK,
+                                                             new_raw_size=version_text_rect[2:4])
+
     def all_sprites(self):
         for spr in self._title_element.all_sprites_from_self_and_kids():
             yield spr
@@ -148,6 +167,8 @@ class MainMenuScene(scenes.Scene):
             yield spr
         yield self._option_pane_bg
         yield self._option_pane_border
+        yield self._version_text_bg
+        yield self._version_text_sprite
         for spr in self.cine_seq.all_sprites():
             yield spr
 
@@ -157,13 +178,6 @@ class MainMenuScene(scenes.Scene):
 
 class InstructionsScene(scenes.Scene):
 
-    TEXT = "Objective:\n" \
-           "Guide each robot to their respective goal, indicated by a capital letter. " \
-           "To pass a level, all units must be at their goals simultaneously.\n\n" \
-           "[WASD or ←↑↓→] to move.\n" \
-           "[R] to reset the entire level.\n" \
-           "[Z] to reset the current robot."  # TODO swap in actual hotkeys
-
     def __init__(self, next_scene, prev_scene):
         super().__init__()
         self.next_scene = next_scene
@@ -172,6 +186,16 @@ class InstructionsScene(scenes.Scene):
         self._text_scale = 1
         self._text_sprite = None
         self._ticks_active = 0
+
+    def _build_text(self):
+        wasd_keys, arrow_keys, jump_alt = gs.get_instance().get_user_friendly_movement_keys()
+        reset_key, hard_reset_key, *_ = gs.get_instance().get_user_friendly_misc_keys()
+        return "Objective:\n" \
+               "Guide each robot to their respective goal, indicated by a capital letter. " \
+               "To pass a level, all units must be at their goals simultaneously.\n\n" \
+               f"[{wasd_keys}] or [{arrow_keys}] and [{jump_alt}] to move.\n" \
+               f"[{reset_key}] to reset the current unit.\n" \
+               f"[{hard_reset_key}] to reset the entire level."
 
     def update(self):
         if inputs.get_instance().was_pressed(const.MENU_CANCEL):
@@ -190,11 +214,14 @@ class InstructionsScene(scenes.Scene):
         if self._text_sprite is None:
             self._text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self._text_scale)
 
+        # XXX wrapping before removing the []s, kinda cringe~
         screen_size = renderengine.get_instance().get_game_size()
-        wrapped_text = sprites.TextSprite.wrap_text_to_fit(InstructionsScene.TEXT,
-                                                           int(screen_size[0] * 0.8),
-                                                           scale=self._text_scale)
-        self._text_sprite = self._text_sprite.update(new_text="\n".join(wrapped_text))
+        wrapped_text = "\n".join(sprites.TextSprite.wrap_text_to_fit(self._build_text(),
+                                                                     width=screen_size[0] * 0.8,
+                                                                     scale=self._text_scale))
+        colored_text = sprites.TextBuilder(text=wrapped_text).recolor_chars_between("[", "]", colors.KEYBIND_COLOR)
+
+        self._text_sprite = self._text_sprite.update(new_text=colored_text.text, new_color_lookup=colored_text.colors)
         self._text_sprite = self._text_sprite.update(new_x=screen_size[0] // 2 - self._text_sprite.size()[0] // 2,
                                                      new_y=screen_size[1] // 2 - self._text_sprite.size()[1] // 2)
 
@@ -342,13 +369,13 @@ class CreditsScene(scenes.Scene):
 
 class OptionSelectScene(scenes.Scene):
 
-    def __init__(self, title=None, description=None, opts_per_page=6):
+    def __init__(self, title=None, opts_per_page=6):
         scenes.Scene.__init__(self)
         self.title_text = title
         self.title_sprite = None
         self.title_scale = 2
 
-        self.desc_text = description
+        self.desc_text = None
         self.desc_sprite = None
         self.desc_scale = 1
         self.desc_horz_inset = 32
@@ -365,6 +392,9 @@ class OptionSelectScene(scenes.Scene):
         self.option_pages.add_option(text, do_action, is_enabled=is_enabled, esc_option=esc_option)
 
     def set_description(self, text, scale=1, alignment=sprites.TextSprite.LEFT, wrap=True):
+        """Sets the description text for the menu.
+        text: str or TextBuilder, or None to disable it.
+        """
         self.desc_text = text
         self.desc_scale = scale
         self.desc_alignment = alignment
@@ -384,14 +414,22 @@ class OptionSelectScene(scenes.Scene):
         else:
             if self.desc_sprite is None:
                 self.desc_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self.desc_scale)
-            if self.desc_wrap:
-                wrapped_desc = sprites.TextSprite.wrap_text_to_fit(self.desc_text,
-                                                                   screen_size[0] - self.desc_horz_inset * 2,
-                                                                   scale=self.desc_scale)
-                desc_text_to_use = "\n".join(wrapped_desc)
+
+            if isinstance(self.desc_text, sprites.TextBuilder):
+                desc_text_to_use = self.desc_text.text
+                desc_color_lookup = self.desc_text.colors
             else:
                 desc_text_to_use = self.desc_text
-            self.desc_sprite.update(new_text=desc_text_to_use, new_alignment=self.desc_alignment)
+                desc_color_lookup = None
+
+            if self.desc_wrap:
+                wrapped_desc = sprites.TextSprite.wrap_text_to_fit(desc_text_to_use,
+                                                                   screen_size[0] - self.desc_horz_inset * 2,
+                                                                   scale=self.desc_scale)
+                desc_color_lookup = None  # TODO impl text wrapping with per-char colors
+                desc_text_to_use = "\n".join(wrapped_desc)
+
+            self.desc_sprite.update(new_text=desc_text_to_use, new_color_lookup=desc_color_lookup, new_alignment=self.desc_alignment)
             desc_x = screen_size[0] // 2 - self.desc_sprite.size()[0] // 2
             desc_y = y_pos
             self.desc_sprite.update(new_x=desc_x, new_y=desc_y)
@@ -417,13 +455,52 @@ class OptionSelectScene(scenes.Scene):
         return self.option_pages.get_cursor_id_from_self_and_kids(xy, absolute=True)
 
 
+class ControlsScene(OptionSelectScene):
+
+    def __init__(self, next_scene):
+        self.next_scene = next_scene
+
+        super().__init__(title="Controls")
+        self.set_description(self._build_desc(), alignment=sprites.TextSprite.CENTER, wrap=False)
+        # TODO add ability to edit controls in-game
+        # TODO (did anyone EVER actually do this in skeletris? not that I saw~)
+
+        self._ticks_active = 0
+
+    def update(self):
+        super().update()
+
+        if self._ticks_active > 5 and inputs.get_instance().was_pressed((const.MENU_ACCEPT, const.MENU_CANCEL)):
+            self.jump_to_scene(self.next_scene)
+
+        self._ticks_active += 1
+
+    def _build_desc(self):
+        wasd_keys, arrow_keys, alt_jump = gs.get_instance().get_user_friendly_movement_keys()
+        right_action_key, left_action_key, alt_action_key = gs.get_instance().get_user_friendly_action_keys()
+        reset_key, hard_reset_key, pause_key, mute_key, fullscreen_key = gs.get_instance().get_user_friendly_misc_keys()
+
+        text = "\n".join([
+            f"move: [{arrow_keys}] or [{wasd_keys}] or [{alt_jump}]",
+            f"interact: [{right_action_key}] or [{left_action_key}] or [{alt_action_key}]",
+            "",
+            f"reset: [{reset_key}] and [{hard_reset_key}]",
+            f"toggle fullscreen: [{fullscreen_key}]",
+            f"mute music: [{mute_key}]",
+            f"pause: [{pause_key}]"
+        ])
+
+        # re-color the keys to make them stand out
+        return sprites.TextBuilder(text=text).recolor_chars_between("[", "]", colors.KEYBIND_COLOR)
+
+
 class LevelSelectForEditScene(OptionSelectScene):
 
     def __init__(self, dirpaths):
         """
         :param dirpaths: map of name -> path
         """
-        OptionSelectScene.__init__(self, "create level")
+        OptionSelectScene.__init__(self, "Create Level")
 
         self.all_levels = {}
 
@@ -466,7 +543,8 @@ class LevelEditorPauseMenu(OptionSelectScene):
         :param on_quit: () -> None
         :param edit_scene_provider: new_bp -> Scene
         """
-        super().__init__(title="editing {}".format(level_bp.name()), description=description)
+        super().__init__(title="editing {}".format(level_bp.name()))
+        self.set_description(description)
         self.add_option("resume", lambda: on_cancel(level_bp), esc_option=True)
         self.add_option("edit metadata", lambda: self.jump_to_scene(
             LevelMetaDataEditScene(level_bp, lambda new_bp: self.jump_to_scene(edit_scene_provider(new_bp)))

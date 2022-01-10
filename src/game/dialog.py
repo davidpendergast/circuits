@@ -298,16 +298,56 @@ def get_dialog(dialog_id, player_type, other_type):
 
 
 REPLACEMENTS = {
-    "{INTERACT_KEY}": lambda: keybinds.get_instance().get_keys(const.MENU_ACCEPT).to_pretty_string_for_display(),
-    "{INTERACT_KEYS}": lambda: keybinds.get_instance().get_keys(const.MENU_ACCEPT).to_pretty_string_for_display(first_only=False),
-    "{ACTION_KEY}": lambda: keybinds.get_instance().get_keys(const.ACTION).to_pretty_string_for_display(),
-    "{ACTION_KEYS}": lambda: keybinds.get_instance().get_keys(const.ACTION).to_pretty_string_for_display(first_only=False),
-    "{JUMP_KEY}": lambda: keybinds.get_instance().get_keys(const.JUMP).to_pretty_string_for_display()
+    "{INTERACT_KEYS}": lambda: keybinds.get_instance().get_keys(const.ACTION).get_pretty_names(),
+    "{JUMP_KEYS}": lambda: keybinds.get_instance().get_keys(const.JUMP).get_pretty_names()
 }
 
 
-def replace_placeholders(raw_text):
-    text = raw_text
-    for r in REPLACEMENTS:
-        text = text.replace(r, REPLACEMENTS[r]())
-    return text
+def replace_placeholders(raw_text: str) -> sprites.TextBuilder:
+    raw_colors = [None] * len(raw_text)
+
+    while "{" in raw_text and "}" in raw_text:
+        start_idx = raw_text.index("{")
+        end_idx = raw_text.index("}") + 1
+        raw_text, raw_colors = _handle_replacement(start_idx, end_idx, raw_text, raw_colors)
+
+    if len(raw_text) != len(raw_colors):
+        raise ValueError(f"bad raw_text={raw_text}, raw_colors={raw_colors} were computed")
+
+    tb = sprites.TextBuilder()
+    for idx, c in enumerate(raw_text):
+        tb.add(c, raw_colors[idx])
+
+    return tb
+
+
+def _handle_replacement(start, end, raw_text, raw_colors):
+    if end <= start:
+        # just slice off the unmatched closing brace I guess
+        return raw_text[0: end] + raw_text[end + 1:], raw_colors[0: end] + raw_colors[end + 1:]
+    else:
+        to_replace = raw_text[start: end]
+        if to_replace not in REPLACEMENTS:
+            # unrecognized replacement, just remove it
+            new_text = "ERROR"
+            new_colors = [colors.PERFECT_RED] * len(new_text)
+        elif "KEYS" in to_replace:
+            mapped_keys = REPLACEMENTS[to_replace]()
+            if len(mapped_keys) == 0:
+                new_text = " "
+                new_colors = [None]
+            else:
+                tb = sprites.TextBuilder()
+                for i, k in enumerate(mapped_keys):
+                    if i > 0:
+                        if i == len(mapped_keys) - 1:
+                            tb.add(", or ")
+                        else:
+                            tb.add(", ")
+                    tb.add(k, color=colors.KEYBIND_COLOR)
+                new_text = tb.text
+                new_colors = [tb.get_color_at(i) for i in range(len(tb.text))]
+        else:
+            raise NotImplementedError()
+
+    return raw_text[0: start] + new_text + raw_text[end:], raw_colors[0: start] + new_colors + raw_colors[end:]

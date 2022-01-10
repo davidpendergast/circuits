@@ -33,7 +33,7 @@ class KeyBindings:
             keylist = util.listify(binding)
             self._binds[action_code] = Binding(keylist)
 
-    def get_binding(self, action_code):
+    def get_binding_or_none(self, action_code) -> 'Binding':
         if action_code in self._binds:
             return self._binds[action_code]
         else:
@@ -61,7 +61,7 @@ class KeyBindings:
                 print("ERROR: global key action \"{}\" failed with exception".format(name))
                 traceback.print_exc()
 
-    def get_keys(self, action_code):
+    def get_keys(self, action_code) -> 'Binding':
         if action_code not in self._binds:
             raise ValueError("unrecognized action code: {}".format(action_code))
         else:
@@ -109,7 +109,7 @@ for name in dir(pygame):
             try:
                 keyname = name[2:]  # slice off the K_
                 if len(keyname) > 1:
-                    keyname = keyname.lower()
+                    keyname = keyname[0].upper() + keyname[1:].lower()
                 else:
                     keyname = keyname.upper()
 
@@ -123,29 +123,29 @@ for name in dir(pygame):
         if isinstance(keycode, int):
             keyname = None
             if "CTRL" in name:
-                keyname = "ctrl"
+                keyname = "Ctrl"
             elif "SHIFT" in name:
-                keyname = "shift"
+                keyname = "Shift"
             elif "ALT" in name:
-                keyname = "alt"
+                keyname = "Alt"
             elif "CAPS" in name:
-                keyname = "caps"
+                keyname = "Caps"
             elif "META" in name:
-                keyname = "meta"
+                keyname = "Meta"
 
             if keyname is not None:
                 _KEYCODE_TO_KEYNAME[keycode] = keyname
                 _KEYNAME_TO_KEYCODE[keyname] = keycode
 
 
-def get_pretty_key_name(keycode):
+def get_pretty_key_name(keycode) -> str:
     if keycode in _KEYCODE_TO_KEYNAME:
         return _KEYCODE_TO_KEYNAME[keycode]
     else:
         return None
 
 
-def get_keycode(keyname):
+def get_keycode(keyname) -> str:
     if keyname in _KEYNAME_TO_KEYCODE:
         return _KEYNAME_TO_KEYCODE[keyname]
     else:
@@ -211,7 +211,11 @@ class Binding:
                     return min_time
         return min_time
 
-    def get_pretty_names(self, ignore_mods=False):
+    _ARROW_MAPPING = {
+        "up": "↑", "left": "←", "down": "↓", "right": "→"
+    }
+
+    def get_pretty_names(self, ignore_mods=False, convert_arrows=True):
         res = []
         for code in self.keycode:
             name = ""
@@ -222,12 +226,14 @@ class Binding:
                         name += "{} + ".format(modname)
             keyname = get_pretty_key_name(code)
             if keyname is not None:
+                if convert_arrows and keyname.lower() in Binding._ARROW_MAPPING:
+                    keyname = Binding._ARROW_MAPPING[keyname.lower()]
                 name += keyname
                 res.append(name)
         return res
 
-    def to_pretty_string_for_display(self, first_only=True, ignore_mods=False, delim=", ", final_delim=", or "):
-        all_keys = self.get_pretty_names(ignore_mods)
+    def to_pretty_string_for_display(self, first_only=True, ignore_mods=False, delim=", ", final_delim=", or ", convert_arrows=True):
+        all_keys = self.get_pretty_names(ignore_mods=ignore_mods, convert_arrows=convert_arrows)
         if len(all_keys) == 0:
             return "?"
         else:

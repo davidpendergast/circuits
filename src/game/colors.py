@@ -84,9 +84,8 @@ DARK_TAN = to_float(131, 108, 67)
 PURPLE = to_float(228, 127, 253)
 DARK_PURPLE = to_float(94, 56, 94)
 
-# PURPLE = to_float(99, 228, 253)
-# DARK_PURPLE = to_float(94, 56, 94)
-
+KEYBIND_COLOR = PERFECT_YELLOW
 EDITOR_SELECTION_COLOR = PERFECT_RED
+
 
 
