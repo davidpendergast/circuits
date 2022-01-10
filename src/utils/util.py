@@ -943,10 +943,11 @@ def user_data_path(relative_path, forcelocal=False, local_subdir="userdata"):
         if _NAME_OF_GAME_FOR_USERDATA is None or _AUTHOR_FOR_USERDATA is None:
             raise ValueError("Must call set_info_for_user_data_path(...) prior to user_data_path()")
         try:
-            return appdirs.user_data_dir(appname=_NAME_OF_GAME_FOR_USERDATA,
-                                         appauthor=_AUTHOR_FOR_USERDATA)
+            directory = appdirs.user_data_dir(appname=_NAME_OF_GAME_FOR_USERDATA,
+                                              appauthor=_AUTHOR_FOR_USERDATA)
+            return os.path.normpath(os.path.join(directory, relative_path))
         except Exception:
-            print("ERROR: failed to get user's AppData directory")
+            print("ERROR: failed to get user's AppData directory...")
             traceback.print_exc()
             return None
 

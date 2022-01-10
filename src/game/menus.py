@@ -56,7 +56,8 @@ class MainMenuScene(scenes.Scene):
 
         self._options_list = ui.OptionsList(outlined=True)
         self._options_list.add_option("start", lambda: self._do_start())
-        self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
+        if configs.is_dev:  # TODO user-facing level editor
+            self._options_list.add_option("create", lambda: self.jump_to_scene(LevelSelectForEditScene(configs.level_edit_dirs)))
         self._options_list.add_option("controls", lambda: self.jump_to_scene(ControlsScene(self)))
         self._options_list.add_option("stats", lambda: self.jump_to_scene(self._make_stats_scene()))
         self._options_list.add_option("credits", lambda: self.jump_to_scene(CreditsScene(self)))
@@ -339,6 +340,8 @@ class CreditsScene(scenes.Scene):
         enter_keys = keybinds.get_instance().get_keys(const.MENU_ACCEPT)
         if self.tick_count > 5 and inputs.get_instance().was_pressed(enter_keys):
             self.scroll_speed_idx = (self.scroll_speed_idx + 1) % len(self.scroll_speeds)
+        elif inputs.get_instance().was_pressed(const.MENU_CANCEL) and isinstance(self.next_scene, MainMenuScene):
+            self.jump_to_scene(self.next_scene)
 
         self.scroll_y_pos += self._scroll_speed()
 
