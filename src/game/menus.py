@@ -1572,8 +1572,9 @@ class StatsScene(OptionSelectScene):
             f"levels completed: {completed_str}",
             None if best_time_str is None else "sum of best times: {best_time_str}",
             "",
+            f"deaths: {gs.get_instance().get_save_data().get_death_count()}",
             f"total playtime: {util.ticks_to_time_string(total_playtime, show_minutes_if_zero=True)}",
-            f"active playtime: {util.ticks_to_time_string(in_game_playtime, show_minutes_if_zero=True)}"
+            f"active playtime: {util.ticks_to_time_string(in_game_playtime, show_minutes_if_zero=True)}",
         ] if s is not None)
 
 

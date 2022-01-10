@@ -7,6 +7,7 @@ import src.utils.util as util
 import src.game.colors as colors
 import src.engine.keybinds as keybinds
 
+
 class SaveAndLoadJsonBlob:
 
     def __init__(self):
@@ -77,11 +78,13 @@ class SaveData(SaveAndLoadJsonBlob):
     COMPLETED_LEVELS = "completed_levels"
     IN_GAME_PLAYTIME = "in_game_playtime"  # number of ticks in a RealGameScene.
     TOTAL_PLAYTIME = "total_playtime"      # number of ticks spent with the game open
+    DEATH_COUNT = "death_count"
 
     _DEFAULTS = {
         COMPLETED_LEVELS: {},
         IN_GAME_PLAYTIME: 0,
-        TOTAL_PLAYTIME: 0
+        TOTAL_PLAYTIME: 0,
+        DEATH_COUNT: 0
     }
 
     def __init__(self):
@@ -96,7 +99,7 @@ class SaveData(SaveAndLoadJsonBlob):
     def clean(self, attrib, new_val):
         if attrib == SaveData.COMPLETED_LEVELS:
             return {k: new_val[k] for k in new_val if (new_val[k] is not None and new_val[k] >= 0)}
-        elif attrib in (SaveData.IN_GAME_PLAYTIME, SaveData.TOTAL_PLAYTIME):
+        elif attrib in (SaveData.IN_GAME_PLAYTIME, SaveData.TOTAL_PLAYTIME, SaveData.DEATH_COUNT):
             return int(new_val)
         else:
             raise ValueError("unrecognized attribute: {}".format(attrib))
@@ -130,6 +133,9 @@ class SaveData(SaveAndLoadJsonBlob):
 
     def get_total_in_game_playtime(self):
         return self.get(SaveData.IN_GAME_PLAYTIME)
+
+    def get_death_count(self):
+        return self.get(SaveData.DEATH_COUNT)
 
 
 class Settings(SaveAndLoadJsonBlob):
@@ -205,6 +211,9 @@ class GlobalState:
 
     def inc_in_game_playtime(self):
         self._save_data.set(SaveData.IN_GAME_PLAYTIME, self._save_data.get_total_in_game_playtime() + 1)
+
+    def inc_death_count(self):
+        self._save_data.set(SaveData.DEATH_COUNT, self._save_data.get_death_count() + 1)
 
     def update(self):
         self._update_fullscreen_fade()

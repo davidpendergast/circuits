@@ -2651,6 +2651,9 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
         self.set_death_reason(DeathReasons.OUT_OF_BOUNDS)
 
     def set_death_reason(self, reason, silent=False):
+        if self._death_reason is None:
+            gs.get_instance().inc_death_count()
+
         self._death_reason = reason
         if not silent and reason is not None:
             self.play_sound(reason.get_sound())
