@@ -7,55 +7,103 @@ import shutil
 import stat
 import struct
 
+####   OPTIONS   ####
+
 NAME_OF_GAME = "RESYNC"
 NAME_OF_GAME_SIMPLE = "resync"
 
-_WINDOWS = "Windows"
-_LINUX = "Linux"
-_MAC = "Darwin"
+SPLASH_IMAGE_PATH = None  # "assets/splash.png"
+ICON_PATH_ICNS = "assets/icons/icon.icns"
+ICON_PATH_ICO = "assets/icons/icon.ico"
 
+ONEFILE_MODE = True
+SHOW_CONSOLE = False
+SHOW_TRACEBACK_ON_CRASH = True
 
-ICON_PATH_KEY = "~ICON_PATH~"
+DATA_DIRS_TO_PRESERVE = ["assets", "overworlds"]
+ENTRY_POINT_FILE = "entry_point.py"
 
+#### END OPTIONS ####
 
 SPEC_CONTENTS = f"""
 # -*- mode: python -*-
 # WARNING: This file is auto-generated (see make_exe.py)
 
-block_cipher = None
-
-a = Analysis(['entry_point.py'],
+a = Analysis(['{ENTRY_POINT_FILE}'],
              pathex=[''],
              binaries=[],
-             datas=[('assets', 'assets'), ('overworlds', 'overworlds')],
+             datas=[{", ".join(f"('{name}', '{name}')" for name in DATA_DIRS_TO_PRESERVE)}],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
-             cipher=block_cipher)
+             cipher=None)
              
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+"""
 
+# PREVENT YOUR DEATH. GO NO FURTHER
+# There's nothing in this file worth dying for.
+# Do not go beyond this point
+
+if SPLASH_IMAGE_PATH is None:
+    if ONEFILE_MODE:
+        SPEC_CONTENTS += f"""
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
           a.datas,
+          [],  # no idea
           name='{NAME_OF_GAME}',
           debug=False,
           strip=False,
           upx=True,
-          runtime_tmpdir=None,
-          console=True,
-          icon='{ICON_PATH_KEY}')
-          
-app = BUNDLE(exe,
+          console={SHOW_CONSOLE},
+          icon=~ICON_PATH~,
+          disable_windowed_traceback={not SHOW_TRACEBACK_ON_CRASH})
+
+# for mac builds, which I guess requires onefile mode?
+app = BUNDLE(exe,  
          name='{NAME_OF_GAME}.app',
-         icon='{ICON_PATH_KEY}',
+         icon=~ICON_PATH~,
          bundle_identifier=None)
 """
+    else:
+        SPEC_CONTENTS += f"""
+exe = EXE(pyz,
+          a.scripts,
+          [],  # no idea what this is
+          exclude_binaries=True,
+          name='{NAME_OF_GAME}',
+          debug=False,
+          strip=False,
+          upx=True,
+          console={SHOW_CONSOLE},
+          icon=~ICON_PATH~, 
+          bootloader_ignore_signals=False, 
+          disable_windowed_traceback={not SHOW_TRACEBACK_ON_CRASH})
+
+# onedir stuff
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    name='{NAME_OF_GAME}',
+    strip=False,
+    upx=True
+)
+"""
+else:
+    # splash stuff aka pain
+    pass
+
+_WINDOWS = "Windows"
+_LINUX = "Linux"
+_MAC = "Darwin"
 
 
 def _ask_yes_or_no_question(question):
@@ -77,9 +125,9 @@ def _calc_bit_count_str():
 
 def _get_icon_path(os_version_str):
     if os_version_str == _MAC:
-        return str(pathlib.Path('assets/icons/icon.icns'))
+        return "None" if ICON_PATH_ICNS is None else os.path.normpath(ICON_PATH_ICNS)
     else:
-        return str(pathlib.Path('assets/icons/icon.ico'))
+        return "None" if ICON_PATH_ICO is None else os.path.normpath(ICON_PATH_ICO)
 
 
 def do_it():
@@ -100,7 +148,7 @@ def do_it():
     icon_path = _get_icon_path(os_system_str)
 
     with open(spec_filename, "w") as f:
-        f.write(SPEC_CONTENTS.replace(ICON_PATH_KEY, icon_path))
+        f.write(SPEC_CONTENTS.replace("~ICON_PATH~", f"'{icon_path}'" if icon_path != "None" else "None"))
     dist_dir = pathlib.Path("dist/{}_{}_{}".format(
         NAME_OF_GAME_SIMPLE,
         pretty_os_str.lower(),
