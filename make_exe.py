@@ -1,38 +1,50 @@
 import os
 import platform
 import pathlib
-import datetime
 import tempfile
 import shutil
 import stat
 import struct
+
 
 ####   OPTIONS   ####
 
 NAME_OF_GAME = "RESYNC"
 NAME_OF_GAME_SIMPLE = "resync"
 
-SPLASH_IMAGE_PATH = None  # "assets/splash.png"
-ICON_PATH_ICNS = "assets/icons/icon.icns"
 ICON_PATH_ICO = "assets/icons/icon.ico"
+ICON_PATH_ICNS = "assets/icons/icon.icns"  # mac-style icons
+
+SPLASH_IMAGE_PATH = "assets/splash.png"
 
 ONEFILE_MODE = True
 SHOW_CONSOLE = False
+
 SHOW_TRACEBACK_ON_CRASH = True
 
-DATA_DIRS_TO_PRESERVE = ["assets", "overworlds"]
 ENTRY_POINT_FILE = "entry_point.py"
+DATA_TO_PRESERVE = [
+    ("assets", "assets"),
+    ("overworlds", "overworlds")
+]
 
 #### END OPTIONS ####
 
+if not ONEFILE_MODE:
+    # XXX using a splash image with ONEFILE_MODE = False seems to
+    # cause the exe to create a non-focused pygame window (that
+    # lands behind the file browser). So I'm disabling this for now.
+    # You don't really need a splash image with non-onefile anyways.
+    SPLASH_IMAGE_PATH = None
+
 SPEC_CONTENTS = f"""
-# -*- mode: python -*-
+# -*- mode: python ; coding: utf-8 -*-
 # WARNING: This file is auto-generated (see make_exe.py)
 
 a = Analysis(['{ENTRY_POINT_FILE}'],
              pathex=[''],
              binaries=[],
-             datas=[{", ".join(f"('{name}', '{name}')" for name in DATA_DIRS_TO_PRESERVE)}],
+             datas=[{", ".join(f"('{src}', '{dest}')" for (src, dest) in DATA_TO_PRESERVE)}],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -44,26 +56,30 @@ a = Analysis(['{ENTRY_POINT_FILE}'],
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 """
 
+STD_EXE_OPTS = f"""
+          name='{NAME_OF_GAME}',
+          console={SHOW_CONSOLE},
+          icon=~ICON_PATH~,
+          debug=False,
+          strip=False,
+          upx=True,
+          disable_windowed_traceback={not SHOW_TRACEBACK_ON_CRASH},
+          bootloader_ignore_signals=False
+"""
+
 # PREVENT YOUR DEATH. GO NO FURTHER
 # There's nothing in this file worth dying for.
 # Do not go beyond this point
 
-if SPLASH_IMAGE_PATH is None:
-    if ONEFILE_MODE:
-        SPEC_CONTENTS += f"""
+if ONEFILE_MODE and SPLASH_IMAGE_PATH is None:
+    SPEC_CONTENTS += f"""
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
           a.datas,
           [],  # no idea
-          name='{NAME_OF_GAME}',
-          debug=False,
-          strip=False,
-          upx=True,
-          console={SHOW_CONSOLE},
-          icon=~ICON_PATH~,
-          disable_windowed_traceback={not SHOW_TRACEBACK_ON_CRASH})
+{STD_EXE_OPTS})
 
 # for mac builds, which I guess requires onefile mode?
 app = BUNDLE(exe,  
@@ -71,22 +87,14 @@ app = BUNDLE(exe,
          icon=~ICON_PATH~,
          bundle_identifier=None)
 """
-    else:
-        SPEC_CONTENTS += f"""
+elif not ONEFILE_MODE and SPLASH_IMAGE_PATH is None:
+    SPEC_CONTENTS += f"""
 exe = EXE(pyz,
           a.scripts,
           [],  # no idea what this is
           exclude_binaries=True,
-          name='{NAME_OF_GAME}',
-          debug=False,
-          strip=False,
-          upx=True,
-          console={SHOW_CONSOLE},
-          icon=~ICON_PATH~, 
-          bootloader_ignore_signals=False, 
-          disable_windowed_traceback={not SHOW_TRACEBACK_ON_CRASH})
+{STD_EXE_OPTS})
 
-# onedir stuff
 coll = COLLECT(
     exe,
     a.binaries,
@@ -97,9 +105,54 @@ coll = COLLECT(
     upx=True
 )
 """
-else:
-    # splash stuff aka pain
-    pass
+else:  # splash mode
+    SPEC_CONTENTS += f"""
+splash = Splash('{SPLASH_IMAGE_PATH}',
+    binaries=a.binaries,
+    datas=a.datas,
+    text_pos=None,
+    text_size=12,
+    minify_script=True)
+"""
+    if ONEFILE_MODE:
+        SPEC_CONTENTS += f"""
+exe = EXE(pyz,
+          a.scripts,
+          a.binaries,
+          a.zipfiles,
+          a.datas, 
+          splash, 
+          splash.binaries,
+          [],
+{STD_EXE_OPTS})
+
+# I assume this is what mac + splash should look like, but I haven't tested it
+app = BUNDLE(exe,  
+         name='{NAME_OF_GAME}.app',
+         icon=~ICON_PATH~,
+         bundle_identifier=None)
+"""
+    else:
+        SPEC_CONTENTS += f"""
+exe = EXE(pyz,
+          a.scripts,
+          splash,
+          [],  # no idea what this is
+          exclude_binaries=True,
+{STD_EXE_OPTS})
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    splash.binaries,
+    name='{NAME_OF_GAME}',
+    strip=False,
+    upx=True
+)
+"""
+
 
 _WINDOWS = "Windows"
 _LINUX = "Linux"
@@ -125,9 +178,9 @@ def _calc_bit_count_str():
 
 def _get_icon_path(os_version_str):
     if os_version_str == _MAC:
-        return "None" if ICON_PATH_ICNS is None else os.path.normpath(ICON_PATH_ICNS)
+        return os.path.normpath(ICON_PATH_ICNS) if ICON_PATH_ICNS else None
     else:
-        return "None" if ICON_PATH_ICO is None else os.path.normpath(ICON_PATH_ICO)
+        return os.path.normpath(ICON_PATH_ICO) if ICON_PATH_ICO else None
 
 
 def do_it():
@@ -146,9 +199,9 @@ def do_it():
     print("INFO: creating spec file {}".format(spec_filename))
 
     icon_path = _get_icon_path(os_system_str)
-
     with open(spec_filename, "w") as f:
-        f.write(SPEC_CONTENTS.replace("~ICON_PATH~", f"'{icon_path}'" if icon_path != "None" else "None"))
+        f.write(SPEC_CONTENTS.replace("~ICON_PATH~", f"'{icon_path}'" if icon_path else "None"))
+
     dist_dir = pathlib.Path("dist/{}_{}_{}".format(
         NAME_OF_GAME_SIMPLE,
         pretty_os_str.lower(),

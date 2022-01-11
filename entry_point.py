@@ -22,10 +22,10 @@ def _get_crash_report_file_name():
 
 def _dismiss_splash_screen():
     try:
-        import pyi_splash  # special pyinstaller thing, import will not resolve in dev
+        import pyi_splash  # special pyinstaller thing - import will not resolve in dev
         pyi_splash.close()
     except Exception:
-        pass  # this is expected to throw an exception in non-exe launch contexts.
+        pass  # this is expected to throw an exception in non-splash launch contexts.
 
 
 if __name__ == "__main__":
