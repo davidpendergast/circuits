@@ -85,10 +85,10 @@ features:
 	
 	- all in all, didn't look very fun.
 	action items:
-		[ ] can we make the early levels less painful?
-			[ ] maybe remove 1-2 pitfalls from boulders?
-			[ ] make maze easier (less platforming & microspacing)
-			[ ] make stairway more forgiving (guard-rails around switches)
+		[x] can we make the early levels less painful?
+			[x] maybe remove 1-2 pitfalls from boulders?
+			[x] make maze easier (less platforming & microspacing)
+			[x] make stairway more forgiving (guard-rails around switches)
 		[/] fast forward button?
 		although tbh I don't really like the gameplay loop this creates.
 		I feel like you'd FFW, go too far, reset, repeat a lot
