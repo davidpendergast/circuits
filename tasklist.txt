@@ -59,6 +59,17 @@ features:
  [x] clipping boulders while jumping over them causes them to fall
  - fast fwd button
     - would be nice, not sure how technically feasible this would be though
+    
+ tester 2 (C):
+    - checkin out menu, reading controls
+    - instantly solved first level...?
+        - levels 1-3 were re-recorded, no biggie
+    - game seems to not be running at max FPS MMM
+    - lept into spikes on level 5 (stairway), trying to go for A platform as B
+        - but learned from that (so probably ok)
+        - still would be good to correlated characters to letters better
+    - struggled a bit with level 5 (stairway), but re-recorded it with B a few times and got it down
+        - struggled to move B onto the switches precisely (may want to fix that)
 
  tester 3 (P):
   verbal feedback:
