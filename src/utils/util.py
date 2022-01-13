@@ -943,10 +943,11 @@ def user_data_path(relative_path, forcelocal=False, local_subdir="userdata"):
         if _NAME_OF_GAME_FOR_USERDATA is None or _AUTHOR_FOR_USERDATA is None:
             raise ValueError("Must call set_info_for_user_data_path(...) prior to user_data_path()")
         try:
-            return appdirs.user_data_dir(appname=_NAME_OF_GAME_FOR_USERDATA,
-                                         appauthor=_AUTHOR_FOR_USERDATA)
+            directory = appdirs.user_data_dir(appname=_NAME_OF_GAME_FOR_USERDATA,
+                                              appauthor=_AUTHOR_FOR_USERDATA)
+            return os.path.normpath(os.path.join(directory, relative_path))
         except Exception:
-            print("ERROR: failed to get user's AppData directory")
+            print("ERROR: failed to get user's AppData directory...")
             traceback.print_exc()
             return None
 
@@ -1036,6 +1037,10 @@ def read_int(json_blob, key, default):
 
 def read_string(json_blob, key, default):
     return read_safely(json_blob, key, default, mapper=lambda x: str(x))
+
+
+def read_strings(json_blob, key, default):
+    return read_list_safely(json_blob, key, default, item_mapper=lambda x: str(x))
 
 
 def read_bool(json_blob, key, default):
@@ -1264,6 +1269,17 @@ def read_safely(json_blob, key, default, mapper=lambda x: x):
             return mapper(json_blob[key])
         except Exception:
             return default
+
+
+def read_list_safely(json_blob, key, default, item_mapper=lambda x: x, accept_non_lists=True):
+    def _mapper(value):
+        if isinstance(value, list):
+            return [item_mapper(v) for v in value]
+        elif accept_non_lists:
+            return item_mapper(value)
+        else:
+            return default
+    return read_safely(json_blob, key, default, mapper=_mapper)
 
 
 def python_version_string():

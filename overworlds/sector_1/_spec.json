@@ -23,8 +23,8 @@
 "lvl_5": "stairway",
 "lvl_6": "maze",
 "lvl_7": "boulders",
-"lvl_8": "diversion",
-"lvl_9": "sleepwalk",
+"lvl_8": "desync",
+"lvl_9": "resync",
 "lvl_c1": "c_introduction",
 "bg_triangles": {
     "top": [],

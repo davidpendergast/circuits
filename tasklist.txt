@@ -39,7 +39,9 @@ features:
  ethical dilemma:
  - should we fulfill our own "purpose", at the possible expense of others, or abandon it so others might live
  
- feedback:
+ playtesting / feedback:
+ 
+ tester 1 (T)
  [x] tried to climb right wall with B on level 2
  - hard/confusing to remember which character is which letter (colorblind)
     - fix w/ story?
@@ -57,6 +59,43 @@ features:
  [x] clipping boulders while jumping over them causes them to fall
  - fast fwd button
     - would be nice, not sure how technically feasible this would be though
+
+ tester 3 (P):
+  verbal feedback:
+    - would prefer ctrl + r over shift + r
+	- ability to click A / B icons on timer bar? (to reset)
+	- fast fwd button?
+  i noticed:
+	game seemed to lag quite a lot (like 60% max fps, yeesh)
+		I think they were playing through WINE or something tho
+	levels before stairway seemed dull, idk
+		- they did stairway pretty quickly though
+	maze seemed a bit overwhelming / unfun
+		- 1st tried to just hit buttons randomly and force way through
+		- i think it taught them the power of visualization tho
+		- had a lot of trouble making one of the middle jumps
+		- yeah maze did not look very fun haha (12 mins of struggle, in 19 mins of playing)
+	boulders was going well but they failed a jump at the very end and died
+		- and then they forgot to touch the last rock and lost again in a frustrating way
+		- and then again
+		- and then had to sit in gay baby jail and wait for B to finish
+		- some major oofs on this level
+	and then they gave up on the level where you have to desync
+		- this is fine; i think the game sorta just wasn't their cup of tea
+	
+	- all in all, didn't look very fun.
+	action items:
+		[x] can we make the early levels less painful?
+			[x] maybe remove 1-2 pitfalls from boulders?
+			[x] make maze easier (less platforming & microspacing)
+			[x] make stairway more forgiving (guard-rails around switches)
+		[/] fast forward button?
+		although tbh I don't really like the gameplay loop this creates.
+		I feel like you'd FFW, go too far, reset, repeat a lot
+		and you'd be incentivized to FFW at all times (even when moving and such)
+		(especially if you were speedrunning, didn't even consider that).
+		yeah I think ffw is a no-go.
+	
     
     
  level ideas:

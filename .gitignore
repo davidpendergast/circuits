@@ -8,6 +8,7 @@ xcfs/*
 *.lnk
 *.mmpz
 logs/*
+build/*
 *.DS_Store
 texture_atlas.png
 songs/**/*.json
@@ -18,4 +19,5 @@ userdata/*
 dist/*
 output.spec
 assets/sounds/Cyberleaf-ModernUISFX/Sounds/*.wav
+entry_point.spec
 
