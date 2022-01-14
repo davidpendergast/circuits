@@ -387,6 +387,14 @@ class OverworldPack:
                 if loaded_overworld is not None:
                     overworlds[overworld_id] = loaded_overworld
 
+            intro_level_path = util.read_string(json_blob, "intro_level", None)
+            if intro_level_path is not None:
+                path_to_level = os.path.normpath(os.path.join(path, intro_level_path))
+                print("INFO: loading intro level from {}".format(path_to_level))
+                intro_level_bp = blueprints.load_level_from_file(path_to_level)
+            else:
+                intro_level_bp = None
+
             connections = {}
             if "connections" in json_blob:
                 for ov_id in overworld_ids:
@@ -417,20 +425,21 @@ class OverworldPack:
                             else:
                                 print("WARN: unrecognized exit id: {}".format(exit_id))
 
-            return OverworldPack(ident, name, author, overworlds, connections, path)
+            return OverworldPack(ident, name, author, overworlds, connections, intro_level_bp, path)
 
         except Exception:
             print("ERROR: failed to load overworld \"{}\"".format(path))
             traceback.print_exc()
             return None
 
-    def __init__(self, ref_id, name, author, overworlds, connections, directory):
+    def __init__(self, ref_id, name, author, overworlds, connections, intro_level_bp, directory):
         """
         :param ref_id: id of the pack
         :param name: name of the pack
         :param author: author of the pack
         :param overworlds: map from overworld_id -> OverworldBlueprint
         :param connections: map from overworld_id -> (map from exit_num -> overworld_id)
+        :param intro_level_bp: level to auto-load on game start if it hasn't been beaten yet.
         """
         self.ref_id = ref_id
         self.name = name
@@ -438,12 +447,17 @@ class OverworldPack:
         self.overworlds = overworlds
         self.connections = connections
 
+        self.intro_level_bp = intro_level_bp
+
         self.directory = directory
 
         self._starting_world = self._find_starting_overworld()
 
     def get_start(self) -> 'OverworldBlueprint':
         return self._starting_world
+
+    def get_intro_level(self) -> 'blueprints.LevelBlueprint':
+        return self.intro_level_bp
 
     def get_overworld_with_id(self, ref_id) -> 'OverworldBlueprint':
         if ref_id in self.overworlds:
@@ -1773,6 +1787,28 @@ class OverworldScene(scenes.Scene):
                                                  lambda: self.get_manager().set_next_scene(_updated_scene()))
             self.get_manager().set_next_scene(next_scene)
             sounds.play_sound(soundref.LEVEL_START)
+
+    def start_intro_sequence_if_necessary(self) -> bool:
+        intro_level = self.state.overworld_pack.get_intro_level()
+        if intro_level is not None:
+            if not self.state.is_complete(intro_level.level_id()):
+                print("INFO: starting intro sequence")
+                # TODO play intro cutscene
+                import src.game.menus as menus
+
+                def _on_intro_finish(new_time=None):
+                    if new_time is not None:
+                        self.state.set_completed(intro_level.level_id(), new_time)
+                        return self
+                    else:
+                        return menus.MainMenuScene()
+
+                next_scene = menus.RealGameScene(intro_level,
+                                                 lambda time: self.get_manager().set_next_scene( _on_intro_finish(new_time=time)),
+                                                 lambda: self.get_manager().set_next_scene( _on_intro_finish()))
+                self.get_manager().set_next_scene(next_scene)
+                return True
+        return False
 
     def _update_bg_triangles(self):
         size = renderengine.get_instance().get_game_size()

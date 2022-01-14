@@ -3,7 +3,7 @@
     "description": "The journey begins.",
     "entities": [
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 32, "y": 80},
-        {"color_id": 1, "h": 112, "type": "block", "w": 16, "x": 0, "y": 48},
+        {"color_id": 1, "h": 80, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 2, "h": 16, "type": "block", "w": 64, "x": 64, "y": 224},
         {"color_id": 1, "h": 32, "type": "block", "w": 80, "x": 16, "y": 96},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 224},
@@ -165,15 +165,17 @@
             "y": 128
         },
         {"art_id": 2, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 448, "y": 128},
-        {"art_id": 0, "color_id": 2, "h": 64, "type": "block", "w": 16, "x": 16, "y": 128},
         {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 400, "y": 0},
         {"color_id": 1, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
-        {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 16, "x": 0, "y": 160},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 16, "x": 0, "y": 192},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 96, "y": 112},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 128, "y": 112},
-        {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 144}
+        {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 144},
+        {"color_id": 1, "h": 64, "type": "block", "w": 8, "x": 0, "y": 128}
     ],
     "level_id": "arrival",
     "name": "Arrival",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

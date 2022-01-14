@@ -3,6 +3,7 @@
 "ref_id": "standard",
 "author": "Ghast",
 "overworlds": ["sector_1", "sector_a", "sector_2", "sector_3", "sector_4"],
+"intro_level": "sector_1/levels/landing.json",
 "connections": {
     "sector_1": {
         "e1": ["sector_2", "e0"]

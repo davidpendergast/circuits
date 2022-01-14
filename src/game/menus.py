@@ -73,15 +73,13 @@ class MainMenuScene(scenes.Scene):
         self.cine_seq = cinematics.CinematicFactory.make_cinematic(cinematics.CinematicScenes.MAIN_MENU)
 
     def _do_start(self):
-        do_instructions = True
         overworld_scene = _make_overworlds_scene()
-        if do_instructions:
+        if overworld_scene.start_intro_sequence_if_necessary():
+            pass  # will handle things itself.
+        else:
             next_scene = InstructionsScene(overworld_scene, self)
             sounds.play_sound(soundref.MENU_ACCEPT)
-        else:
-            next_scene = overworld_scene
-            sounds.play_sound(soundref.MENU_START)
-        self.jump_to_scene(next_scene)
+            self.jump_to_scene(next_scene)
 
     def _make_stats_scene(self):
         return StatsScene(None, self, title="Stats")

@@ -152,7 +152,7 @@
         {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 16, "x": 360, "y": 48},
         {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 336, "y": 56}
     ],
-    "level_id": "tele_intro",
+    "level_id": "teleporter",
     "name": "Teleporter",
     "time_limit": 3600
 }
