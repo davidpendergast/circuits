@@ -3047,7 +3047,7 @@ class ParticleEmitterZone(DynamicEntity):
 class PlayerIndicatorEntity(Entity):
 
     def __init__(self, target_player, player_num=0):
-        super().__init__(0, 0, w=8, h=8)
+        super().__init__(target_player.get_center()[0], target_player.get_center()[1], w=8, h=8)
         self.target_player_ent_id = target_player.get_ent_id()
 
         self.max_bob_height = 12
@@ -3073,14 +3073,14 @@ class PlayerIndicatorEntity(Entity):
     def should_remove(self, player):
         return player.has_ever_moved()
 
-    def update(self):
-        super().update()
+    def update_sprites(self):
+        super().update_sprites()
+        
         player = self.get_world().get_entity_by_id(self.target_player_ent_id)
         if player is None or self.should_remove(player):
-            self.get_world().remove_entity(self)
+            self._sprites.clear()
         else:
             xy_list = self.get_target_pts(player)
-
             y_offs = 0.5 * (1 + math.cos(self.bob_tick / self.bob_period * 6.283) * (self.max_bob_height - self.min_bob_height)) + self.min_bob_height
 
             new_sprites = []
@@ -3103,6 +3103,17 @@ class PlayerIndicatorEntity(Entity):
 
             self._sprites = new_sprites
             self.bob_tick += 1
+
+    def update(self):
+        super().update()
+
+        player = self.get_world().get_entity_by_id(self.target_player_ent_id)
+        if player is None or self.should_remove(player):
+            self.get_world().remove_entity(self)
+        else:
+            # just to ensure this entity always gets updated.
+            # it'll be drawn at its target points though.
+            self.set_xy(player.get_center())
 
     def all_sprites(self):
         for spr in self._sprites:
