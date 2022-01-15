@@ -77,7 +77,13 @@ class MainMenuScene(scenes.Scene):
         if overworld_scene.start_intro_sequence_if_necessary():
             pass  # will handle things itself.
         else:
-            next_scene = InstructionsScene(overworld_scene, self)
+            next_scene = overworld_scene
+
+            # XXX showing instructions if the first level *is* completed, because if it's not
+            # completed it'll show the instructions itself~
+            if overworld_scene.state.is_complete("arrival"):
+                next_scene = InstructionsScene(overworld_scene, self)
+
             sounds.play_sound(soundref.MENU_ACCEPT)
             self.jump_to_scene(next_scene)
 
@@ -471,10 +477,14 @@ class ControlsScene(OptionSelectScene):
     def update(self):
         super().update()
 
-        if self._ticks_active > 5 and inputs.get_instance().was_pressed((const.MENU_ACCEPT, const.MENU_CANCEL)):
+        if self._ticks_active > 5 and (inputs.get_instance().was_pressed((const.MENU_ACCEPT, const.MENU_CANCEL))
+                or inputs.get_instance().mouse_was_pressed()):
             self.jump_to_scene(self.next_scene)
 
         self._ticks_active += 1
+
+    def get_cursor_id_at(self, xy):
+        return const.CURSOR_HAND
 
     def _build_desc(self):
         wasd_keys, arrow_keys, alt_jump = gs.get_instance().get_user_friendly_movement_keys()
@@ -686,7 +696,7 @@ class CutsceneScene(scenes.Scene):
                     # if there's room under the image, put the text there.
                     target_y = self._bg_sprite.y() + self._bg_sprite.height() + space_remaining // 2
                 else:
-                    target_y = int(game_size[3] * 0.9) - text_h  # otherwise just cram it in
+                    target_y = int(game_size[1] * 0.9) - text_h  # otherwise just cram it in
             else:
                 target_y = game_size[1] // 2  # center it
 
@@ -701,21 +711,25 @@ class CutsceneScene(scenes.Scene):
 
 class MultiPageCutsceneScene(CutsceneScene):
 
-    def __init__(self, pages, page=0, next_scene_provider=None):
+    def __init__(self, pages, page=0, next_scene_provider=None, sound_for_next_page=soundref.MENU_BLIP):
         CutsceneScene.__init__(self)
         if page < 0 or page >= len(pages):
             raise ValueError("page out of bounds: {}".format(page))
         self.all_pages = pages
         self.page = page
         self.next_scene_provider = next_scene_provider
+        self.sound_for_next_page = sound_for_next_page
 
     def get_text(self) -> sprites.TextBuilder:
-        text = self.all_pages[self.page][1]
+        page_info = self.all_pages[self.page]
+        text = None if len(page_info) <= 1 else page_info[1]
+        color = colors.WHITE if len(page_info) <= 2 else page_info[2]
+
         if text is None:
             return None
         else:
             res = sprites.TextBuilder()
-            res.add(text, color=colors.WHITE)
+            res.add(text, color=color)
             return res
 
     def get_bg_image(self) -> sprites.ImageModel:
@@ -725,16 +739,27 @@ class MultiPageCutsceneScene(CutsceneScene):
         else:
             return None
 
+    def get_cutscene_for_page(self, page):
+        return MultiPageCutsceneScene(self.all_pages, page,
+                                      next_scene_provider=self.next_scene_provider,
+                                      sound_for_next_page=self.sound_for_next_page)
+
     def get_next_scene(self) -> scenes.Scene:
         if self.page < len(self.all_pages) - 1:
-            return MultiPageCutsceneScene(self.all_pages, self.page + 1, next_scene_provider=self.next_scene_provider)
+            return self.get_cutscene_for_page(self.page + 1)
         elif self.next_scene_provider is not None:
             return self.next_scene_provider()
         else:
             return MainMenuScene()
 
+    def handle_inputs(self):
+        if self.tick_count > 5 and inputs.get_instance().was_anything_pressed():
+            self.jump_to_scene(self.get_next_scene())
+            if self.sound_for_next_page is not None:
+                sounds.play_sound(self.sound_for_next_page)
 
-class IntroCutsceneScene(MultiPageCutsceneScene):
+
+class IntroCutsceneSceneOld(MultiPageCutsceneScene):
 
     _PAGES = [
         (spriteref.CutsceneTypes.SUN, "The sun."),
@@ -747,7 +772,48 @@ class IntroCutsceneScene(MultiPageCutsceneScene):
     ]
 
     def __init__(self, next_scene_provider):
-        super().__init__(IntroCutsceneScene._PAGES, next_scene_provider=next_scene_provider)
+        super().__init__(IntroCutsceneSceneOld._PAGES, next_scene_provider=next_scene_provider)
+
+
+class IntroCutsceneScene(MultiPageCutsceneScene):
+
+    _PAGES = [
+        (None, "Eons ago, a message was sent in a dying galaxy"),
+        (None, "THIS IS LIKELY OUR FINAL TRANSMISSION", colors.BLUE),
+        (None, "SOLAR PANELS CRITICALLY DAMAGED\nBACKUP FUELS DEPLETED", colors.TAN),
+        (None, "WE'VE SET COURSE FOR AN UNKNOWN STRUCTURE ORBITING SOL-1564", colors.BLUE),
+        (None, "SCANS SUGGEST ARTIFICIAL CONSTRUCTION, BUT NO RADIO CONTACT HAS BEEN MADE", colors.PURPLE),
+        (None, "IT'S THE BEST HOPE OF CONTINUING OUR MISSION", colors.GREEN),
+        (None, "POWERING DOWN.\nMAY WE EVER WAKE.\nEND OF TRANSMISSION", colors.BLUE),
+        (None, "At present day, the ship arrives...")
+    ]
+
+    def __init__(self, next_scene_provider, page=0, sound_for_next_page=soundref.ModernUI.sci_fi_notification_2):
+        super().__init__(IntroCutsceneScene._PAGES, page=page,
+                         next_scene_provider=next_scene_provider, sound_for_next_page=sound_for_next_page)
+
+    def became_active(self):
+        if self.page == 0:
+            sounds.play_sound(soundref.ModernUI.open_or_enable_4a)
+            gs.get_instance().do_fullscreen_fade(60, colors.PERFECT_BLACK, 1.0, 0.0)
+            songsystem.get_instance().set_song(songsystem.OFDN_DEPARTING_AT_DAWN, volume_levels=0.66, fadein=0.5)
+
+    def get_cutscene_for_page(self, page):
+        return IntroCutsceneScene(page=page,
+                                  next_scene_provider=self.next_scene_provider,
+                                  sound_for_next_page=self.sound_for_next_page)
+
+    def handle_inputs(self):
+        if self.tick_count > 5 and inputs.get_instance().was_anything_pressed():
+            next_scene = self.get_next_scene()
+            if isinstance(next_scene, MultiPageCutsceneScene):
+                self.jump_to_scene(next_scene)
+                if self.sound_for_next_page is not None:
+                    sounds.play_sound(self.sound_for_next_page)
+            else:
+                sounds.play_sound(soundref.LEVEL_START)
+                self.jump_to_scene(next_scene, do_fade=False)
+                gs.get_instance().do_fullscreen_fade(60 * 2, colors.PERFECT_BLACK, 1.0, 0.0)
 
 
 class EndOfGameScene(MultiPageCutsceneScene):
@@ -831,6 +897,7 @@ class _BaseGameScene(scenes.Scene):
             cell_size = gs.get_instance().cell_size
             print("INFO: mouse pressed at ({}, {})".format(int(world_xy[0]) // cell_size,
                                                            int(world_xy[1]) // cell_size))
+
     def all_sprites(self):
         if self._world_view is not None:
             for spr in self._world_view.all_sprites():
@@ -1094,7 +1161,7 @@ class _GameState:
             self.set_alive(idx, is_alive)
 
     def get_song(self):
-        song_id = self.bp.song_id()
+        song_id = self.bp.get_resolved_song_id()
         if song_id is None:
             return songsystem.SILENCE
         else:

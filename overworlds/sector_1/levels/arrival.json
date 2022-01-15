@@ -176,6 +176,6 @@
     "level_id": "arrival",
     "name": "Arrival",
     "song_id": null,
-    "special": [],
+    "special": ["show_instructions"],
     "time_limit": 3600
 }

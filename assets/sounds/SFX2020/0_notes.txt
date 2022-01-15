@@ -291,7 +291,7 @@ UnitFlip2.wav
 UnitFlip.wav - blip
 UnitLosesEnergeticShield.wav
 UnitsDetectInArea.wav
-UnitSelectedWithVeryLowPower.wav - powering down?
+UnitSelectedWithVeryLowPower.wav 
 UnknownAttakStyle.wav
 UnknownObjectsInArea.wav - secret found?
 UnknownPower.wav

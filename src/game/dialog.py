@@ -298,6 +298,7 @@ def get_dialog(dialog_id, player_type, other_type):
 
 
 REPLACEMENTS = {
+    "{MOVEMENT_KEYS}": lambda: gs.get_instance().get_user_friendly_movement_keys(),
     "{INTERACT_KEYS}": lambda: keybinds.get_instance().get_keys(const.ACTION).get_pretty_names(),
     "{JUMP_KEYS}": lambda: keybinds.get_instance().get_keys(const.JUMP).get_pretty_names()
 }
