@@ -1340,9 +1340,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
 
     def on_level_fail(self):
         self.get_world_view().set_bg_colors([colors.PERFECT_DARK_RED, colors.PERFECT_VERY_DARK_RED], period=15, loop=False)
-        # self.get_world_view().fade_to_bg_color(colors.PERFECT_VERY_DARK_RED, delay=20)
         sounds.play_sound(soundref.LEVEL_FAILED)
-        # TODO sound / music change
         # TODO screenshake
 
     def get_state(self) -> _GameState:
@@ -1377,7 +1375,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
                 print("INFO: player moved! starting level")
                 self._state.set_status(Statuses.IN_PROGRESS)
         elif self._state.get_status() == Statuses.EXIT_NOW_SUCCESSFULLY:
-            self._on_level_completion(self._state.get_elapsed_ticks())
+            self.on_level_complete(self._state.get_elapsed_ticks())
 
         _BaseGameScene.update(self)
 
@@ -1394,6 +1392,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
             self.do_reset(idx=-1)  # just current player
 
         elif self._state.all_satisfied():
+            sounds.play_sound(soundref.LEVEL_FULL_SUCCESS)
             self._state.set_status(Statuses.TOTAL_SUCCESS)
             self.replace_players_with_fadeout(delay=self._fadeout_duration)
             self._state.set_status(Statuses.EXIT_NOW_SUCCESSFULLY, delay=self._fadeout_duration)
@@ -1413,6 +1412,7 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
                 player_ent = self.get_world().get_player()
                 recording = player_ent.get_controller().get_recording()
                 if recording is not None:
+                    sounds.play_sound(soundref.LEVEL_PARTIAL_SUCCESS)
                     self._state.set_status(Statuses.PARTIAL_SUCCESS)
                     self.replace_players_with_fadeout(delay=self._fadeout_duration)
                     self.add_fade_in_sprites_at_start_locations([_i for _i in range(0, self._state.get_active_player_idx() + 2)],

@@ -12,34 +12,51 @@ import src.game.globalstate as gs
 import configs
 import src.game.playertypes as playertypes
 import src.engine.keybinds as keybinds
+import src.engine.sounds as sounds
+import src.game.soundref as soundref
 
 
-_ALL_META_SPEAKER_IDS = []
-_ALL_NON_META_SPEAKER_IDS = []
+_ALL_META_SPEAKER_IDS = set()
+_ALL_NON_META_SPEAKER_IDS = set()
 
 
-def _speaker_id(val, meta=False):
-    if meta:
-        _ALL_META_SPEAKER_IDS.append(val)
-    else:
-        _ALL_NON_META_SPEAKER_IDS.append(val)
-    return val
+class SpeakerType:
+
+    def __init__(self, speaker_id, color=colors.WHITE, sound=soundref.PLAYER_DIALOG, meta=False):
+        self.speaker_id = speaker_id
+        self.text_color = color
+        self.sound = sound
+        self.meta = meta
+
+        if meta:
+            _ALL_META_SPEAKER_IDS.add(self)
+        else:
+            _ALL_NON_META_SPEAKER_IDS.add(self)
+
+    def __eq__(self, other):
+        if isinstance(other, SpeakerType):
+            return self.speaker_id == other.speaker_id
+        else:
+            return False
+
+    def __hash__(self):
+        return hash(self.speaker_id)
 
 
 class Speaker:
-    A = _speaker_id(const.PLAYER_FAST)
-    B = _speaker_id(const.PLAYER_SMALL)
-    C = _speaker_id(const.PLAYER_HEAVY)
-    D = _speaker_id(const.PLAYER_FLYING)
+    A = SpeakerType(const.PLAYER_FAST, color=colors.BLUE, sound=playertypes.PlayerTypes.FAST.translate_sound(soundref.PLAYER_DIALOG))
+    B = SpeakerType(const.PLAYER_SMALL, color=colors.TAN, sound=playertypes.PlayerTypes.SMALL.translate_sound(soundref.PLAYER_DIALOG))
+    C = SpeakerType(const.PLAYER_HEAVY, color=colors.GREEN, sound=playertypes.PlayerTypes.HEAVY.translate_sound(soundref.PLAYER_DIALOG))
+    D = SpeakerType(const.PLAYER_FLYING, color=colors.PURPLE, sound=playertypes.PlayerTypes.FLYING.translate_sound(soundref.PLAYER_DIALOG))
 
-    NONE = _speaker_id("none")
-    UNKNOWN = _speaker_id("unknown")
+    NONE = SpeakerType("none")
+    UNKNOWN = SpeakerType("unknown")
 
-    PLAYER = _speaker_id("player_type", meta=True)  # the type of the active player
-    OTHER = _speaker_id("speaker_type", meta=True)  # the type of the thing that was interacted with
+    PLAYER = SpeakerType("player_type", meta=True)  # the type of the active player
+    OTHER = SpeakerType("speaker_type", meta=True)  # the type of the thing that was interacted with
 
     @staticmethod
-    def resolve(obj):
+    def resolve(obj) -> SpeakerType:
         if isinstance(obj, playertypes.PlayerType):
             obj = obj.get_id()
 
@@ -49,16 +66,22 @@ class Speaker:
 
         if isinstance(obj, str):
             for s_id in _ALL_NON_META_SPEAKER_IDS:
-                if s_id == obj:
+                if s_id.speaker_id == obj:
                     return s_id
+
+        return Speaker.UNKNOWN
 
 
 class DialogFragment:
 
-    def __init__(self, text, speaker=None, id_resolver={}):
-        self.speaker_id = speaker
-        self.id_resolver = id_resolver
+    def __init__(self, text, speaker: SpeakerType = Speaker.NONE, right_side=False, id_resolver={}, color="auto", sound="auto"):
         self.text = text
+        self.speaker_type = speaker
+        self._color = color
+        self._sound = sound
+        self.right_side = right_side
+
+        self.id_resolver = id_resolver
         self.next_options = []  # (answer, DialogFragment)
 
     def set_next(self, dialog_frag) -> 'DialogFragment':
@@ -81,15 +104,33 @@ class DialogFragment:
         else:
             return None
 
-    def get_speaker_sprites(self):
-        speaker_id = self.speaker_id
-        if speaker_id in self.id_resolver:
-            speaker_id = self.id_resolver[speaker_id]
+    def get_resolved_speaker_type(self):
+        speaker_type = self.speaker_type
+        if speaker_type in self.id_resolver:
+            speaker_type = self.id_resolver[speaker_type]
+        return speaker_type
 
-        if speaker_id is None:
+    def get_speaker_sprites(self):
+        speaker_type = self.get_resolved_speaker_type()
+        if speaker_type is None:
             return []
         else:
-            return spriteref.object_sheet().get_speaker_portrait_sprites(speaker_id)
+            return spriteref.object_sheet().get_speaker_portrait_sprites(speaker_type.speaker_id)
+
+    def put_speaker_sprite_on_right_side(self):
+        return self.right_side
+
+    def get_text_color(self):
+        if self._color == "auto":
+            return self.get_resolved_speaker_type().text_color
+        else:
+            return self._color
+
+    def get_sound(self):
+        if self._sound == "auto":
+            return self.get_resolved_speaker_type().sound
+        else:
+            return self._sound
 
 
 def link(*frags):
@@ -120,7 +161,10 @@ class DialogElement(ui.UiElement):
         self.speaker_sprite = None
         self.text_sprite = None
 
-        self.inset = 4
+        self._has_played_sound = False
+        self._was_clicked_this_frame = False
+
+        self.inset = 8
 
     def _get_visible_text(self):
         # TODO scrolling?
@@ -139,46 +183,82 @@ class DialogElement(ui.UiElement):
 
         if self.bg_sprite is None:
             self.bg_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_BG_LAYER, depth=10)
-        bg_model = spritesheets.get_instance().get_sheet(spritesheets.WhiteSquare.SHEET_ID).get_sprite(opacity=self.bg_opacity)
+        bg_model = spritesheets.get_white_square_img(self.bg_opacity)
         self.bg_sprite = self.bg_sprite.update(new_model=bg_model, new_x=xy[0], new_y=xy[1],
                                                new_ratio=(size[0] / bg_model.width(), size[1] / bg_model.height()),
                                                new_color=colors.PERFECT_BLACK)
 
-        if self.speaker_sprite is None:
-            self.speaker_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+        text_rect = [xy[0] + self.inset, xy[1] + self.inset, size[0] - self.inset * 2, size[1] - self.inset * 2]
+
         all_sprites = self.current_dialog.get_speaker_sprites()
         if len(all_sprites) > 0:
             speaker_img = all_sprites[gs.get_instance().anim_tick() // 8 % len(all_sprites)]
         else:
-            speaker_img = spritesheets.get_white_square_img(0)
+            speaker_img = None
 
-        speaker_sc = 3
-        speaker_size = speaker_img.size(scale=speaker_sc)
-        self.speaker_sprite = self.speaker_sprite.update(new_model=speaker_img, new_x=xy[0] + self.inset,
-                                                         new_y=screen_size[1] - speaker_size[1],
-                                                         new_scale=speaker_sc)
+        if speaker_img is not None:
+            speaker_sc = 3
+            speaker_size = speaker_img.size(scale=speaker_sc)
+            speaker_on_right_side = self.current_dialog.put_speaker_sprite_on_right_side()
+            if speaker_on_right_side:
+                speaker_x = xy[0] + size[0] - speaker_size[0] - self.inset
+                text_rect = [xy[0] + self.inset, xy[1] + self.inset,
+                             size[0] - self.inset * 2 - speaker_size[0], size[1] - self.inset * 2]
+            else:
+                speaker_x = xy[0] + self.inset
+                text_rect = [speaker_x + speaker_size[0] + self.inset, xy[1] + self.inset,
+                             size[0] - self.inset * 2 - speaker_size[0], size[1] - self.inset * 2]
 
-        text_xy = (xy[0] + speaker_size[0] + 2 * self.inset, xy[1] + self.inset)
-        text_size = ((xy[0] + size[0]) - text_xy[0] - self.inset, size[1] - 2 * self.inset)
-        visible_text = "\n".join(sprites.TextSprite.wrap_text_to_fit(self._get_visible_text(), text_size[0],
+            if self.speaker_sprite is None:
+                self.speaker_sprite = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER)
+            self.speaker_sprite = self.speaker_sprite.update(new_model=speaker_img, new_x=speaker_x,
+                                                             new_y=screen_size[1] - speaker_size[1],
+                                                             new_xflip=speaker_on_right_side,
+                                                             new_scale=speaker_sc)
+        else:
+            self.speaker_sprite = None
+
+        text_color = self.current_dialog.get_text_color()
+        visible_text = "\n".join(sprites.TextSprite.wrap_text_to_fit(self._get_visible_text(), text_rect[2],
                                                                      scale=1, font_lookup=self.get_font()))
         if self.text_sprite is None:
             self.text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "blah", font_lookup=self.get_font())
-        self.text_sprite.update(new_x=text_xy[0], new_y=text_xy[1], new_text=visible_text)
+        self.text_sprite.update(new_x=text_rect[0], new_y=text_rect[1], new_text=visible_text, new_color=text_color)
 
     def update(self):
-        if inputs.get_instance().was_pressed((const.MENU_ACCEPT, const.JUMP, const.MENU_CANCEL)):
+        if not self._has_played_sound:
+            self._has_played_sound = True
+            sound_to_play = self.current_dialog.get_sound()
+            sounds.play_sound(sound_to_play)
+
+        if self._was_clicked_this_frame or inputs.get_instance().was_pressed((const.ACTION, const.MENU_ACCEPT, const.MENU_CANCEL)):
+            self.handle_dialog_interact()
+
+            if self.current_dialog is None:
+                sounds.play_sound(soundref.DIALOG_EXIT)
+
+        self._was_clicked_this_frame = False
+        self.current_dialog_ticks += 1
+
+    def handle_click(self, xy, button=1) -> bool:
+        self._was_clicked_this_frame = True
+        return True
+
+    def get_cursor_id_at(self, xy):
+        return const.CURSOR_HAND
+
+    def handle_dialog_interact(self):
+        if self.current_dialog_ticks > 5:
             if self.is_scrolling():
-                if self.current_dialog_ticks > 5:
-                    self.current_dialog_ticks = 10000  # scroll to end
+                self.current_dialog_ticks = 10000  # scroll to end
             else:
                 self.go_to_next_dialog()
 
     def go_to_next_dialog(self):
-        next = self.current_dialog.get_next_by_idx(self.selected_option)  # could be None
+        self.current_dialog = self.current_dialog.get_next_by_idx(self.selected_option)  # could be None
         self.selected_option = 0
         self.current_dialog_ticks = 0
-        self.current_dialog = next
+        self._has_played_sound = False
 
     def get_xy(self, absolute=False):
         size = self.get_size()
@@ -213,6 +293,10 @@ class DialogManager:
 
     def update(self):
         if self._ui is not None:
+            if inputs.get_instance().mouse_in_window() and inputs.get_instance().mouse_was_pressed(button=1):
+                mouse_xy = inputs.get_instance().mouse_pos()
+                self._ui.send_click_to_self_and_kids(mouse_xy, absolute=True, button=1)
+
             self._ui.update_self_and_kids()
 
         if self._ui is not None and self._ui.current_dialog is None:
@@ -263,6 +347,13 @@ class DialogScene(scenes.Scene):
             # only update the underlying scene if dialog is inactive.
             self.update_impl()
 
+    def get_cursor_id_at(self, xy) -> str:
+        if self.is_dialog_active():
+            cursor_from_dialog = self.dialog_manager.get_ui().get_cursor_id_from_self_and_kids(xy, absolute=True)
+            if cursor_from_dialog is not None:
+                return cursor_from_dialog
+        return super().get_cursor_id_at(xy)
+
     def update_impl(self):
         raise NotImplementedError()
 
@@ -273,8 +364,9 @@ class DialogScene(scenes.Scene):
 
 
 def get_test_dialog(lookup={}):
-    return link(DialogFragment("Here's some test dialog.", speaker=Speaker.OTHER, id_resolver=lookup),
+    return link(DialogFragment("Here's some test dialog.", speaker=Speaker.OTHER, id_resolver=lookup, right_side=True),
                 DialogFragment("And here's a test reply.", speaker=Speaker.PLAYER, id_resolver=lookup))
+
 
 def get_multi_char_test_dialog():
     return link(DialogFragment("Here's some test text.", speaker=Speaker.A),
@@ -283,6 +375,13 @@ def get_multi_char_test_dialog():
                                "text here to extend the length to make it wrap. The Glitch Mob is a great band don't you think?", speaker=Speaker.C),
                 DialogFragment("Life?", speaker=Speaker.D),
                 DialogFragment("Err... life-mimicking CPU cycles, I mean.", speaker=Speaker.C))
+
+
+_ALL_DIALOG = {}
+
+
+def init_dialog():
+    _ALL_DIALOG["nothing_to_say"] = link(DialogFragment("I have nothing to say.", speaker=Speaker.OTHER))
 
 
 def get_dialog(dialog_id, player_type, other_type):
@@ -294,7 +393,20 @@ def get_dialog(dialog_id, player_type, other_type):
             Speaker.OTHER: Speaker.resolve(other_type)
         }
 
-        return get_test_dialog(lookup=lookup)
+        if dialog_id == "c_introduction":
+            return link(DialogFragment("It's good to 'C' you in one piece, C!", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("Always 'A' pleasure. Will you two 'B' staying a while?", speaker=Speaker.C, right_side=True),
+                        DialogFragment("Absolutely. Right up until we the fix the ship and refuel, and then we're blasting out of this hellhole.", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("What is this place? It was dismantling the ship when we powered on. It was like it had a mind of its own.", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("It's some kind of factory. These blocks all around us - that's what it's making.", speaker=Speaker.C, id_resolver=lookup, right_side=True),
+                        DialogFragment("That's what happened to my portion of the ship - it pulled it into pieces and reforged it into these blocks, like it was scrap metal.", speaker=Speaker.C, id_resolver=lookup, right_side=True),
+                        DialogFragment("Sounds like we might be here a while...", speaker=Speaker.B, id_resolver=lookup),
+                        DialogFragment("And what about D? Have you seen them?", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("I haven't seen them, or their section of the ship. I'm sure they're buzzing around somehwere.", speaker=Speaker.C, id_resolver=lookup, right_side=True),
+                        DialogFragment("Alright, well. Let's stick together. This place is dangerous.", speaker=Speaker.PLAYER, id_resolver=lookup)
+                    )
+        else:
+            return DialogFragment("I have nothing to say.", speaker=Speaker.OTHER, id_resolver=lookup)
 
 
 REPLACEMENTS = {

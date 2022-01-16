@@ -85,7 +85,7 @@
             "dialog": "",
             "points": [],
             "subtype": "player_small",
-            "text": "Info text will appear here.\nRemember to watch your step!",
+            "text": "Look! It's C",
             "type": "info",
             "x": 256,
             "y": 136
@@ -100,10 +100,10 @@
         {"art_id": 0, "color_id": 2, "h": 48, "type": "block", "w": 16, "x": 96, "y": 176},
         {
             "color_id": 0,
-            "dialog": "",
+            "dialog": "c_introduction",
             "points": [],
             "subtype": "player_heavy",
-            "text": "Info text will appear here.\nRemember to watch your step!",
+            "text": "{INTERACT_KEYS} to Talk",
             "type": "info",
             "x": 364,
             "y": 128
@@ -222,5 +222,7 @@
     ],
     "level_id": "c_introduction",
     "name": "Introduction",
+    "song_id": null,
+    "special": [],
     "time_limit": 36000
 }

@@ -170,17 +170,23 @@ class PlayerTypes:
     FAST = PlayerType("A", 1, const.PLAYER_FAST, size=(0.75, 1.75), can_walljump=True, can_crouch=True,
                       move_speed=7.5, jump_height=3.2,
                       sound_overrides={
-                          soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_7
+                          soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_7,
+                          soundref.PLAYER_DIALOG: soundref.ModernUI.generic_button_7,
+                          soundref.PLAYER_ALERT: soundref.ModernUI.generic_button_7,
                       })
     SMALL = PlayerType("B", 2, const.PLAYER_SMALL, size=(0.875, 0.75), can_be_grabbed=True, can_crouch=True,
                        move_speed=5.5, jump_height=2.1,
                        sound_overrides={
-                           soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_9,
+                           soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_8,
+                           soundref.PLAYER_DIALOG: soundref.ModernUI.generic_button_8,
+                           soundref.PLAYER_ALERT: soundref.ModernUI.generic_button_8,
                        })
     HEAVY = PlayerType("C", 3, const.PLAYER_HEAVY, size=(1.25, 1.25), can_grab=True,
                        move_speed=5, jump_height=3.2, can_crouch=True, breaks_blocks=True,
                        sound_overrides={
-                           soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_3
+                           soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_6,
+                           soundref.PLAYER_DIALOG: soundref.ModernUI.generic_button_6,
+                           soundref.PLAYER_ALERT: soundref.ModernUI.generic_button_6,
                        },
                        anim_rate_overrides={
                            spriteref.PlayerStates.WALKING: 1
@@ -191,7 +197,9 @@ class PlayerTypes:
                         should_ever_xflip=False,
                         sound_overrides={
                             soundref.PLAYER_JUMP: soundref.ModernUI.generic_button_4,
-                            soundref.PLAYER_FLY: soundref.ModernUI.generic_button_4
+                            soundref.PLAYER_FLY: soundref.ModernUI.generic_button_4,
+                            soundref.PLAYER_DIALOG: soundref.ModernUI.generic_button_4,
+                            soundref.PLAYER_ALERT: soundref.ModernUI.generic_button_4,
                         },
                         anim_rate_overrides={
                             spriteref.PlayerStates.AIRBORNE: lambda _ent: 1 if _ent.get_y_vel() < 0 else 1,

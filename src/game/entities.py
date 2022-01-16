@@ -3644,7 +3644,7 @@ class InfoEntity(Entity):
 
         self._should_show_text = overlapping and len(self._text) > 0
 
-        if overlapping and inputs.get_instance().was_pressed(const.MENU_ACCEPT):
+        if overlapping and inputs.get_instance().was_pressed(const.ACTION):
             self.try_to_display_dialog(p)
 
     def try_to_display_dialog(self, player):

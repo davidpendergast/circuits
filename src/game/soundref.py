@@ -503,6 +503,8 @@ MENU_SLIDE = ModernUI.little_swoosh_3
 LEVEL_START = ModernUI.open_or_enable_4b
 LEVEL_QUIT = ModernUI.close_or_disable_4
 LEVEL_FAILED = ModernUI.error_5
+LEVEL_PARTIAL_SUCCESS = ModernUI.success_7a
+LEVEL_FULL_SUCCESS = ModernUI.success_7b
 
 BLOCK_BREAK = ModernUI.clicky_button_1b
 BLOCK_PRIMED_TO_FALL = ModernUI.clicky_button_2
@@ -514,10 +516,11 @@ TELEPORT_BLOCKED = ModernUI.close_or_disable_3
 TELEPORT_UNBLOCKED = ModernUI.open_or_enable_3
 
 PLAYER_JUMP = ModernUI.generic_button_7
-PLAYER_DIALOG = ModernUI.little_noise
 PLAYER_DEATH = ModernUI.all_containing("Error", exclude_text=("5",))
+PLAYER_DIALOG = ModernUI.generic_notification_6
+DIALOG_EXIT = ModernUI.close_or_disable_1
 
-PLAYER_ALERT = ModernUI._a
+PLAYER_ALERT = ModernUI.sci_fi_notification_2
 PLAYER_PICKUP = ModernUI.clicky_button_3a
 PLAYER_PUTDOWN = ModernUI.clicky_button_3b
 PLAYER_FLY = ModernUI.all_containing("Popup")
