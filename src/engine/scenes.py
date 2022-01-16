@@ -33,8 +33,8 @@ class Scene:
     def is_active(self):
         return self.get_manager().get_active_scene() == self
 
-    def jump_to_scene(self, next_scene):
-        self.get_manager().set_next_scene(next_scene)
+    def jump_to_scene(self, next_scene, do_fade=True):
+        self.get_manager().set_next_scene(next_scene, do_fade=do_fade)
 
     def all_sprites(self):
         raise NotImplementedError()

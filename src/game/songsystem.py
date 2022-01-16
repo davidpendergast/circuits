@@ -164,39 +164,37 @@ def all_valid_song_ids_for_levels():
                 yield key + "_{}".format(i)
 
 
-def get_song_id_for_level(overworld_id, level_pcnt: float=0.0, explicit_song_id=None):
+def resolve_explicit_song_id_from_level(explicit_song_id):
+    if explicit_song_id in _SONG_MAPPINGS_FOR_LEVELS:
+        return _SONG_MAPPINGS_FOR_LEVELS[explicit_song_id][0]
+    else:
+        try:
+            # it should look like "sector_ab_2", in which case we need to extract "sector_ab" and 2.
+            underscore_idx = explicit_song_id.rindex("_")
+            key = explicit_song_id[0:underscore_idx]
+            idx = int(explicit_song_id[underscore_idx + 1:])
+            if key in _SONG_MAPPINGS_FOR_LEVELS:
+                n_songs = len(_SONG_MAPPINGS_FOR_LEVELS[key])
+                return _SONG_MAPPINGS_FOR_LEVELS[key][util.bound(idx, -1, n_songs - 1)]
+            else:
+                print("WARN: unrecognized song id: {}".format(explicit_song_id))
+        except Exception:
+            print("WARN: song id couldn't be parsed: {}".format(explicit_song_id))
+
+    # if we failed to resolve the explicit ID, just bail.
+    return SILENCE
+
+
+def get_default_song_id_for_level(overworld_id, level_pcnt: float=0.0):
     """
     :param overworld_id: ID of the overworld the level belongs to.
     :param level_pcnt: the value N/M, where N is the level's chronological number and M is the number of levels in the world.
-    :param explicit_song_id: an explict ID for the song
     """
-    if explicit_song_id is not None:
-        if explicit_song_id in _SONG_MAPPINGS_FOR_LEVELS:
-            return _SONG_MAPPINGS_FOR_LEVELS[explicit_song_id][0]
-        else:
-            try:
-                # it should look like "sector_ab_2", in which case we need to extract "sector_ab" and 2.
-                underscore_idx = explicit_song_id.rindex("_")
-                key = explicit_song_id[0:underscore_idx]
-                idx = int(explicit_song_id[underscore_idx + 1:])
-                if key in _SONG_MAPPINGS_FOR_LEVELS:
-                    n_songs = len(_SONG_MAPPINGS_FOR_LEVELS[key])
-                    return _SONG_MAPPINGS_FOR_LEVELS[key][util.bound(idx, -1, n_songs - 1)]
-                else:
-                    print("WARN: unrecognized song id: {}".format(explicit_song_id))
-            except Exception:
-                print("WARN: song id couldn't be parsed: {}".format(explicit_song_id))
-
-        # if we failed to resolve the explicit ID, just bail.
-        # TODO let you reference songs from within overworld packs as well?
-        return SILENCE
-
+    if overworld_id in _SONG_MAPPINGS_FOR_LEVELS:
+        return util.index_into(_SONG_MAPPINGS_FOR_LEVELS[overworld_id], level_pcnt, wrap=False)
     else:
-        if overworld_id in _SONG_MAPPINGS_FOR_LEVELS:
-            return util.index_into(_SONG_MAPPINGS_FOR_LEVELS[overworld_id], level_pcnt, wrap=False)
-        else:
-            # I guess?
-            return util.index_into(_SONG_MAPPINGS_FOR_LEVELS["custom"], level_pcnt, wrap=False)
+        # I guess?
+        return util.index_into(_SONG_MAPPINGS_FOR_LEVELS["custom"], level_pcnt, wrap=False)
 
 
 _LOADED_SONGS = {}

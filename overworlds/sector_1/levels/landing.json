@@ -129,8 +129,8 @@
         {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 80, "x": 368, "y": 224},
         {"art_id": 0, "color_id": 0, "h": 48, "type": "block", "w": 8, "x": 136, "y": 96},
         {"art_id": 0, "color_id": 0, "h": 48, "type": "block", "w": 16, "x": 224, "y": 128},
-        {"art_id": 0, "color_id": 0, "h": 8, "type": "block", "w": 96, "x": 240, "y": 128},
-        {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 16, "x": 336, "y": 128},
+        {"art_id": 0, "color_id": 0, "h": 8, "type": "block", "w": 64, "x": 240, "y": 128},
+        {"art_id": 0, "color_id": 0, "h": 56, "type": "block", "w": 16, "x": 336, "y": 96},
         {"art_id": 1, "color_id": 5, "h": 16, "inverted": false, "type": "decoration", "w": 16, "x": 240, "y": 136},
         {"art_id": 0, "color_id": 5, "h": 32, "inverted": false, "type": "decoration", "w": 32, "x": 144, "y": 104},
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 16, "x": 176, "y": 96},
@@ -140,7 +140,7 @@
             "dialog": "",
             "points": [],
             "subtype": "exclam",
-            "text": "Did.. we survive?",
+            "text": "Did.. we make it?",
             "type": "info",
             "x": 224,
             "y": 112
@@ -160,7 +160,7 @@
             "dialog": "",
             "points": [],
             "subtype": "exclam",
-            "text": "The ship appears to be intact. And there's... gravity?",
+            "text": "Well, we landed on something. There's gravity.",
             "type": "info",
             "x": 288,
             "y": 176
@@ -172,7 +172,7 @@
             "dialog": "",
             "points": [],
             "subtype": "exclam",
-            "text": "Where are we? And where are the others?",
+            "text": "What is this place? And where are the others?",
             "type": "info",
             "x": 480,
             "y": 168
@@ -658,11 +658,23 @@
         {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 32, "x": 1584, "y": 112},
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 32, "x": 1584, "y": 80},
         {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 64, "x": 1088, "y": 76},
-        {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 1152, "y": 72}
+        {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 1152, "y": 72},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [
+                [16, 32]
+            ],
+            "subtype": "invisible",
+            "text": "{MOVEMENT_KEYS} to Move",
+            "type": "info",
+            "x": 56,
+            "y": 160
+        }
     ],
     "level_id": "landing",
     "name": "Landing",
-    "song_id": null,
+    "song_id": "custom_2",
     "special": [],
     "time_limit": 216000
 }

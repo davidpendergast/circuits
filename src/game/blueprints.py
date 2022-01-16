@@ -14,6 +14,7 @@ import src.game.spriteref as spriteref
 import src.game.const as const
 import src.game.playertypes as playertypes
 import src.game.colors as colors
+import src.game.songsystem as songsystem
 
 
 # json keys
@@ -835,6 +836,7 @@ DESCRIPTION = "description"     # level flavor text
 
 SPECIAL = "special"             # list of special strings
 _ROLL_CREDITS_FLAG = "roll_credits"
+_SHOW_INSTRUCTIONS = "show_instructions"
 
 SONG_ID = "song_id"             # song associated with the level
 INSTRUMENTS = "instruments"     # mapping from player_id to instrument track(s) it controls
@@ -855,7 +857,12 @@ class LevelBlueprint:
 
         self.directory = directory
 
-        self.ephemeral_song_id = None
+        explicit_id = self.explicit_song_id()
+        if explicit_id is not None:
+            self.ephemeral_song_id = songsystem.resolve_explicit_song_id_from_level(explicit_id)
+        else:
+            self.ephemeral_song_id = None
+
         self._cached_entities = None      # list of (blob, spec)
 
     @staticmethod
@@ -877,8 +884,11 @@ class LevelBlueprint:
     def level_id(self):
         return util.read_string(self.json_blob, LEVEL_ID, "???")
 
-    def song_id(self):
-        return util.read_string(self.json_blob, SONG_ID, self.ephemeral_song_id)
+    def get_resolved_song_id(self):
+        if self.ephemeral_song_id is not None:
+            return self.ephemeral_song_id
+        else:
+            return None  # silence
 
     def explicit_song_id(self):
         return util.read_string(self.json_blob, SONG_ID, None)
@@ -925,6 +935,9 @@ class LevelBlueprint:
 
     def should_roll_credits_when_beat_for_first_time(self):
         return _ROLL_CREDITS_FLAG in self.special_flags()
+
+    def should_show_instructions(self):
+        return _SHOW_INSTRUCTIONS in self.special_flags()
 
     def time_limit(self):
         """returns: level's time limit in ticks"""

@@ -631,6 +631,13 @@ class OverworldBlueprint:
                 return n
         return None
 
+    def number_of_numeric_levels(self):
+        res = 0
+        for level_n in self.levels:
+            if str(level_n).isnumeric():
+                res += 1
+        return res
+
     def __repr__(self):
         return "\n".join([
             "OverworldBlueprint: {}".format(self.ref_id),
@@ -737,17 +744,15 @@ class OverworldState:
             level_dir = os.path.join(overworld_bp.directory, "levels")
 
             loaded_levels = blueprints.load_all_levels_from_dir(level_dir)
+            n_numeric_levels = overworld_bp.number_of_numeric_levels()
 
-            # Assign default songs to the levels
+            # Resolve the levels' songs
             for key in loaded_levels:
                 level = loaded_levels[key]
                 level_num = overworld_bp.get_level_num_for_id(level.level_id())
-                if level_num is not None:
-                    if str(level_num).isnumeric():
-                        n = int(level_num) / len(overworld_bp.levels)
-                    else:
-                        n = 1.0
-                    level.ephemeral_song_id = songsystem.get_song_id_for_level(overworld_id, n, explicit_song_id=level.explicit_song_id())
+                if level.explicit_song_id() is None and str(level_num).isnumeric():
+                    n = int(level_num) / max(1, n_numeric_levels)
+                    level.ephemeral_song_id = songsystem.get_default_song_id_for_level(overworld_id, n)
 
             self.level_blueprints.update(loaded_levels)
 
@@ -1782,9 +1787,15 @@ class OverworldScene(scenes.Scene):
                 next_scene = menus.LevelEditGameScene(level_bp,
                                                       prev_scene_provider=lambda: _updated_scene(reload_levels=True))
             else:
-                next_scene = menus.RealGameScene(level_bp,
+                game_scene = menus.RealGameScene(level_bp,
                                                  lambda time: self.get_manager().set_next_scene(_updated_scene(new_time=time)),
                                                  lambda: self.get_manager().set_next_scene(_updated_scene()))
+                next_scene = game_scene
+
+                # handle "Instructions scene"
+                if not state.is_complete(level_bp.level_id()) and level_bp.should_show_instructions():
+                    next_scene = menus.InstructionsScene(next_scene, self)
+
             self.get_manager().set_next_scene(next_scene)
             sounds.play_sound(soundref.LEVEL_START)
 
@@ -1793,7 +1804,11 @@ class OverworldScene(scenes.Scene):
         if intro_level is not None:
             if not self.state.is_complete(intro_level.level_id()):
                 print("INFO: starting intro sequence")
-                # TODO play intro cutscene
+                # It goes:
+                # 1. cutscene
+                # 2. intro level
+                # 3. overworld scene
+
                 import src.game.menus as menus
 
                 def _on_intro_finish(new_time=None):
@@ -1803,10 +1818,16 @@ class OverworldScene(scenes.Scene):
                     else:
                         return menus.MainMenuScene()
 
-                next_scene = menus.RealGameScene(intro_level,
-                                                 lambda time: self.get_manager().set_next_scene( _on_intro_finish(new_time=time)),
-                                                 lambda: self.get_manager().set_next_scene( _on_intro_finish()))
-                self.get_manager().set_next_scene(next_scene)
+                in_game_scene = menus.RealGameScene(intro_level,
+                                                    lambda time: self.get_manager().set_next_scene(_on_intro_finish(new_time=time)),
+                                                    lambda: self.get_manager().set_next_scene(_on_intro_finish()))
+
+                def provide_level_scene():
+                    gs.get_instance().do_fullscreen_fade(120, colors.PERFECT_BLACK, 1, 0)
+                    return in_game_scene
+                cutscene_scene = menus.IntroCutsceneScene(provide_level_scene)
+
+                self.get_manager().set_next_scene(cutscene_scene)
                 return True
         return False
 

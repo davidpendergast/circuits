@@ -137,6 +137,13 @@ class DefaultFontSmall(FontSheet):
     def __init__(self):
         FontSheet.__init__(self, DefaultFontSmall.SHEET_ID, "assets/font_small.png")
 
+        self.set_swap_chars({
+            "→": chr(16),
+            "←": chr(17),
+            "↑": chr(24),
+            "↓": chr(25)
+        })
+
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
         if sheet is None:
