@@ -3314,14 +3314,15 @@ class DecorationEntity(Entity):
     def update_sprites(self):
         if self._sprite is None:
             self._sprite = sprites.ImageSprite.new_sprite(spriteref.BLOCK_LAYER, depth=0)
-        model = spriteref.decoration_sheet().get_sprite(self.get_size(), self.art_id)
+        model, can_recolor = spriteref.decoration_sheet().get_sprite(self.get_size(), self.art_id)
         if model is None:
             model = spritesheets.get_white_square_img(opacity=0.75)
             self._sprite = self._sprite.update(new_model=model, new_x=self.get_x(), new_y=self.get_y(),
                                                new_raw_size=self.get_size(), new_color=self.get_color())
         else:
             self._sprite = self._sprite.update(new_model=model, new_x=self.get_x(), new_y=self.get_y(),
-                                               new_color=self.get_color(), new_xflip=self.xflip)
+                                               new_color=self.get_color() if can_recolor else colors.PERFECT_WHITE,
+                                               new_xflip=self.xflip)
 
     def all_sprites(self):
         yield self._sprite

@@ -336,6 +336,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         self.speaker_portraits[const.PLAYER_HEAVY] = [_img(176 + 24 * 2, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
         player_d_portrait_width = 25  # needed another pixel, sue me~
         self.speaker_portraits[const.PLAYER_FLYING] = [_img(176 + 24 * 3, 392 + i * 32, player_d_portrait_width, 32, offs=start_pos) for i in range(0, 2)]
+        self.speaker_portraits["overseer"] = [_img(296, 392 + i * 32, 24, 32, offs=start_pos) for i in range(0, 2)]
 
         temp = self._handle_rotated_player_pieces([624, 128, 8, 8], 2, 8, atlas, start_pos)
         self.thin_block_broken_pieces_horz = temp[0]
@@ -635,13 +636,13 @@ class _DecorationSheet(spritesheets.SpriteSheet):
     def __init__(self):
         spritesheets.SpriteSheet.__init__(self, "decorations", "assets/decorations.png")
 
-        self.sprites = {}  # (w, h) -> list of ImageModels
+        self.sprites = {}  # (w, h) -> list of ImageModels, bool: can_recolor
 
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
 
-        def _make_blocks(xy, dims, n=1, offs=(0, 0)):
-            return [_img(xy[0] + i * dims[0], xy[1], dims[0], dims[1], offs=offs) for i in range(0, n)]
+        def _make_blocks(xy, dims, n=1, offs=(0, 0), can_recolor=True):
+            return [_img(xy[0] + i * dims[0], xy[1], dims[0], dims[1], offs=offs) for i in range(0, n)], can_recolor
 
         self.sprites.clear()
         self.sprites[(16, 16)] = _make_blocks((0, 0), (16, 16), n=2, offs=start_pos)
@@ -650,12 +651,15 @@ class _DecorationSheet(spritesheets.SpriteSheet):
         self.sprites[(8, 8)] = _make_blocks((0, 32), (8, 8), n=3, offs=start_pos)
         self.sprites[(32, 32)] = _make_blocks((0, 40), (32, 32), n=2, offs=start_pos)
         self.sprites[(32, 16)] = _make_blocks((0, 72), (32, 16), n=3, offs=start_pos)
+        self.sprites[(128, 112)] = _make_blocks((0, 128), (128, 112), n=1, offs=start_pos, can_recolor=False)
 
     def get_sprite(self, size, idx):
+        """ returns: ImageModel, can_recolor """
         if size in self.sprites:
-            return self.sprites[size][idx % len(self.sprites[size])]
+            imgs, can_recolor = self.sprites[size]
+            return imgs[idx % len(self.sprites[size])], can_recolor
         else:
-            return None
+            return None, True
 
 
 class _UiSheet(spritesheets.SpriteSheet):

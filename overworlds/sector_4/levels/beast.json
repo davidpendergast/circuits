@@ -166,8 +166,6 @@
         },
         {"art_id": 1, "color_id": 5, "h": 16, "inverted": true, "type": "decoration", "w": 16, "x": 144, "y": 48},
         {"art_id": 1, "color_id": 5, "h": 16, "inverted": false, "type": "decoration", "w": 16, "x": 320, "y": 48},
-        {"art_id": 0, "color_id": 5, "h": 16, "inverted": true, "type": "decoration", "w": 16, "x": 144, "y": 160},
-        {"art_id": 0, "color_id": 5, "h": 8, "inverted": false, "type": "decoration", "w": 24, "x": 216, "y": 168},
         {"art_id": 0, "color_id": 5, "h": 8, "inverted": false, "type": "decoration", "w": 16, "x": 320, "y": 168},
         {"art_id": 0, "color_id": 0, "h": 48, "type": "block", "w": 32, "x": 480, "y": 192},
         {"art_id": 1, "color_id": 0, "h": 32, "type": "block", "w": 16, "x": 576, "y": 96},
@@ -696,7 +694,19 @@
         {"art_id": 0, "color_id": 0, "h": 8, "type": "block", "w": 48, "x": 448, "y": 128},
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 32, "x": 480, "y": 0},
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 32, "x": 528, "y": 96},
-        {"art_id": 0, "color_id": 0, "h": 8, "type": "block", "w": 8, "x": 496, "y": 128}
+        {"art_id": 0, "color_id": 0, "h": 8, "type": "block", "w": 8, "x": 496, "y": 128},
+        {"art_id": 0, "color_id": 5, "h": 112, "inverted": false, "type": "decoration", "w": 128, "x": 176, "y": 64},
+        {
+            "color_id": 0,
+            "dialog": "overseer_conversation",
+            "points": [],
+            "subtype": "invisible",
+            "text": "{INTERACT_KEYS} to Talk",
+            "type": "info",
+            "x": 136,
+            "y": 136
+        },
+        {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 16, "x": 144, "y": 160}
     ],
     "level_id": "beast",
     "name": "Belly of the Beast",

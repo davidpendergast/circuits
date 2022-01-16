@@ -48,6 +48,7 @@ class Speaker:
     B = SpeakerType(const.PLAYER_SMALL, color=colors.TAN, sound=playertypes.PlayerTypes.SMALL.translate_sound(soundref.PLAYER_DIALOG))
     C = SpeakerType(const.PLAYER_HEAVY, color=colors.GREEN, sound=playertypes.PlayerTypes.HEAVY.translate_sound(soundref.PLAYER_DIALOG))
     D = SpeakerType(const.PLAYER_FLYING, color=colors.PURPLE, sound=playertypes.PlayerTypes.FLYING.translate_sound(soundref.PLAYER_DIALOG))
+    OVERSEER = SpeakerType("overseer", color=colors.WHITE, sound=soundref.ModernUI.sci_fi_notification_2)
 
     NONE = SpeakerType("none")
     UNKNOWN = SpeakerType("unknown")
