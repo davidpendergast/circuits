@@ -4,7 +4,7 @@
     "entities": [
         {"color_id": 0, "h": 16, "type": "block", "w": 48, "x": 160, "y": 192},
         {"art_id": 1, "color_id": 0, "h": 32, "type": "block", "w": 16, "x": 160, "y": 160},
-        {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 32, "x_dir": 1, "y": 192},
+        {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 16, "x_dir": 1, "y": 192},
         {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 1328, "y": 192},
         {"color_id": 0, "h": 48, "type": "block", "w": 104, "x": 136, "y": 0},
         {"color_id": 0, "h": 48, "type": "block", "w": 16, "x": 0, "y": 192},
@@ -57,18 +57,7 @@
             "y": 160
         },
         {"color_id": 0, "h": 16, "type": "block", "w": 48, "x": 272, "y": 192},
-        {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 16, "x": 16, "y": 192},
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 32, "x": 16, "y": 208},
-        {
-            "art_id": 0,
-            "color_id": 0,
-            "h": 32,
-            "subtype": [0, 0, "horizontal"],
-            "type": "sloped_2x2_block",
-            "w": 32,
-            "x": 48,
-            "y": 192
-        },
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 80, "x": 80, "y": 208},
         {
             "art_id": 0,
@@ -92,7 +81,7 @@
         },
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 80, "x": 320, "y": 208},
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 80, "x": 160, "y": 208},
-        {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 32, "x": 48, "y": 224},
+        {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 32, "x": 48, "y": 208},
         {"art_id": 0, "color_id": 0, "h": 32, "type": "block", "w": 80, "x": 240, "y": 208},
         {"color_id": 0, "h": 48, "type": "block", "w": 104, "x": 240, "y": 0},
         {"color_id": 0, "inverted": true, "subtype": "0X", "type": "camera_bound_marker", "x": 0, "y": 0},
@@ -141,27 +130,7 @@
             "subtype": "player_small",
             "text": "",
             "type": "info",
-            "x": 88,
-            "y": 192
-        },
-        {
-            "color_id": 0,
-            "dialog": "",
-            "points": [],
-            "subtype": "player_heavy",
-            "text": "",
-            "type": "info",
-            "x": 368,
-            "y": 192
-        },
-        {
-            "color_id": 0,
-            "dialog": "",
-            "points": [],
-            "subtype": "player_flying",
-            "text": "",
-            "type": "info",
-            "x": 304,
+            "x": 120,
             "y": 144
         },
         {"art_id": 1, "color_id": 5, "h": 16, "inverted": true, "type": "decoration", "w": 16, "x": 144, "y": 48},
@@ -535,7 +504,7 @@
             "dialog": "",
             "points": [],
             "subtype": "player_small",
-            "text": "After you, Captain",
+            "text": "After you, Captain.",
             "type": "info",
             "x": 512,
             "y": -64
@@ -589,7 +558,7 @@
             "dialog": "",
             "points": [],
             "subtype": "player_small",
-            "text": "After you, Captain",
+            "text": "After you, Captain.",
             "type": "info",
             "x": 644,
             "y": 400
@@ -706,11 +675,47 @@
             "x": 136,
             "y": 136
         },
-        {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 16, "x": 144, "y": 160}
+        {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 16, "x": 144, "y": 160},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "player_flying",
+            "text": "",
+            "type": "info",
+            "x": 160,
+            "y": 144
+        },
+        {"art_id": 0, "color_id": 0, "h": 8, "type": "block", "w": 32, "x": 112, "y": 160},
+        {
+            "art_id": 0,
+            "color_id": 0,
+            "h": 32,
+            "subtype": [0, 2, "vertical"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 80,
+            "y": 160
+        },
+        {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 48, "x": 32, "y": 192},
+        {"art_id": 0, "color_id": 0, "h": 16, "type": "block", "w": 32, "x": 80, "y": 192},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "player_heavy",
+            "text": "",
+            "type": "info",
+            "x": 96,
+            "y": 144
+        },
+        {"art_id": 0, "color_id": 5, "h": 8, "inverted": false, "type": "decoration", "w": 24, "x": 48, "y": 184},
+        {"art_id": 0, "color_id": 5, "h": 16, "inverted": false, "type": "decoration", "w": 16, "x": 112, "y": 192},
+        {"art_id": 0, "color_id": 0, "h": 8, "type": "block", "w": 16, "x": 464, "y": -240}
     ],
     "level_id": "beast",
     "name": "Belly of the Beast",
     "song_id": null,
-    "special": [],
-    "time_limit": 3600
+    "special": ["roll_credits"],
+    "time_limit": 216000
 }

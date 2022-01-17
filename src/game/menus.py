@@ -778,7 +778,7 @@ class IntroCutsceneSceneOld(MultiPageCutsceneScene):
 class IntroCutsceneScene(MultiPageCutsceneScene):
 
     _PAGES = [
-        (None, "Eons ago, a message was sent in a dying galaxy"),
+        (None, "Eons ago, a message was sent in a dying galaxy"),  # TODO - improve
         (None, "THIS IS LIKELY OUR FINAL TRANSMISSION", colors.BLUE),
         (None, "SOLAR PANELS CRITICALLY DAMAGED\nBACKUP FUELS DEPLETED", colors.TAN),
         (None, "WE'VE SET COURSE FOR AN UNKNOWN STRUCTURE ORBITING SOL-1564", colors.BLUE),
@@ -818,12 +818,10 @@ class IntroCutsceneScene(MultiPageCutsceneScene):
 
 class EndOfGameScene(MultiPageCutsceneScene):
 
-    ENDING_TURN_ON = "turn_on"
-    ENDING_LEAVE_OFF = "leave_off"
-
-    def __init__(self, next_scene_provider, ending=None):
-        pages = [(None, "You win!")]
-        # TODO alt endings
+    def __init__(self, next_scene_provider):
+        pages = [(None, "You win!"),
+                 (None, "Your decision alters the fate of the galaxy for eons to come.")]
+        # TODO alt endings (wdym? that was the alt ending)
 
         def _get_next_scene():
             if next_scene_provider is not None:
