@@ -992,7 +992,7 @@ class LevelBlueprint:
                 print("ERROR: failed to build blob: {}".format(blob))
                 traceback.print_exc()
 
-        has_camera_markers = False
+        camera_bound_rects = {}  # camera id -> rect
 
         min_xy_with_data = [None, None]
         max_xy_with_data = [None, None]
@@ -1004,22 +1004,24 @@ class LevelBlueprint:
                 max_xy_with_data[1] = max(max_xy_with_data[1] if max_xy_with_data[1] is not None else -float('inf'), ent.get_rect()[1] + ent.get_rect()[3])
 
             if ent.is_camera_bound_marker():
-                has_camera_markers = True
+                if ent.get_idx() in camera_bound_rects:
+                    camera_bound_rects[ent.get_idx()] = util.rect_union([camera_bound_rects[ent.get_idx()], ent.get_rect()])
+                else:
+                    camera_bound_rects[ent.get_idx()] = ent.get_rect()
 
-        if not has_camera_markers and min_xy_with_data[0] is not None:
-            min_camera_block = entities.CameraBoundMarker(min_xy_with_data[0], min_xy_with_data[1], 0, show_timer=True)
-            max_camera_block = entities.CameraBoundMarker(max_xy_with_data[0] - min_camera_block.get_w(),
-                                                          max_xy_with_data[1] - min_camera_block.get_h(),
-                                                          0, show_timer=True)
-            # world.add_entity(min_camera_block, next_update=False)
-            # world.add_entity(max_camera_block, next_update=False)
+        safe_zones = []
+        if len(camera_bound_rects) > 0:
+            # if you're in a camera bound, that's safe.
+            for idx in camera_bound_rects:
+                safe_zones.append(camera_bound_rects[idx])
+        elif max_xy_with_data[0] is not None:
+            # if there are no camera bounds, assume the blocks define the shape of the level.
+            safe_zones.append([min_xy_with_data[0],
+                               min_xy_with_data[1],
+                               max_xy_with_data[0] - min_xy_with_data[0],
+                               max_xy_with_data[1] - min_xy_with_data[1]])
 
-        if max_xy_with_data[0] is not None:
-            safe_zone = [min_xy_with_data[0],
-                         min_xy_with_data[1],
-                         max_xy_with_data[0] - min_xy_with_data[0],
-                         max_xy_with_data[1] - min_xy_with_data[1]]
-            world.set_safe_zones([safe_zone])
+        world.set_safe_zones(safe_zones)
 
         return world
 

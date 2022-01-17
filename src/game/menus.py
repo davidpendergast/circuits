@@ -284,6 +284,8 @@ class CreditsScene(scenes.Scene):
 
     SLIDE_TEXT.extend([
         "",
+        ("special thanks to everyone who helped with testing", SMALL),
+        "",
         ("made with pygame and OpenGL", SMALL),
         "",
         ("thanks for playing <3", SMALL)

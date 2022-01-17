@@ -41,7 +41,7 @@ features:
  
  playtesting / feedback:
  
- tester 1 (T)
+ tester 1 (Te)
  [x] tried to climb right wall with B on level 2
  - hard/confusing to remember which character is which letter (colorblind)
     - fix w/ story?
@@ -60,7 +60,7 @@ features:
  - fast fwd button
     - would be nice, not sure how technically feasible this would be though
     
- tester 2 (C):
+ tester 2 (Ca):
     - checkin out menu, reading controls
     - instantly solved first level...?
         - levels 1-3 were re-recorded, no biggie
@@ -71,7 +71,7 @@ features:
     - struggled a bit with level 5 (stairway), but re-recorded it with B a few times and got it down
         - struggled to move B onto the switches precisely (may want to fix that)
 
- tester 3 (P):
+ tester 3 (Po):
   verbal feedback:
     - would prefer ctrl + r over shift + r
 	- ability to click A / B icons on timer bar? (to reset)
@@ -106,6 +106,32 @@ features:
 		and you'd be incentivized to FFW at all times (even when moving and such)
 		(especially if you were speedrunning, didn't even consider that).
 		yeah I think ffw is a no-go.
+		
+tester 4: (Ax)
+	verbal feedback:
+		- No complaints from me and I hope this game does well!
+		- Is this for a game jam? Seems like a solid game which I feel would win then
+		- Really cool concept and I like the usage of time!
+	recording:
+		didn't record 'landing'
+		Arrival - several attempts, they restarted via the pause menu.
+			- perfect, overall.
+		walljump level, seemed to go well
+		'trust' level, also seemed to go pretty well.
+		then they stopped.
+	thoughts:
+		- no actionable items.
+			- except maybe that level 3 was too boring and made them stop, idk
+			- still wondering if 'Desync' should be level 3
+				- idk, i can't ~really~ keep players interested if they don't want to be.
+			
+tester 5: (No)
+	verbal feedback:
+		- there were some parts that i couldnt really understand but i caught on later on
+			- ("mostly at the beginning")
+	    - its pretty fun
+        - till i got stuck on a level lol
+        - only feedback i can give is that maybe with bot a, when youre doing the wall clinging, there should be a button to uncling
 	
     
     
