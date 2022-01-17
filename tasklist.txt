@@ -5,22 +5,30 @@ bugs:
 	- would be ok, but it's not super consistent
 
 p3 bugs:
- - falling block is 'squished' in "Heist" preview img
- - falling blocks are inconsistently destroyed when a door block is activated on top of them
- - sector text gets misaligned at certain window heights
+ - falling block is 'squished' in "Heist" preview img?
+ - in preview panes, every single block in the level is rendered (but not displayed)
+    - leading to fps drops in 'story' levels
  
  
 features:
- - hook up stats + credits scene to final level
-    [x] what final level?
- [x] let you embed stuff (e.g. "{ACTION_KEY}" --> [Enter]) into dialog / info text.
-    - with a special color
-	  - relax
- [x] there should be an indicator when a player desyncs / resyncs
- - load controls from user-editable file, or otherwise make them editable
+ [/] there should be an indicator when a player desyncs / resyncs
+   - implemented, but scrapped
+ [/] load controls from user-editable file, or otherwise make them editable
  - choose real sounds for things (and make them louder? they don't really cut through the music currently)
- [x] stats scene (total playtime, total best level time sum, levels completed)
- [x] teleporters getting blocked
+   - I think we're mostly... good?
+
+final push:
+ - finalize song assignments
+ - B dialog in intro level
+ - A dialog / level in sector_a
+   - some brief dialog at beginning of sector A
+   - needs new art?
+ [x] C dialog / could extend level a bit
+ - level / dialog for sector 2
+ - D dialog in sector 3
+ - flavor text for (all) levels
+ - set up itch page
+ - acquire usable linux machine
 
  story:
  - you are: a group of scavenger/scout robots who explore space, searching for materials

@@ -935,19 +935,21 @@ class TextSprite(MultiSprite):
             self._unused_sprites.append(spr)
 
     def _realign_characters(self):
-        y_to_chars = {}
+        row_to_chars = {}
         for idx, c in enumerate(self._character_sprites):
-            y = c.y() // c.height()
-            if y not in y_to_chars:
-                y_to_chars[y] = []
-            y_to_chars[y].append((c, idx))
+            # Dividing up character sprites by row is a little complicated due to outline sprites
+            # having an offset from their line's 'true y'. But we can just divide and round.
+            row = round((c.y() - self.get_rect()[1]) / c.height())
+            if row not in row_to_chars:
+                row_to_chars[row] = []
+            row_to_chars[row].append((c, idx))
 
         x_min = self._bounding_rect[0]
         x_max = x_min + self._bounding_rect[2]
 
-        for y in y_to_chars:
-            y_to_chars[y].sort(key=lambda c_idx: c_idx[0].x())
-            line_length = y_to_chars[y][-1][0].x() + y_to_chars[y][-1][0].width() - y_to_chars[y][0][0].x()
+        for row in row_to_chars:
+            row_to_chars[row].sort(key=lambda c_idx: c_idx[0].x())
+            line_length = row_to_chars[row][-1][0].x() + row_to_chars[row][-1][0].width() - row_to_chars[row][0][0].x()
             if self._alignment == TextSprite.RIGHT:
                 dx = x_max - x_min - line_length
             elif self._alignment == TextSprite.CENTER:
@@ -955,7 +957,7 @@ class TextSprite(MultiSprite):
             else:
                 dx = 0
 
-            for c, idx in y_to_chars[y]:
+            for c, idx in row_to_chars[row]:
                 self._character_sprites[idx] = c.update(new_x=c.x() + dx)
 
     def update(self, new_x=None, new_y=None, new_text=None, new_scale=None, new_depth=None,
