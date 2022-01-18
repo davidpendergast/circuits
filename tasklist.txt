@@ -13,6 +13,7 @@ p3 bugs:
 features:
  [/] there should be an indicator when a player desyncs / resyncs
    - implemented, but scrapped
+   [ ] maybe bring the desync indicator back at least "?"
  [/] load controls from user-editable file, or otherwise make them editable
  - choose real sounds for things (and make them louder? they don't really cut through the music currently)
    - I think we're mostly... good?
@@ -46,10 +47,13 @@ final push:
 
  ethical dilemma:
  - should we fulfill our own "purpose", at the possible expense of others, or abandon it so others might live
+	- doesn't super matter because no one will finish the game
+		- but it matters to meeee
+		- (the only gamer that matters)
  
  playtesting / feedback:
  
- tester 1 (Te)
+ tester 1 (Te) v0.0.0
  [x] tried to climb right wall with B on level 2
  - hard/confusing to remember which character is which letter (colorblind)
     - fix w/ story?
@@ -68,7 +72,7 @@ final push:
  - fast fwd button
     - would be nice, not sure how technically feasible this would be though
     
- tester 2 (Ca):
+ tester 2 (Ca): v0.0.1
     - checkin out menu, reading controls
     - instantly solved first level...?
         - levels 1-3 were re-recorded, no biggie
@@ -79,7 +83,7 @@ final push:
     - struggled a bit with level 5 (stairway), but re-recorded it with B a few times and got it down
         - struggled to move B onto the switches precisely (may want to fix that)
 
- tester 3 (Po):
+ tester 3 (Po): v0.0.1
   verbal feedback:
     - would prefer ctrl + r over shift + r
 	- ability to click A / B icons on timer bar? (to reset)
@@ -115,7 +119,7 @@ final push:
 		(especially if you were speedrunning, didn't even consider that).
 		yeah I think ffw is a no-go.
 		
-tester 4: (Ax)
+tester 4: (Ax) v0.0.2
 	verbal feedback:
 		- No complaints from me and I hope this game does well!
 		- Is this for a game jam? Seems like a solid game which I feel would win then
@@ -133,16 +137,117 @@ tester 4: (Ax)
 			- still wondering if 'Desync' should be level 3
 				- idk, i can't ~really~ keep players interested if they don't want to be.
 			
-tester 5: (No)
+tester 5: (No) v0.0.2
 	verbal feedback:
 		- there were some parts that i couldnt really understand but i caught on later on
-			- ("mostly at the beginning")
+			- "mostly at the beginning"
 	    - its pretty fun
         - till i got stuck on a level lol
         - only feedback i can give is that maybe with bot a, when youre doing the wall clinging, there should be a button to uncling
+		
+	i noticed:
+		[ ] platforming at the start of 'landing' is a little clunky
+			- arrival
+			- ran to the end of arrival w/out interacting with switch
+			- then messed around with switch with B for a bit
+			- really struggling with 1st level lol
+				- context: I rushed the build and there was a bug that caused instructions to not be shown
+			- trying to get A to go to B's exit !!
+				- that's not good
+				- WHY
+				- eventually did it.. it did not work
+				- HMM
+				- then did it correctly. that is a first
+		- game is running well though. lvl 2 
+		- got tricked on level (trust), little annoying?
+		- lot of unnecessary restarting. perfectionism?
+		- did stairway in one try, v nice
+		- maze time
+			- hitting switches a bit randomly at first (just hoping it'll work out?)
+			- seems to have some ideas, no major execution problems like in previous builds
+			- failed at the very end with B, then (accidentally?) restarted A
+			- maze took 5 mins out of 13 so far. (Arrival took 3.5 mins)
+		- boulders
+			- lot of trial and error, trying to figure out the correct order
+			- eventually got it though. being stuck in gay baby jail looked annoying
+			- kinda struggled with wall clinging from the looks of it
+			- took like 3 minutes, probably fine
+		- desync
+			- understood it practically immediately (due to experiences w/ arrival I think)
+		- resync
+			- understood that practically immediately too. very good
+		- crush went well, lots of learning
+		- fragility
+			- the little walkoff C has to do might be a bit tight
+			- accidentally did a full reset?
+			[x] not a huge fan of the little jump A has to do on the right side into the narrow gap over the spikes
+			- this level has a lot of "gotchas"
+				- can't walk on the thing above C's spawn with A
+				- can't touch anything or jump with C
+				- but got it. was this fun? it didn't look like it
+					- is the game supposed to be fun?
+						- is life not meant to be pain
+				- like 5 mins of playtime
+		- beat scaffolding in like a minute, good!
+		- catch
+			- so this is actually the player's very first time seeing switches get
+			  triggered by blocks. so maybe that's not great?
+				- edit: actually this sorta happens in boulders with falling blocks, so
+			- maybe an early level should introduce this idea first?
+			- but he gets it, so maybe it's fine.
+			- each part took like 3 attempts to figure out
+				- but he got it. 3 mins, good i think
+			- tried to jump through double-spikes, probably didn't recognize that they were spikes
+				- live and learn 
+		- skipped level 5 (which should be ok, i mean otherwise why layout the sector like that)
+		- divider
+			- so this introduces perma-switches, and it's a desync level.
+			- and B is in jail the whole time 
+			- this level is actually pretty hard though
+			- managed to get C into B's chamber, and hold down the X ?!
+				- that's a pretty insane non-solution
+				- hard to pull off and won't help HMM
+			- then struggle to pull off another non-solution for a while
+			- and then quit, when he couldn't pull it off
+			- 10 mins on this level. 
+				- gave it quite a solid try though, but that effort was not rewarded
+		40 mins total.
+	thoughts:
+		[ ] player-letter correlation is a big problem
+			- dialog should help. will players remember though?
+			- anything else?
+		[ ] action key is confusing? since it basically does nothing for most of the game
+		- managed to proactively desync A on Arrival
+			- which is encouraging if I want to move 'Desync' up
+		[ ] Divider is quite difficult for that position in the levels
+			- it's literally the 3rd / 4th desync level in the game
+			- and requires two(?) non-obvious alignments
+			- and has some brutal false solutions
+			- it's skippable, but... it feels super bad to skip levels in puzzle games
+		[ ] I think they didn't notice sector A, which could be an issue.
+			- idk! those levels aren't super great anyways.
+		[ ] unrelated to playthrough but 'help' should tell you that B can jump out of C's arms
+		[/] how does the player feel when they start a sector and see like 9 uncleared levels ahead of them?
+			- does this feel bad? should they be hidden until you unlock them?
+			- info overload?
+			- or does it not really matter
+			- like if they're hidden, the player still *knows* that there will be like 10 levels in the zone
+				- and ideally they'd want to experience more levels? lol
+				- idk. i don't think it matters
+		
+list of dropoff points:
+	- MAZE     (1-6) 	(after completion)
+	- DESYNC   (1-8) 	(before completion)
+	- DIVIDER  (2-6)    (before) <-- problem
+    - SISYPHUS (2-9)    (haven't tested again since fixing, but requires a 'discovery')
+    - PIT OF DESPAIR	(probably? coin toss)
+	- SPLIT is probably kinda hard?
+	- RELEASE
+	- PATHWAYS
+	- ... at this point most levels are getting pretty brutal, so idk
+	- ultimately, it's a difficult game. people aren't going to beat it in a single playthrough
+	  and that's probably ok. That's the nature of hard puzzle games 
 	
-    
-    
  level ideas:
  - single room with many moving platforms
     - like https://youtu.be/eYJAnXgI0AU?t=1577
@@ -158,7 +263,6 @@ tester 5: (No)
  [x] make_exe for Windows
  [ ] make_exe for Linux
  [ ] make_exe for MacOS
- [ ] display version number in game
  
  
  
