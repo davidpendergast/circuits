@@ -171,7 +171,7 @@
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 96, "y": 112},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 128, "y": 112},
         {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 144},
-        {"color_id": 1, "h": 64, "type": "block", "w": 8, "x": 0, "y": 128}
+        {"color_id": 1, "h": 64, "type": "block", "w": 16, "x": 0, "y": 128}
     ],
     "level_id": "arrival",
     "name": "Arrival",

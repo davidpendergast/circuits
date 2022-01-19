@@ -170,17 +170,28 @@
             "dialog": "",
             "points": [],
             "subtype": "exclam",
-            "text": "Unit C can pick up Unit B\nwith [{INTERACT_KEYS}]",
+            "text": "Unit C can pick up B\nwith [{INTERACT_KEYS}]",
             "type": "info",
             "x": 72,
             "y": 152
         },
         {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 16, "x": 72, "y": 168},
         {"art_id": 3, "color_id": 2, "h": 32, "type": "block", "w": 32, "x": 352, "y": 112},
-        {"art_id": 2, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 112, "y": 128}
+        {"art_id": 2, "color_id": 3, "h": 16, "type": "block", "w": 16, "x": 112, "y": 128},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "exclam",
+            "text": "And Unit B can exit C's grasp by jumping!",
+            "type": "info",
+            "x": 232,
+            "y": 192
+        }
     ],
     "level_id": "help",
     "name": "Help",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

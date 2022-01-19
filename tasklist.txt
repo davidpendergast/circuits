@@ -146,7 +146,7 @@ tester 5: (No) v0.0.2
         - only feedback i can give is that maybe with bot a, when youre doing the wall clinging, there should be a button to uncling
 		
 	i noticed:
-		[ ] platforming at the start of 'landing' is a little clunky
+		[x] platforming at the start of 'landing' is a little clunky
 			- arrival
 			- ran to the end of arrival w/out interacting with switch
 			- then messed around with switch with B for a bit
@@ -219,14 +219,14 @@ tester 5: (No) v0.0.2
 		[ ] action key is confusing? since it basically does nothing for most of the game
 		- managed to proactively desync A on Arrival
 			- which is encouraging if I want to move 'Desync' up
-		[ ] Divider is quite difficult for that position in the levels
+		[x] Divider is quite difficult for that position in the levels
 			- it's literally the 3rd / 4th desync level in the game
 			- and requires two(?) non-obvious alignments
 			- and has some brutal false solutions
 			- it's skippable, but... it feels super bad to skip levels in puzzle games
 		[ ] I think they didn't notice sector A, which could be an issue.
 			- idk! those levels aren't super great anyways.
-		[ ] unrelated to playthrough but 'help' should tell you that B can jump out of C's arms
+		[x] unrelated to playthrough but 'help' should tell you that B can jump out of C's arms
 		[/] how does the player feel when they start a sector and see like 9 uncleared levels ahead of them?
 			- does this feel bad? should they be hidden until you unlock them?
 			- info overload?
