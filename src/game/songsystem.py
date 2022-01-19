@@ -146,12 +146,20 @@ INSTRUCTION_MENU_SONG = OFDN_DREAM_FACTORY, [0.75]
 _SONG_MAPPINGS_FOR_LEVELS = {
     "silence": [SILENCE],
     "menu_theme": [MAIN_MENU_SONG],
-    "sector_1": [OFDN_DREAM_FACTORY, OFDN_0_TO_100, OFDN_ETHNIC_BEAT],
-    "sector_a": [OFDN_FOCUS],
-    "sector_2": [OFDN_GANXTA, OFDN_LOW_GRAVITY, OFDN_LARGO],
+    "sector_1": [OFDN_VOLTAGE, OFDN_TIME_FLIES, OFDN_ETHNIC_BEAT],
+    "sector_a": [OFDN_0_TO_100, OFDN_CRUISER],
+    "sector_2": [OFDN_GANXTA, OFDN_TIMED, OFDN_FOCUS],
     "sector_3": [OFDN_CHOPPIN, OFDN_DEPARTING_AT_DAWN, OFDN_SHEHERAZADE],
-    "sector_4": [OFDN_STREAM, OFDN_TIME_FLIES, OFDN_VOLTAGE],
-    "custom": [OFDN_CHOPPIN, OFDN_CRUISER, OFDN_DEPARTING_AT_DAWN, OFDN_SHEHERAZADE, OFDN_TIMED]
+    "sector_4": [OFDN_STREAM, OFDN_NO_TIME, OFDN_GANXTA],
+    "custom": [
+        OFDN_CHOPPIN,
+        OFDN_CRUISER,
+        OFDN_DEPARTING_AT_DAWN,
+        OFDN_SHEHERAZADE,
+        OFDN_TIMED,
+        OFDN_DREAM_FACTORY,
+        OFDN_NO_TIME,
+        OFDN_LARGO]  # DO NOT RE-ARRANGE
 }
 
 
@@ -172,7 +180,7 @@ def resolve_explicit_song_id_from_level(explicit_song_id):
             # it should look like "sector_ab_2", in which case we need to extract "sector_ab" and 2.
             underscore_idx = explicit_song_id.rindex("_")
             key = explicit_song_id[0:underscore_idx]
-            idx = int(explicit_song_id[underscore_idx + 1:])
+            idx = int(explicit_song_id[underscore_idx + 1:]) - 1
             if key in _SONG_MAPPINGS_FOR_LEVELS:
                 n_songs = len(_SONG_MAPPINGS_FOR_LEVELS[key])
                 return _SONG_MAPPINGS_FOR_LEVELS[key][util.bound(idx, -1, n_songs - 1)]

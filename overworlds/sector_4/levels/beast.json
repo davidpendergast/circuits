@@ -714,7 +714,7 @@
     ],
     "level_id": "beast",
     "name": "Belly of the Beast",
-    "song_id": null,
+    "song_id": "custom_6",
     "special": ["roll_credits"],
     "time_limit": 216000
 }

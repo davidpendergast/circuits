@@ -3,6 +3,8 @@ bugs:
  - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
  - players can splat if they hit the ground with too much speed
 	- would be ok, but it's not super consistent
+	- only really occurs when you have a lot of downward speed and hit a platform with upward speed
+ - teles that start out deactivated shouldn't blip every time the level starts
 
 p3 bugs:
  - falling block is 'squished' in "Heist" preview img?
@@ -17,9 +19,12 @@ features:
  [/] load controls from user-editable file, or otherwise make them editable
  - choose real sounds for things (and make them louder? they don't really cut through the music currently)
    - I think we're mostly... good?
+ - level editor
+	- ability to choose song in-game
+	- import / export / play custom levels
 
 final push:
- - finalize song assignments
+ [x] finalize song assignments
  - B dialog in intro level
  - A dialog / level in sector_a
    - some brief dialog at beginning of sector A
@@ -29,7 +34,7 @@ final push:
  - D dialog in sector 3
  - flavor text for (all) levels
  - set up itch page
- - acquire usable linux machine
+ - acquire usable linux machine and make build
 
  story:
  - you are: a group of scavenger/scout robots who explore space, searching for materials

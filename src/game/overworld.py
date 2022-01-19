@@ -751,7 +751,7 @@ class OverworldState:
                 level = loaded_levels[key]
                 level_num = overworld_bp.get_level_num_for_id(level.level_id())
                 if level.explicit_song_id() is None and str(level_num).isnumeric():
-                    n = int(level_num) / max(1, n_numeric_levels)
+                    n = (int(level_num) - 1) / max(1, n_numeric_levels)
                     level.ephemeral_song_id = songsystem.get_default_song_id_for_level(overworld_id, n)
 
             self.level_blueprints.update(loaded_levels)
