@@ -22,6 +22,7 @@ features:
  - level editor
 	- ability to choose song in-game
 	- import / export / play custom levels
+ - music should get quieter in dialog
 
 final push:
  [x] finalize song assignments

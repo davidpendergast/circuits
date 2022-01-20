@@ -242,6 +242,143 @@ class InstructionsScene(scenes.Scene):
         songsystem.get_instance().set_song(songsystem.INSTRUCTION_MENU_SONG, fadein=0.5, fadeout=0.5)
 
 
+class LevelPlayerOverviewScene(scenes.Scene):
+
+    def __init__(self, game_scene: 'RealGameScene', on_quit):
+        super().__init__()
+        self.game_scene = game_scene
+        self.on_quit = on_quit
+
+        self.sprites = []   # list of [ImageSprite, TextSprite]s, one per line
+        self.bg_sprite = None
+        self.inset = (16, 8)
+
+        self.ticks_active = 0
+
+        self.is_transitioning = False
+        self.trans_delay = 20
+        self.trans_ticks = 0
+
+    def _get_lines(self):
+        """ returns: list of (ImageModel, text, color)
+        """
+        if self.is_transitioning:
+            return []
+
+        def _get_player_sprite(player_id):
+            idx = gs.get_instance().anim_tick() // 8
+            all_sprites = spriteref.object_sheet().get_speaker_portrait_sprites(player_id)
+            return all_sprites[idx % len(all_sprites)]
+
+        res = []
+        for idx in range(0, self.game_scene.get_state().num_players()):
+            player_type = self.game_scene.get_state().get_player_type(idx)
+            res.append([
+                _get_player_sprite(player_type.get_id()),
+                f"{player_type.get_name().lower()} → {player_type.get_name().upper()}",
+                player_type.get_color()
+            ])
+        return res
+
+    def update(self):
+        self.game_scene.update_song()
+
+        if inputs.get_instance().was_pressed(const.MENU_CANCEL):
+            sounds.play_sound(soundref.MENU_BACK)
+            self.on_quit()
+        elif self.ticks_active > 5 and not self.is_transitioning:
+            if inputs.get_instance().was_anything_pressed() or inputs.get_instance().mouse_was_pressed():
+                sounds.play_sound(soundref.MENU_ACCEPT)
+                self.is_transitioning = True
+
+        self.ticks_active += 1
+
+        if self.is_transitioning:
+            if self.trans_ticks >= self.trans_delay:
+                self.jump_to_scene(self.game_scene, do_fade=False)
+            self.trans_ticks += 1
+
+    def _img_scale(self):
+        return 1.5
+
+    def _text_scale(self):
+        return 2
+
+    def get_bg_opacity(self):
+        base = 0.8
+        if not self.is_transitioning:
+            return base
+        else:
+            return util.bound(base * (1 - self.trans_ticks / self.trans_delay), 0, 1)
+
+    def get_cursor_id_at(self, xy) -> str:
+        return const.CURSOR_HAND
+
+    def update_sprites(self):
+        lines = self._get_lines()
+        if len(self.sprites) > len(lines):
+            self.sprites = self.sprites[0: len(lines)]
+        else:
+            while len(self.sprites) < len(lines):
+                new_img = sprites.ImageSprite.new_sprite(spriteref.UI_FG_LAYER, scale=self._img_scale(), depth=-5000)
+                new_text = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "abc", scale=self._text_scale(), depth=-5000,
+                                              font_lookup=spritesheets.get_default_font(True, False))
+                self.sprites.append([new_img, new_text])
+
+        line_widths = []
+        line_heights = []
+        for i, model_text_color in enumerate(lines):
+            model, text, color = model_text_color
+            self.sprites[i][0] = self.sprites[i][0].update(new_model=model)
+            self.sprites[i][1] = self.sprites[i][1].update(new_text=text, new_color=color)
+            line_widths.append(self.sprites[i][0].width() + self.inset[0] + self.sprites[i][1].size()[0])
+            line_heights.append(max(self.sprites[i][0].height(), self.sprites[i][1].size()[1]))
+
+        total_width = max(line_widths, default=0)
+        total_height = sum(line_heights) + max(0, len(line_heights) - 1) * self.inset[1]
+
+        screen_size = renderengine.get_instance().get_game_size()
+        info_rect = [screen_size[0] // 2 - total_width // 2,
+                     screen_size[1] // 2 - total_height // 2,
+                     total_width, total_height]
+
+        y = info_rect[1]
+        img_right_x = None
+        for i, img_text in enumerate(self.sprites):
+            if img_right_x is None:
+                x = info_rect[0] + info_rect[2] // 2 - line_widths[i] // 2
+                img_right_x = x + img_text[0].width()
+            else:
+                # XXX for (stupid) reasons, the sprites don't all have the same lengths
+                # so we force them to line up on the right edge (so that the text will be aligned).
+                x = img_right_x - img_text[0].width()
+
+            self.sprites[i][0] = img_text[0].update(new_x=x,
+                                                    new_y=y + line_heights[i] // 2 - img_text[0].height() // 2)
+            self.sprites[i][1].update(new_x=x + self.sprites[i][0].width() + self.inset[0],
+                                      new_y=y + 2 * line_heights[i] // 3 - img_text[1].size()[1] // 2)
+            y += line_heights[i] + self.inset[1]
+
+        if self.bg_sprite is None:
+            self.bg_sprite = sprites.ImageSprite(
+                None,
+                0, 0, spriteref.UI_FG_LAYER,
+                color=colors.PERFECT_BLACK,
+                depth=-4900)
+        self.bg_sprite = self.bg_sprite.update(new_model=spritesheets.get_white_square_img(self.get_bg_opacity()),
+                                               new_raw_size=screen_size)
+
+        self.game_scene.update_sprites()
+
+    def all_sprites(self):
+        for img_spr, text_spr in self.sprites:
+            yield img_spr
+            yield text_spr
+        yield self.bg_sprite
+        for spr in self.game_scene.all_sprites():
+            yield spr
+
+
 class CreditsScene(scenes.Scene):
     # most of this is yoinked from Skeletris
 

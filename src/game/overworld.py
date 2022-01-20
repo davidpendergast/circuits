@@ -638,6 +638,13 @@ class OverworldBlueprint:
                 res += 1
         return res
 
+    def is_numeric_level(self, level_id):
+        level_num = self.get_level_num_for_id(level_id)
+        if level_num is None:
+            return False
+        else:
+            return str(level_num).isnumeric()
+
     def __repr__(self):
         return "\n".join([
             "OverworldBlueprint: {}".format(self.ref_id),
@@ -1790,7 +1797,13 @@ class OverworldScene(scenes.Scene):
                 game_scene = menus.RealGameScene(level_bp,
                                                  lambda time: self.get_manager().set_next_scene(_updated_scene(new_time=time)),
                                                  lambda: self.get_manager().set_next_scene(_updated_scene()))
-                next_scene = game_scene
+
+                if self.state.get_overworld().is_numeric_level(level_bp.level_id()):
+                    next_scene = menus.LevelPlayerOverviewScene(game_scene, lambda: self.get_manager().set_next_scene(self))
+                else:
+                    # no need to show character info on 'story' levels
+                    # TODO this should probably be a flag within the level itself
+                    next_scene = game_scene
 
                 # handle "Instructions scene"
                 if not state.is_complete(level_bp.level_id()) and level_bp.should_show_instructions():
