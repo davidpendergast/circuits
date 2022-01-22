@@ -97,11 +97,13 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.CYCLE_SELECTION_ART_BACKWARD, keybinds.Binding(pygame.K_e, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.TOGGLE_SELECTION_INVERTED, keybinds.Binding(pygame.K_i, mods=pygame.KMOD_NONE))
-        keybinds.get_instance().set_binding(const.ADVANCED_EDIT, keybinds.Binding(pygame.K_o, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.ADVANCED_EDIT, keybinds.Binding(pygame.K_o, mods=pygame.KMOD_NONE))
 
         keybinds.get_instance().set_binding(const.ADD_POINT, keybinds.Binding(pygame.K_p, mods=pygame.KMOD_NONE))
         keybinds.get_instance().set_binding(const.REMOVE_POINT, keybinds.Binding(pygame.K_p, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
         keybinds.get_instance().set_binding(const.CLEAR_POINTS, keybinds.Binding(pygame.K_p, mods=[pygame.KMOD_SHIFT, pygame.KMOD_CTRL, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.ROTATE_POINTS_FORWARD, keybinds.Binding(pygame.K_p, mods=[pygame.KMOD_ALT, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.ROTATE_POINTS_BACKWARD, keybinds.Binding(pygame.K_p, mods=[pygame.KMOD_ALT, pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.DECREASE_EDIT_RESOLUTION, [pygame.K_LEFTBRACKET])
         keybinds.get_instance().set_binding(const.INCREASE_EDIT_RESOLUTION, [pygame.K_RIGHTBRACKET])

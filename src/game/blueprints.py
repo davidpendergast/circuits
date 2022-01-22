@@ -669,7 +669,7 @@ class MovingBlockSpecType(SpecType):
 
     def __init__(self):
         SpecType.__init__(self, "moving_block", required_keys=(X, Y, W, H, DURATION, LOOP),
-                          optional_keys={POINTS: tuple(), ART_ID: -1, COLOR_ID: 0})
+                          optional_keys={POINTS: tuple(), ART_ID: 0, COLOR_ID: 0})
 
     def build_entities(self, json_blob):
         points = list(util.listify(json_blob[POINTS]))
@@ -812,7 +812,6 @@ class SpecTypes:
 
     CAMERA_BOUND_MARKER = CameraBoundMarkerSpecType()
     ZONE = ZoneSpecType()
-
 
     @staticmethod
     def get(type_id) -> SpecType:
@@ -1174,13 +1173,54 @@ class SpecUtils:
         return res
 
     @staticmethod
+    def convert_to_type(spec_blob, to_type: SpecType):
+        new_blob = to_type.get_default_blob()
+        spec_blob = spec_blob.copy()
+
+        if SUBTYPE_ID in spec_blob and SUBTYPE_ID in new_blob and spec_blob[SUBTYPE_ID] in to_type.get_subtypes():
+            new_blob[SUBTYPE_ID] = spec_blob[SUBTYPE_ID]
+
+        if W in spec_blob and W in new_blob:
+            new_blob[W] = max(to_type.get_minimum_size()[0], spec_blob[W])
+        if H in spec_blob and H in new_blob:
+            new_blob[H] = max(to_type.get_minimum_size()[1], spec_blob[H])
+
+        for key in [X, Y, POINTS, LOOP, DURATION, INVERTED, TEXT, DIALOG_ID]:
+            if key in spec_blob and key in new_blob:
+                new_blob[key] = spec_blob[key]
+
+        if ART_ID in spec_blob and ART_ID in new_blob and spec_blob[ART_ID] in to_type.get_art_ids(new_blob):
+            new_blob[ART_ID] = spec_blob[ART_ID]
+        if COLOR_ID in spec_blob and COLOR_ID in new_blob and spec_blob[COLOR_ID] in to_type.get_color_ids(new_blob):
+            new_blob[COLOR_ID] = spec_blob[COLOR_ID]
+
+        try:
+            to_type.check_if_valid(new_blob)
+        except ValueError:
+            print(f"ERROR: failed to convert blob to type: {to_type.get_id()}")
+            traceback.print_exc()
+            return spec_blob
+        return new_blob
+
+    @staticmethod
+    def add_point_at_offset(spec_blob, xy_offset):
+        rect = SpecUtils.get_rect(spec_blob)
+        if rect is None:
+            return spec_blob.copy()
+        else:
+            return SpecUtils.add_point(spec_blob, (rect[0] + xy_offset[0], rect[1] + xy_offset[1]))
+
+    @staticmethod
     def add_point(spec_blob, xy):
+        if TYPE_ID in spec_blob and spec_blob[TYPE_ID] == SpecTypes.BLOCK.get_id():
+            # convert the block to a moving block so we can add a point.
+            spec_blob = SpecUtils.convert_to_type(spec_blob, SpecTypes.MOVING_BLOCK)
+
         res = spec_blob.copy()
         if POINTS in spec_blob:
             new_points = [pt for pt in spec_blob[POINTS]]
             new_points.append(xy)
             res[POINTS] = tuple(new_points)
-
         return res
 
     @staticmethod
@@ -1192,6 +1232,10 @@ class SpecUtils:
 
     @staticmethod
     def clear_points(spec_blob):
+        if TYPE_ID in spec_blob and spec_blob[TYPE_ID] == SpecTypes.MOVING_BLOCK.get_id():
+            # convert moving blocks back to a regular block.
+            spec_blob = SpecUtils.convert_to_type(spec_blob, SpecTypes.BLOCK)
+
         res = spec_blob.copy()
         if POINTS in spec_blob:
             res[POINTS] = tuple()
@@ -1202,6 +1246,22 @@ class SpecUtils:
         res = spec_blob.copy()
         if POINTS in spec_blob:
             res[POINTS] = tuple(util.add(pt, dxy) for pt in spec_blob[POINTS])
+        return res
+
+    @staticmethod
+    def rotate_points(spec_blob, direction=1):
+        res = spec_blob.copy()
+        if POINTS in spec_blob:
+            all_points = []
+            if X in spec_blob and Y in spec_blob:
+                all_points.append((spec_blob[X], spec_blob[Y]))
+            all_points.extend(spec_blob[POINTS])
+            rotated_points = [all_points[(idx + direction) % len(all_points)] for idx in range(len(all_points))]
+            if X in spec_blob and Y in spec_blob:
+                x, y = rotated_points.pop(0)
+                res[X] = x
+                res[Y] = y
+            res[POINTS] = tuple(rotated_points)
         return res
 
     @staticmethod

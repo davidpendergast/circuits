@@ -55,6 +55,8 @@ TOGGLE_SHOW_LIGHTING = "toggle_show_lighting"
 ADD_POINT = "add_pt"
 REMOVE_POINT = "remove_pt"
 CLEAR_POINTS = "clear_pts"
+ROTATE_POINTS_FORWARD = "rotate_pts_forward"
+ROTATE_POINTS_BACKWARD = "rotate_pts_backward"
 
 SHRINK_SELECTION_VERT = "shrink_selection_vert"
 SHRINK_SELECTION_HORZ = "shrink_selection_horz"

@@ -18,7 +18,11 @@ features:
  - level editor
 	- ability to choose song in-game
 	- import / export / play custom levels
+	- better entity sizing system in level editor
+	- adding point to group of selected moving plats should add points to each with correct offset
  - music should get quieter in dialog
+	
+ 
 
 final push:
  [x] finalize song assignments

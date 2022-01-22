@@ -2266,12 +2266,7 @@ class LevelEditGameScene(_BaseGameScene):
                 spawn_y = mouse_pos_in_world[1] - (mouse_pos_in_world[1] % self.edit_resolution)
 
                 blob = json.loads(raw_data) # should be a list of specs
-                min_xy = [float('inf'), float('inf')]
-                for spec in blob:
-                    if blueprints.X in spec:
-                        min_xy[0] = min(min_xy[0], int(spec[blueprints.X]))
-                    if blueprints.Y in spec:
-                        min_xy[1] = min(min_xy[1], int(spec[blueprints.Y]))
+                min_xy = self.get_min_xy_of_specs(blob)
 
                 shifted_specs = []
                 move_x = spawn_x - min_xy[0] if min_xy[0] < float('inf') else 0
@@ -2309,8 +2304,26 @@ class LevelEditGameScene(_BaseGameScene):
         resize_funct = lambda s: blueprints.SpecUtils.resize(s, (dx * self.edit_resolution, dy * self.edit_resolution))
         self._mutate_selected_specs(resize_funct)
 
+    def get_min_xy_of_specs(self, specs):
+        min_xy = [float('inf'), float('inf')]
+        for spec in specs:
+            if blueprints.X in spec:
+                min_xy[0] = min(min_xy[0], int(spec[blueprints.X]))
+            if blueprints.Y in spec:
+                min_xy[1] = min(min_xy[1], int(spec[blueprints.Y]))
+        return min_xy
+
     def add_point_to_selection(self, x, y):
-        add_funct = lambda s: blueprints.SpecUtils.add_point(s, (x, y))
+        selected = self.get_selected_specs()
+        if len(selected) == 1:
+            add_funct = lambda s: blueprints.SpecUtils.add_point(s, (x, y))
+        else:
+            min_xy = self.get_min_xy_of_specs(selected)
+            if min_xy[0] < float('inf') and min_xy[1] < float('inf'):
+                offset = x - min_xy[0], y - min_xy[1]
+                add_funct = lambda s: blueprints.SpecUtils.add_point_at_offset(s, offset)
+            else:
+                return  # nothing to mutate
         self._mutate_selected_specs(add_funct)
 
     def remove_point_from_selection(self, x, y):
@@ -2320,6 +2333,10 @@ class LevelEditGameScene(_BaseGameScene):
     def clear_points_from_selection(self):
         clear_funct = lambda s: blueprints.SpecUtils.clear_points(s)
         self._mutate_selected_specs(clear_funct)
+
+    def rotate_points_in_selection(self, direction=1):
+        rotate_func = lambda s: blueprints.SpecUtils.rotate_points(s, direction=direction)
+        self._mutate_selected_specs(rotate_func)
 
     def cycle_selection_type(self, steps):
         cycle_funct = lambda s: blueprints.SpecUtils.cycle_subtype(s, steps)
@@ -2812,6 +2829,10 @@ class NormalMouseMode(MouseMode):
         if mouse_xy is not None and edit_xy is not None:
             if inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.CLEAR_POINTS)):
                 self.scene.clear_points_from_selection()
+            elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ROTATE_POINTS_FORWARD)):
+                self.scene.rotate_points_in_selection()
+            elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ROTATE_POINTS_BACKWARD)):
+                self.scene.rotate_points_in_selection(direction=-1)
             elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.REMOVE_POINT)):
                 self.scene.remove_point_from_selection(mouse_xy[0], mouse_xy[1])
             elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ADD_POINT)):
