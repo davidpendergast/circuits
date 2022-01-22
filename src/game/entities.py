@@ -1032,25 +1032,28 @@ class MoveBetweenPointsController:
 
         self._point_sprites_for_editor = []
 
-    def update(self):
-        tick_count = self.obj.get_world().get_tick()
+    @staticmethod
+    def get_pos_at_tick(pts, tick, period, loop=True):
+        step = tick // period
+        cycle = step // len(pts)
 
-        step = tick_count // self._period
-        cycle = step // len(self._pts)
-
-        if self._loop or cycle % 2 == 0:
+        if loop or cycle % 2 == 0:
             # we're going forward
-            p1 = self._pts[step % len(self._pts)]
-            p2 = self._pts[(step + 1) % len(self._pts)]
+            p1 = pts[step % len(pts)]
+            p2 = pts[(step + 1) % len(pts)]
         else:
             # backwards
-            p1 = self._pts[(-step) % len(self._pts)]
-            p2 = self._pts[(-step - 1) % len(self._pts)]
+            p1 = pts[(-step) % len(pts)]
+            p2 = pts[(-step - 1) % len(pts)]
 
-        prog = (tick_count % self._period) / self._period
-        pos = util.smooth_interp(p1, p2, prog)
+        prog = (tick % period) / period
+        return util.smooth_interp(p1, p2, prog)
 
-        pos = int(pos[0]), int(pos[1])  # otherwise it's super jerky when the player rides it
+    def update(self):
+        tick_count = self.obj.get_world().get_tick()
+        raw_pos = MoveBetweenPointsController.get_pos_at_tick(self._pts, tick_count, self._period, loop=self._loop)
+
+        pos = int(raw_pos[0]), int(raw_pos[1])  # otherwise it's super jerky when the player rides it
 
         old_xy = self.obj.get_xy(raw=True)
 

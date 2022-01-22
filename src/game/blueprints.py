@@ -1078,7 +1078,7 @@ def write_level_to_file(level, filepath):
 class SpecUtils:
 
     @staticmethod
-    def get_rect(spec_blob, default_size=16):
+    def get_rect(spec_blob, default_size=16, at_tick=0):
         if X in spec_blob:
             x = int(spec_blob[X])
         else:
@@ -1087,6 +1087,18 @@ class SpecUtils:
             y = int(spec_blob[Y])
         else:
             return None
+
+        if TYPE_ID in spec_blob and spec_blob[TYPE_ID] in ("moving_block", "spikes"):
+            points = list(util.listify(spec_blob[POINTS])) if POINTS in spec_blob else []
+            points.insert(0, (x, y))
+
+            duration = spec_blob[DURATION] if DURATION in spec_blob else 90
+            loop = spec_blob[LOOP] if LOOP in spec_blob else True
+
+            raw_xy = entities.MoveBetweenPointsController.get_pos_at_tick(points, at_tick, duration, loop=loop)
+            x = int(raw_xy[0])
+            y = int(raw_xy[1])
+
         w = default_size
         h = default_size
         if W in spec_blob:
