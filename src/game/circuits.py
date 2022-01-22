@@ -58,7 +58,6 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.TOGGLE_MUTE, [pygame.K_m])
 
         # debug commands
-        keybinds.get_instance().set_binding(const.NEXT_LEVEL_DEBUG, [pygame.K_n])
         keybinds.get_instance().set_binding(const.TOGGLE_SPRITE_MODE_DEBUG, [pygame.K_h])
         keybinds.get_instance().set_binding(const.TOGGLE_PLAYER_TYPE, [pygame.K_p])
         keybinds.get_instance().set_binding(const.TEST_KEY_1, keybinds.Binding(pygame.K_1, mods=pygame.KMOD_SHIFT))
@@ -67,42 +66,42 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.TOGGLE_SHOW_LIGHTING, keybinds.Binding(pygame.K_l))
         keybinds.get_instance().set_binding(const.UNLOCK_ALL_DEBUG, keybinds.Binding(pygame.K_u, mods=pygame.KMOD_CTRL))
 
-        keybinds.get_instance().set_binding(const.SAVE, keybinds.Binding(pygame.K_s, mods=pygame.KMOD_CTRL))
-        keybinds.get_instance().set_binding(const.SAVE_AS, keybinds.Binding(pygame.K_s, mods=[pygame.KMOD_CTRL, pygame.KMOD_SHIFT]))
+        keybinds.get_instance().set_binding(const.SAVE, keybinds.Binding(pygame.K_s, mods=[pygame.KMOD_CTRL, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.SAVE_AS, keybinds.Binding(pygame.K_s, mods=[pygame.KMOD_CTRL, pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         # level editor commands
         keybinds.get_instance().set_binding(const.TOGGLE_EDIT_MODE, [pygame.K_F5])
 
-        keybinds.get_instance().set_binding(const.MOVE_SELECTION_UP, [pygame.K_w])
-        keybinds.get_instance().set_binding(const.MOVE_SELECTION_LEFT, [pygame.K_a])
+        keybinds.get_instance().set_binding(const.MOVE_SELECTION_UP, keybinds.Binding(pygame.K_w, mods=pygame.KMOD_NONE))
+        keybinds.get_instance().set_binding(const.MOVE_SELECTION_LEFT, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_NONE))
         keybinds.get_instance().set_binding(const.MOVE_SELECTION_DOWN, keybinds.Binding(pygame.K_s, mods=pygame.KMOD_NONE))
-        keybinds.get_instance().set_binding(const.MOVE_SELECTION_RIGHT, [pygame.K_d])
+        keybinds.get_instance().set_binding(const.MOVE_SELECTION_RIGHT, keybinds.Binding(pygame.K_d, mods=pygame.KMOD_NONE))
 
         keybinds.get_instance().set_binding(const.MOVE_CAMERA_UP, [pygame.K_UP])
         keybinds.get_instance().set_binding(const.MOVE_CAMERA_LEFT, [pygame.K_LEFT])
         keybinds.get_instance().set_binding(const.MOVE_CAMERA_DOWN, [pygame.K_DOWN])
         keybinds.get_instance().set_binding(const.MOVE_CAMERA_RIGHT, [pygame.K_RIGHT])
 
-        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_VERT, keybinds.Binding(pygame.K_w, mods=pygame.KMOD_SHIFT))
-        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_HORZ, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_SHIFT))
-        keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, keybinds.Binding(pygame.K_s, mods=pygame.KMOD_SHIFT))
-        keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, keybinds.Binding(pygame.K_d, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_VERT, keybinds.Binding(pygame.K_w, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.SHRINK_SELECTION_HORZ, keybinds.Binding(pygame.K_a, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_VERT, keybinds.Binding(pygame.K_s, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.GROW_SELECTION_HORZ, keybinds.Binding(pygame.K_d, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.CYCLE_SELECTION_SUBTYPE_FORWARD, keybinds.Binding(pygame.K_t, mods=pygame.KMOD_NONE))
-        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_SUBTYPE_BACKWARD, keybinds.Binding(pygame.K_t, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_SUBTYPE_BACKWARD, keybinds.Binding(pygame.K_t, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.CYCLE_SELECTION_COLOR_FORWARD, keybinds.Binding(pygame.K_c, mods=pygame.KMOD_NONE))
-        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_COLOR_BACKWARD, keybinds.Binding(pygame.K_c, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_COLOR_BACKWARD, keybinds.Binding(pygame.K_c, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.CYCLE_SELECTION_ART_FORWARD, keybinds.Binding(pygame.K_e, mods=pygame.KMOD_NONE))
-        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_ART_BACKWARD, keybinds.Binding(pygame.K_e, mods=pygame.KMOD_SHIFT))
+        keybinds.get_instance().set_binding(const.CYCLE_SELECTION_ART_BACKWARD, keybinds.Binding(pygame.K_e, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.TOGGLE_SELECTION_INVERTED, keybinds.Binding(pygame.K_i, mods=pygame.KMOD_NONE))
-        keybinds.get_instance().set_binding(const.ADVANCED_EDIT, keybinds.Binding(pygame.K_o, mods=pygame.KMOD_NONE))
+        keybinds.get_instance().set_binding(const.ADVANCED_EDIT, keybinds.Binding(pygame.K_o, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.ADD_POINT, keybinds.Binding(pygame.K_p, mods=pygame.KMOD_NONE))
-        keybinds.get_instance().set_binding(const.REMOVE_POINT, keybinds.Binding(pygame.K_p, mods=pygame.KMOD_SHIFT))
-        keybinds.get_instance().set_binding(const.CLEAR_POINTS, keybinds.Binding(pygame.K_p, mods=(pygame.KMOD_SHIFT, pygame.KMOD_CTRL)))
+        keybinds.get_instance().set_binding(const.REMOVE_POINT, keybinds.Binding(pygame.K_p, mods=[pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.CLEAR_POINTS, keybinds.Binding(pygame.K_p, mods=[pygame.KMOD_SHIFT, pygame.KMOD_CTRL, pygame.KMOD_NONE]))
 
         keybinds.get_instance().set_binding(const.DECREASE_EDIT_RESOLUTION, [pygame.K_LEFTBRACKET])
         keybinds.get_instance().set_binding(const.INCREASE_EDIT_RESOLUTION, [pygame.K_RIGHTBRACKET])
@@ -126,7 +125,8 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.COPY, keybinds.Binding(pygame.K_c, mods=pygame.KMOD_CTRL))
         keybinds.get_instance().set_binding(const.PASTE, keybinds.Binding(pygame.K_v, mods=pygame.KMOD_CTRL))
         keybinds.get_instance().set_binding(const.CUT, keybinds.Binding(pygame.K_x, mods=pygame.KMOD_CTRL))
-        keybinds.get_instance().set_binding(const.SELECT_ALL, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_CTRL))
+        keybinds.get_instance().set_binding(const.SELECT_ALL, keybinds.Binding(pygame.K_a, mods=[pygame.KMOD_CTRL, pygame.KMOD_NONE]))
+        keybinds.get_instance().set_binding(const.SELECT_ALL_ONSCREEN, keybinds.Binding(pygame.K_a, mods=[pygame.KMOD_SHIFT, pygame.KMOD_CTRL, pygame.KMOD_NONE]))
 
         path_to_cursors = util.resource_path("assets/cursors.png")
 

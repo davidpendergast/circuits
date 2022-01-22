@@ -2559,9 +2559,14 @@ class LevelEditGameScene(_BaseGameScene):
         for s in all_selects:
             self.set_selected(s, select=False)
 
-    def select_all(self):
+    def select_all(self, in_rect=None):
         for s in self.all_spec_blobs:
-            self.set_selected(s, select=True)
+            if in_rect is None:
+                self.set_selected(s, select=True)
+            else:
+                spec_rect = blueprints.SpecUtils.get_rect(s)
+                if spec_rect is not None and util.rects_intersect(in_rect, spec_rect):
+                    self.set_selected(s, select=True)
 
     def _get_selected_entity_color(self, ent):
         color_id = ent.get_color_id()
@@ -2777,6 +2782,8 @@ class NormalMouseMode(MouseMode):
             self.scene.delete_selection()
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.ADVANCED_EDIT)):
             self.scene.handle_advanced_edit_pressed()
+        elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SELECT_ALL_ONSCREEN)):
+            self.scene.select_all(in_rect=self.scene.get_world_view().get_camera_rect_in_world())
         elif inputs.get_instance().was_pressed(keybinds.get_instance().get_keys(const.SELECT_ALL)):
             self.scene.select_all()
 

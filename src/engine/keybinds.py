@@ -72,28 +72,36 @@ def get_instance() -> KeyBindings:
     return _INSTANCE
 
 
-def modifier_to_key(key):
-    if key == pygame.KMOD_CTRL:
-        return [pygame.K_LCTRL, pygame.K_RCTRL]
-    elif key == pygame.KMOD_LCTRL:
-        return pygame.K_LCTRL
-    elif key == pygame.KMOD_RCTRL:
-        return pygame.K_RCTRL
+_MOD_TO_KEYS_MAPPING = {}  # mod_id -> list of key_ids (ex. KMOD_CTRL -> [K_LCTRL, R_RCTRL])
+_KEY_TO_MOD_MAPPING = {}   # key_id -> mod_ids (ex. R_RCTRL -> [KMOD_CTRL, KMOD_RCTRL])
 
-    elif key == pygame.KMOD_ALT:
-        return [pygame.K_LALT, pygame.K_RALT]
-    elif key == pygame.KMOD_LALT:
-        return pygame.K_LALT
-    elif key == pygame.KMOD_RALT:
-        return pygame.K_RALT
+def _add_mod_mapping(mod_id, key_ids):
+    key_ids = util.listify(key_ids)
+    _MOD_TO_KEYS_MAPPING[mod_id] = key_ids
+    for k in key_ids:
+        _KEY_TO_MOD_MAPPING[k] = mod_id
 
-    elif key == pygame.KMOD_SHIFT:
-        return [pygame.K_LSHIFT, pygame.K_RSHIFT]
-    elif key == pygame.KMOD_LSHIFT:
-        return pygame.K_LSHIFT
-    elif key == pygame.KMOD_RSHIFT:
-        return pygame.K_RSHIFT
+_add_mod_mapping(pygame.KMOD_CTRL, [pygame.K_LCTRL, pygame.K_RCTRL])
+_add_mod_mapping(pygame.KMOD_LCTRL, pygame.K_LCTRL)
+_add_mod_mapping(pygame.KMOD_RCTRL, pygame.K_RCTRL)
 
+_add_mod_mapping(pygame.KMOD_ALT, [pygame.K_LALT, pygame.K_RALT])
+_add_mod_mapping(pygame.KMOD_LALT, pygame.K_LALT)
+_add_mod_mapping(pygame.KMOD_RALT, pygame.K_RALT)
+
+_add_mod_mapping(pygame.KMOD_SHIFT, [pygame.K_LSHIFT, pygame.K_RSHIFT])
+_add_mod_mapping(pygame.KMOD_LSHIFT, pygame.K_LSHIFT)
+_add_mod_mapping(pygame.KMOD_RSHIFT, pygame.K_RSHIFT)
+
+def modifier_to_keys(mod_id):
+    if mod_id in _MOD_TO_KEYS_MAPPING:
+        return _MOD_TO_KEYS_MAPPING[mod_id]
+    else:
+        return []
+
+def key_to_modifiers(key_id):
+    if key_id in _KEY_TO_MOD_MAPPING:
+        return _KEY_TO_MOD_MAPPING[key_id]
     else:
         return []
 
@@ -160,7 +168,7 @@ _ALL_MODS = [pygame.KMOD_CTRL, pygame.KMOD_LCTRL, pygame.KMOD_RCTRL,
              pygame.KMOD_MODE, pygame.KMOD_NONE, pygame.KMOD_NUM]
 
 
-_ALL_MOD_KEYS = util.flatten_list([modifier_to_key(_m) for _m in _ALL_MODS])
+_ALL_MOD_KEYS = util.flatten_list([modifier_to_keys(_m) for _m in _ALL_MODS])
 
 
 def _is_mod(code):
@@ -181,13 +189,24 @@ class Binding:
         return len(self.keycode)
 
     def _mods_satisfied(self, input_state):
+        require_exact = False
+        allowed_keys = set()
         for m in self.mods:
             if m == pygame.KMOD_NONE:
-                if input_state.is_held(_ALL_MOD_KEYS):
-                    # if we have NO_MODS, and any mods are held, fail the binding
+                # if KMOD_NONE is here, that means other mods must match exactly (i.e. no extra mod keys held).
+                require_exact = True
+            else:
+                keys_that_satisfy_mod = modifier_to_keys(m)
+                if not input_state.is_held(keys_that_satisfy_mod):
                     return False
-            elif not input_state.is_held(modifier_to_key(m)):
+                else:
+                    allowed_keys.update(keys_that_satisfy_mod)
+
+        if require_exact:
+            prohibited_keys = [k for k in _ALL_MOD_KEYS if k not in allowed_keys]
+            if input_state.is_held(prohibited_keys):
                 return False
+
         return True
 
     def is_held(self, input_state):
