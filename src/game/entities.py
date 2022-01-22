@@ -2445,9 +2445,13 @@ class PlayerEntity(DynamicEntity, HasLightSourcesEntity):
         print(f"INFO: player {self.get_player_type().get_name()} {'resynced' if sync else 'desynced'}!")
         self._is_synced = sync
         # TODO this doesn't work 100% correctly, and players won't notice it / know what it means anyways.
-        # TODO Just going to disable it for now.
-        # self._try_to_alert(sound=soundref.PLAYER_RESYNC if sync else soundref.PLAYER_DESYNC,
-        #                   symbol="*" if sync else "?")
+        # but it's neat
+        if not sync:
+            self._try_to_alert(sound=soundref.PLAYER_DESYNC, symbol="?")
+        else:
+            # disable bc no one will ever know what it means
+            # self._try_to_alert(sound=soundref.PLAYER_RESYNC, symbol="*")
+            pass
 
     def is_synced(self):
         return self._is_synced
