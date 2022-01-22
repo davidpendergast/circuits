@@ -1282,9 +1282,14 @@ class LevelPreviewElement(ui.UiElement):
             if self._current_bp is not None:
                 for (blob, spec) in self._current_bp.all_entities():
                     self._preview_sprites.append(_EntityPreview(blob, spec))
-
-        for preview in self._preview_sprites:
-            preview.update_sprites(self._vis_rect_in_level, inner_rect)
+            to_remove = []
+            for preview in self._preview_sprites:
+                preview.update_sprites(self._vis_rect_in_level, inner_rect, gs.get_instance().tick_count())
+                if len([s for s in preview.all_sprites()]) == 0:
+                    to_remove.append(preview)  # remove things that are offscreen (or have no sprites)
+        else:
+            for preview in self._preview_sprites:
+                preview.update_sprites(self._vis_rect_in_level, inner_rect, gs.get_instance().tick_count())
 
     def get_size(self):
         return self._size
@@ -1324,7 +1329,7 @@ class _EntityPreview():
         xy2 = _EntityPreview._xform_point((world_rect[0] + world_rect[2], world_rect[1] + world_rect[3]), vis_rect_in_level, canvas_rect)
         return [xy1[0], xy1[1], xy2[0] - xy1[0], xy2[1] - xy1[1]]
 
-    def update_sprites(self, vis_rect_in_level, canvas):
+    def update_sprites(self, vis_rect_in_level, canvas, tick):
         color = blueprints.SpecUtils.get_preview_color(self.blob)
         depth = _EntityPreview.DEPTH_OVERRIDES[self.spec_type] if self.spec_type in _EntityPreview.DEPTH_OVERRIDES else 0
 
@@ -1332,50 +1337,83 @@ class _EntityPreview():
                               blueprints.SpecTypes.START_BLOCK, blueprints.SpecTypes.END_BLOCK,
                               blueprints.SpecTypes.DOOR_BLOCK, blueprints.SpecTypes.FALLING_BLOCK,
                               blueprints.SpecTypes.FALSE_BLOCK, blueprints.SpecTypes.TELEPORTER):
-            util.extend_or_empty_list_to_length(self.sprites, 1,
-                                                creator=lambda: sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER))
-            world_rect = blueprints.SpecUtils.get_rect(self.blob)
+            world_rect = blueprints.SpecUtils.get_rect(self.blob, at_tick=tick)
 
             if util.rects_intersect(world_rect, vis_rect_in_level):
-                canvas_rect = _EntityPreview._stretch_rect_to_fit(world_rect, vis_rect_in_level, canvas)
-                down_expand = -1 if canvas_rect[1] + canvas_rect[3] < canvas[1] + canvas[3] else 0
-                right_expand = -1 if canvas_rect[0] + canvas_rect[2] < canvas[0] + canvas[2] else 0
-                canvas_rect = util.rect_expand(canvas_rect, down_expand=down_expand, right_expand=right_expand)
-            else:
-                canvas_rect = [0, 0, 0, 0]
-            self.sprites[0] = self.sprites[0].update(new_rect=canvas_rect, new_color=color, new_depth=depth)
-        elif self.spec_type == blueprints.SpecTypes.SLOPE_BLOCK_QUAD:
-            util.extend_or_empty_list_to_length(self.sprites, 2, creator=lambda: None)
-            if self.sprites[0] is None:
-                self.sprites[0] = sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER)
-            if self.sprites[1] is None:
-                self.sprites[1] = sprites.TriangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER)
+                rect_in_canvas = _EntityPreview._stretch_rect_to_fit(world_rect, vis_rect_in_level, canvas)
+                down_expand = -1 if rect_in_canvas[1] + rect_in_canvas[3] < canvas[1] + canvas[3] else 0
+                right_expand = -1 if rect_in_canvas[0] + rect_in_canvas[2] < canvas[0] + canvas[2] else 0
+                rect_in_canvas = util.rect_expand(rect_in_canvas, down_expand=down_expand, right_expand=right_expand)
 
+                util.extend_or_empty_list_to_length(self.sprites, 1, creator=lambda: sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER))
+                self.sprites[0] = self.sprites[0].update(new_rect=rect_in_canvas, new_color=color, new_depth=depth)
+            else:
+                self.sprites.clear()
+        elif self.spec_type == blueprints.SpecTypes.SLOPE_BLOCK_QUAD:
             world_triangle, world_rect = self.spec_type.get_triangle_and_rect(self.blob, with_xy_offset=True)
             triangle_right = any([p[0] > world_rect[0] + world_rect[2] for p in world_triangle])
             triangle_left = any([p[0] < world_rect[0] for p in world_triangle])
             triangle_down = any([p[1] > world_rect[1] + world_rect[3] for p in world_triangle])
             triangle_up = any([p[1] < world_rect[1] for p in world_triangle])
+
+            rect_in_level = util.rects_intersect(world_rect, vis_rect_in_level)
+            tri_in_level = util.rect_intersects_triangle(vis_rect_in_level, world_triangle)
+
+            if rect_in_level or tri_in_level:
+                util.extend_or_empty_list_to_length(self.sprites, 2, creator=lambda: None)
+                if self.sprites[0] is None:
+                    self.sprites[0] = sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER)
+                if self.sprites[1] is None:
+                    self.sprites[1] = sprites.TriangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER)
+
+                if rect_in_level:
+                    rect_in_canvas = _EntityPreview._stretch_rect_to_fit(world_rect, vis_rect_in_level, canvas)
+                    down_expand = -1 if not triangle_down and rect_in_canvas[1] + rect_in_canvas[3] < canvas[1] + canvas[3] else 0
+                    right_expand = -1 if not triangle_right and rect_in_canvas[0] + rect_in_canvas[2] < canvas[0] + canvas[2] else 0
+                    rect_in_canvas = util.rect_expand(rect_in_canvas, down_expand=down_expand, right_expand=right_expand)
+                    self.sprites[0].update(new_rect=rect_in_canvas, new_color=color, new_depth=depth)
+
+                if tri_in_level:
+                    canvas_triangle = [_EntityPreview._xform_point(p, vis_rect_in_level, canvas) for p in world_triangle]
+                    bounding_rect = util.get_rect_containing_points(canvas_triangle, inclusive=True)
+                    if triangle_up:
+                        down_expand = 0
+                    else:
+                        down_expand = -1 if bounding_rect[1] + bounding_rect[3] < canvas[1] + canvas[3] else 0
+                    if triangle_left:
+                        right_expand = 0
+                    else:
+                        right_expand = -1 if bounding_rect[0] + bounding_rect[2] < canvas[0] + canvas[2] else -1
+                    bounding_rect = util.rect_expand(bounding_rect, down_expand=down_expand, right_expand=right_expand)
+                    canvas_triangle = [util.constrain_point_to_rect(bounding_rect, p) for p in canvas_triangle]
+                    self.sprites[1] = self.sprites[1].update(new_points=canvas_triangle, new_color=color, new_depth=depth)
+            else:
+                self.sprites.clear()
+        elif self.spec_type == blueprints.SpecTypes.SPIKES:
+            world_rect = blueprints.SpecUtils.get_rect(self.blob, at_tick=tick)
+
             if util.rects_intersect(world_rect, vis_rect_in_level):
-                canvas_rect = _EntityPreview._stretch_rect_to_fit(world_rect, vis_rect_in_level, canvas)
-                down_expand = -1 if not triangle_down and canvas_rect[1] + canvas_rect[3] < canvas[1] + canvas[3] else 0
-                right_expand = -1 if not triangle_right and canvas_rect[0] + canvas_rect[2] < canvas[0] + canvas[2] else 0
-                canvas_rect = util.rect_expand(canvas_rect, down_expand=down_expand, right_expand=right_expand)
-                self.sprites[0].update(new_rect=canvas_rect, new_color=color, new_depth=depth)
-            if util.rect_intersects_triangle(vis_rect_in_level, world_triangle):
-                canvas_triangle = [_EntityPreview._xform_point(p, vis_rect_in_level, canvas) for p in world_triangle]
-                bounding_rect = util.get_rect_containing_points(canvas_triangle, inclusive=True)
-                if triangle_up:
-                    down_expand = 0
-                else:
-                    down_expand = -1 if bounding_rect[1] + bounding_rect[3] < canvas[1] + canvas[3] else 0
-                if triangle_left:
-                    right_expand = 0
-                else:
-                    right_expand = -1 if bounding_rect[0] + bounding_rect[2] < canvas[0] + canvas[2] else -1
-                bounding_rect = util.rect_expand(bounding_rect, down_expand=down_expand, right_expand=right_expand)
-                canvas_triangle = [util.constrain_point_to_rect(bounding_rect, p) for p in canvas_triangle]
-                self.sprites[1] = self.sprites[1].update(new_points=canvas_triangle, new_color=color, new_depth=depth)
+                rect_in_canvas = _EntityPreview._stretch_rect_to_fit(world_rect, vis_rect_in_level, canvas)
+
+                spike_dims = (world_rect[2] // 8, world_rect[3] // 8)
+                util.extend_or_empty_list_to_length(self.sprites, spike_dims[0] * spike_dims[1],
+                                                    creator=lambda: sprites.RectangleSprite(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER))
+                for i in range(0, spike_dims[0] * spike_dims[1]):
+                    spike_x = i % spike_dims[0]
+                    spike_y = i // spike_dims[0]
+                    spike_rect = [
+                        rect_in_canvas[0] + spike_x / spike_dims[0] * rect_in_canvas[2],
+                        rect_in_canvas[1] + spike_y / spike_dims[1] * rect_in_canvas[3],
+                        rect_in_canvas[2] / spike_dims[0] - 1,
+                        rect_in_canvas[3] / spike_dims[1] - 1
+                    ]
+                    w, h = spike_rect[2:4]
+                    spike_rect = util.rect_expand(spike_rect,
+                                                  right_expand=-w / 4, left_expand=-w / 4,
+                                                  up_expand=-h / 4, down_expand=-h / 4)
+                    self.sprites[i] = self.sprites[i].update(new_rect=spike_rect, new_color=color, new_depth=depth)
+            else:
+                self.sprites.clear()
 
     def all_sprites(self):
         for spr in self.sprites:
@@ -1476,7 +1514,7 @@ class OverworldInfoPanelElement(ui.UiElement):
             y_pos += self.title_text_sprite.size()[1]
 
         self.level_preview_panel_element.set_xy((2, y_pos))
-        self.level_preview_panel_element.set_size((rect[2] - 4, 90))
+        self.level_preview_panel_element.set_size((rect[2] - 4, 98))
         y_pos += self.level_preview_panel_element.get_size()[1]
 
         node = self.get_node_to_show()
