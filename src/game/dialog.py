@@ -416,6 +416,10 @@ def get_dialog(dialog_id, player_type, other_type):
                         DialogFragment("I haven't seen them, or their section of the ship. I'm sure they're buzzing around somehwere.", speaker=Speaker.C, id_resolver=lookup, right_side=True),
                         DialogFragment("Alright, well. Let's stick together. This place is dangerous.", speaker=Speaker.PLAYER, id_resolver=lookup)
                     )
+        elif dialog_id == "player_a_self_dialog":
+            return link(DialogFragment("Hello?", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("...", speaker=Speaker.A, right_side=True),
+                        DialogFragment("They aren't fully assembled yet. They won't be able to talk to me.", speaker=Speaker.PLAYER, id_resolver=lookup))
         elif dialog_id == "overseer_conversation":
             return link(DialogFragment("... Hello?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("Welcome home.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),

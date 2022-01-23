@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast"],
-    "description": "Watch your step, and don't look down!",
+    "description": "Watch your step, and don't look down!\n",
     "entities": [
         {"color_id": 1, "h": 240, "type": "block", "w": 16, "x": 0, "y": 0},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 32, "x": 16, "x_dir": 1, "y": 192},
@@ -276,21 +276,21 @@
         {"color_id": 1, "h": 48, "type": "block", "w": 368, "x": 1120, "y": 0},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 1024, "y": 128},
         {
-            "art_id": 1,
+            "art_id": 3,
             "color_id": 0,
             "duration": 90,
             "h": 32,
             "loop": true,
             "points": [
-                [1216, 176]
+                [1248, 176]
             ],
             "type": "moving_block",
             "w": 32,
-            "x": 1104,
+            "x": 1136,
             "y": 96
         },
         {
-            "art_id": -1,
+            "art_id": 1,
             "color_id": 0,
             "duration": 90,
             "h": 32,
@@ -340,11 +340,11 @@
             ],
             "type": "moving_block",
             "w": 32,
-            "x": 1520,
+            "x": 1552,
             "y": 192
         },
         {
-            "art_id": -1,
+            "art_id": 1,
             "color_id": 0,
             "duration": 90,
             "h": 8,
@@ -372,10 +372,9 @@
             "y": 96
         },
         {"color_id": 1, "h": 48, "type": "block", "w": 368, "x": 1488, "y": 0},
-        {"color_id": -1, "h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 2032, "y": 144},
         {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 16, "x": 1984, "y": 160},
         {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 256, "x": 1856, "y": 0},
-        {"art_id": 0, "color_id": 1, "h": 192, "type": "block", "w": 16, "x": 2096, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 112, "type": "block", "w": 16, "x": 2096, "y": 128},
         {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 1984, "y": 144},
         {
             "art_id": 1,
@@ -442,7 +441,7 @@
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": 1456, "y": 48},
         {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 32, "x": 1376, "y": 48},
         {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 48, "x": 1408, "y": 48},
-        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 1456, "y": 64},
+        {"art_id": 3, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 1456, "y": 64},
         {
             "color_id": 0,
             "h": 32,
@@ -514,9 +513,8 @@
             "type": "spikes",
             "w": 16,
             "x": 1872,
-            "y": 112
+            "y": 96
         },
-        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 1872, "y": 96},
         {
             "color_id": 0,
             "h": 32,
@@ -525,9 +523,236 @@
             "w": 8,
             "x": 1976,
             "y": 168
+        },
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 0, "vertical"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2080,
+            "y": 48
+        },
+        {"art_id": 0, "color_id": 1, "h": 80, "type": "block", "w": 32, "x": 2112, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 64, "x": 2112, "y": 128},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2112,
+            "y": 160
+        },
+        {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 2144, "y": 160},
+        {"color_id": 0, "inverted": true, "subtype": "0X", "type": "camera_bound_marker", "x": 0, "y": 0},
+        {"color_id": 0, "inverted": true, "subtype": "0X", "type": "camera_bound_marker", "x": 2096, "y": 224},
+        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 2032, "y": 144},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2144,
+            "y": 32
+        },
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 64, "x": 2144, "y": 0},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2176,
+            "y": 144
+        },
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 96, "x": 2208, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 96, "x": 2400, "y": 64},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 96, "x": 2400, "y": 104},
+        {"color_id": 1, "inverted": true, "subtype": "0X", "type": "camera_bound_marker", "x": 2480, "y": 224},
+        {"color_id": 1, "inverted": true, "subtype": "0X", "type": "camera_bound_marker", "x": 2112, "y": 0},
+        {
+            "art_id": 2,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 0, "vertical"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2160,
+            "y": 176
+        },
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 96, "x": 2192, "y": 176},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2192,
+            "y": 192
+        },
+        {"art_id": 3, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 2176, "y": 208},
+        {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 2288, "y": 176},
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 96, "x": 2304, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 96, "x": 2400, "y": 144},
+        {
+            "color_id": 0,
+            "dialog": "player_a_self_dialog",
+            "points": [],
+            "subtype": "player_fast",
+            "text": "Press {INTERACT_KEYS} to Talk.",
+            "type": "info",
+            "x": 2400,
+            "y": 88
+        },
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 80, "x": 2400, "y": 0},
+        {"art_id": 0, "color_id": 1, "h": 64, "type": "block", "w": 16, "x": 2480, "y": 0},
+        {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 2480, "y": 112},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2368,
+            "y": 160
+        },
+        {
+            "art_id": 1,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2400,
+            "y": 184
+        },
+        {
+            "art_id": 1,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2464,
+            "y": 184
+        },
+        {"art_id": 5, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 2480, "y": 152},
+        {"art_id": 2, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": 2432, "y": 184},
+        {"art_id": 0, "color_id": 0, "h": 120, "type": "block", "w": 4, "x": 2396, "y": 32},
+        {"art_id": 1, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 2240, "y": 112},
+        {
+            "art_id": 2,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 2288,
+            "y": 96
+        },
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 48, "x": 2320, "y": 96},
+        {"art_id": 0, "color_id": 1, "h": 24, "type": "block", "w": 8, "x": 2368, "y": 88},
+        {"color_id": -1, "h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 2336, "y": 176},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 112, "x": 2224, "y": 192},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 64, "x": 2336, "y": 192},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 64, "x": 2416, "y": 176},
+        {"art_id": 1, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 2400, "y": 152},
+        {"art_id": 3, "color_id": 1, "h": 32, "type": "block", "w": 16, "x": 2480, "y": 72},
+        {"art_id": 0, "color_id": 1, "h": 8, "type": "block", "w": 8, "x": 2368, "y": 112},
+        {"art_id": 1, "color_id": 5, "h": 16, "inverted": false, "type": "decoration", "w": 16, "x": 2176, "y": 32},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "exclam",
+            "text": "What.. the?",
+            "type": "info",
+            "x": 2336,
+            "y": 80
+        },
+        {"art_id": 1, "color_id": 1, "h": 24, "type": "block", "w": 32, "x": 2432, "y": 216},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "exclam",
+            "text": "There's an odd.. familiarity to this place.",
+            "type": "info",
+            "x": 1032,
+            "y": 112
+        },
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [],
+            "subtype": "exclam",
+            "text": "Maybe it's nothing.",
+            "type": "info",
+            "x": 1448,
+            "y": 160
+        },
+        {
+            "color_id": 0,
+            "dialog": "player_a_self_dialog",
+            "points": [],
+            "subtype": "player_fast",
+            "text": "Press {INTERACT_KEYS} to Talk.",
+            "type": "info",
+            "x": 2416,
+            "y": 88
+        },
+        {
+            "color_id": 0,
+            "dialog": "player_a_self_dialog",
+            "points": [],
+            "subtype": "player_fast",
+            "text": "Press {INTERACT_KEYS} to Talk.",
+            "type": "info",
+            "x": 2432,
+            "y": 128
+        },
+        {
+            "color_id": 0,
+            "dialog": "player_a_self_dialog",
+            "points": [],
+            "subtype": "player_fast",
+            "text": "Press {INTERACT_KEYS} to Talk.",
+            "type": "info",
+            "x": 2464,
+            "y": 128
+        },
+        {
+            "color_id": 0,
+            "dialog": "player_a_self_dialog",
+            "points": [],
+            "subtype": "player_fast",
+            "text": "Press {INTERACT_KEYS} to Talk.",
+            "type": "info",
+            "x": 2448,
+            "y": 48
+        },
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": 1488,
+            "y": 176
         }
     ],
     "level_id": "acrobatics",
     "name": "Acrobatics",
-    "time_limit": 3600
+    "song_id": null,
+    "special": [],
+    "time_limit": 216000
 }
