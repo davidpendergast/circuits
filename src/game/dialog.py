@@ -394,7 +394,17 @@ def get_dialog(dialog_id, player_type, other_type):
             Speaker.OTHER: Speaker.resolve(other_type)
         }
 
-        if dialog_id == "c_introduction":
+        if dialog_id == "b_introduction":
+            return link(DialogFragment("It's tearing the ship apart!", speaker=Speaker.B, id_resolver=lookup),
+                        DialogFragment("What is?", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("This... this place. It's some kind of machine.", speaker=Speaker.B, id_resolver=lookup),
+                        DialogFragment("Just our luck. We landed on a ship-eating machine?", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("It seems that way.", speaker=Speaker.B, id_resolver=lookup),
+                        DialogFragment("Well, at least there's something here. There was a good chance we'd never reboot. Where are the others?", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("The other half of the ship is gone. I haven't seen them.", speaker=Speaker.B, id_resolver=lookup),
+                        DialogFragment("Well lets take a look around.", speaker=Speaker.PLAYER, id_resolver=lookup)
+                    )
+        elif dialog_id == "c_introduction":
             return link(DialogFragment("It's good to 'C' you in one piece, C!", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("Always 'A' pleasure. Will you two 'B' staying a while?", speaker=Speaker.C, right_side=True),
                         DialogFragment("Absolutely. Right up until we the fix the ship and refuel, and then we're blasting out of this hellhole.", speaker=Speaker.PLAYER, id_resolver=lookup),

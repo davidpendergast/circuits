@@ -305,7 +305,7 @@ class OverworldGrid:
                 return n
         return None
 
-    def get_connected_node_in_dir(self, xy, direction, selectable_only=True, enabled_only=True) -> 'OverworldGrid.OverworldNode':
+    def get_connected_node_in_dir(self, xy, direction, selectable_only=True, enabled_only=True, fuzzy=False) -> 'OverworldGrid.OverworldNode':
         start_node = self.get_node(xy)
         if start_node is None:
             return None
@@ -326,6 +326,35 @@ class OverworldGrid:
                                                   enabled_only=enabled_only, selectable_only=False):
                     if not selectable_only or candidate.is_selectable():
                         return candidate
+                    elif candidate.is_endpoint():
+                        return None  # there's a node there, but it's not selectable.
+
+            if fuzzy:
+                # look for the closest node that's connected back to us in the reverse direction.
+                to_search_fuzzy = []
+                if n: to_search_fuzzy.append((xy[0], xy[1] - 1))
+                if s: to_search_fuzzy.append((xy[0], xy[1] + 1))
+                if w: to_search_fuzzy.append(((xy[0] - 1, xy[1])))
+                if e: to_search_fuzzy.append(((xy[0] + 1, xy[1])))
+
+                candidates = []
+                for start_xy in to_search_fuzzy:
+                    for candidate in self.bf_traverse(start_xy, ignore=(xy,),
+                                                      enabled_only=enabled_only, selectable_only=False):
+                        candidates.append(candidate)
+
+                candidates.sort(key=lambda c: util.dist_manhattan(xy, c.get_xy()))
+
+                anti_dir = util.negate(direction)
+                for candidate in candidates:
+                    if self.get_connected_node_in_dir(candidate.get_xy(), anti_dir,
+                                                      selectable_only=selectable_only,
+                                                      enabled_only=enabled_only, fuzzy=False) == start_node:
+                        if selectable_only and not candidate.is_selectable():
+                            if candidate.is_endpoint():
+                                return None
+                        else:
+                            return candidate
             return None
 
     def bf_traverse(self, start_xy, ignore=(), enabled_only=False, selectable_only=False):
@@ -1766,7 +1795,8 @@ class OverworldScene(scenes.Scene):
             orig_node = self.state.get_selected_node()
             if orig_node is not None:
                 new_node = self.state.get_grid().get_connected_node_in_dir(orig_node.get_xy(), (dx, dy),
-                                                                           selectable_only=True, enabled_only=True)
+                                                                           selectable_only=True, enabled_only=True,
+                                                                           fuzzy=True)
                 if new_node is not None:
                     if new_node.is_exit():
                         self.state.activate_exit_node(new_node.get_exit_id())

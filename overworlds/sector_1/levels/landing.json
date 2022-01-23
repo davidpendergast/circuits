@@ -472,7 +472,7 @@
         {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 32, "x": 1440, "y": 60},
         {
             "color_id": 0,
-            "dialog": "ab_intro",
+            "dialog": "b_introduction",
             "points": [],
             "subtype": "player_small",
             "text": "Press {INTERACT_KEYS} to Talk.",
