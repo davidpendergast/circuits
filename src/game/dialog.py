@@ -420,6 +420,24 @@ def get_dialog(dialog_id, player_type, other_type):
             return link(DialogFragment("Hello?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("...", speaker=Speaker.A, right_side=True),
                         DialogFragment("They aren't fully assembled yet. They won't be able to talk to me.", speaker=Speaker.PLAYER, id_resolver=lookup))
+        elif dialog_id == "corpse_with_note":
+            return link(DialogFragment("It's holding a note.", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("\"First our bodies failed. Now our minds. But the machines aren't bothered. "
+                                       "I say let them continue - it would be our final, permanent stain on this unforgiving place. A monument to our sins.\""))
+        elif dialog_id == "d_introduction":
+            return link(DialogFragment("D! It's 'D'-lightful to see you!", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("Ah, there you are. I've been scanning this place top to bottom looking for you three.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("I was starting to 'B'-come worried you'd been processed into space blocks.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("What are these blocks anyways?", speaker=Speaker.A),
+                        DialogFragment("They're practically indestructable. They can absorb, store, and transmit extreme amounts of thermal energy. I don't know what their purpose is.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("This station produces them, but it's running nowhere close to its capacity. It seems like it's been abandoned or shut down.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("Is that why it destroyed the ship? To make blocks?", speaker=Speaker.B),
+                        DialogFragment("Yes. Any material it comes into contact with, natural or artificial, it tries to break down and use.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("Why are the blocks being built here, so close to SOL-1564?", speaker=Speaker.C),
+                        DialogFragment("It's using the star's heat for power, but it could do that from a distance too. I don't know why it's so close.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("The installation's core is deeper down in this sector. Perhaps we'll find answers there.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("Let's go.", speaker=Speaker.A)
+            )
         elif dialog_id == "overseer_conversation":
             return link(DialogFragment("... Hello?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("Welcome home.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),

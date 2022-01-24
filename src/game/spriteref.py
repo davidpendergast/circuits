@@ -657,7 +657,7 @@ class _DecorationSheet(spritesheets.SpriteSheet):
         """ returns: ImageModel, can_recolor """
         if size in self.sprites:
             imgs, can_recolor = self.sprites[size]
-            return imgs[idx % len(self.sprites[size])], can_recolor
+            return imgs[idx % len(imgs)], can_recolor
         else:
             return None, True
 

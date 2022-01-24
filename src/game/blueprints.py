@@ -571,7 +571,7 @@ class DecorationSpecType(SpecType):
         if size not in spriteref.decoration_sheet().sprites:
             return [0]
         else:
-            n = len(spriteref.decoration_sheet().sprites[size])
+            n = len(spriteref.decoration_sheet().sprites[size][0])
             return [i for i in range(n)]
 
     def get_default_value(self, k):
