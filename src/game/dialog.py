@@ -419,9 +419,21 @@ def get_dialog(dialog_id, player_type, other_type):
         elif dialog_id == "player_a_self_dialog":
             return link(DialogFragment("Hello?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("...", speaker=Speaker.A, right_side=True),
-                        DialogFragment("They aren't fully assembled yet. They won't be able to talk to me.", speaker=Speaker.PLAYER, id_resolver=lookup))
+                        DialogFragment("They seem to be deactivated.", speaker=Speaker.PLAYER, id_resolver=lookup))
         elif dialog_id == "computer":
-            return link(DialogFragment("It's a computer."))
+            return link(DialogFragment("What's this?", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("Diagrams of a star, with what appear to be many rings around it.", speaker=Speaker.A, right_side=True),
+                        DialogFragment("Is that SOL-1564?", speaker=Speaker.A, right_side=True),
+                        DialogFragment("Stars all look the same to me.", speaker=Speaker.B),
+                        DialogFragment("It says SOL-1564 in the bottom right corner.", speaker=Speaker.C),
+                        DialogFragment("It's probably SOL-1564 then.", speaker=Speaker.A, right_side=True),
+                        DialogFragment("I think that's a fair assessment.", speaker=Speaker.C),
+                        DialogFragment("What are the rings?", speaker=Speaker.B),
+                        DialogFragment("Naturally-occurring celestial rings are made of rocks and ice, but these ones are too discrete and irregular. Perhaps they're artificial.", speaker=Speaker.A, right_side=True),
+                        DialogFragment("You can't build something like that. You'd need incalculable quantities of material, and even then, they would likely just fall into the star.", speaker=Speaker.C),
+                        DialogFragment("Yeah, weird.", speaker=Speaker.B),
+                        DialogFragment("Well, let's keep moving.", speaker=Speaker.A, right_side=True)
+                        )
         elif dialog_id == "corpse_with_note":
             return link(DialogFragment("It's holding a note.", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("\"First our bodies failed. Now our minds. But the machines aren't bothered. "
