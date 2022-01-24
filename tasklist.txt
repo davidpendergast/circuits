@@ -26,13 +26,11 @@ features:
 
 final push:
  [x] finalize song assignments
- - B dialog in intro level
- - A dialog / level in sector_a
-   - some brief dialog at beginning of sector A
-   - needs new art?
+ [x] B dialog in intro level
+ [x] A dialog / level in sector_a
  [x] C dialog / could extend level a bit
- - level / dialog for sector 2
- - D dialog in sector 3
+ [1/2] level / dialog for sector 2
+ [X] D dialog in sector 3
  - flavor text for (all) levels
  - set up itch page
  - acquire usable linux machine and make build

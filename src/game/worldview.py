@@ -6,6 +6,7 @@ import src.engine.renderengine as renderengine
 import src.engine.inputs as inputs
 import src.engine.sprites as sprites
 
+import configs
 import src.game.globalstate as gs
 import src.game.spriteref as spriteref
 import src.engine.spritesheets as spritesheets
@@ -47,13 +48,8 @@ class WorldView:
         self._loop_bg_colors = True
 
     def update(self):
-        zoom_change = 0
-        if inputs.get_instance().was_pressed(pygame.K_MINUS):
-            zoom_change -= 1
-        if inputs.get_instance().was_pressed(pygame.K_EQUALS):
-            zoom_change += 1
-        if zoom_change != 0:
-            self.adjust_base_zoom(zoom_change)
+        if configs.is_dev:
+            self._handle_debug_inputs()
 
         if self._temp_zoom_idx is not None:
             self._temp_zoom_tick_count = min(self._temp_zoom_delay, self._temp_zoom_tick_count + 1)
@@ -62,18 +58,6 @@ class WorldView:
                 self._temp_zoom_idx = None
 
         self._bg_colors_tick += 1
-
-        if inputs.get_instance().was_pressed(pygame.K_f):
-            self._free_camera = not self._free_camera
-            print("INFO: toggled free camera to: {}".format(self._free_camera))
-
-        if inputs.get_instance().was_pressed(pygame.K_g):
-            self._show_grid = not self._show_grid
-            print("INFO: toggled grid to: {}".format(self._show_grid))
-
-        if inputs.get_instance().was_pressed(pygame.K_h):
-            gs.get_instance().debug_render = not gs.get_instance().debug_render
-            print("INFO: toggled debug sprites to: {}".format(gs.get_instance().debug_render))
 
         if not self._free_camera:
             player = self._world.get_player()
@@ -109,6 +93,27 @@ class WorldView:
 
     def set_free_camera(self, val):
         self._free_camera = val
+
+    def _handle_debug_inputs(self):
+        zoom_change = 0
+        if inputs.get_instance().was_pressed(pygame.K_MINUS):
+            zoom_change -= 1
+        if inputs.get_instance().was_pressed(pygame.K_EQUALS):
+            zoom_change += 1
+        if zoom_change != 0:
+            self.adjust_base_zoom(zoom_change)
+
+        if inputs.get_instance().was_pressed(pygame.K_f):
+            self._free_camera = not self._free_camera
+            print("INFO: toggled free camera to: {}".format(self._free_camera))
+
+        if inputs.get_instance().was_pressed(pygame.K_g):
+            self._show_grid = not self._show_grid
+            print("INFO: toggled grid to: {}".format(self._show_grid))
+
+        if inputs.get_instance().was_pressed(pygame.K_h):
+            gs.get_instance().debug_render = not gs.get_instance().debug_render
+            print("INFO: toggled debug sprites to: {}".format(gs.get_instance().debug_render))
 
     def set_bg_colors(self, colors, period=120, loop=True):
         if colors is None:
