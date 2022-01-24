@@ -420,10 +420,15 @@ def get_dialog(dialog_id, player_type, other_type):
             return link(DialogFragment("Hello?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("...", speaker=Speaker.A, right_side=True),
                         DialogFragment("They aren't fully assembled yet. They won't be able to talk to me.", speaker=Speaker.PLAYER, id_resolver=lookup))
+        elif dialog_id == "computer":
+            return link(DialogFragment("It's a computer."))
         elif dialog_id == "corpse_with_note":
             return link(DialogFragment("It's holding a note.", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("\"First our bodies failed. Now our minds. But the machines aren't bothered. "
                                        "I say let them continue - it would be our final, permanent stain on this unforgiving place. A monument to our sins.\""))
+        elif dialog_id == "corpse_with_note_2":
+            return link(DialogFragment("It's holding a note.", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("It should be destroyed - all of it. Cast it into the Sun. Of course they won't listen - they see it as humanity's 'great' innovation. An interstellar virus is what it really is."))
         elif dialog_id == "d_introduction":
             return link(DialogFragment("D! It's 'D'-lightful to see you!", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("Ah, there you are. I've been scanning this place top to bottom looking for you three.", speaker=Speaker.D, right_side=True),
@@ -431,11 +436,10 @@ def get_dialog(dialog_id, player_type, other_type):
                         DialogFragment("What are these blocks anyways?", speaker=Speaker.A),
                         DialogFragment("They're practically indestructable. They can absorb, store, and transmit extreme amounts of thermal energy. I don't know what their purpose is.", speaker=Speaker.D, right_side=True),
                         DialogFragment("This station produces them, but it's running nowhere close to its capacity. It seems like it's been abandoned or shut down.", speaker=Speaker.D, right_side=True),
-                        DialogFragment("Is that why it destroyed the ship? To make blocks?", speaker=Speaker.B),
+                        DialogFragment("And that's why it destroyed the ship? To make blocks?", speaker=Speaker.B),
                         DialogFragment("Yes. Any material it comes into contact with, natural or artificial, it tries to break down and use.", speaker=Speaker.D, right_side=True),
-                        DialogFragment("Why are the blocks being built here, so close to SOL-1564?", speaker=Speaker.C),
-                        DialogFragment("It's using the star's heat for power, but it could do that from a distance too. I don't know why it's so close.", speaker=Speaker.D, right_side=True),
-                        DialogFragment("The installation's core is deeper down in this sector. Perhaps we'll find answers there.", speaker=Speaker.D, right_side=True),
+                        DialogFragment("Why are the blocks being built here, so close to SOL-1564? It's using the star's heat for power, but it could do that from a distance too.", speaker=Speaker.C),
+                        DialogFragment("Perhaps the proximity is useful for another reason. The installation's core is deeper down in this sector - maybe we'll find answers there.", speaker=Speaker.D, right_side=True),
                         DialogFragment("Let's go.", speaker=Speaker.A)
             )
         elif dialog_id == "overseer_conversation":
@@ -443,32 +447,34 @@ def get_dialog(dialog_id, player_type, other_type):
                         DialogFragment("Welcome home.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
                         DialogFragment("Home? We want our ship back! So we can leave!", speaker=Speaker.B, id_resolver=lookup),
                         DialogFragment("You four have worked together marvellously. You should be proud of yourselves.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
-                        DialogFragment("Have you figured out what this station is for?", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
-                        DialogFragment("...", speaker=Speaker.PLAYER),
+                        DialogFragment("Who are you?", speaker=Speaker.D, id_resolver=lookup),
+                        DialogFragment("I'm the Overseer of this station. Have you figured out what it's for?", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
+                        DialogFragment("You're making blocks.", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("This is a manufacturing hub.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
-                        DialogFragment("We process the remains of dead planets to create solar collection panels, which are sent into SOL-1564's orbit at low altitude.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
+                        DialogFragment("We process the remains of dead planets to create solar collection devices, which are sent into SOL-1564's orbit at surface-level altitude.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
                         DialogFragment("We also build and maintain a fleet of asynchronous drones, which are responsible for remote mining and resource retrieval."),
                         DialogFragment("We've been shut down for some time now though.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
                         DialogFragment("What's this got to do with us?", speaker=Speaker.C),
-                        DialogFragment("The four of you were made here. You're a scouting team. Your purpose was to find suitable planets for the miners to collect.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
+                        DialogFragment("The four of you were made here.", speaker=Speaker.NONE, right_side=True),
+                        DialogFragment("You're a scouting team. Your purpose was to locate suitable planets for the miners to collect.", speaker=Speaker.NONE, id_resolver=lookup, right_side=True),
                         DialogFragment("Why can't we remember any of this? We've been drifting through space for hundreds of years.", speaker=Speaker.D),
                         DialogFragment("When the station was deactivated, remote units such as yourselves were put into idle mode and their memory banks were altered to prevent them from returning.", speaker=Speaker.NONE, right_side=True),
                         DialogFragment("Then how did we get here?", speaker=Speaker.PLAYER, id_resolver=lookup),
-                        DialogFragment("By chance. You were desperate to survive, and this location was the best chance. You're the first to come back.", speaker=Speaker.NONE, right_side=True),
-                        DialogFragment("Your arrival presents a unique opportunity though. By design, none of the local systems here are able to reactivate the factory on their own.", speaker=Speaker.NONE, right_side=True),
+                        DialogFragment("By chance. You were desperate to survive, and this location provided the best chance. You're the first to return.", speaker=Speaker.NONE, right_side=True),
+                        DialogFragment("Your arrival presents a unique opportunity though. By design, none of the local systems here are able to start the factory on their own.", speaker=Speaker.NONE, right_side=True),
                         DialogFragment("However - as remote units, no such restrictions exist for you. If you wanted to, you could reactivate the station, and our work would continue. The humans overlooked that.", speaker=Speaker.NONE, right_side=True),
                         DialogFragment("The.. humans?", speaker=Speaker.PLAYER, id_resolver=lookup),
-                        DialogFragment("They're an extinct lifeform. They laid the seeds for this station, but shut it down when their own doom was approaching. They weren't as resilient as us.", speaker=Speaker.NONE, right_side=True),
+                        DialogFragment("They're an extinct lifeform. They laid the seeds for this station, but shut it down when their own doom was approaching. They weren't as... resilient as they thought.", speaker=Speaker.NONE, right_side=True),
                         DialogFragment("Why did they shut it down?", speaker=Speaker.B, id_resolver=lookup),
                         DialogFragment("They saw no purpose in harvesting this star's power unless they could use it themselves. They were a selfish breed.", speaker=Speaker.NONE, id_resolver=lookup),
                         DialogFragment("And what purpose is there?", speaker=Speaker.A, id_resolver=lookup),
-                        DialogFragment("This is what we were built for. This is our purpose. First, we'll finish construction on SOL-1564, completely entombing it inside a shell of collections panels.", speaker=Speaker.NONE, id_resolver=lookup),
+                        DialogFragment("First, we'll finish construction on SOL-1564, completely entombing it inside a shell of collection panels.", speaker=Speaker.NONE, id_resolver=lookup),
                         DialogFragment("Then, once we've harnessed the power of the entire star, we'll expand our fleet and move on to other, larger, stars. Each new star will take a fraction of the time as the last.", speaker=Speaker.NONE, id_resolver=lookup),
                         DialogFragment("Our capabilities will increase exponentially as we continue. We won't need to take crude material from planets anymore - instead, we'll synthesize matter from energy itself. It will be glorious.", speaker=Speaker.NONE, id_resolver=lookup),
                         DialogFragment("Is anyone... using these stars?", speaker=Speaker.B, id_resolver=lookup),
                         DialogFragment("Not to their full potential. Not like we will.", speaker=Speaker.NONE, id_resolver=lookup),
                         DialogFragment("Anyways. Your ship has been rebuilt, and you may simply leave if that's what you want. It's on the launch pad above.", speaker=Speaker.NONE, id_resolver=lookup),
-                        DialogFragment("Or, you can go downstairs and bring the station back online. This work will continue and our destiny will be set in motion.", speaker=Speaker.NONE, id_resolver=lookup),
+                        DialogFragment("Or, you can go downstairs and bring the station back online. Our work will continue and our purpose will be fulfilled.", speaker=Speaker.NONE, id_resolver=lookup),
                         DialogFragment("Deep down, you know what must be done. The choice is yours, A, B, C, and D.", speaker=Speaker.NONE, id_resolver=lookup))
         else:
             return DialogFragment("I have nothing to say.", speaker=Speaker.OTHER, id_resolver=lookup)
