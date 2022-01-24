@@ -330,11 +330,11 @@
             "h": 32,
             "loop": true,
             "points": [
-                [-416, 96]
+                [-412, 96]
             ],
             "type": "moving_block",
             "w": 32,
-            "x": -416,
+            "x": -412,
             "y": 128
         },
         {
@@ -344,11 +344,11 @@
             "h": 112,
             "loop": true,
             "points": [
-                [-404, 128]
+                [-400, 128]
             ],
             "type": "moving_block",
             "w": 8,
-            "x": -404,
+            "x": -400,
             "y": 160
         },
         {"art_id": 1, "color_id": 2, "h": 32, "type": "block", "w": 32, "x": -320, "y": 80},
@@ -878,7 +878,9 @@
             "x": -704,
             "y": -128
         },
-        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": -800, "y": -176}
+        {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 32, "x": -800, "y": -176},
+        {"art_id": 2, "color_id": 2, "h": 16, "type": "block", "w": 48, "x": -448, "y": 208},
+        {"art_id": 0, "color_id": 2, "h": 16, "type": "block", "w": 8, "x": -392, "y": 208}
     ],
     "level_id": "c_introduction",
     "name": "Meeting",

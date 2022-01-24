@@ -2,7 +2,7 @@
 import os.path
 
 name_of_game = "RESYNC"
-version = "0.0.3"
+version = "0.0.4"
 userdata_subdir = "Resync"
 
 

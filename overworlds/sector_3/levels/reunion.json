@@ -506,16 +506,6 @@
         {"art_id": 0, "color_id": 3, "h": 16, "type": "block", "w": 48, "x": 624, "y": -80},
         {"art_id": 0, "color_id": 0, "h": 56, "type": "block", "w": 4, "x": 592, "y": -64},
         {"art_id": 2, "color_id": 3, "h": 16, "type": "block", "w": 32, "x": 672, "y": -16},
-        {
-            "color_id": 0,
-            "dialog": "",
-            "points": [],
-            "subtype": "exclam",
-            "text": "It's some kind of control room.",
-            "type": "info",
-            "x": 712,
-            "y": -48
-        },
         {"art_id": 0, "color_id": 2, "h": 16, "type": "false_block", "w": 8, "x": 632, "y": 40},
         {"art_id": 1, "color_id": 2, "h": 16, "type": "false_block", "w": 48, "x": 640, "y": 40},
         {"art_id": 2, "color_id": 2, "h": 16, "type": "false_block", "w": 32, "x": 688, "y": 40},

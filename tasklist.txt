@@ -32,6 +32,7 @@ final push:
  [1/2] level / dialog for sector 2
  [X] D dialog in sector 3
  - flavor text for (all) levels
+ - music for story levels
  - set up itch page
  - acquire usable linux machine and make build
 

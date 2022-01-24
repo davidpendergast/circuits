@@ -402,7 +402,7 @@ def get_dialog(dialog_id, player_type, other_type):
                         DialogFragment("It seems that way.", speaker=Speaker.B, id_resolver=lookup),
                         DialogFragment("Well, at least there's something here. There was a good chance we'd never reboot. Where are the others?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("The other half of the ship is gone. I haven't seen them.", speaker=Speaker.B, id_resolver=lookup),
-                        DialogFragment("Well lets take a look around.", speaker=Speaker.PLAYER, id_resolver=lookup)
+                        DialogFragment("Well let's take a look around.", speaker=Speaker.PLAYER, id_resolver=lookup)
                     )
         elif dialog_id == "c_introduction":
             return link(DialogFragment("It's good to 'C' you in one piece, C!", speaker=Speaker.PLAYER, id_resolver=lookup),
