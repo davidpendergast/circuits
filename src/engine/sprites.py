@@ -2,6 +2,7 @@
 import src.engine.globaltimer as globaltimer
 
 import math
+import typing
 
 import src.utils.util as util
 
@@ -1041,10 +1042,15 @@ class TextSprite(MultiSprite):
 
     @staticmethod
     def wrap_text_to_fit(text, width, scale=1, font_lookup=None, x_kerning=DEFAULT_X_KERNING):
-        """returns: list of strings, one per line."""
+        """
+        text: str or TextBuilder
+        returns: list of strings or TextBuilders, one per line.
+        """
         if font_lookup is None:
             import src.engine.spritesheets as spritesheets  # (.-.)
             font_lookup = spritesheets.get_instance().get_sheet(spritesheets.DefaultFont.SHEET_ID)
+
+        using_tbs = isinstance(text, TextBuilder)
 
         if "\n" in text:
             lines = text.split("\n")
@@ -1055,14 +1061,13 @@ class TextSprite(MultiSprite):
             return res
         else:
             # at this point, text contains no newlines
-
             words = text.split(" ")  # FYI if you have repeated spaces this will delete them
             cur_line = []
             cur_width = 0
 
             if len(words) == 1 and len(words[0]) == 0:
                 # probably an intentional empty line, so preserve it.
-                return [""]
+                return [""] if not using_tbs else [TextBuilder()]
 
             res = []
 
@@ -1077,7 +1082,7 @@ class TextSprite(MultiSprite):
                         cur_width = word_width
                     elif cur_width + space_width + word_width > width / scale:
                         # gotta wrap
-                        res.append(" ".join(cur_line))
+                        res.append(" ".join(cur_line) if not using_tbs else TextBuilder.join(cur_line, sep=" "))
                         cur_line.clear()
                         cur_line.append(w)
                         cur_width = word_width + x_kerning
@@ -1086,7 +1091,7 @@ class TextSprite(MultiSprite):
                         cur_width += space_width + word_width + x_kerning
 
             if len(cur_line) > 0:
-                res.append(" ".join(cur_line))
+                res.append(" ".join(cur_line) if not using_tbs else TextBuilder.join(cur_line, sep=" "))
 
             return res
 
@@ -1141,11 +1146,50 @@ class TextBuilder:
     def copy(self) -> 'TextBuilder':
         return TextBuilder(self.text, dict(self.colors))
 
+    def split(self, sep) -> typing.List['TextBuilder']:
+        res = []
+        orig_idx = 0
+        for text in self.text.split(sep):
+            split_colors = {}
+            for c_idx in range(len(text)):
+                if orig_idx in self.colors:
+                    split_colors[c_idx] = self.colors[orig_idx]
+                orig_idx += 1
+            orig_idx += len(sep)
+            res.append(TextBuilder(text, colors=split_colors))
+        return res
+
+    @staticmethod
+    def join(sequence, sep="", sep_color=None) -> 'TextBuilder':
+        """
+        Joins a sequence of str or TextBuilders into a single TextBuilder.
+        """
+        res = TextBuilder()
+        for s_idx_in_seq, s in enumerate(sequence):
+            if s_idx_in_seq > 0:
+                res.add(sep, color=sep_color)
+            if isinstance(s, TextBuilder):
+                start_idx = len(res)
+                res.text += s.text
+                for i in range(len(s)):
+                    s_color = s.get_color_at(i)
+                    if s_color is not None:
+                        res.colors[start_idx + i] = s_color
+            else:
+                res.add(str(s))
+        return res
+
     def __iter__(self):
         return self.text
 
+    def __getitem__(self, key):
+        return self.text[key]
+
     def __len__(self):
         return len(self.text)
+
+    def __contains__(self, item):
+        return item in self.text
 
     def __repr__(self):
         return "TextBuilder({}, {})".format(self.text, self.colors)

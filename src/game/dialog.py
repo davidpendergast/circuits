@@ -495,7 +495,11 @@ def get_dialog(dialog_id, player_type, other_type):
 REPLACEMENTS = {
     "{MOVEMENT_KEYS}": lambda: gs.get_instance().get_user_friendly_movement_keys(),
     "{INTERACT_KEYS}": lambda: keybinds.get_instance().get_keys(const.ACTION).get_pretty_names(),
-    "{JUMP_KEYS}": lambda: keybinds.get_instance().get_keys(const.JUMP).get_pretty_names()
+    "{JUMP_KEYS}": lambda: keybinds.get_instance().get_keys(const.JUMP).get_pretty_names(),
+    "{PLAYER_A}": lambda: playertypes.PlayerTypes.FAST.get_name(),
+    "{PLAYER_B}": lambda: playertypes.PlayerTypes.SMALL.get_name(),
+    "{PLAYER_C}": lambda: playertypes.PlayerTypes.HEAVY.get_name(),
+    "{PLAYER_D}": lambda: playertypes.PlayerTypes.FLYING.get_name()
 }
 
 
@@ -522,12 +526,13 @@ def _handle_replacement(start, end, raw_text, raw_colors):
         # just slice off the unmatched closing brace I guess
         return raw_text[0: end] + raw_text[end + 1:], raw_colors[0: end] + raw_colors[end + 1:]
     else:
+        new_text = "ERROR"
+        new_colors = [colors.PERFECT_RED] * len(new_text)
+
         to_replace = raw_text[start: end]
         if to_replace not in REPLACEMENTS:
-            # unrecognized replacement, just remove it
-            new_text = "ERROR"
-            new_colors = [colors.PERFECT_RED] * len(new_text)
-        elif "KEYS" in to_replace:
+            pass  # unrecognized replacement, show an error
+        elif "_KEYS" in to_replace:
             mapped_keys = REPLACEMENTS[to_replace]()
             if len(mapped_keys) == 0:
                 new_text = " "
@@ -543,6 +548,13 @@ def _handle_replacement(start, end, raw_text, raw_colors):
                     tb.add(k, color=colors.KEYBIND_COLOR)
                 new_text = tb.text
                 new_colors = [tb.get_color_at(i) for i in range(len(tb.text))]
+        elif "PLAYER_" in to_replace:
+            new_text = REPLACEMENTS[to_replace]()
+            ptype = playertypes.PlayerTypes.get_type(to_replace[1:-1], or_else_throw=False)
+            if ptype is not None:
+                new_colors = [ptype.get_color() for _ in range(len(new_text))]
+            else:
+                new_colors = [colors.WHITE for _ in range(len(new_text))]
         else:
             raise NotImplementedError()
 

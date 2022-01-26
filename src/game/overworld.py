@@ -27,6 +27,7 @@ import src.game.colors as colors
 import src.game.playertypes as playertypes
 import src.game.soundref as soundref
 import src.game.songsystem as songsystem
+import src.game.dialog as dialog
 
 
 class OverworldGrid:
@@ -1509,12 +1510,13 @@ class OverworldInfoPanelElement(ui.UiElement):
         res.add("--:--.--", color=colors.LIGHT_GRAY)
         return res
 
-    def get_description_text(self):
+    def get_description_text(self) -> sprites.TextBuilder:
         node = self.get_node_to_show()
         if node is not None and isinstance(node, OverworldGrid.LevelNode):
             level_num, _, level_bp = node.get_level_info(self.state)
             if level_bp is not None:
-                return level_bp.description()
+                raw_desc = level_bp.description()
+                return dialog.replace_placeholders(raw_desc)
             else:
                 return None
 
@@ -1563,8 +1565,9 @@ class OverworldInfoPanelElement(ui.UiElement):
                 self.description_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0, "test test test",
                                                                   color=colors.WHITE, font_lookup=font)
             wrapped_text_lines = sprites.TextSprite.wrap_text_to_fit(desc_text, rect[2] - 12, font_lookup=font)
-            wrapped_text = "\n".join(wrapped_text_lines)
-            self.description_text_sprite.update(new_x=rect[0] + 6, new_y=y_pos, new_text=wrapped_text)
+            wrapped_text = sprites.TextBuilder.join(wrapped_text_lines, "\n")
+            self.description_text_sprite.update(new_x=rect[0] + 6, new_y=y_pos, new_text=wrapped_text.text,
+                                                new_color_lookup=wrapped_text.colors)
             y_pos += self.description_text_sprite.size()[1]
 
         level_time = self.get_visible_level_time()

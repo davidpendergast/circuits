@@ -1,6 +1,6 @@
 {
     "characters": ["player_heavy"],
-    "description": "???",
+    "description": "Your new companion is a little heavier than Units {PLAYER_A} and {PLAYER_B}.\n\n\n",
     "entities": [
         {"color_id": 3, "h": 112, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 3, "h": 16, "type": "block", "w": 112, "x": 48, "y": 224},
@@ -132,5 +132,6 @@
     "level_id": "crush",
     "name": "Crush",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

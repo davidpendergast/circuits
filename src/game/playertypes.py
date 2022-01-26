@@ -215,9 +215,21 @@ class PlayerTypes:
 
     @staticmethod
     def get_type(ident, or_else_throw=True):
+        """
+        Gets the PlayerType for the given identity string.
+        This method is case-insensitive and accepts several forms of ID:
+            true identity: e.g. "PLAYER_FAST", "PLAYER_HEAVY"
+            name: e.g. "A", "C"
+            player_name: e.g. "PLAYER_A", "PLAYER_C"
+        """
         for ptype in PlayerTypes._ALL_TYPES:
             if ident == ptype.get_id() or str(ident).upper() == ptype.get_letter().upper():
                 return ptype
+            elif str(ident).upper() == ptype.get_name().upper():
+                return ptype
+            elif str(ident).upper() == "PLAYER_" + ptype.get_name().upper():
+                return ptype
+
         if or_else_throw:
             raise ValueError("unrecognized player type: {}".format(ident))
         else:

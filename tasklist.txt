@@ -35,6 +35,9 @@ final push:
  - music for story levels
  - set up itch page
  - acquire usable linux machine and make build
+ - remove unused assets (songs / sounds)
+ - write info.txt
+ - couple more secrets?
 
  story:
  - you are: a group of scavenger/scout robots who explore space, searching for materials

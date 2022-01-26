@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast"],
-    "description": "???",
+    "description": "Unit {PLAYER_A} notices a passageway leading to an open area, and decides to investigate.\n\n",
     "entities": [
         {"color_id": 1, "h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 80, "x_dir": 1, "y": 176},
         {"art_id": 0, "color_id": 1, "h": 48, "type": "block", "w": 96, "x": 32, "y": 192},
