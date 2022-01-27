@@ -31,6 +31,8 @@ final push:
  [x] C dialog / could extend level a bit
  [1/2] level / dialog for sector 2
  [X] D dialog in sector 3
+ - arrow icons between sectors
+ - rearrange levels: vents -> 3, resync -> 4, desync -> 5? patience somewhere (or new level)
  - flavor text for (all) levels
  - music for story levels
  - set up itch page

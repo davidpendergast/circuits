@@ -55,7 +55,7 @@ PERFECT_DARK_GRAY = to_float(92, 92, 92)
 PERFECT_VERY_DARK_GRAY = to_float(32, 32, 32)
 PERFECT_BLACK = to_float(0, 0, 0)
 
-PERFECT_RED = (1.0, 0.333, 0.333)
+PERFECT_RED = (1.0, 0.333, 0.333)            # ff5555
 PERFECT_DARK_RED = to_float(104, 16, 16)
 PERFECT_VERY_DARK_RED = to_float(32, 0, 0)
 PERFECT_GREEN = (0.5, 1.0, 0.5)
@@ -67,22 +67,22 @@ PERFECT_ORANGE = (1, 205 / 256, 117 / 256)
 
 # in-game colors
 
-WHITE = to_float(244, 244, 244)
-LIGHT_GRAY = to_float(196, 196, 196)
-MID_GRAY = to_float(128, 128, 128)
-DARK_GRAY = to_float(92, 92, 92)
+WHITE = to_float(244, 244, 244)       # f4f4f4
+LIGHT_GRAY = to_float(196, 196, 196)  # c4c4c4
+MID_GRAY = to_float(128, 128, 128)    # 808080
+DARK_GRAY = to_float(92, 92, 92)      # 5c5c5c
 
-BLUE = to_float(148, 176, 194)
-DARK_BLUE = to_float(51, 60, 87)
+BLUE = to_float(148, 176, 194)      # 94b0c2
+DARK_BLUE = to_float(51, 60, 87)    # 333c57
 
-GREEN = to_float(166, 231, 119)
-DARK_GREEN = to_float(86, 123, 59)
+GREEN = to_float(166, 231, 119)     # a6e777
+DARK_GREEN = to_float(86, 123, 59)  # 567b3b
 
-TAN = to_float(256, 205, 117)
-DARK_TAN = to_float(131, 108, 67)
+TAN = to_float(256, 205, 117)       # ffcd75
+DARK_TAN = to_float(131, 108, 67)   # 836c43
 
-PURPLE = to_float(228, 127, 253)
-DARK_PURPLE = to_float(94, 56, 94)
+PURPLE = to_float(228, 127, 253)    # e47ffd
+DARK_PURPLE = to_float(94, 56, 94)  # 5e385e
 
 KEYBIND_COLOR = PERFECT_YELLOW
 EDITOR_SELECTION_COLOR = PERFECT_RED
