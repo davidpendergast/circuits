@@ -6,6 +6,8 @@ bugs:
 	- would be ok, but it's not super consistent
 	- only really occurs when you have a lot of downward speed and hit a platform with upward speed
  - teles that start out deactivated shouldn't blip every time the level starts
+ - starbuck5 SDL2 illegal access error
+	- just going to pray this doesn't happen in the wild
  
  
 features:
@@ -36,14 +38,16 @@ final push:
  - arrow icons between sectors
  [x] rearrange levels: vents -> 3, resync -> 4, desync -> 5? patience somewhere (or new level)
  - flavor text for (all) levels
- [3/5] music for story levels
+ [x] music for story levels
  [x?] set up itch page
  - acquire usable linux machine and make build
- - remove unused assets (songs / sounds)
+ - mac build
+ [x] remove unused assets (songs / sounds)
  - write info.txt
  - couple more secrets?
  - allow you to pause with P
  [x] check error reporting (seems good, if SDL2 doesn't seg fault ._.)
+ - make pyinstaller print logs to the console when you launch the game via cmd (or, suffer pain later!!)
 
  story:
  - you are: a group of scavenger/scout robots who explore space, searching for materials

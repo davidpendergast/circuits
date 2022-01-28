@@ -281,7 +281,7 @@
     ],
     "level_id": "computer",
     "name": "Computer",
-    "song_id": null,
+    "song_id": "custom_8",
     "special": [],
     "time_limit": 216000
 }

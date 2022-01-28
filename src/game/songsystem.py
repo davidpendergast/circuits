@@ -98,11 +98,12 @@ class MultiChannelSong:
             return False
 
     def update(self):
-        if self._playing and self._sounds_are_actually_loaded:
+        if self.is_playing() and self._sounds_are_actually_loaded:
             volume_from_prefs = gs.get_instance().get_settings().music_volume()
             for i, v in enumerate(self._volumes):
                 if i < len(self._sounds):
-                    self._sounds[i].set_volume(v * self._master_volume * self._adjusted_volume * volume_from_prefs)
+                    vol_to_use = v * self._master_volume * self._adjusted_volume * volume_from_prefs
+                    self._sounds[i].set_volume(vol_to_use)
             if len(self._volumes) < len(self._sounds):
                 for i in range(len(self._volumes), len(self._sounds)):
                     self._sounds[i].set_volume(0)
@@ -121,9 +122,10 @@ class MultiChannelSong:
         print("INFO: starting song: {}".format(self.song_id))
         if not self._sounds_are_actually_loaded:
             self._actually_load_sounds()
+        self._playing = True
+        self.update()
         for s in self._sounds:
             s.play(loops=-1)
-        self._playing = True
 
 
 # Of Far Different Nature (that's the artist's name)'s tracks
@@ -225,13 +227,13 @@ def get_default_song_id_for_level(overworld_id, level_pcnt: float=0.0):
 _LOADED_SONGS = {}
 
 
-def _get_song_lazily(song_id) -> MultiChannelSong:
+def _get_song_lazily(song_id, force_load=False) -> MultiChannelSong:
     if song_id not in _LOADED_SONGS:
         if song_id == SILENCE:
             _LOADED_SONGS[song_id] = MultiChannelSong(song_id, [])
         else:
             try:
-                _LOADED_SONGS[song_id] = MultiChannelSong.create(song_id)
+                _LOADED_SONGS[song_id] = MultiChannelSong.create(song_id, fully_load=force_load)
             except Exception:
                 print("ERROR: failed to load multi-track song with ID: {}".format(song_id))
                 traceback.print_exc()
@@ -323,7 +325,7 @@ class LoopFader:
         elif song_id is None:
             song_id = SILENCE
 
-        song = _get_song_lazily(song_id)
+        song = _get_song_lazily(song_id, force_load=self.current_song() is None)
 
         if isinstance(volume_levels, int) or isinstance(volume_levels, float):
             volume_levels = [volume_levels] * song.num_sounds()
@@ -359,12 +361,12 @@ class LoopFader:
                 self.song_queue.append((song, [0] * song.num_sounds(), cur_time + int(fadeout * 1000)))
                 self.song_queue.append((song, volume_levels, cur_time + int((fadein + fadeout) * 1000)))
 
-        self._sort_and_refresh_queue(cur_time)
-        self.last_update_time = cur_time
+        # self._sort_and_refresh_queue(cur_time)
+        # self.last_update_time = cur_time
 
     def update(self):
         cur_time = pygame.time.get_ticks()
-        ellapsed_time_ms = cur_time - self.last_update_time
+        elapsed_time_ms = cur_time - self.last_update_time
         self.last_update_time = cur_time
 
         self._sort_and_refresh_queue(cur_time)
@@ -376,6 +378,10 @@ class LoopFader:
 
         do_start = False
         needs_update = self._dirty
+
+        if len(self.song_queue) == 1:
+            # If there's only one item in the queue, it should always match its specified volume.
+            needs_update |= cur_song.set_volumes(cur_song_info[1], update_now=False)
 
         next_song_info = self.song_queue[1] if len(self.song_queue) >= 2 else None
         if next_song_info is None or cur_time < cur_song_info[2] or cur_song != next_song_info[0]:
@@ -402,7 +408,7 @@ class LoopFader:
             if self._master_volume_rate_of_change == 0:
                 self._master_volume = target_master_volume
             else:
-                change = self._master_volume_rate_of_change * ellapsed_time_ms / 1000.0
+                change = self._master_volume_rate_of_change * elapsed_time_ms / 1000.0
                 if self._master_volume < target_master_volume:
                     self._master_volume = min(self._master_volume + change, target_master_volume)
                 else:
@@ -411,8 +417,20 @@ class LoopFader:
 
         if needs_update:
             cur_song.update()
+
         if do_start:
+            # XXX This call will load the song from disk if it hasn't been yet.
+            # Which can cause a noticeable stutter in the game and mess up the precise
+            # timing we're doing for fading.
+            # TODO We should probably move song loading into a separate thread to prevent the stutter.
             cur_song.start()
+
+            # XXX But we can fix the fading by shifting the entire queue over whenever we start a song :)
+            # it's 5am on a Thursday and we're like 3 days from release
+            shift = pygame.time.get_ticks() - cur_time
+            new_queue = [(s, v, t + shift) for (s, v, t) in self.song_queue]
+            self.song_queue.clear()
+            self.song_queue.extend(new_queue)
 
         self._dirty = False
 

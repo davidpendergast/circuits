@@ -178,7 +178,7 @@ class MainMenuScene(scenes.Scene):
             yield spr
 
     def became_active(self):
-        songsystem.get_instance().set_song(songsystem.MAIN_MENU_SONG, fadein=0.5, fadeout=0.25)
+        songsystem.get_instance().set_song(songsystem.MAIN_MENU_SONG, fadein=3, fadeout=0.25)
 
 
 class InstructionsScene(scenes.Scene):
