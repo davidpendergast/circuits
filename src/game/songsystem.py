@@ -104,12 +104,6 @@ class MultiChannelSong:
         self._playing = True
 
 
-# My (unused) Songs
-MACHINATIONS = "machinations"
-RADIATION = "radiation"
-HARVEST = "harvest"
-SPACE = "space"
-
 # Of Far Different Nature (that's the artist's name)'s tracks
 # https://fardifferent.itch.io/loops
 OFDN_0_TO_100 = "Of Far Different Nature - 0 to 100 (CC-BY)"
@@ -159,7 +153,8 @@ _SONG_MAPPINGS_FOR_LEVELS = {
         OFDN_TIMED,
         OFDN_DREAM_FACTORY,
         OFDN_NO_TIME,
-        OFDN_LARGO]  # DO NOT RE-ARRANGE
+        OFDN_LARGO,
+        OFDN_GANXTA]  # DO NOT RE-ARRANGE
 }
 
 
@@ -237,7 +232,7 @@ class LoopFader:
         self.last_update_time = 0
 
         self._master_volume = 1
-        self._target_master_volume = self._master_volume
+        self._master_volume_multipliers = {}  # str_id -> multiplier
         self._master_volume_rate_of_change = 1  # per sec
 
         self._dirty = False  # if true, means a volume refresh is needed
@@ -248,9 +243,19 @@ class LoopFader:
         else:
             return None
 
-    def set_master_volume(self, volume, rate_of_change=0.1):
-        self._target_master_volume = volume
+    def add_master_volume_multiplier(self, str_id, volume, rate_of_change=0.1):
+        if volume is None or volume == 1:
+            if str_id in self._master_volume_multipliers:
+                del self._master_volume_multipliers[str_id]
+        else:
+            self._master_volume_multipliers[str_id] = volume
         self._master_volume_rate_of_change = rate_of_change
+
+    def get_target_master_volume(self):
+        res = 1
+        for m in self._master_volume_multipliers.values():
+            res *= m
+        return res
 
     def mark_dirty(self):
         self._dirty = True
@@ -319,12 +324,12 @@ class LoopFader:
                 self.song_queue.append((song, volume_levels, cur_time + int((fadein + fadeout) * 1000)))
 
         self._sort_and_refresh_queue(cur_time)
-
         self.last_update_time = cur_time
 
     def update(self):
         cur_time = pygame.time.get_ticks()
         ellapsed_time_ms = cur_time - self.last_update_time
+        self.last_update_time = cur_time
 
         self._sort_and_refresh_queue(cur_time)
 
@@ -356,15 +361,16 @@ class LoopFader:
                 do_start = True
 
         # handle master volume fades
-        if self._master_volume != self._target_master_volume:
+        target_master_volume = self.get_target_master_volume()
+        if self._master_volume != target_master_volume:
             if self._master_volume_rate_of_change == 0:
-                self._master_volume = self._target_master_volume
+                self._master_volume = target_master_volume
             else:
-                change = self._master_volume_rate_of_change * ellapsed_time_ms * 1000.0
-                if self._master_volume < self._target_master_volume:
-                    self._master_volume = min(self._master_volume + change, self._target_master_volume)
+                change = self._master_volume_rate_of_change * ellapsed_time_ms / 1000.0
+                if self._master_volume < target_master_volume:
+                    self._master_volume = min(self._master_volume + change, target_master_volume)
                 else:
-                    self._master_volume = max(self._master_volume - change, self._target_master_volume)
+                    self._master_volume = max(self._master_volume - change, target_master_volume)
             needs_update |= cur_song.set_master_volume(self._master_volume, update_now=False)
 
         if needs_update:

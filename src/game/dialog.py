@@ -14,6 +14,7 @@ import src.game.playertypes as playertypes
 import src.engine.keybinds as keybinds
 import src.engine.sounds as sounds
 import src.game.soundref as soundref
+import src.game.songsystem as songsystem
 
 
 _ALL_META_SPEAKER_IDS = set()
@@ -331,12 +332,15 @@ class DialogScene(scenes.Scene):
     def start_dialog(self, dialog_frag: DialogFragment):
         self.dialog_manager.set_dialog(dialog_frag)
 
+        # dampen music a bit while dialog is active
+        songsystem.get_instance().add_master_volume_multiplier("dialog", 0.5, rate_of_change=1.5)
+
     def is_dialog_active(self):
         return self.dialog_manager.is_active()
 
     def on_dialog_end(self):
         """Called when dialog ends."""
-        pass
+        songsystem.get_instance().add_master_volume_multiplier("dialog", None, rate_of_change=1.5)
 
     def update(self):
         if self.is_dialog_active():
