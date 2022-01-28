@@ -22,17 +22,28 @@ class MultiChannelSong:
 
     def __init__(self, song_id, filenames, adjusted_volume=1):
         self.song_id = song_id
-        self.sounds = [pygame.mixer.Sound(f) for f in filenames]
+        self.filenames = filenames
+
+        # XXX don't want to actually initialize these until the song is actually about to start
+        # (and presumably other channels are silent) because calling pygame.Sound(...) with large
+        # audio files seems to cause other active Sounds to glitch for a moment (they like, go silent)
+        self._sounds_are_actually_loaded = False
+        self._sounds = [None for _ in filenames]
 
         self._master_volume = 1
         self._adjusted_volume = adjusted_volume  # some songs are intrinsically louder than others and need some EQ
-        self._volumes = [1 for _ in range(0, len(self.sounds))]
+        self._volumes = [1 for _ in range(0, len(self._sounds))]
 
         self._playing = False
-        lengths = set()
+
+    def _actually_load_sounds(self):
+        self._sounds_are_actually_loaded = True
+        self._sounds = [pygame.mixer.Sound(f) for f in self.filenames]
 
         # This system won't work at all if the lengths aren't **exactly** the same.
-        for s in self.sounds:
+        # TODO none of the songs are actually multi-track anymore, so this can probably be nuked
+        lengths = set()
+        for s in self._sounds:
             lengths.add(s.get_length())
         if len(lengths) > 1:
             raise ValueError("song's channels have different lengths: {}".format(lengths))
@@ -44,7 +55,7 @@ class MultiChannelSong:
         return isinstance(other, MultiChannelSong) and self.song_id == other.song_id
 
     @staticmethod
-    def load_from_disk(song_id, relpath="assets/songs/"):
+    def create(song_id, relpath="assets/songs/", fully_load=False):
         if song_id.startswith("Of Far Different Nature"):
             base_dir = util.resource_path(os.path.join(relpath, "Of Far Different Nature Pack"))
         else:
@@ -56,7 +67,14 @@ class MultiChannelSong:
                 sound_paths.append(os.path.join(base_dir, fname))
         sound_paths.sort()
 
-        return MultiChannelSong(song_id, sound_paths)
+        res = MultiChannelSong(song_id, sound_paths)
+        if fully_load:
+            res._actually_load_sounds()
+
+        return res
+
+    def num_sounds(self):
+        return len(self._sounds)
 
     def get_volumes(self):
         return self._volumes  # would probably be better to return a copy but ggf
@@ -80,26 +98,30 @@ class MultiChannelSong:
             return False
 
     def update(self):
-        volume_from_prefs = gs.get_instance().get_settings().music_volume()
-        for i, v in enumerate(self._volumes):
-            if i < len(self.sounds):
-                self.sounds[i].set_volume(v * self._master_volume * self._adjusted_volume * volume_from_prefs)
-        if len(self._volumes) < len(self.sounds):
-            for i in range(len(self._volumes), len(self.sounds)):
-                self.sounds[i].set_volume(0)
+        if self._playing and self._sounds_are_actually_loaded:
+            volume_from_prefs = gs.get_instance().get_settings().music_volume()
+            for i, v in enumerate(self._volumes):
+                if i < len(self._sounds):
+                    self._sounds[i].set_volume(v * self._master_volume * self._adjusted_volume * volume_from_prefs)
+            if len(self._volumes) < len(self._sounds):
+                for i in range(len(self._volumes), len(self._sounds)):
+                    self._sounds[i].set_volume(0)
 
     def is_playing(self):
         return self._playing
 
     def stop(self):
         print("INFO: stopping song: {}".format(self.song_id))
-        for s in self.sounds:
-            s.stop()
+        if self._sounds_are_actually_loaded:
+            for s in self._sounds:
+                s.stop()
         self._playing = False
 
     def start(self):
         print("INFO: starting song: {}".format(self.song_id))
-        for s in self.sounds:
+        if not self._sounds_are_actually_loaded:
+            self._actually_load_sounds()
+        for s in self._sounds:
             s.play(loops=-1)
         self._playing = True
 
@@ -209,7 +231,7 @@ def _get_song_lazily(song_id) -> MultiChannelSong:
             _LOADED_SONGS[song_id] = MultiChannelSong(song_id, [])
         else:
             try:
-                _LOADED_SONGS[song_id] = MultiChannelSong.load_from_disk(song_id)
+                _LOADED_SONGS[song_id] = MultiChannelSong.create(song_id)
             except Exception:
                 print("ERROR: failed to load multi-track song with ID: {}".format(song_id))
                 traceback.print_exc()
@@ -222,13 +244,13 @@ def _get_song_lazily(song_id) -> MultiChannelSong:
 
 def num_instruments(song_id) -> int:
     song = _get_song_lazily(song_id)
-    return len(song.sounds)
+    return song.num_sounds()
 
 
 class LoopFader:
 
     def __init__(self):
-        self.song_queue = []  # list of (song, volume_levels, time) tuples
+        self.song_queue = []  # list of (song, volume_levels, time_ms) tuples
         self.last_update_time = 0
 
         self._master_volume = 1
@@ -242,6 +264,20 @@ class LoopFader:
             return self.song_queue[0][0]
         else:
             return None
+
+    def is_playing(self, song_id, ignore_volumes=False, or_queued=True):
+        if isinstance(song_id, tuple):
+            song_id, volumes = song_id
+        else:
+            ignore_volumes = True
+            volumes = None
+
+        for (s, volume_levels, time_ms) in self.song_queue:
+            if (s.song_id == song_id or song_id == CONTINUE_CURRENT) and (ignore_volumes or volume_levels == volumes):
+                return True
+            elif not or_queued:
+                return False
+        return song_id == CONTINUE_CURRENT or song_id == SILENCE
 
     def add_master_volume_multiplier(self, str_id, volume, rate_of_change=0.1):
         if volume is None or volume == 1:
@@ -290,7 +326,7 @@ class LoopFader:
         song = _get_song_lazily(song_id)
 
         if isinstance(volume_levels, int) or isinstance(volume_levels, float):
-            volume_levels = [volume_levels] * len(song.sounds)
+            volume_levels = [volume_levels] * song.num_sounds()
 
         if len(self.song_queue) == 0 or (fadeout <= 0 and self.song_queue[0][0] != song):
             # nuke the existing queue and play the new song
@@ -300,7 +336,7 @@ class LoopFader:
             if fadein <= 0 or song == SILENCE:
                 self.song_queue.append((song, volume_levels, cur_time))
             else:
-                self.song_queue.append((song, [0] * len(song.sounds), cur_time))
+                self.song_queue.append((song, [0] * song.num_sounds(), cur_time))
                 self.song_queue.append((song, volume_levels, cur_time + int(fadein * 1000)))
         elif self.song_queue[0][0] == song:
             # song isn't changing, just fade volume
@@ -320,7 +356,7 @@ class LoopFader:
             if fadein <= 0 or song == SILENCE:
                 self.song_queue.append((song, volume_levels, cur_time + int(fadeout * 1000)))
             else:
-                self.song_queue.append((song, [0] * len(song.sounds), cur_time + int(fadeout * 1000)))
+                self.song_queue.append((song, [0] * song.num_sounds(), cur_time + int(fadeout * 1000)))
                 self.song_queue.append((song, volume_levels, cur_time + int((fadein + fadeout) * 1000)))
 
         self._sort_and_refresh_queue(cur_time)

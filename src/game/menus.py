@@ -178,7 +178,7 @@ class MainMenuScene(scenes.Scene):
             yield spr
 
     def became_active(self):
-        songsystem.get_instance().set_song(songsystem.MAIN_MENU_SONG, fadein=0.5, fadeout=0.5)
+        songsystem.get_instance().set_song(songsystem.MAIN_MENU_SONG, fadein=0.5, fadeout=0.25)
 
 
 class InstructionsScene(scenes.Scene):
@@ -239,7 +239,7 @@ class InstructionsScene(scenes.Scene):
         return const.CURSOR_HAND
 
     def became_active(self):
-        songsystem.get_instance().set_song(songsystem.INSTRUCTION_MENU_SONG, fadein=0.5, fadeout=0.5)
+        songsystem.get_instance().set_song(songsystem.INSTRUCTION_MENU_SONG, fadein=0.5, fadeout=0.25)
 
 
 class LevelPlayerOverviewScene(scenes.Scene):
@@ -935,7 +935,7 @@ class IntroCutsceneScene(MultiPageCutsceneScene):
         if self.page == 0:
             sounds.play_sound(soundref.ModernUI.open_or_enable_4a)
             gs.get_instance().do_fullscreen_fade(60, colors.PERFECT_BLACK, 1.0, 0.0)
-            songsystem.get_instance().set_song(songsystem.OFDN_DEPARTING_AT_DAWN, volume_levels=0.66, fadein=0.5)
+            songsystem.get_instance().set_song(songsystem.OFDN_DEPARTING_AT_DAWN, volume_levels=0.66, fadeout=0.5, fadein=1.5)
 
     def get_cutscene_for_page(self, page):
         return IntroCutsceneScene(page=page,
@@ -1489,7 +1489,9 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
         self._update_ui()
 
     def update_song(self):
-        songsystem.get_instance().set_song(self._state.get_song(), fadein=1)
+        cur_song = self._state.get_song()
+        if not songsystem.get_instance().is_playing(cur_song):
+            songsystem.get_instance().set_song(cur_song, fadeout=0.25, fadein=0.5)
 
     def update(self):
         dialog.DialogScene.update(self)
