@@ -81,9 +81,9 @@ def play_sound(sound, vol=1.0):
         _RECENTLY_PLAYED[effect_path] = 0
 
         # TODO remove
-        import configs
-        if configs.is_dev:
-            print("INFO: playing sound effect: {}".format(effect_path))
+        # import configs
+        # if configs.is_dev:
+        #     print("INFO: playing sound effect: {}".format(effect_path))
 
         effect.set_volume(_MASTER_VOLUME * volume)
         effect.play()

@@ -7,6 +7,7 @@ import re
 import traceback
 
 import src.engine.globaltimer as globaltimer
+import src.engine.crashreporting as crashreporting
 
 
 def printOpenGLError():
@@ -63,10 +64,12 @@ def create_instance():
         vstring = glGetString(GL_VERSION)
         vstring = vstring.decode() if vstring is not None else None
         print("INFO: running OpenGL version: {}".format(vstring))
+        crashreporting.add_runtime_info("OpenGL Version", vstring)
 
         glsl_version = glGetString(GL_SHADING_LANGUAGE_VERSION)
         glsl_version = glsl_version.decode() if glsl_version is not None else None
         print("INFO: with shading language version: {}".format(glsl_version))
+        crashreporting.add_runtime_info("Shader Language Version", glsl_version)
 
         _SINGLETON = _get_best_render_engine(glsl_version)
         return _SINGLETON
@@ -93,8 +96,10 @@ def _get_best_render_engine(glsl_version):
         traceback.print_exc()
 
     if major_vers <= 1 and minor_vers < 30:
+        crashreporting.add_runtime_info("Render Engine", "RenderEngine120")
         return RenderEngine120()
     else:
+        crashreporting.add_runtime_info("Render Engine", "RenderEngine130")
         return RenderEngine130()
 
 
