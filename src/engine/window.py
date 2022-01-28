@@ -26,13 +26,13 @@ class WindowState:
         self._window_size = window_size
         self._min_size = min_size
 
-        self._cached_fullscreen_size = None
+        self._fullscreen_size = None
 
         self._caption = "Game"
         self._caption_info = {}  # str -> str, for example "FPS" -> "60.0"
 
     def _get_mods(self):
-        mods = pygame.OPENGL | pygame.HWSURFACE | pygame.DOUBLEBUF
+        mods = pygame.OPENGL | pygame.DOUBLEBUF
 
         if configs.allow_window_resize:
             mods = pygame.RESIZABLE | mods
@@ -48,12 +48,11 @@ class WindowState:
 
     def _update_display_mode(self):
         if self._is_fullscreen:
-            new_size = self._calc_fullscreen_size_for_set_mode()
-            self._cached_fullscreen_size = new_size
+            new_surface = pygame.display.set_mode((0, 0), self._get_mods())
+            self._fullscreen_size = new_surface.get_size()
+            print(f"INFO: fullscreen size = {new_surface.get_size()}")
         else:
-            new_size = self._window_size
-
-        new_surface = pygame.display.set_mode(new_size, self._get_mods())
+            new_surface = pygame.display.set_mode(self._window_size, self._get_mods())
 
         import src.engine.renderengine as renderengine
         render_eng = renderengine.get_instance()
@@ -89,23 +88,11 @@ class WindowState:
 
     def get_display_size(self):
         if self._is_fullscreen:
-            return self._cached_fullscreen_size
+            return self._fullscreen_size
         else:
             return self._window_size
 
-    def _calc_fullscreen_size_for_set_mode(self):
-        fullscreen_modes = pygame.display.list_modes()
-        if fullscreen_modes != -1 and len(fullscreen_modes) > 0:
-            # XXX this give bizarre results when multiple monitors are present.
-            return fullscreen_modes[0]
-
-        print("WARN: falling back to display.Info() to calculate fullscreen size")
-        # indicates some kind of error state, just going to try our best
-        info = pygame.display.Info()
-        return (info.current_w, info.current_h)  # this gets the current window size
-
     def set_window_size(self, w, h):
-        # print("INFO: set window size to: ({}, {})".format(w, h))
         self._window_size = (w, h)
         self._update_display_mode()
 
@@ -116,9 +103,12 @@ class WindowState:
         if self.is_fullscreen() == val:
             return
         else:
-            self._cached_fullscreen_size = None
-
+            self._fullscreen_size = None
             self._is_fullscreen = val
+
+            if self._is_fullscreen:
+                pygame.display.quit()
+
             self._update_display_mode()
 
     def window_to_screen_pos(self, pos):

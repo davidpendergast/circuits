@@ -6,7 +6,6 @@ bugs:
 	- would be ok, but it's not super consistent
 	- only really occurs when you have a lot of downward speed and hit a platform with upward speed
  - teles that start out deactivated shouldn't blip every time the level starts
- - fullscreen is totally messed up when display scaling is enabled
  
  
 features:
@@ -21,8 +20,9 @@ features:
 	- import / export / play custom levels
 	- better entity sizing system in level editor
 	- adding point to group of selected moving plats should add points to each with correct offset
- - music should get quieter in dialog
+ [x] music should get quieter in dialog
  - pause on focus lost
+ - pause with p key
 	
  
 
@@ -36,12 +36,14 @@ final push:
  - arrow icons between sectors
  [x] rearrange levels: vents -> 3, resync -> 4, desync -> 5? patience somewhere (or new level)
  - flavor text for (all) levels
- - music for story levels
+ [3/5] music for story levels
  [x?] set up itch page
  - acquire usable linux machine and make build
  - remove unused assets (songs / sounds)
  - write info.txt
  - couple more secrets?
+ - allow you to pause with P
+ [x] check error reporting (seems good, if SDL2 doesn't seg fault ._.)
 
  story:
  - you are: a group of scavenger/scout robots who explore space, searching for materials
