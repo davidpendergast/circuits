@@ -47,7 +47,8 @@ final push:
  - couple more secrets?
  - allow you to pause with P
  [x] check error reporting (seems good, if SDL2 doesn't seg fault ._.)
- - make pyinstaller print logs to the console when you launch the game via cmd (or, suffer pain later!!)
+ [x] make pyinstaller print logs to the console when you launch the game via cmd (or, suffer pain later!!)
+	- instruct users to run with 
 
  story:
  - you are: a group of scavenger/scout robots who explore space, searching for materials

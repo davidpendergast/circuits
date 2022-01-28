@@ -136,10 +136,23 @@
         {"art_id": 0, "color_id": 2, "h": 48, "type": "block", "w": 16, "x": 240, "y": 192},
         {"art_id": 2, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 192},
         {"art_id": 5, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 176, "y": 176},
-        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 16, "x": 400, "y": 184}
+        {"art_id": 0, "color_id": 2, "h": 8, "type": "block", "w": 16, "x": 400, "y": 184},
+        {
+            "color_id": 0,
+            "dialog": "",
+            "points": [
+                [22, 154]
+            ],
+            "subtype": "question",
+            "text": "Note: END blocks will only accept one copy of a unit.",
+            "type": "info",
+            "x": 88,
+            "y": 208
+        }
     ],
     "level_id": "split",
     "name": "Split",
     "song_id": null,
+    "special": [],
     "time_limit": 7200
 }

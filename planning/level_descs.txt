@@ -1,0 +1,14 @@
+vents: Tight spaces and dark places.
+stairway: This one requires some coordination.
+trust: The path splits for Unit {PLAYER_A}, or does it?
+maze: A large chasm blocks Unit {PLAYER_B}'s path. Thankfully there are some blocks to stand on.
+boulders: These blocks have strange gravitational properties - watch your step!
+resync: Sometimes getting back on track is the hard part.
+meeting: Ensuring the safety of the other crewmembers is one of Unit {PLAYER_A}'s primary functions, and hasn't left their CPU since the crash. Perhaps some clues to their whereabouts lie ahead.
+
+crush: Your new companion is a little heavier than Units {PLAYER_A} and {PLAYER_B}.
+scaffolding: You start getting the sense that {PLAYER_C} exceeds the weight limit of this area.
+catch: Just Unit {PLAYER_C}'s luck - more flimsy platforms.
+chimney: Down the shoot(?)
+blockage: Similiar to 'Arrival', but not quite the same.
+sisyphus
