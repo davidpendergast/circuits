@@ -1,5 +1,5 @@
 vents: Tight spaces and dark places.
-stairway: This one requires some coordination.
+stairway: This will require some coordination.
 trust: The path splits for Unit {PLAYER_A}, or does it?
 maze: A large chasm blocks Unit {PLAYER_B}'s path. Thankfully there are some blocks to stand on.
 boulders: These blocks have strange gravitational properties - watch your step!
@@ -11,4 +11,38 @@ scaffolding: You start getting the sense that {PLAYER_C} exceeds the weight limi
 catch: Just Unit {PLAYER_C}'s luck - more flimsy platforms.
 chimney: Down the shoot(?)
 blockage: Similiar to 'Arrival', but not quite the same.
-sisyphus
+sisyphus: A test for all three of you.
+channels: Three paths this time.
+divider: Unit {PLAYER_C} and {PLAYER_B} encounter a true test.
+computer: The Units come across a strange computer in a large, empty room. Maybe it knows something useful.
+
+patience: Unit {PLAYER_A}'s talents shoud be quite effective at handling these obstacles.
+machine: You come across something resembling a large engine. It's clanks and vibrations can be felt throughout the sector.
+airlock: Another automated system. It almost feels like an obstacle course.
+heist: Unit {PLAYER_A} notices a vault at the other side of the room, which appears to be well-protected. They wonder if they can slip inside. 
+razor: Danger ahead. Someone didn't want this area to be disturbed.
+spikes: Careful not to touch... anything, really.
+acrobatics: A moment of reflection.
+
+help: Units {PLAYER_B} and {PLAYER_C} learn a new technique.
+boost: Reaching new heights.
+pit: A large pit blocks {PLAYER_B} and {PLAYER_C}'s path. Luckily there are some blocks to stand on.
+teleporter: Units {PLAYER_A} and {PLAYER_B} come across a strange new device.
+duality: Unit {PLAYER_B} meets an unlikely ally.
+split: Now things are really getting out of hand.
+control: The room buzzes with the sound of more teleporters. Time to get things under control.
+release: Something tells you this won't be easy.
+pathways: Two robots. Two pathways. How bad could this one be?
+reunion: The trio steps out into the next sector, and something feels off - almost like the area is incomplete or not meant to be seen. They hear the whir of machinery in the distance.
+
+fly: Unit {PLAYER_D}'s time to shine.
+smash: Units {PLAYER_A} and {PLAYER_D} encounter some inconveniently-placed blocks.
+spacewalk: Unit {PLAYER_B} detects some kind of mechanism in the other room, but it seems innaccessible.
+chamber: Unit {PLAYER_D} comes across some kind of mechanicanical press. And unfortunately, it's blocking the way.
+fork: Again, the path splits.
+elevator: Going up?
+Machinations: The four of you are glad to be back together again, working on one task as team.
+dichotomy: Unit {PLAYER_D} gets another chance to shine.
+the rack: You stumble into a massive room, lined with racks of servers. It's clear that these computers are the brain of this operation.
+beast: Finaly, we're at the Core.
+

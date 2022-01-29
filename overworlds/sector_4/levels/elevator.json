@@ -1,6 +1,6 @@
 {
     "characters": ["player_heavy", "player_flying"],
-    "description": "???",
+    "description": "Going up?\n",
     "entities": [
         {"color_id": 3, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 0, "color_id": 4, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},

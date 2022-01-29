@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast"],
-    "description": "???",
+    "description": "Unit {PLAYER_A} comes across a large engine. Its clanks and vibrations can be felt throughout the sector.\n\n",
     "entities": [
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 32, "x_dir": 1, "y": 176},
         {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 400, "y": 224},
@@ -223,5 +223,7 @@
     ],
     "level_id": "machine",
     "name": "Machine",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

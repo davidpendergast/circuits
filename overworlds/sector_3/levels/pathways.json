@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_heavy"],
-    "description": "???",
+    "description": "Two robots. Two pathways. How bad could it be?\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_fast", "type": "end_block", "w": 32, "x": 432, "y": 208},
@@ -290,5 +290,6 @@
     "level_id": "pathways",
     "name": "Pathways",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

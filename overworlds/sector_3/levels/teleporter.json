@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_small"],
-    "description": "???",
+    "description": "Units {PLAYER_A} and {PLAYER_B} come across a strange new device.\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 96},

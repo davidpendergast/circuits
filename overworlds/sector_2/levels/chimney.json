@@ -1,6 +1,6 @@
 {
     "characters": ["player_heavy", "player_fast"],
-    "description": "Down the shoot.",
+    "description": "Down the shoot.\n\n\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 1, "h": 16, "type": "block", "w": 112, "x": 64, "y": 224},
@@ -176,5 +176,7 @@
     ],
     "level_id": "chimney",
     "name": "Chimney",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

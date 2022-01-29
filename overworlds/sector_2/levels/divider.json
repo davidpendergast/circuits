@@ -1,6 +1,6 @@
 {
     "characters": ["player_heavy", "player_small"],
-    "description": "???",
+    "description": "Units {PLAYER_C} and {PLAYER_B} encounter a true test.\n",
     "entities": [
         {"art_id": 0, "color_id": 2, "h": 64, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_heavy", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 96},

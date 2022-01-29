@@ -1,6 +1,6 @@
 {
     "characters": ["player_heavy", "player_small"],
-    "description": "???",
+    "description": "Unit {PLAYER_B} has some flashbacks to 'Arrival', when things were simpler.\n",
     "entities": [
         {"color_id": 2, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 3, "h": 16, "type": "block", "w": 192, "x": 192, "y": 224},
@@ -146,5 +146,7 @@
     ],
     "level_id": "blockage",
     "name": "Blockage",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

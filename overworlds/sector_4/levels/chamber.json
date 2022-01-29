@@ -1,6 +1,6 @@
 {
     "characters": ["player_flying"],
-    "description": "???",
+    "description": "Unit {PLAYER_D} encounters some kind of hydraulic press. And unfortunately, it's blocking the way.\n",
     "entities": [
         {"color_id": 4, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
         {"art_id": 0, "color_id": 4, "h": 96, "type": "block", "w": 16, "x": 464, "y": 48},
@@ -311,5 +311,6 @@
     "level_id": "chamber",
     "name": "Chamber",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

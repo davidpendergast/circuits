@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast"],
-    "description": "???",
+    "description": "We've reached the Core.\n",
     "entities": [
         {"color_id": 0, "h": 16, "type": "block", "w": 48, "x": 160, "y": 192},
         {"art_id": 1, "color_id": 0, "h": 32, "type": "block", "w": 16, "x": 160, "y": 160},

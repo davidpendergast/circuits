@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_fast"],
-    "description": "???",
+    "description": "Ok, now things are really getting out of hand.\n",
     "entities": [
         {"color_id": 2, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 1, "h": 16, "type": "block", "w": 48, "x": 64, "y": 224},

@@ -1,6 +1,6 @@
 {
     "characters": ["player_heavy"],
-    "description": "???",
+    "description": "The units come across a dusty computer in a large, empty room. Maybe it can tell them something.\n\n",
     "entities": [
         {"color_id": 2, "h": 64, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 3, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 208, "y": 224},

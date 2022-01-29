@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_fast"],
-    "description": "???",
+    "description": "Danger ahead. Someone didn't want this area to be disturbed.\n",
     "entities": [
         {"color_id": 1, "h": 72, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 6, "color_id": 2, "h": 16, "type": "block", "w": 16, "x": 16, "y": 224},
@@ -200,5 +200,6 @@
     "level_id": "razor",
     "name": "Razor",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_small"],
-    "description": "This might be a little tricky.",
+    "description": "Unit {PLAYER_B}'s time to shine.\n\n\n\n\n",
     "entities": [
         {"color_id": 1, "h": 32, "type": "block", "w": 16, "x": 64, "y": 80},
         {"color_id": 1, "h": 96, "type": "block", "w": 32, "x": 0, "y": 48},

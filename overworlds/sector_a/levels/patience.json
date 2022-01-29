@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_fast"],
-    "description": "???",
+    "description": "Unit {PLAYER_A}'s talents shoud come in handy here.\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 96, "x": 64, "y": 224},
@@ -167,5 +167,6 @@
     "level_id": "patience",
     "name": "Patience",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

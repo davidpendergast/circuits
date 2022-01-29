@@ -1,6 +1,6 @@
 {
     "characters": ["player_flying", "player_fast"],
-    "description": "???",
+    "description": "Units {PLAYER_D} and {PLAYER_A} come across some inconveniently-placed blocks.\n",
     "entities": [
         {"art_id": 0, "color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 4, "h": 8, "type": "block", "w": 16, "x": 128, "y": 232},
@@ -141,5 +141,6 @@
     "level_id": "smash",
     "name": "Smash",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_flying"],
-    "description": "???\n",
+    "description": "Unit {PLAYER_B} detects some kind of mechanism in the other room, but it seems innaccessible.\n",
     "entities": [
         {"color_id": 2, "h": 72, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 2, "h": 48, "type": "block", "w": 320, "x": 80, "y": 0},
@@ -219,5 +219,6 @@
     "level_id": "spacewalk",
     "name": "Spacewalk",
     "song_id": null,
+    "special": [],
     "time_limit": 7200
 }

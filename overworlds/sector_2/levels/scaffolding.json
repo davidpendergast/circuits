@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_heavy"],
-    "description": "???",
+    "description": "Unit {PLAYER_C} starts to get the sense that they exceed this area's weight limit.\n\n\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 1, "color_id": 3, "h": 32, "type": "block", "w": 16, "x": 48, "y": 192},
@@ -153,5 +153,7 @@
     ],
     "level_id": "scaffolding",
     "name": "Scaffolding",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

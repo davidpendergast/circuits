@@ -1,6 +1,6 @@
 {
     "characters": ["player_flying", "player_fast", "player_small"],
-    "description": "???",
+    "description": "Once again, the path splits.\n\n",
     "entities": [
         {"color_id": 4, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 224},
@@ -195,5 +195,6 @@
     "level_id": "fork",
     "name": "Fork",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

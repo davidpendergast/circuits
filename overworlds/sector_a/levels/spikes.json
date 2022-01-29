@@ -1,9 +1,8 @@
 {
     "characters": ["player_fast"],
-    "description": "If you like pointy things, this is the level for you!",
+    "description": "Careful not to touch... anything, really.\n",
     "entities": [
-        {"color_id": 1, "h": 48, "type": "block", "w": 80, "x": 16, "y": 48},
-        {"color_id": 1, "h": 240, "type": "block", "w": 16, "x": 0, "y": 0},
+        {"color_id": 1, "h": 144, "type": "block", "w": 16, "x": 0, "y": 96},
         {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 96, "y": 112},
         {"color_id": 1, "h": 16, "type": "block", "w": 192, "x": 64, "y": 224},
         {"color_id": 1, "h": 32, "type": "block", "w": 80, "x": 16, "y": 96},
@@ -12,7 +11,7 @@
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 16, "x_dir": 1, "y": 176},
         {"color_id": 1, "h": 48, "type": "block", "w": 32, "x": 224, "y": 176},
         {"color_id": 1, "h": 128, "type": "block", "w": 32, "x": 288, "y": 96},
-        {"color_id": 1, "h": 48, "type": "block", "w": 464, "x": 16, "y": 0},
+        {"color_id": 1, "h": 48, "type": "block", "w": 480, "x": 0, "y": 0},
         {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 288, "y": 224},
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 16, "x": 176, "y": 104},
         {
@@ -116,15 +115,6 @@
             "x": 128,
             "y": 112
         },
-        {
-            "color_id": 2,
-            "h": 64,
-            "subtype": [1, 0],
-            "type": "spikes",
-            "w": 8,
-            "x": 96,
-            "y": 48
-        },
         {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 48, "x": 240, "y": 96},
         {
             "color_id": 2,
@@ -207,21 +197,98 @@
             "y": 96
         },
         {"art_id": 0, "color_id": 1, "h": 32, "type": "block", "w": 8, "x": 376, "y": 64},
+        {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 352, "y": 224},
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 320, "y": 224},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "false_block", "w": 80, "x": 16, "y": 48},
+        {"art_id": 0, "color_id": 1, "h": 48, "type": "false_block", "w": 16, "x": 0, "y": 48},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": -32,
+            "y": 96
+        },
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": -96, "y": 112},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [2, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": -32,
+            "y": 16
+        },
+        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 64, "x": -96, "y": 16},
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 2, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": -128,
+            "y": 16
+        },
+        {
+            "art_id": 0,
+            "color_id": 1,
+            "h": 32,
+            "subtype": [0, 0, "horizontal"],
+            "type": "sloped_2x2_block",
+            "w": 32,
+            "x": -128,
+            "y": 96
+        },
+        {"art_id": 0, "color_id": 1, "h": 112, "type": "block", "w": 32, "x": -160, "y": 16},
+        {"art_id": 0, "color_id": 5, "h": 8, "inverted": false, "type": "decoration", "w": 16, "x": -96, "y": 104},
+        {
+            "color_id": 2,
+            "duration": 90,
+            "h": 8,
+            "loop": true,
+            "points": [],
+            "subtype": [0, 1],
+            "type": "spikes",
+            "w": 64,
+            "x": -96,
+            "y": 32
+        },
+        {
+            "color_id": 2,
+            "duration": 90,
+            "h": 48,
+            "loop": true,
+            "points": [],
+            "subtype": [1, 0],
+            "type": "spikes",
+            "w": 8,
+            "x": -128,
+            "y": 48
+        },
+        {"color_id": 0, "inverted": false, "subtype": "0X", "type": "camera_bound_marker", "x": 0, "y": 0},
+        {"color_id": 0, "inverted": false, "subtype": "0X", "type": "camera_bound_marker", "x": 464, "y": 224},
+        {"color_id": 1, "inverted": true, "subtype": "0X", "type": "camera_bound_marker", "x": -160, "y": 16},
+        {"color_id": 1, "inverted": true, "subtype": "0X", "type": "camera_bound_marker", "x": -16, "y": 112},
         {
             "color_id": 0,
             "dialog": "",
-            "points": [],
-            "subtype": "question",
-            "text": "Every platformer needs at least\none level like this :)",
+            "points": [
+                [-272, 32]
+            ],
+            "subtype": "invisible",
+            "text": "It's holding a shopping list:\n  spikes\n  spikes\n  spikes\n  spikes",
             "type": "info",
-            "x": 112,
+            "x": -88,
             "y": 96
-        },
-        {"color_id": 1, "h": 16, "type": "block", "w": 32, "x": 352, "y": 224},
-        {"art_id": 0, "color_id": 1, "h": 16, "type": "block", "w": 32, "x": 320, "y": 224}
+        }
     ],
     "level_id": "spikes",
     "name": "Spikes",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

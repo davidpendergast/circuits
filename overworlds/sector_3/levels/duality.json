@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_heavy"],
-    "description": "???\n",
+    "description": "Unit {PLAYER_B} finds an unlikely ally.\n",
     "entities": [
         {"color_id": 2, "h": 64, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_small", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 192},
@@ -140,5 +140,7 @@
     ],
     "level_id": "duality",
     "name": "Duality",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

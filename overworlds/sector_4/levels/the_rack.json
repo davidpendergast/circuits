@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_flying", "player_fast", "player_heavy"],
-    "description": "???",
+    "description": "You enter a massive room, lined with racks of servers. It's clear that these nodes are the brains of this operation.\n\n\n\n\n",
     "entities": [
         {"color_id": 0, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 176},

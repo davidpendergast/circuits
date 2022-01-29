@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_fast", "player_heavy"],
-    "description": "???",
+    "description": "Unit {PLAYER_C} is a bit stuck. Hopefully {PLAYER_B} and {PLAYER_A} can release them without making things worse. \n\n",
     "entities": [
         {"color_id": 3, "h": 32, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 2, "color_id": 2, "h": 32, "type": "block", "w": 16, "x": 416, "y": 192},
@@ -150,5 +150,6 @@
     "level_id": "sisyphus",
     "name": "Sisyphus",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

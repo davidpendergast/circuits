@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_heavy"],
-    "description": "???",
+    "description": "Units {PLAYER_A} and {PLAYER_C} find themselves separated in two different channels.\n\n\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"color_id": 3, "h": 16, "type": "block", "w": 192, "x": 64, "y": 224},
@@ -109,5 +109,7 @@
     ],
     "level_id": "channels",
     "name": "Channels",
+    "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

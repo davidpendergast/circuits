@@ -1,6 +1,6 @@
 {
     "characters": ["player_small", "player_fast"],
-    "description": "???",
+    "description": "The blocks ahead seem a bit unstable... watch your step!\n\n\n",
     "entities": [
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 0, "y": 48},
         {"art_id": 1, "color_id": 2, "h": 16, "type": "block", "w": 48, "x": 112, "y": 224},

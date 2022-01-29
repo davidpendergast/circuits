@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_small"],
-    "description": "???\n",
+    "description": "Sometimes getting back on track is the hard part.\n\n",
     "entities": [
         {"color_id": 1, "h": 16, "type": "block", "w": 64, "x": 64, "y": 80},
         {"color_id": 1, "h": 96, "type": "block", "w": 16, "x": 32, "y": 48},

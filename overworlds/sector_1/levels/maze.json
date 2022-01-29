@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_small"],
-    "description": "A large chasm blocks B's path. Thankfully there are some blocks to stand on.",
+    "description": "A large chasm blocks Unit {PLAYER_B}'s path. Thankfully there are some blocks to stand on.\n\n",
     "entities": [
         {"color_id": 1, "h": 144, "type": "block", "w": 16, "x": 0, "y": 0},
         {"h": 16, "subtype": "player_small", "type": "start_block", "w": 16, "x": 16, "x_dir": 1, "y": 96},

@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast", "player_small", "player_flying", "player_heavy"],
-    "description": "???",
+    "description": "The four of you are glad to be together again, working as a team.\n\n",
     "entities": [
         {"color_id": 3, "h": 100, "type": "block", "w": 16, "x": 0, "y": 48},
         {"h": 16, "subtype": "player_fast", "type": "start_block", "w": 16, "x": 48, "x_dir": 1, "y": 96},
@@ -137,5 +137,6 @@
     "level_id": "machinations",
     "name": "Machinations",
     "song_id": null,
+    "special": [],
     "time_limit": 3600
 }

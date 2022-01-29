@@ -1,6 +1,6 @@
 {
     "characters": ["player_small"],
-    "description": "???",
+    "description": "The trio steps out into the next sector. They hear the whir of machinery in the distance.\n\n\n",
     "entities": [
         {"color_id": 4, "h": 64, "type": "block", "w": 16, "x": 944, "y": 48},
         {

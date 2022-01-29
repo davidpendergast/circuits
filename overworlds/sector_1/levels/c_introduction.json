@@ -1,6 +1,6 @@
 {
     "characters": ["player_fast"],
-    "description": "A stranger lurks in the shadows.\n",
+    "description": "Perhaps some clues about the missing crewmates lie ahead.\n",
     "entities": [
         {"art_id": 3, "color_id": 3, "h": 32, "type": "block", "w": 32, "x": 352, "y": 144},
         {"color_id": 1, "h": 48, "type": "block", "w": 64, "x": 112, "y": 0},
