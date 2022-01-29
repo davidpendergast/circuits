@@ -1,0 +1,70 @@
+RESYNC
+======
+
+Overview
+--------
+
+Resync is a puzzle-platformer where you sequentially
+control multiple characters per level. 
+
+
+Features
+--------
+
+ - Mixture of puzzle levels, story, and traditional platforming.
+ - 40+ levels, and multiple units with unique abilities.
+ - Original artwork and puzzle archetypes.
+ - Branching, non-linear overworld.
+
+
+Controls
+--------
+
+Left Handed:
+ - Move: WASD and/or Space
+ - Interact: J or Enter
+
+Right Handed:
+ - Move: Arrow Keys and/or Space
+ - Interact: F or Enter
+
+Reset Current Character: R
+Reset Entire Level: Shift + R
+
+Toggle Music: M
+Toggle Fullscreen: F4
+Pause/Exit: Escape
+Navigate Menus: WASD, Arrow Keys, Enter, Click, and/or Escape
+
+
+Credits
+-------
+
+Art, coding, design, and concept: 
+ - David Pendergast 
+     https://twitter.com/Ghast_NEOH
+     https://ghastly.itch.io
+
+Music: 
+ - Of Far Different Nature
+     https://fardifferent.bandcamp.com/
+     See in-game credits for song list (all used under CC-BY 4.0)
+
+Sound Effects: 
+ - Cyberleaf Studio
+     https://andreabaroni.com/
+
+
+Notice on Distribution
+----------------------
+
+The **only** official place to download this game is itch.io. If you downloaded 
+this from another site, it was uploaded there without permission and is likely 
+out of date (and could have been tampered with). Please do not re-upload this 
+executable to other sites or re-distribute it by any other means.
+
+
+Policy on Videos, Streams
+-------------------------
+
+Welcomed and encouraged! Feel free to tweet at me if you do! (@Ghast_NEOH)

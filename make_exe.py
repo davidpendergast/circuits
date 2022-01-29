@@ -23,9 +23,13 @@ SHOW_CONSOLE = False
 SHOW_TRACEBACK_ON_CRASH = True
 
 ENTRY_POINT_FILE = "entry_point.py"
-DATA_TO_PRESERVE = [
+DATA_TO_BUNDLE = [
     ("assets", "assets"),
-    ("overworlds", "overworlds")
+    ("overworlds", "overworlds"),
+
+]
+DATA_TO_COPY = [
+    ("info.txt", "info.txt")
 ]
 
 #### END OPTIONS ####
@@ -44,7 +48,7 @@ SPEC_CONTENTS = f"""
 a = Analysis(['{ENTRY_POINT_FILE}'],
              pathex=[''],
              binaries=[],
-             datas=[{", ".join(f"('{src}', '{dest}')" for (src, dest) in DATA_TO_PRESERVE)}],
+             datas=[{", ".join(f"('{src}', '{dest}')" for (src, dest) in DATA_TO_BUNDLE)}],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -240,6 +244,14 @@ def do_it():
         else:
             st = os.stat(str(exe_path))
             os.chmod(str(exe_path), st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    for src_path, dest_path in DATA_TO_COPY:
+        if not os.path.exists(src_path):
+            raise ValueError("couldn't find data to copy: {}".format(src_path))
+        else:
+            full_dest_path = os.path.join(dist_dir_subdir, dest_path)
+            print("INFO: copying {} to {}".format(src_path, full_dest_path))
+            shutil.copy2(src_path, full_dest_path)
 
     print("\nINFO: make_exe.py has finished")
 
