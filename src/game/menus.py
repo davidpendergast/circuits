@@ -1121,6 +1121,7 @@ class _GameState:
     def reset(self, idx=-1):
         if idx == -1:
             idx = self.get_active_player_idx()
+        idx = util.bound(idx, 0, self.num_players() - 1)
 
         self._time_elapsed = 0
         for i in range(0, len(self._currently_satisfied)):
@@ -1129,9 +1130,16 @@ class _GameState:
             self._currently_playing[i] = False
         for i in range(0, len(self._currently_playing)):
             self._has_ever_died[i] = None
-        if idx == 0:  # reset all players
+
+        if idx == 0:
+            # reset all players
             self._active_player_idx = 0
             self._recorded_runs = [None] * self.num_players()
+        else:
+            # reset player at idx (and players after)
+            self._active_player_idx = idx
+            self._recorded_runs = self._recorded_runs[0: idx] + [None] * (self.num_players() - idx)
+
         self.set_status(Statuses.WAITING)
 
     def active_player_succeeded(self, recording):
@@ -1563,13 +1571,13 @@ class RealGameScene(_BaseGameScene, dialog.DialogScene):
                     print("WARN: active player is satisfied but has no recording. hopefully we're in dev mode?")
 
     def do_reset(self, idx=-1):
-        if ((idx == 0 and not self._state.get_status().can_hard_reset)
-                or (idx != 0 and not self._state.get_status().can_soft_reset)):
-            return False
-        else:
+        if (((idx == 0 or idx != self._state.get_active_player_idx()) and self._state.get_status().can_hard_reset)
+                or (idx == self._state.get_active_player_idx() and self._state.get_status().can_soft_reset)):
             self._state.reset(idx=idx)
             self.setup_new_world(self._state.bp)
             return True
+        else:
+            return False
 
     def replace_players_with_fadeout(self, delay=60):
         for i in range(0, self._state.get_active_player_idx() + 1):
@@ -1831,7 +1839,7 @@ class StatsScene(OptionSelectScene):
 
         return "\n".join(s for s in [
             f"levels completed: {completed_str}",
-            None if best_time_str is None else "sum of best times: {best_time_str}",
+            None if best_time_str is None else f"sum of best times: {best_time_str}",
             "",
             f"deaths: {gs.get_instance().get_save_data().get_death_count()}",
             f"total playtime: {util.ticks_to_time_string(total_playtime, show_minutes_if_zero=True)}",

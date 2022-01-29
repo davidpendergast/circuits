@@ -8,6 +8,8 @@ bugs:
  - teles that start out deactivated shouldn't blip every time the level starts
  - starbuck5 SDL2 illegal access error
 	- just going to pray this doesn't happen in the wild
+ - reset Unit C doesn't work on Release
+ - {best_time_str}
  
  
 features:
@@ -42,9 +44,10 @@ final push:
  [x?] set up itch page
  - acquire usable linux machine and make build
  - mac build
+	- not a super priority
  [x] remove unused assets (songs / sounds)
- - write info.txt
- - couple more secrets?
+ [x] write info.txt
+ [x?] couple more secrets?
  - allow you to pause with P
  [x] check error reporting (seems good, if SDL2 doesn't seg fault ._.)
  [x] make pyinstaller print logs to the console when you launch the game via cmd (or, suffer pain later!!)

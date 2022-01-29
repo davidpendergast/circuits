@@ -1494,7 +1494,9 @@ class TeleporterBlock(AbstractActorSensorBlock):
         # play sound if it just got blocked
         blocked = self.is_blocked()
         if blocked != self._was_blocked_last_frame:
-            sounds.play_sound(soundref.TELEPORT_BLOCKED if blocked else soundref.TELEPORT_UNBLOCKED)
+            if self.get_world().get_tick() > 5:
+                # don't play a sound if it's already blocked when the level starts.
+                sounds.play_sound(soundref.TELEPORT_BLOCKED if blocked else soundref.TELEPORT_UNBLOCKED)
             self._was_blocked_last_frame = blocked
 
         if self._post_tele_countdown > 0:

@@ -23,6 +23,7 @@ SHOW_CONSOLE = False
 SHOW_TRACEBACK_ON_CRASH = True
 
 ENTRY_POINT_FILE = "entry_point.py"
+
 DATA_TO_BUNDLE = [
     ("assets", "assets"),
     ("overworlds", "overworlds"),
