@@ -1,15 +1,13 @@
 
 bugs:
- - the "action button" and "activate dialog" buttons should be the same (and it should be Enter, not J?)
-    - I think this is done?
  - players can splat if they hit the ground with too much speed
 	- would be ok, but it's not super consistent
 	- only really occurs when you have a lot of downward speed and hit a platform with upward speed
- - teles that start out deactivated shouldn't blip every time the level starts
+		- only really happens on 'Patience' (which is probably ok, idk)
  - starbuck5 SDL2 illegal access error
 	- just going to pray this doesn't happen in the wild
- - reset Unit C doesn't work on Release
- - {best_time_str}
+ - desync indicator can give false positives (esp with moving platforms)
+ 
  
  
 features:
@@ -17,16 +15,15 @@ features:
    - implemented, but scrapped
    [x] maybe bring the desync indicator back at least "?"
  [/] load controls from user-editable file, or otherwise make them editable
- - choose real sounds for things (and make them louder? they don't really cut through the music currently)
-   - I think we're mostly... good?
  - level editor
 	- ability to choose song in-game
 	- import / export / play custom levels
 	- better entity sizing system in level editor
 	- adding point to group of selected moving plats should add points to each with correct offset
  [x] music should get quieter in dialog
- - pause on focus lost
+ - pause on focus lost (need settings menu for this, kinda)
  - pause with p key
+ - rename 'Help' to 'Lift'?
 	
  
 

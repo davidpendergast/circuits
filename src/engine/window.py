@@ -30,6 +30,7 @@ class WindowState:
 
         self._caption = "Game"
         self._caption_info = {}  # str -> str, for example "FPS" -> "60.0"
+        self._icon_surface = None  # pygame.Surface
 
     def _get_mods(self):
         mods = pygame.OPENGL | pygame.DOUBLEBUF
@@ -44,9 +45,11 @@ class WindowState:
 
     def show(self):
         self._update_display_mode()
-        self._update_caption()
 
     def _update_display_mode(self):
+        self._update_caption()
+        self._update_icon()
+
         if self._is_fullscreen:
             new_surface = pygame.display.set_mode((0, 0), self._get_mods())
             self._fullscreen_size = new_surface.get_size()
@@ -84,7 +87,12 @@ class WindowState:
         pygame.display.set_caption(cap)
 
     def set_icon(self, surface):
-        pygame.display.set_icon(surface)
+        if surface != self._icon_surface:
+            self._icon_surface = surface
+            self._update_icon()
+
+    def _update_icon(self):
+        pygame.display.set_icon(self._icon_surface)
 
     def get_display_size(self):
         if self._is_fullscreen:
