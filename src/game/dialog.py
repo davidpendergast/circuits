@@ -423,7 +423,9 @@ def get_dialog(dialog_id, player_type, other_type):
         elif dialog_id == "player_a_self_dialog":
             return link(DialogFragment("Hello?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("...", speaker=Speaker.A, right_side=True),
-                        DialogFragment("They seem to be deactivated.", speaker=Speaker.PLAYER, id_resolver=lookup))
+                        DialogFragment("They seem to be deactivated.", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("I can't explain it, but I feel like I've been on the other side of this glass before. Long ago.", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("Anyways, I better not disturb them.", speaker=Speaker.PLAYER, id_resolver=lookup))
         elif dialog_id == "computer":
             return link(DialogFragment("What's this?", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("Diagrams of a star, with what appear to be many rings around it.", speaker=Speaker.A, right_side=True),
@@ -444,7 +446,10 @@ def get_dialog(dialog_id, player_type, other_type):
                                        "I say let them continue - it would be our final, permanent stain on this unforgiving place. A monument to our sins.\""))
         elif dialog_id == "corpse_with_note_2":
             return link(DialogFragment("It's holding a note.", speaker=Speaker.PLAYER, id_resolver=lookup),
-                        DialogFragment("It should be destroyed - all of it. Cast it into the Sun. Of course they won't listen - they see it as humanity's 'great' innovation. An interstellar virus is what it really is."))
+                        DialogFragment("\"It should be destroyed - all of it. Cast it into the Sun. Of course they won't listen - they see it as humanity's 'great' innovation. An interstellar virus is what it really is.\""))
+        elif dialog_id == "corpse_with_note_3":
+            return link(DialogFragment("It's holding a note.", speaker=Speaker.PLAYER, id_resolver=lookup),
+                        DialogFragment("\"We can't benefit from this power anymore - that's obvious. But why shouldn't another intelligent lifeform? That could be our legacy; this gift, to whomever is willing to wield it.\nI say leave it dormant, and hope for the best.\""))
         elif dialog_id == "d_introduction":
             return link(DialogFragment("D! It's 'D'-lightful to see you!", speaker=Speaker.PLAYER, id_resolver=lookup),
                         DialogFragment("Ah, there you are. I've been scanning this place top to bottom looking for you three.", speaker=Speaker.D, right_side=True),

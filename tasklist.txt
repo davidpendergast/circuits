@@ -37,7 +37,7 @@ final push:
  [X] D dialog in sector 3
  - arrow icons between sectors
  [x] rearrange levels: vents -> 3, resync -> 4, desync -> 5? patience somewhere (or new level)
- - flavor text for (all) levels
+ [x] flavor text for (all) levels
  [x] music for story levels
  [x?] set up itch page
  - acquire usable linux machine and make build
