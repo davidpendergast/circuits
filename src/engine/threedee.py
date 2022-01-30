@@ -70,6 +70,9 @@ class ThreeDeeLayer(layers.ImageLayer):
         return res
 
     def render(self, engine):
+        if not engine.is_opengl():
+            return  # doesn't work in non-OpenGL mode, for obvious reasons
+
         self.set_client_states(True, engine)
         self._set_uniforms_for_scene(engine)
 

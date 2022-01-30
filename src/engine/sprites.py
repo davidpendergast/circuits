@@ -237,6 +237,9 @@ class ImageSprite(AbstractSprite):
     def size(self):
         return (self.width(), self.height())
 
+    def rect(self):
+        return (self.x(), self.y(), self.width(), self.height())
+
     def scale(self):
         return self._scale
         

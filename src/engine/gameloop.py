@@ -70,10 +70,7 @@ class _GameLoop:
         # uncomment to save out the full texture atlas
         # pygame.image.save(atlas_surface, "texture_atlas.png")
 
-        texture_data = pygame.image.tostring(atlas_surface, "RGBA", 1)
-        width = atlas_surface.get_width()
-        height = atlas_surface.get_height()
-        render_eng.set_texture(texture_data, width, height)
+        render_eng.set_texture(atlas_surface)
 
         for layer in self._game.get_layers():
             renderengine.get_instance().add_layer(layer)

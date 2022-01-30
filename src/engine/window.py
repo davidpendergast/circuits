@@ -33,7 +33,8 @@ class WindowState:
         self._icon_surface = None  # pygame.Surface
 
     def _get_mods(self):
-        mods = pygame.OPENGL | pygame.DOUBLEBUF
+        mods = 0
+        # mods = pygame.OPENGL | pygame.DOUBLEBUF
 
         if configs.allow_window_resize:
             mods = pygame.RESIZABLE | mods

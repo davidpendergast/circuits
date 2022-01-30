@@ -5,9 +5,13 @@ import numpy
 import math
 import re
 import traceback
+import pygame
+import configs
 
 import src.engine.globaltimer as globaltimer
 import src.engine.crashreporting as crashreporting
+import src.utils.util as util
+import src.utils.matutils as matutils
 
 
 def printOpenGLError():
@@ -61,23 +65,38 @@ def create_instance():
     """intializes the RenderEngine singleton."""
     global _SINGLETON
     if _SINGLETON is None:
-        vstring = glGetString(GL_VERSION)
-        vstring = vstring.decode() if vstring is not None else None
-        print("INFO: running OpenGL version: {}".format(vstring))
-        crashreporting.add_runtime_info("OpenGL Version", vstring)
+        glsl_version = None
+        err = None
+        try:
+            vstring = glGetString(GL_VERSION)
+            vstring = vstring.decode() if vstring is not None else None
+            print("INFO: running OpenGL version: {}".format(vstring))
+            crashreporting.add_runtime_info("OpenGL Version", vstring)
 
-        glsl_version = glGetString(GL_SHADING_LANGUAGE_VERSION)
-        glsl_version = glsl_version.decode() if glsl_version is not None else None
-        print("INFO: with shading language version: {}".format(glsl_version))
-        crashreporting.add_runtime_info("Shader Language Version", glsl_version)
+            glsl_version = glGetString(GL_SHADING_LANGUAGE_VERSION)
+            glsl_version = glsl_version.decode() if glsl_version is not None else None
+            print("INFO: with shading language version: {}".format(glsl_version))
+            crashreporting.add_runtime_info("Shader Language Version", glsl_version)
+        except GLerror as e:
+            err = e
+            traceback.print_exc()
 
         _SINGLETON = _get_best_render_engine(glsl_version)
+        if _SINGLETON is None and err is not None:
+            # GL isn't working and compat mode is disabled, so just bail
+            raise err
+
         return _SINGLETON
     else:
         raise ValueError("There is already a RenderEngine initialized.")
 
 
 def _get_best_render_engine(glsl_version):
+    if configs.compat_mode == "always" or (glsl_version is None and configs.compat_mode):
+        print("INFO: Using non-OpenGL compatibility mode")
+        crashreporting.add_runtime_info("Render Engine", "PurePygameRenderEngine (compatibility mode)")
+        return PurePygameRenderEngine()
+
     major_vers = 1
     minor_vers = 0
 
@@ -114,7 +133,6 @@ class RenderEngine:
 
     def __init__(self):
         self.sprite_info_lookup = {}  # (int) id -> _SpriteInfoBundle
-        self.camera_pos = [0, 0]
         self.size = (0, 0)
         self.min_size = (0, 0)
         self._pixel_scale = 1  # the number of screen "pixels" per game pixel
@@ -207,6 +225,22 @@ class RenderEngine:
     def set_proj_matrix(self, mat):
         raise NotImplementedError()
 
+    def set_camera_2d(self, offs2d, scale=(1, 1)):
+        """
+            Convenience method. Can be called instead of the three `set_XXX_matrix()`
+            methods for simple 2D scenes.
+        """
+        model = numpy.identity(4, dtype=numpy.float32)
+        self.set_model_matrix(model)
+
+        view = matutils.translation_matrix(util.mult(offs2d, -1))
+        matutils.scale_matrix(scale, mat=view)
+        self.set_view_matrix(view)
+
+        game_width, game_height = self.get_game_size()
+        proj = matutils.ortho_matrix(0, game_width, game_height, 0, 1, -1)
+        self.set_proj_matrix(proj)
+
     def resize_internal(self):
         raise NotImplementedError()
 
@@ -227,6 +261,9 @@ class RenderEngine:
 
     def set_colors(self, data):
         raise NotImplementedError()
+
+    def is_opengl(self):
+        return True
 
     def get_shader(self):
         return self.shader
@@ -258,9 +295,13 @@ class RenderEngine:
 
         img_data, w, h = self.raw_texture_data
         if img_data is not None:
-            self.set_texture(img_data, w, h, tex_id=self.tex_id)
+            self._set_texture_data_as_str(img_data, w, h, tex_id=self.tex_id)
 
-    def set_texture(self, img_data, width, height, tex_id=None):
+    def set_texture(self, texture: pygame.Surface):
+        img_data = pygame.image.tostring(texture, 'RGBA', True)
+        self._set_texture_data_as_str(img_data, texture.get_width(), texture.get_height())
+
+    def _set_texture_data_as_str(self, img_data, width, height, tex_id=None):
         """
             img_data: image data in string RGBA format.
         """
@@ -280,14 +321,10 @@ class RenderEngine:
 
         self.raw_texture_data = (img_data, width, height)
 
-        self.set_texture_internal()
+        self.on_texture_changed()
 
-    def set_texture_internal(self):
+    def on_texture_changed(self):
         pass
-
-    def set_camera_pos(self, x, y, center=False):
-        self.camera_pos[0] = x - (self.size[0] // 2) if center else 0
-        self.camera_pos[1] = y - (self.size[1] // 2) if center else 0
         
     def update(self, sprite):
         if sprite is None:
@@ -312,9 +349,12 @@ class RenderEngine:
                 layer.update(uid, sprite.last_modified_tick())
             else:
                 raise ValueError("Incompatible sprite type: {}".format(sprite.sprite_type()))
-        
-    def render_layers(self):
+
+    def clear_screen(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    def render_layers(self):
+        self.clear_screen()
 
         # clear out sprites that weren't updated this tick
         cur_tick = globaltimer.tick_count()
@@ -334,6 +374,9 @@ class RenderEngine:
                 continue
             
             layer.render(self)
+
+    def draw_elements(self, indices):
+        glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, indices)
 
     def cleanup(self):
         self.shader.end()
@@ -500,7 +543,7 @@ class RenderEngine130(RenderEngine):
             h += (px_scale - h % px_scale)
         return (w, h)
 
-    def set_texture_internal(self):
+    def on_texture_changed(self):
         if self.raw_texture_data is not None:
             tex_w = self.raw_texture_data[1]
             tex_h = self.raw_texture_data[2]
@@ -592,4 +635,100 @@ class RenderEngine120(RenderEngine130):
             }
             '''
         )
+
+
+class PurePygameRenderEngine(RenderEngine):
+
+    def __init__(self):
+        super().__init__()
+        self.texture_atlas = None
+        self.clear_color = (0, 0, 0)
+
+        self.camera_xy = [0, 0]
+        self.camera_scale = (1, 1)
+        self.camera_surface = None
+
+    def is_opengl(self):
+        return False
+
+    def get_glsl_version(self): return None
+    def build_shader(self): pass
+    def setup_shader(self): pass
+
+    def set_view_matrix(self, mat): raise ValueError("set_view_matrix() not supported in RenderEnginePurePygame.")
+    def set_model_matrix(self, mat): raise ValueError("set_model_matrix() not supported in RenderEnginePurePygame.")
+    def set_proj_matrix(self, mat): raise ValueError("set_proj_matrix() not supported in RenderEnginePurePygame.")
+
+    def resize_internal(self): pass
+    def set_vertices_enabled(self, val): pass
+    def set_vertices(self, data): pass
+    def set_texture_coords_enabled(self, val): pass
+    def set_texture_coords(self, data): pass
+
+    def set_colors_enabled(self, val): pass
+    def set_colors(self, data): pass
+
+    def reset_for_display_mode_change(self, new_surface):
+        self.set_camera_2d(self.camera_xy, self.camera_scale)
+
+    def on_texture_changed(self): pass
+    def cleanup(self): pass
+
+    def init(self, w, h):
+        """
+        params w, h: The dimension of the window (not the "game size"!)
+        """
+        self.resize(w, h)
+
+    def set_clear_color(self, color):
+        self.clear_color = tuple(util.bound(int(c * 256), 0, 255) for c in color)
+
+    def set_camera_2d(self, xy, scale=(1, 1)):
+        self.camera_xy = xy
+        self.camera_scale = scale
+        game_size = self.get_game_size()
+        camera_surface_size = (max(1, int(scale[0] * game_size[0])),
+                               max(1, int(scale[1] * game_size[1])))
+        if pygame.display.get_surface().get_size() == camera_surface_size:
+            # can just draw directly to the display
+            self.camera_surface = None
+        else:
+            if self.camera_surface is None or self.camera_surface.get_size() != camera_surface_size:
+                self.camera_surface = pygame.Surface(camera_surface_size, pygame.SRCALPHA)
+
+    def set_texture(self, texture: pygame.Surface):
+        """
+            img_data: image data in string RGBA format.
+        """
+        self.texture_atlas = texture.convert_alpha()
+        self.on_texture_changed()
+
+    def _get_drawing_surface(self):
+        if self.camera_surface is not None:
+            return self.camera_surface
+        else:
+            return pygame.display.get_surface()
+
+    def blit_sprite(self, src_rect, dest_rect, color=(1, 1, 1)):
+        surf = self._get_drawing_surface()
+        surf.blit(self.texture_atlas, dest_rect, src_rect)
+
+    def draw_rect(self, rect, color=(1, 1, 1)):
+        pass
+
+    def draw_polygon(self, points, color=(1, 1, 1)):
+        surf = self._get_drawing_surface()
+        color255 = tuple(util.bound(int(c * 256), 0, 255) for c in color)
+        pygame.draw.polygon(surf, color255, points)
+
+    def render_layers(self):
+        super().render_layers()
+        self.set_camera_2d(self.camera_xy, self.camera_scale)
+
+        if self.camera_surface is not None:
+            display_surf = pygame.display.get_surface()
+            pygame.transform.scale(self.camera_surface, display_surf.get_size(), display_surf)
+
+    def clear_screen(self):
+        self._get_drawing_surface().fill(self.clear_color)
 

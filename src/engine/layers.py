@@ -198,26 +198,22 @@ class ImageLayer(_Layer):
         self.populate_data_arrays(sprite_info_lookup)
 
     def render(self, engine):
-        # split up like this to make it easier to find performance bottlenecks
-        self.set_client_states(True, engine)
-        self._set_uniforms(engine)
-        self._pass_attributes(engine)
-        self._draw_elements()
-        self.set_client_states(False, engine)
+        if engine.is_opengl():
+            # split up like this to make it easier to find performance bottlenecks
+            self.set_client_states(True, engine)
+            self._set_uniforms(engine)
+            self._pass_attributes(engine)
+            self._draw_elements(engine)
+            self.set_client_states(False, engine)
+        else:
+            # compatibility mode
+            for i in range(0, len(self.images)):
+                sprite = engine.sprite_info_lookup[self.images[i]].sprite
+                if sprite is not None and sprite.model() is not None:
+                    engine.blit_sprite(sprite.model().rect(), sprite.rect(), color=sprite.color)
 
     def _set_uniforms(self, engine):
-        model = numpy.identity(4, dtype=numpy.float32)
-        engine.set_model_matrix(model)
-
-        offs2d = self.get_offset()
-        scale = self.get_scale()
-        view = matutils.translation_matrix(util.mult(offs2d, -1))
-        matutils.scale_matrix((scale, scale), mat=view)
-        engine.set_view_matrix(view)
-
-        game_width, game_height = engine.get_game_size()
-        proj = matutils.ortho_matrix(0, game_width, game_height, 0, 1, -1)
-        engine.set_proj_matrix(proj)
+        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
 
     def set_client_states(self, enable, engine):
         engine.set_vertices_enabled(enable)
@@ -231,8 +227,8 @@ class ImageLayer(_Layer):
         if self.is_color():
             engine.set_colors(self.colors)
 
-    def _draw_elements(self):
-        glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, self.indices)
+    def _draw_elements(self, engine):
+        engine.draw_elements(self.indices)
 
     def __contains__(self, uid):
         return uid in self._image_set
@@ -264,6 +260,15 @@ class PolygonLayer(ImageLayer):
 
     def color_stride(self):
         return 3 * 3
+
+    def render(self, engine):
+        if engine.is_opengl():
+            super().render(engine)
+        else:
+            for i in range(0, len(self.images)):
+                sprite = engine.sprite_info_lookup[self.images[i]].sprite
+                if sprite is not None and isinstance(sprite, sprites.TriangleSprite):
+                    engine.draw_polygon(sprite.points(), sprite.color())
 
 
 
