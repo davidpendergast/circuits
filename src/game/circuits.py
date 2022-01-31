@@ -70,7 +70,9 @@ class CircuitsGame(game.Game):
         keybinds.get_instance().set_binding(const.SAVE_AS, keybinds.Binding(pygame.K_s, mods=[pygame.KMOD_CTRL, pygame.KMOD_SHIFT, pygame.KMOD_NONE]))
 
         # level editor commands
+        keybinds.get_instance().set_binding(const.TOGGLE_SHOW_CAPTION_INFO, [pygame.K_F3])
         keybinds.get_instance().set_binding(const.TOGGLE_EDIT_MODE, [pygame.K_F5])
+        keybinds.get_instance().set_binding(const.TOGGLE_COMPAT_MODE, [pygame.K_F6])
 
         keybinds.get_instance().set_binding(const.MOVE_SELECTION_UP, keybinds.Binding(pygame.K_w, mods=pygame.KMOD_NONE))
         keybinds.get_instance().set_binding(const.MOVE_SELECTION_LEFT, keybinds.Binding(pygame.K_a, mods=pygame.KMOD_NONE))
@@ -171,9 +173,9 @@ class CircuitsGame(game.Game):
 
         songsystem.get_instance().update()
 
-        if configs.is_dev and globaltimer.tick_count() % 15 == 0:
+        if globaltimer.tick_count() % 15 == 0:
             window.get_instance().set_caption_info("SPRITES", renderengine.get_instance().count_sprites())
-
+            window.get_instance().set_caption_info("NO_GL_MODE", None if window.get_instance().is_opengl_mode() else "True")
         return not gs.get_instance().should_exit()
 
     def cleanup(self):
@@ -195,6 +197,20 @@ class CircuitsGame(game.Game):
             print(f"INFO: {'unmuting' if is_muted else 'muting'} audio")
             gs.get_instance().get_settings().set(gs.Settings.MUTE_MUSIC, not is_muted)
             gs.get_instance().get_settings().set(gs.Settings.MUTE_EFFECTS, not is_muted)
+
+        if inputs.get_instance().was_pressed(const.TOGGLE_SHOW_CAPTION_INFO):
+            win = window.get_instance()
+            print(f"INFO: toggling caption info to {not win.is_showing_caption_info()}")
+            win.set_show_caption_info(not win.is_showing_caption_info())
+
+        if inputs.get_instance().was_pressed(const.TOGGLE_COMPAT_MODE):
+            win = window.get_instance()
+
+            if win.is_fullscreen():
+                win.set_fullscreen(False)
+
+            print(f"INFO: setting compat mode to {win.is_opengl_mode()}")
+            win.set_opengl_mode(not win.is_opengl_mode())
 
 
 def _update_readme():

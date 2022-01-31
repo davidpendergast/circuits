@@ -30,7 +30,7 @@ precise_fps = False
 
 
 """ Miscellaneous """
-compat_mode = "always"  # True, False, or "always" accepted
+start_in_compat_mode = False
 do_crash_reporting = True  # whether to produce a crash file when the program exits via an exception.
 is_dev = os.path.exists(".gitignore")  # yikes
 

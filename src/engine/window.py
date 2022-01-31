@@ -6,10 +6,10 @@ import configs
 _INSTANCE = None
 
 
-def create_instance(window_size=(640, 480), min_size=(0, 0)):
+def create_instance(window_size=(640, 480), min_size=(0, 0), opengl_mode=True):
     global _INSTANCE
     if _INSTANCE is None:
-        _INSTANCE = WindowState(window_size, min_size=min_size)
+        _INSTANCE = WindowState(window_size, min_size=min_size, opengl_mode=opengl_mode)
         return _INSTANCE
     else:
         raise ValueError("There is already a WindowState initialized.")
@@ -21,20 +21,25 @@ def get_instance() -> 'WindowState':
 
 class WindowState:
 
-    def __init__(self, window_size, min_size=(0, 0)):
+    def __init__(self, window_size, min_size=(0, 0), opengl_mode=True):
         self._is_fullscreen = False
         self._window_size = window_size
         self._min_size = min_size
 
         self._fullscreen_size = None
 
+        self._icon_surface = None  # pygame.Surface
+
         self._caption = "Game"
         self._caption_info = {}  # str -> str, for example "FPS" -> "60.0"
-        self._icon_surface = None  # pygame.Surface
+        self._show_caption_info = configs.is_dev
+
+        self._opengl_mode = opengl_mode
 
     def _get_mods(self):
         mods = 0
-        # mods = pygame.OPENGL | pygame.DOUBLEBUF
+        if self._opengl_mode:
+            mods = pygame.OPENGL | pygame.DOUBLEBUF | mods
 
         if configs.allow_window_resize:
             mods = pygame.RESIZABLE | mods
@@ -61,8 +66,24 @@ class WindowState:
         import src.engine.renderengine as renderengine
         render_eng = renderengine.get_instance()
         if render_eng is not None:
-            # XXX otherwise everything breaks on Windows (see docs on this method)
-            render_eng.reset_for_display_mode_change(new_surface)
+            if self.is_opengl_mode() != render_eng.is_opengl():
+                if self.is_opengl_mode():
+                    glsl_version_to_use = renderengine.check_system_glsl_version(or_else_throw=False)
+                else:
+                    glsl_version_to_use = None
+
+                if self.is_opengl_mode() and glsl_version_to_use is None:
+                    # nice try, but it's not supported.
+                    self._opengl_mode = False
+                    new_surface = pygame.display.set_mode(self._window_size, self._get_mods())
+                    render_eng.reset_for_display_mode_change(new_surface)
+                else:
+                    atlas = render_eng.cached_texture_atlas
+                    render_eng = renderengine.create_instance(glsl_version_to_use)
+                    render_eng.set_texture_atlas(atlas)
+            else:
+                # XXX otherwise everything breaks on Windows (see docs on this method)
+                render_eng.reset_for_display_mode_change(new_surface)
 
     def set_caption(self, title):
         if title != self._caption:
@@ -78,9 +99,17 @@ class WindowState:
             self._caption_info[name] = value
             self._update_caption()
 
+    def is_showing_caption_info(self):
+        return self._show_caption_info
+
+    def set_show_caption_info(self, val):
+        if val != self._show_caption_info:
+            self._show_caption_info = val
+            self._update_caption()
+
     def _update_caption(self):
         cap = self._caption
-        if len(self._caption_info) > 0:
+        if self._show_caption_info and len(self._caption_info) > 0:
             info = []
             for name in self._caption_info:
                 info.append("{}={}".format(name, self._caption_info[name]))
@@ -119,6 +148,16 @@ class WindowState:
                 pygame.display.quit()
 
             self._update_display_mode()
+
+    def set_opengl_mode(self, val):
+        if self.is_opengl_mode() == val:
+            return
+        else:
+            self._opengl_mode = val
+            self._update_display_mode()
+
+    def is_opengl_mode(self):
+        return self._opengl_mode
 
     def window_to_screen_pos(self, pos):
         if pos is None:

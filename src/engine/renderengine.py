@@ -14,6 +14,87 @@ import src.utils.util as util
 import src.utils.matutils as matutils
 
 
+_SINGLETON = None
+
+
+def create_instance(glsl_version):
+    """Initializes (or re-initializes) the RenderEngine singleton."""
+    global _SINGLETON
+    old_engine = _SINGLETON
+    _SINGLETON = _get_best_render_engine(glsl_version)
+
+    if old_engine is not None:
+        for lay_id in old_engine.layers:
+            lay = old_engine.layers[lay_id]
+            _SINGLETON.add_layer(lay)
+            if lay_id in old_engine.hidden_layers:
+                _SINGLETON.hide_layer(lay_id)
+
+        _SINGLETON.init(*old_engine.size)
+        _SINGLETON.set_min_size(*old_engine.min_size)
+        _SINGLETON.set_pixel_scale(old_engine.get_pixel_scale())
+
+        _SINGLETON.set_texture_atlas(old_engine.cached_texture_atlas)
+        _SINGLETON.sprite_info_lookup.update(old_engine.sprite_info_lookup)
+
+    return _SINGLETON
+
+
+def check_system_glsl_version(or_else_throw=True):
+    # XXX note that this only works *after* an OPENGL window has been made.
+    try:
+        vstring = glGetString(GL_VERSION)
+        vstring = vstring.decode() if vstring is not None else None
+        print("INFO: running OpenGL version: {}".format(vstring))
+        crashreporting.add_runtime_info("OpenGL Version", vstring)
+
+        # this line will throw a GLerror if the system's OpenGL version is < 2.0
+        # (because GL_SHADING_LANGUAGE_VERSION isn't valid before then).
+        glsl_version = glGetString(GL_SHADING_LANGUAGE_VERSION)
+        glsl_version = glsl_version.decode() if glsl_version is not None else None
+        print("INFO: with shading language version: {}".format(glsl_version))
+        crashreporting.add_runtime_info("Shader Language Version", glsl_version)
+
+        return glsl_version
+
+    except GLerror as e:
+        if or_else_throw:
+            raise e
+        else:
+            print("WARN: failed to query OpenGL Shader Language (GLSL) version, falling back to compatibility mode.")
+            traceback.print_exc()
+            return None
+
+
+def _get_best_render_engine(glsl_version):
+    major_vers, minor_vers = 1, 0
+
+    if glsl_version is not None:
+        try:
+            # it's formatted like "##.##.## <Anything>", so we split on periods and spaces
+            chunks = re.split("[. ]", glsl_version)
+            chunks = [c for c in chunks if len(c) > 0]
+
+            if len(chunks) >= 1:
+                major_vers = int(chunks[0])
+            if len(chunks) >= 2:
+                minor_vers = int(chunks[1])
+        except Exception:
+            print("ERROR: failed to parse glsl_version: {}".format(glsl_version))
+            traceback.print_exc()
+
+    if major_vers > 2 or minor_vers >= 30:  # 1.30 is OpenGL 3.0
+        crashreporting.add_runtime_info("Render Engine", "RenderEngine130")
+        return RenderEngine130()
+    elif 20 <= minor_vers:  # 1.20 is OpenGL 2.1
+        crashreporting.add_runtime_info("Render Engine", "RenderEngine120")
+        return RenderEngine120()
+    else:
+        # Anything earlier than that, we fallback to CPU rendering.
+        crashreporting.add_runtime_info("Render Engine", "PurePygameRenderEngine (Compatibility Mode)")
+        return PurePygameRenderEngine()
+
+
 def printOpenGLError():
     err = glGetError()
     if err != GL_NO_ERROR:
@@ -58,70 +139,6 @@ class Shader:
         glUseProgram(0)
 
 
-_SINGLETON = None
-
-
-def create_instance():
-    """intializes the RenderEngine singleton."""
-    global _SINGLETON
-    if _SINGLETON is None:
-        glsl_version = None
-        err = None
-        try:
-            vstring = glGetString(GL_VERSION)
-            vstring = vstring.decode() if vstring is not None else None
-            print("INFO: running OpenGL version: {}".format(vstring))
-            crashreporting.add_runtime_info("OpenGL Version", vstring)
-
-            glsl_version = glGetString(GL_SHADING_LANGUAGE_VERSION)
-            glsl_version = glsl_version.decode() if glsl_version is not None else None
-            print("INFO: with shading language version: {}".format(glsl_version))
-            crashreporting.add_runtime_info("Shader Language Version", glsl_version)
-        except GLerror as e:
-            err = e
-            traceback.print_exc()
-
-        _SINGLETON = _get_best_render_engine(glsl_version)
-        if _SINGLETON is None and err is not None:
-            # GL isn't working and compat mode is disabled, so just bail
-            raise err
-
-        return _SINGLETON
-    else:
-        raise ValueError("There is already a RenderEngine initialized.")
-
-
-def _get_best_render_engine(glsl_version):
-    if configs.compat_mode == "always" or (glsl_version is None and configs.compat_mode):
-        print("INFO: Using non-OpenGL compatibility mode")
-        crashreporting.add_runtime_info("Render Engine", "PurePygameRenderEngine (compatibility mode)")
-        return PurePygameRenderEngine()
-
-    major_vers = 1
-    minor_vers = 0
-
-    try:
-        # it's formatted like "##.##.## <Anything>", so we split on periods and spaces
-        chunks = re.split("[. ]", glsl_version)
-        chunks = [c for c in chunks if len(c) > 0]
-
-        if len(chunks) >= 1:
-            major_vers = int(chunks[0])
-        if len(chunks) >= 2:
-            minor_vers = int(chunks[1])
-
-    except Exception:
-        print("ERROR: failed to parse glsl_version: {}".format(glsl_version))
-        traceback.print_exc()
-
-    if major_vers <= 1 and minor_vers < 30:
-        crashreporting.add_runtime_info("Render Engine", "RenderEngine120")
-        return RenderEngine120()
-    else:
-        crashreporting.add_runtime_info("Render Engine", "RenderEngine130")
-        return RenderEngine130()
-
-
 class _SpriteInfoBundle:
 
     def __init__(self, sprite, last_updated_tick):
@@ -143,6 +160,7 @@ class RenderEngine:
 
         self.tex_id = None
 
+        self.cached_texture_atlas = None
         self.raw_texture_data = (None, 0, 0)  # data, width, height
         
     def add_layer(self, layer):
@@ -181,7 +199,6 @@ class RenderEngine:
         h = max(h, self.min_size[1])
 
         self.size = (w, h)
-
         self.resize_internal()
 
     def set_min_size(self, w, h):
@@ -297,7 +314,8 @@ class RenderEngine:
         if img_data is not None:
             self._set_texture_data_as_str(img_data, w, h, tex_id=self.tex_id)
 
-    def set_texture(self, texture: pygame.Surface):
+    def set_texture_atlas(self, texture: pygame.Surface):
+        self.cached_texture_atlas = texture
         img_data = pygame.image.tostring(texture, 'RGBA', True)
         self._set_texture_data_as_str(img_data, texture.get_width(), texture.get_height())
 
@@ -647,7 +665,6 @@ class PurePygameRenderEngine(RenderEngine):
 
     def __init__(self):
         super().__init__()
-        self.texture_atlas = None
         self.clear_color = (0, 0, 0)
 
         self.camera_xy = [0, 0]
@@ -705,11 +722,8 @@ class PurePygameRenderEngine(RenderEngine):
             if self.camera_surface is None or self.camera_surface.get_size() != camera_surface_size:
                 self.camera_surface = pygame.Surface(camera_surface_size, pygame.SRCALPHA)
 
-    def set_texture(self, texture: pygame.Surface):
-        """
-            img_data: image data in string RGBA format.
-        """
-        self.texture_atlas = texture.convert_alpha()
+    def set_texture_atlas(self, texture: pygame.Surface):
+        self.cached_texture_atlas = texture.convert_alpha()
         self.on_texture_changed()
 
     def _get_drawing_surface(self):
@@ -746,9 +760,9 @@ class PurePygameRenderEngine(RenderEngine):
                             and sprite.xflip() is False
                             and sprite.color() == (1, 1, 1)):
                         # already the correct size, just blit it
-                        surf.blit(self.texture_atlas, (dest_rect[0], dest_rect[1]), src_rect_on_atlas)
+                        surf.blit(self.cached_texture_atlas, (dest_rect[0], dest_rect[1]), src_rect_on_atlas)
                     else:
-                        subsurf = self.texture_atlas.subsurface(src_rect_on_atlas)
+                        subsurf = self.cached_texture_atlas.subsurface(src_rect_on_atlas)
                         orig_subsurf = subsurf
                         if sprite.xflip():
                             subsurf = pygame.transform.flip(subsurf, True, False)

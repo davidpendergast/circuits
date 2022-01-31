@@ -4,7 +4,6 @@ import numpy
 
 import src.engine.sprites as sprites
 import src.utils.util as util
-import src.utils.matutils as matutils
 
 
 def assert_int(val):
@@ -198,6 +197,7 @@ class ImageLayer(_Layer):
         self.populate_data_arrays(sprite_info_lookup)
 
     def render(self, engine):
+        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
         if engine.is_opengl():
             # split up like this to make it easier to find performance bottlenecks
             self.set_client_states(True, engine)
@@ -207,7 +207,6 @@ class ImageLayer(_Layer):
             self.set_client_states(False, engine)
         else:
             # compatibility mode
-            engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
             for i in range(0, len(self.images)):
                 sprite = engine.sprite_info_lookup[self.images[i]].sprite
                 engine.blit_sprite(sprite)
@@ -262,17 +261,12 @@ class PolygonLayer(ImageLayer):
         return 3 * 3
 
     def render(self, engine):
+        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
         if engine.is_opengl():
             super().render(engine)
         else:
             # compatibility mode
-            engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
             for i in range(0, len(self.images)):
                 sprite = engine.sprite_info_lookup[self.images[i]].sprite
                 engine.blit_sprite(sprite)
-
-
-
-
-
 
