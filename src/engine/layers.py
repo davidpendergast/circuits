@@ -207,13 +207,13 @@ class ImageLayer(_Layer):
             self.set_client_states(False, engine)
         else:
             # compatibility mode
+            engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
             for i in range(0, len(self.images)):
                 sprite = engine.sprite_info_lookup[self.images[i]].sprite
-                if sprite is not None and sprite.model() is not None:
-                    engine.blit_sprite(sprite.model().rect(), sprite.rect(), color=sprite.color)
+                engine.blit_sprite(sprite)
 
     def _set_uniforms(self, engine):
-        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
+        pass
 
     def set_client_states(self, enable, engine):
         engine.set_vertices_enabled(enable)
@@ -265,10 +265,11 @@ class PolygonLayer(ImageLayer):
         if engine.is_opengl():
             super().render(engine)
         else:
+            # compatibility mode
+            engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
             for i in range(0, len(self.images)):
                 sprite = engine.sprite_info_lookup[self.images[i]].sprite
-                if sprite is not None and isinstance(sprite, sprites.TriangleSprite):
-                    engine.draw_polygon(sprite.points(), sprite.color())
+                engine.blit_sprite(sprite)
 
 
 

@@ -373,7 +373,10 @@ class RenderEngine:
             if layer.get_layer_id() in self.hidden_layers:
                 continue
             
-            layer.render(self)
+            self.render_layer(layer)
+
+    def render_layer(self, layer):
+        layer.render(self)
 
     def draw_elements(self, indices):
         glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, indices)
@@ -637,6 +640,9 @@ class RenderEngine120(RenderEngine130):
         )
 
 
+import src.engine.sprites as sprites
+
+
 class PurePygameRenderEngine(RenderEngine):
 
     def __init__(self):
@@ -683,12 +689,15 @@ class PurePygameRenderEngine(RenderEngine):
     def set_clear_color(self, color):
         self.clear_color = tuple(util.bound(int(c * 256), 0, 255) for c in color)
 
+    def _get_render_mult(self) -> int:
+        return self.get_pixel_scale()
+
     def set_camera_2d(self, xy, scale=(1, 1)):
         self.camera_xy = xy
         self.camera_scale = scale
         game_size = self.get_game_size()
-        camera_surface_size = (max(1, int(scale[0] * game_size[0])),
-                               max(1, int(scale[1] * game_size[1])))
+        mult = self._get_render_mult()
+        camera_surface_size = (int(game_size[0] * mult), int(game_size[1] * mult))
         if pygame.display.get_surface().get_size() == camera_surface_size:
             # can just draw directly to the display
             self.camera_surface = None
@@ -709,25 +718,78 @@ class PurePygameRenderEngine(RenderEngine):
         else:
             return pygame.display.get_surface()
 
-    def blit_sprite(self, src_rect, dest_rect, color=(1, 1, 1)):
-        surf = self._get_drawing_surface()
-        surf.blit(self.texture_atlas, dest_rect, src_rect)
+    def blit_sprite(self, sprite: 'sprites.AbstractSprite'):
+        if sprite is None:
+            return
+        elif isinstance(sprite, sprites.MultiSprite):
+            for spr in sprite.all_sprites():
+                self.blit_sprite(spr)
+        else:
+            mult = self._get_render_mult()
+            offs = (self.camera_xy[0] * mult,
+                    self.camera_xy[1] * mult)
 
-    def draw_rect(self, rect, color=(1, 1, 1)):
-        pass
+            if isinstance(sprite, sprites.ImageSprite):
+                if sprite.model() is not None:
+                    src_rect_on_atlas = sprite.model().rect()
+                    dest_rect_in_world = sprite.rect()
 
-    def draw_polygon(self, points, color=(1, 1, 1)):
-        surf = self._get_drawing_surface()
-        color255 = tuple(util.bound(int(c * 256), 0, 255) for c in color)
-        pygame.draw.polygon(surf, color255, points)
+                    surf = self._get_drawing_surface()
+                    dest_rect = [dest_rect_in_world[0] * mult * self.camera_scale[0] - offs[0],
+                                 dest_rect_in_world[1] * mult * self.camera_scale[1] - offs[1],
+                                 dest_rect_in_world[2] * mult * self.camera_scale[0],
+                                 dest_rect_in_world[3] * mult * self.camera_scale[1]]
 
-    def render_layers(self):
-        super().render_layers()
-        self.set_camera_2d(self.camera_xy, self.camera_scale)
+                    if (src_rect_on_atlas[2] == dest_rect[2]
+                            and src_rect_on_atlas[3] == dest_rect[3]
+                            and sprite.rotation() == 0
+                            and sprite.xflip() is False
+                            and sprite.color() == (1, 1, 1)):
+                        # already the correct size, just blit it
+                        surf.blit(self.texture_atlas, (dest_rect[0], dest_rect[1]), src_rect_on_atlas)
+                    else:
+                        subsurf = self.texture_atlas.subsurface(src_rect_on_atlas)
+                        orig_subsurf = subsurf
+                        if sprite.xflip():
+                            subsurf = pygame.transform.flip(subsurf, True, False)
+
+                        if sprite.rotation() == 0:
+                            subsurf = subsurf.copy()
+                        elif sprite.rotation() == 1:
+                            subsurf = pygame.transform.rotate(subsurf, -90)
+                        elif sprite.rotation() == 2:
+                            subsurf = pygame.transform.rotate(subsurf, -180)
+                        else:
+                            subsurf = pygame.transform.rotate(subsurf, -270)
+
+                        if sprite.color() != (1, 1, 1):
+                            if subsurf == orig_subsurf:
+                                subsurf = subsurf.copy()
+                            color255 = tuple(util.bound(int(c * 256), 0, 255) for c in sprite.color())
+                            subsurf.fill(color255, [0, 0, subsurf.get_width(), subsurf.get_height()], pygame.BLEND_MIN)
+                            subsurf.fill(color255, [0, 0, subsurf.get_width(), subsurf.get_height()], pygame.BLEND_MIN)
+
+                        xformed = pygame.transform.scale(subsurf, (dest_rect[2], dest_rect[3]))
+                        surf.blit(xformed, (dest_rect[0], dest_rect[1]))
+            elif isinstance(sprite, sprites.TriangleSprite):
+                xformed_pts = []
+                bb = util.get_rect_containing_points(sprite.points(), inclusive=False)
+                for p in sprite.points():
+                    x = (p[0] if (p[0] < bb[0] + bb[2] or bb[2] == 0) else p[0]) * mult - offs[0]
+                    y = (p[1] if (p[1] < bb[1] + bb[3] or bb[3] == 0) else p[1]) * mult - offs[1]
+                    xformed_pts.append((x, y))
+
+                color255 = list(util.bound(int(c * 256), 0, 255) for c in sprite.color())
+                surf = self._get_drawing_surface()
+                pygame.draw.polygon(surf, color255, xformed_pts)
+
+    def render_layer(self, layer):
+        super().render_layer(layer)
 
         if self.camera_surface is not None:
             display_surf = pygame.display.get_surface()
-            pygame.transform.scale(self.camera_surface, display_surf.get_size(), display_surf)
+            temp = pygame.transform.scale(self.camera_surface, display_surf.get_size())
+            display_surf.blit(temp, (0, 0), temp.get_rect(), pygame.BLEND_PREMULTIPLIED)
 
     def clear_screen(self):
         self._get_drawing_surface().fill(self.clear_color)

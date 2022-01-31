@@ -218,21 +218,23 @@ class ImageSprite(AbstractSprite):
     def y(self):
         return self._y
         
-    def width(self):
+    def width(self, with_rotations=True):
         if self.model() is None:
             return 0
-        elif self.rotation() % 2 == 0:
-            return self.model().width() * self.scale() * self.ratio()[0]
+        elif not with_rotations or self.rotation() % 2 == 0:
+            raw_w = self.raw_size()[0]
+            return raw_w if raw_w >= 0 else self.model().width() * self.scale() * self.ratio()[0]
         else:
-            return self.model().height() * self.scale() * self.ratio()[1]
+            return self.height(with_rotations=False)
         
-    def height(self):
+    def height(self, with_rotations=True):
         if self.model() is None:
             return 0
-        elif self.rotation() % 2 == 0:
-            return self.model().height() * self.scale() * self.ratio()[1]
+        elif not with_rotations or self.rotation() % 2 == 0:
+            raw_h = self.raw_size()[1]
+            return raw_h if raw_h >= 0 else self.model().height() * self.scale() * self.ratio()[1]
         else:
-            return self.model().width() * self.scale() * self.ratio()[0]
+            return self.width(with_rotations=False)
 
     def size(self):
         return (self.width(), self.height())
