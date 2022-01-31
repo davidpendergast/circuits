@@ -163,6 +163,7 @@ class ImageLayer(_Layer):
             self.colors.resize(self.color_stride() * n_sprites, refcheck=False)
 
         # TODO - we only need to iterate over dirty indices here
+        # TODO - even better, can we numpyify this whole thing?
         for i in range(0, n_sprites):
             sprite = sprite_info_lookup[self.images[i]].sprite
             sprite.add_urself(
@@ -197,7 +198,6 @@ class ImageLayer(_Layer):
         self.populate_data_arrays(sprite_info_lookup)
 
     def render(self, engine):
-        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
         if engine.is_opengl():
             # split up like this to make it easier to find performance bottlenecks
             self.set_client_states(True, engine)
@@ -207,12 +207,13 @@ class ImageLayer(_Layer):
             self.set_client_states(False, engine)
         else:
             # compatibility mode
+            engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
             for i in range(0, len(self.images)):
                 sprite = engine.sprite_info_lookup[self.images[i]].sprite
                 engine.blit_sprite(sprite)
 
     def _set_uniforms(self, engine):
-        pass
+        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
 
     def set_client_states(self, enable, engine):
         engine.set_vertices_enabled(enable)
@@ -259,14 +260,4 @@ class PolygonLayer(ImageLayer):
 
     def color_stride(self):
         return 3 * 3
-
-    def render(self, engine):
-        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
-        if engine.is_opengl():
-            super().render(engine)
-        else:
-            # compatibility mode
-            for i in range(0, len(self.images)):
-                sprite = engine.sprite_info_lookup[self.images[i]].sprite
-                engine.blit_sprite(sprite)
 

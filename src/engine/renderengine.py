@@ -786,15 +786,9 @@ class PurePygameRenderEngine(RenderEngine):
                         xformed = pygame.transform.scale(subsurf, (dest_rect[2], dest_rect[3]))
                         surf.blit(xformed, (dest_rect[0], dest_rect[1]))
             elif isinstance(sprite, sprites.TriangleSprite):
-                xformed_pts = []
-                bb = util.get_rect_containing_points(sprite.points(), inclusive=False)
-                for p in sprite.points():
-                    x = (p[0] if (p[0] < bb[0] + bb[2] or bb[2] == 0) else p[0]) * mult - offs[0]
-                    y = (p[1] if (p[1] < bb[1] + bb[3] or bb[3] == 0) else p[1]) * mult - offs[1]
-                    xformed_pts.append((x, y))
-
-                color255 = list(util.bound(int(c * 256), 0, 255) for c in sprite.color())
                 surf = self._get_drawing_surface()
+                color255 = list(util.bound(int(c * 256), 0, 255) for c in sprite.color())
+                xformed_pts = [(p[0] * mult - offs[0], p[1] * mult - offs[1]) for p in sprite.points()]
                 pygame.draw.polygon(surf, color255, xformed_pts)
 
     def render_layer(self, layer):
