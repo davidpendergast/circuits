@@ -715,7 +715,9 @@ class PurePygameRenderEngine(RenderEngine):
         game_size = self.get_game_size()
         mult = self._get_render_mult()
         camera_surface_size = (int(game_size[0] * mult), int(game_size[1] * mult))
-        if pygame.display.get_surface().get_size() == camera_surface_size:
+        display_size = pygame.display.get_surface().get_size()
+        if (abs(display_size[0] - camera_surface_size[0]) < mult
+                and abs(display_size[1] - camera_surface_size[1]) < mult):
             # can just draw directly to the display
             self.camera_surface = None
         else:
@@ -780,8 +782,7 @@ class PurePygameRenderEngine(RenderEngine):
                             if subsurf == orig_subsurf:
                                 subsurf = subsurf.copy()
                             color255 = tuple(util.bound(int(c * 256), 0, 255) for c in sprite.color())
-                            subsurf.fill(color255, [0, 0, subsurf.get_width(), subsurf.get_height()], pygame.BLEND_MIN)
-                            subsurf.fill(color255, [0, 0, subsurf.get_width(), subsurf.get_height()], pygame.BLEND_MIN)
+                            subsurf.fill(color255, [0, 0, subsurf.get_width(), subsurf.get_height()], pygame.BLEND_MULT)
 
                         xformed = pygame.transform.scale(subsurf, (dest_rect[2], dest_rect[3]))
                         surf.blit(xformed, (dest_rect[0], dest_rect[1]))
