@@ -1,6 +1,5 @@
 import os
 import platform
-import pathlib
 import tempfile
 import shutil
 import stat
@@ -200,19 +199,19 @@ def do_it():
 
     os_bit_count_str = _calc_bit_count_str()
 
-    spec_filename = pathlib.Path("output.spec")
+    spec_filename = "output.spec"
     print("INFO: creating spec file {}".format(spec_filename))
 
     icon_path = _get_icon_path(os_system_str)
     with open(spec_filename, "w") as f:
         f.write(SPEC_CONTENTS.replace("~ICON_PATH~", f"'{icon_path}'" if icon_path else "None"))
 
-    dist_dir = pathlib.Path("dist/{}_{}_{}".format(
+    dist_dir = os.path.join("dist", "{}_{}_{}".format(
         NAME_OF_GAME_SIMPLE,
         pretty_os_str.lower(),
         os_bit_count_str.lower()))
 
-    if os.path.exists(str(dist_dir)):
+    if os.path.exists(dist_dir):
         ans = _ask_yes_or_no_question("Overwrite {}?".format(dist_dir))
         if ans:
             print("INFO: deleting pre-existing build {}".format(dist_dir))
@@ -221,7 +220,7 @@ def do_it():
             print("INFO: user opted to not overwrite pre-existing build, exiting")
             return
 
-    dist_dir_subdir = pathlib.Path("{}/{}".format(dist_dir, NAME_OF_GAME_SIMPLE))
+    dist_dir_subdir = os.path.join(dist_dir, NAME_OF_GAME_SIMPLE)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         print("INFO: created temp directory: {}".format(temp_dir))
@@ -239,7 +238,7 @@ def do_it():
 
     if os_system_str == _LINUX:
         print("INFO: chmod'ing execution permissions to all users (linux)")
-        exe_path = pathlib.Path("{}/{}".format(dist_dir_subdir, NAME_OF_GAME_SIMPLE))
+        exe_path = os.path.join(dist_dir_subdir, NAME_OF_GAME)
         if not os.path.exists(str(exe_path)):
             raise ValueError("couldn't find exe to apply exec permissions: {}".format(exe_path))
         else:
