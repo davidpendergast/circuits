@@ -141,8 +141,7 @@ class CircuitsGame(game.Game):
         ])
         cursors.set_cursor(const.CURSOR_DEFAULT)
 
-        if configs.is_dev:
-            globaltimer.set_show_fps(True)
+        globaltimer.set_show_fps(True)
 
         gs.get_instance().load_data_from_disk()
 
