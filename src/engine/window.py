@@ -28,13 +28,13 @@ class WindowState:
 
         self._fullscreen_size = None
 
-        self._icon_surface = None  # pygame.Surface
+        self._icon_surface: pygame.Surface = None
 
         self._caption = "Game"
         self._caption_info = {}  # str -> str, for example "FPS" -> "60.0"
         self._show_caption_info = configs.is_dev
 
-        self._opengl_mode = opengl_mode
+        self._opengl_mode: bool = opengl_mode
 
     def _get_mods(self):
         mods = 0
@@ -63,6 +63,12 @@ class WindowState:
         else:
             new_surface = pygame.display.set_mode(self._window_size, self._get_mods())
 
+        # TODO this OpenGL compatibility dance between the Window and renderengine could probably be improved?
+        # Currently we're:
+        # 1. Creating an OPENGL-flagged window (via pygame.display.set_mode())
+        # 2. Checking to see if OpenGL actually works (via check_system_glsl_version())
+        # 3a. If it does, we're all good.
+        # 3b. If it doesn't, we kill the window (pygame.display.quit()), and make another window(!) without the flag.
         import src.engine.renderengine as renderengine
         render_eng = renderengine.get_instance()
         if render_eng is not None:
@@ -75,12 +81,12 @@ class WindowState:
                 if self.is_opengl_mode() and glsl_version_to_use is None:
                     # nice try, but it's not supported.
                     self._opengl_mode = False
+                    pygame.display.quit()  # kill the existing OPENGL-flagged window.
                     new_surface = pygame.display.set_mode(self._window_size, self._get_mods())
                     render_eng.reset_for_display_mode_change(new_surface)
                 else:
-                    atlas = render_eng.cached_texture_atlas
-                    render_eng = renderengine.create_instance(glsl_version_to_use)
-                    render_eng.set_texture_atlas(atlas)
+                    # This call copies over all the cached data from the old render engine (texture_atlas, layers, etc.)
+                    renderengine.create_instance(glsl_version_to_use)
             else:
                 # XXX otherwise everything breaks on Windows (see docs on this method)
                 render_eng.reset_for_display_mode_change(new_surface)
@@ -153,6 +159,9 @@ class WindowState:
         if self.is_opengl_mode() == val:
             return
         else:
+            # in pygame 1.9.x, it blackscreens without this call when going from GL to non-GL
+            pygame.display.quit()
+
             self._opengl_mode = val
             self._update_display_mode()
 

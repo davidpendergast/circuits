@@ -783,7 +783,7 @@ class PurePygameRenderEngine(RenderEngine):
                             subsurf.fill(color255, [0, 0, subsurf.get_width(), subsurf.get_height()], pygame.BLEND_MIN)
                             subsurf.fill(color255, [0, 0, subsurf.get_width(), subsurf.get_height()], pygame.BLEND_MIN)
 
-                        xformed = pygame.transform.scale(subsurf, (dest_rect[2], dest_rect[3]))
+                        xformed = pygame.transform.scale(subsurf, (int(dest_rect[2]), int(dest_rect[3])))
                         surf.blit(xformed, (dest_rect[0], dest_rect[1]))
             elif isinstance(sprite, sprites.TriangleSprite):
                 surf = self._get_drawing_surface()
