@@ -19,6 +19,35 @@ def get_instance() -> 'WindowState':
     return _INSTANCE
 
 
+def calc_pixel_scale(screen_size):
+    if configs.auto_resize_pixel_scale:
+        screen_w, screen_h = screen_size
+        optimal_w = configs.optimal_window_size[0]
+        optimal_h = configs.optimal_window_size[1]
+
+        optimal_scale = configs.optimal_pixel_scale
+        min_scale = configs.minimum_auto_pixel_scale
+        max_scale = min(int(screen_w / optimal_w * optimal_scale + 1), int(screen_h / optimal_h * optimal_scale + 1))
+
+        # when the screen is large enough to fit this quantity of (minimal) screens at a
+        # particular scaling setting, that scale is considered good enough to switch to.
+        # we choose the largest (AKA most zoomed in) "good" scale.
+        step_up_x_ratio = 1.0
+        step_up_y_ratio = 1.0
+
+        best = min_scale
+        for i in range(min_scale, max_scale + 1):
+            if (optimal_w / optimal_scale * i * step_up_x_ratio <= screen_w
+                    and optimal_h / optimal_scale * i * step_up_y_ratio <= screen_h):
+                best = i
+            else:
+                break
+
+        return best
+    else:
+        return configs.optimal_pixel_scale
+
+
 class WindowState:
 
     def __init__(self, window_size, min_size=(0, 0), opengl_mode=True):
@@ -63,8 +92,8 @@ class WindowState:
         else:
             new_surface = pygame.display.set_mode(self._window_size, self._get_mods())
 
-        # TODO this OpenGL compatibility dance between the Window and renderengine could probably be improved?
-        # Currently we're:
+        # TODO this OpenGL compatibility-mode dance between the window and render engine could probably be improved?
+        # At game start, we're:
         # 1. Creating an OPENGL-flagged window (via pygame.display.set_mode())
         # 2. Checking to see if OpenGL actually works (via check_system_glsl_version())
         # 3a. If it does, we're all good.
@@ -86,10 +115,14 @@ class WindowState:
                     render_eng.reset_for_display_mode_change(new_surface)
                 else:
                     # This call copies over all the cached data from the old render engine (texture_atlas, layers, etc.)
-                    renderengine.create_instance(glsl_version_to_use)
+                    # Note that it also copies over its size, which may be stale if the game was fullscreen before.
+                    render_eng = renderengine.create_instance(glsl_version_to_use)
             else:
                 # XXX otherwise everything breaks on Windows (see docs on this method)
                 render_eng.reset_for_display_mode_change(new_surface)
+
+            # If the display's size changed (e.g. due to fullscreen state changing), gotta update the render engine.
+            render_eng.resize(*new_surface.get_size(), px_scale=calc_pixel_scale(new_surface.get_size()))
 
     def set_caption(self, title):
         if title != self._caption:

@@ -84,7 +84,7 @@ class _GameLoop:
         for layer in self._game.get_layers():
             renderengine.get_instance().add_layer(layer)
 
-        px_scale = self._calc_pixel_scale(window.get_instance().get_display_size())
+        px_scale = window.calc_pixel_scale(window.get_instance().get_display_size())
         render_eng.set_pixel_scale(px_scale)
 
         self._game.initialize()
@@ -95,34 +95,6 @@ class _GameLoop:
         if configs.allow_fullscreen:
             keybinds.get_instance().set_global_action(pygame.K_F4, "fullscreen",
                                                       lambda: self._request_fullscreen_toggle())
-
-    def _calc_pixel_scale(self, screen_size):
-        if configs.auto_resize_pixel_scale:
-            screen_w, screen_h = screen_size
-            optimal_w = configs.optimal_window_size[0]
-            optimal_h = configs.optimal_window_size[1]
-
-            optimal_scale = configs.optimal_pixel_scale
-            min_scale = configs.minimum_auto_pixel_scale
-            max_scale = min(int(screen_w / optimal_w * optimal_scale + 1), int(screen_h / optimal_h * optimal_scale + 1))
-
-            # when the screen is large enough to fit this quantity of (minimal) screens at a
-            # particular scaling setting, that scale is considered good enough to switch to.
-            # we choose the largest (AKA most zoomed in) "good" scale.
-            step_up_x_ratio = 1.0
-            step_up_y_ratio = 1.0
-
-            best = min_scale
-            for i in range(min_scale, max_scale + 1):
-                if (optimal_w / optimal_scale * i * step_up_x_ratio <= screen_w
-                        and optimal_h / optimal_scale * i * step_up_y_ratio <= screen_h):
-                    best = i
-                else:
-                    break
-
-            return best
-        else:
-            return configs.optimal_pixel_scale
 
     def _toggle_profiling(self):
         # used to help find performance bottlenecks
@@ -180,7 +152,7 @@ class _GameLoop:
                 win.set_fullscreen(not win.is_fullscreen())
 
                 new_size = win.get_display_size()
-                new_pixel_scale = self._calc_pixel_scale(new_size)
+                new_pixel_scale = window.calc_pixel_scale(new_size)
                 if new_pixel_scale != renderengine.get_instance().get_pixel_scale():
                     renderengine.get_instance().set_pixel_scale(new_pixel_scale)
                 renderengine.get_instance().resize(new_size[0], new_size[1], px_scale=new_pixel_scale)
@@ -199,7 +171,7 @@ class _GameLoop:
                 window.get_instance().set_window_size(last_resize_event.w, last_resize_event.h)
 
                 display_w, display_h = window.get_instance().get_display_size()
-                new_pixel_scale = self._calc_pixel_scale((last_resize_event.w, last_resize_event.h))
+                new_pixel_scale = window.calc_pixel_scale((last_resize_event.w, last_resize_event.h))
 
                 renderengine.get_instance().resize(display_w, display_h, px_scale=new_pixel_scale)
 
