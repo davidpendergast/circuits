@@ -150,16 +150,26 @@ class MainMenuScene(scenes.Scene):
                                                                scale=1, color=colors.PERFECT_BLACK, depth=-10)
         self._option_pane_border.update(new_rect=options_bg_rect)
 
+        version_text = "v" + configs.version
+
+        import src.engine.window as window
+        if not window.get_instance().is_opengl_mode():
+            version_text += "\n(compatibility mode)"
+
         if self._version_text_sprite is None:
             self._version_text_sprite = sprites.TextSprite(spriteref.UI_FG_LAYER, 0, 0,
-                                                           "v" + configs.version,
+                                                           version_text,
                                                            color=colors.LIGHT_GRAY,
-                                                           font_lookup=spritesheets.get_default_font(mono=False, small=True))
+                                                           font_lookup=spritesheets.get_default_font(mono=False, small=True),
+                                                           alignment=sprites.TextSprite.RIGHT)
         version_text_rect = self._version_text_sprite.get_rect()
-        self._version_text_sprite.update(new_x=total_size[0] - version_text_rect[2],
-                                         new_y=total_size[1] - version_text_rect[3])
+        self._version_text_sprite.update(
+            new_text=version_text,
+            new_x=total_size[0] - version_text_rect[2],
+            new_y=total_size[1] - version_text_rect[3])
         if self._version_text_bg is None:
             self._version_text_bg = sprites.ImageSprite(spritesheets.get_white_square_img(opacity=0.5), 0, 0, spriteref.UI_BG_LAYER)
+        version_text_rect = self._version_text_sprite.get_rect()
         self._version_text_bg = self._version_text_bg.update(new_x=version_text_rect[0],
                                                              new_y=version_text_rect[1],
                                                              new_color=colors.PERFECT_BLACK,
@@ -515,7 +525,7 @@ class CreditsScene(scenes.Scene):
 
 class OptionSelectScene(scenes.Scene):
 
-    def __init__(self, title=None, opts_per_page=6):
+    def __init__(self, title=None, opts_per_page=6, vert_spacing=32):
         scenes.Scene.__init__(self)
         self.title_text = title
         self.title_sprite = None
@@ -528,7 +538,7 @@ class OptionSelectScene(scenes.Scene):
         self.desc_alignment = sprites.TextSprite.LEFT
         self.desc_wrap = True
 
-        self.vert_spacing = 32
+        self.vert_spacing = vert_spacing
 
         self.option_pages = ui.MultiPageOptionsList(opts_per_page=opts_per_page)
 
@@ -1811,7 +1821,7 @@ class GamePausedScene(OptionSelectScene):
 class StatsScene(OptionSelectScene):
 
     def __init__(self, overworld_state: overworld.OverworldState, next_scene, title="Stats"):
-        super().__init__(title=title)
+        super().__init__(title=title, vert_spacing=24)
         if overworld_state is None:
             overworld_scene = _make_overworlds_scene()  # XXX eesh
             overworld_state = overworld_scene.state

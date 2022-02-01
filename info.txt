@@ -1,11 +1,13 @@
+
 RESYNC
 ======
+
 
 Overview
 --------
 
-Resync is a puzzle-platformer where you sequentially
-control multiple characters per level. 
+Resync is a puzzle-platformer where you sequentially control 
+multiple characters per level. 
 
 
 Features
@@ -35,6 +37,19 @@ Toggle Music: M
 Toggle Fullscreen: F4
 Pause/Exit: Escape
 Navigate Menus: WASD, Arrow Keys, Enter, Click, and/or Escape
+
+
+Advanced Controls
+-----------------
+
+Toggle FPS Display:              F3  (appears in window's title bar)
+Toggle Compatibiliy Mode*:       F6  (see description below)
+
+*Compatibility mode will cause the game to be rendered without the GPU or OpenGL.
+The performance will be worse but it should allow the game to work on systems it
+otherwise wouldn't. The game will automatically switch to this mode on startup if
+it fails to create an OpenGL context (if this occurs, the main menu will have a 
+solid black background instead of the 3D ship and say "compatibility mode").
 
 
 Credits

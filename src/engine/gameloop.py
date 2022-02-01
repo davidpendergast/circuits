@@ -43,13 +43,22 @@ class _GameLoop:
         window_icon.set_colorkey((255, 0, 0))
 
         print("INFO: creating window...")
-        window.create_instance(window_size=configs.default_window_size, min_size=configs.minimum_window_size)
+        window.create_instance(window_size=configs.default_window_size,
+                               min_size=configs.minimum_window_size,
+                               opengl_mode=not configs.start_in_compat_mode)
         window.get_instance().set_caption(configs.name_of_game)
         window.get_instance().set_icon(window_icon)
         window.get_instance().show()
 
-        print("INFO: creating render engine")
-        render_eng = renderengine.create_instance()
+        glsl_version_to_use = None
+        if window.get_instance().is_opengl_mode():
+            # make sure we can actually support OpenGL
+            glsl_version_to_use = renderengine.check_system_glsl_version(or_else_throw=False)
+            if glsl_version_to_use is None:
+                window.get_instance().set_opengl_mode(False)
+
+        print("INFO: creating render engine...")
+        render_eng = renderengine.create_instance(glsl_version_to_use)
         render_eng.init(*configs.default_window_size)
         render_eng.set_min_size(*configs.minimum_window_size)
 
@@ -70,10 +79,7 @@ class _GameLoop:
         # uncomment to save out the full texture atlas
         # pygame.image.save(atlas_surface, "texture_atlas.png")
 
-        texture_data = pygame.image.tostring(atlas_surface, "RGBA", 1)
-        width = atlas_surface.get_width()
-        height = atlas_surface.get_height()
-        render_eng.set_texture(texture_data, width, height)
+        render_eng.set_texture_atlas(atlas_surface)
 
         for layer in self._game.get_layers():
             renderengine.get_instance().add_layer(layer)
@@ -169,6 +175,7 @@ class _GameLoop:
             ignore_resize_events_next_tick = False
 
             if self._requested_fullscreen_toggle_this_tick:
+                # TODO I have no idea if this **** is still necessary in pygame 2+
                 win = window.get_instance()
                 win.set_fullscreen(not win.is_fullscreen())
 

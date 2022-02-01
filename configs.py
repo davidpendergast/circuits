@@ -2,7 +2,7 @@
 import os.path
 
 name_of_game = "RESYNC"
-version = "1.0.0"
+version = "1.0.1"
 userdata_subdir = "Resync"
 
 
@@ -30,6 +30,7 @@ precise_fps = False
 
 
 """ Miscellaneous """
+start_in_compat_mode = False
 do_crash_reporting = True  # whether to produce a crash file when the program exits via an exception.
 is_dev = os.path.exists(".gitignore")  # yikes
 

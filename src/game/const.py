@@ -26,6 +26,8 @@ TOGGLE_PLAYER_TYPE = "toggle_player_type"
 TEST_KEY_1 = "test_1"
 TEST_KEY_2 = "test_2"
 TEST_KEY_3 = "test_3"
+TOGGLE_COMPAT_MODE = "toggle_compat_mode"
+TOGGLE_SHOW_CAPTION_INFO = "show_caption_info"
 
 TOGGLE_EDIT_MODE = "toggle_edit_mode"
 
