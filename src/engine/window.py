@@ -183,9 +183,7 @@ class WindowState:
             self._fullscreen_size = None
             self._is_fullscreen = val
 
-            if self._is_fullscreen:
-                pygame.display.quit()
-
+            pygame.display.quit()
             self._update_display_mode()
 
     def set_opengl_mode(self, val):
