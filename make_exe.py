@@ -34,12 +34,25 @@ DATA_TO_COPY = [
 
 #### END OPTIONS ####
 
+_WINDOWS = "Windows"
+_LINUX = "Linux"
+_MAC = "Darwin"
+
+OS_SYSTEM_STR = platform.system()
+if OS_SYSTEM_STR not in (_WINDOWS, _LINUX, _MAC):
+    raise ValueError("Unrecognized operating system: {}".format(OS_SYSTEM_STR))
+
 if not ONEFILE_MODE:
     # XXX using a splash image with ONEFILE_MODE = False seems to
     # cause the exe to create a non-focused pygame window (that
     # lands behind the file browser). So I'm disabling this for now.
     # You don't really need a splash image with non-onefile anyways.
     SPLASH_IMAGE_PATH = None
+
+if OS_SYSTEM_STR == _MAC:
+    SPLASH_IMAGE_PATH = None  # doesn't work on mac
+    ONEFILE_MODE = True       # onedir doesn't really seem to work
+
 
 SPEC_CONTENTS = f"""
 # -*- mode: python ; coding: utf-8 -*-
@@ -109,7 +122,7 @@ coll = COLLECT(
     upx=True
 )
 """
-else:  # splash mode
+else:  # splash mode (note that mac + splash doesn't work)
     SPEC_CONTENTS += f"""
 splash = Splash('{SPLASH_IMAGE_PATH}',
     binaries=a.binaries,
@@ -129,12 +142,6 @@ exe = EXE(pyz,
           splash.binaries,
           [],
 {STD_EXE_OPTS})
-
-# I assume this is what mac + splash should look like, but I haven't tested it
-app = BUNDLE(exe,  
-         name='{NAME_OF_GAME}.app',
-         icon=~ICON_PATH~,
-         bundle_identifier=None)
 """
     else:
         SPEC_CONTENTS += f"""
@@ -156,11 +163,6 @@ coll = COLLECT(
     upx=True
 )
 """
-
-
-_WINDOWS = "Windows"
-_LINUX = "Linux"
-_MAC = "Darwin"
 
 
 def _ask_yes_or_no_question(question):
@@ -188,21 +190,17 @@ def _get_icon_path(os_version_str):
 
 
 def do_it():
-    os_system_str = platform.system()
-    if os_system_str not in (_WINDOWS, _LINUX, _MAC):
-        raise ValueError("Unrecognized operating system: {}".format(os_system_str))
-
-    if os_system_str == _MAC:
+    if OS_SYSTEM_STR == _MAC:
         pretty_os_str = "Mac"  # darwin is weird
     else:
-        pretty_os_str = os_system_str
+        pretty_os_str = OS_SYSTEM_STR
 
     os_bit_count_str = _calc_bit_count_str()
 
     spec_filename = "output.spec"
     print("INFO: creating spec file {}".format(spec_filename))
 
-    icon_path = _get_icon_path(os_system_str)
+    icon_path = _get_icon_path(OS_SYSTEM_STR)
     with open(spec_filename, "w") as f:
         f.write(SPEC_CONTENTS.replace("~ICON_PATH~", f"'{icon_path}'" if icon_path else "None"))
 
@@ -236,7 +234,7 @@ def do_it():
     if os.path.exists(str(spec_filename)):
         os.remove(str(spec_filename))
 
-    if os_system_str == _LINUX:
+    if OS_SYSTEM_STR == _LINUX:
         print("INFO: chmod'ing execution permissions to all users (linux)")
         exe_path = os.path.join(dist_dir_subdir, NAME_OF_GAME)
         if not os.path.exists(str(exe_path)):

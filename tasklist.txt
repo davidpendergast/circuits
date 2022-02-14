@@ -7,6 +7,7 @@ bugs:
  - starbuck5 SDL2 illegal access error
 	- just going to pray this doesn't happen in the wild
  - desync indicator can give false positives (esp with moving platforms)
+ - 1x2 D-type door block's art is off by a pixel (literally unplayable)
  
  
  
@@ -40,8 +41,7 @@ final push:
  [x] music for story levels
  [x?] set up itch page
  - acquire usable linux machine and make build
- - mac build
-	- not a super priority
+ [x] mac build
  [x] remove unused assets (songs / sounds)
  [x] write info.txt
  [x?] couple more secrets?

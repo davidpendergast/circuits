@@ -43,7 +43,7 @@ Advanced Controls
 -----------------
 
 Toggle FPS Display:              F3  (appears in window's title bar)
-Toggle Compatibiliy Mode*:       F6  (see description below)
+Toggle Compatibility Mode*:      F6  (see description below)
 
 *Compatibility mode will cause the game to be rendered without the GPU or OpenGL.
 The performance will be worse but it should allow the game to work on systems it
