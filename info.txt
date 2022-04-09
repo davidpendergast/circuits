@@ -6,8 +6,8 @@ RESYNC
 Overview
 --------
 
-Resync is a puzzle-platformer where you sequentially control 
-multiple characters per level. 
+Resync is a puzzle-platformer where you control multiple characters
+per level and alter the paths of your past selves.
 
 
 Features
@@ -56,7 +56,7 @@ Credits
 -------
 
 Art, coding, design, and concept: 
- - David Pendergast 
+ - David Pendergast (aka Ghast)
      https://twitter.com/Ghast_NEOH
      https://ghastly.itch.io
 
@@ -73,17 +73,17 @@ Sound Effects:
 Notice on Distribution
 ----------------------
 
-The **only** official place to download this game is itch.io. If you downloaded 
-this from another site, it was uploaded there without permission and is likely 
-out of date (and could have been tampered with). Please do not re-upload this 
-executable to other sites or re-distribute it by any other means.
+The **only** official sources for this game are:
+
+- The game's main page on itch.io: https://ghastly.itch.io/resync
+- The Indiepocalypse Anthology (Issue #27)
+
+If you downloaded this from another place, it was uploaded there without permission 
+and is likely out of date (and could have been tampered with). Please do not re-upload 
+this executable to other sites or re-distribute it by any other means without permission.
 
 
 Policy on Videos, Streams
 -------------------------
 
 Welcomed and encouraged! Feel free to tweet at me if you do! (@Ghast_NEOH)
-
-
-
-
