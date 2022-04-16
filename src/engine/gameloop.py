@@ -167,7 +167,6 @@ class _GameLoop:
 
             if not ignore_resize_events_this_tick and len(all_resize_events) > 0:
                 last_resize_event = all_resize_events[-1]
-
                 window.get_instance().set_window_size(last_resize_event.w, last_resize_event.h)
 
                 display_w, display_h = window.get_instance().get_display_size()
