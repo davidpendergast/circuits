@@ -171,7 +171,6 @@ class WindowState:
 
     def set_window_size(self, w, h):
         self._window_size = (w, h)
-        self._update_display_mode()
 
     def is_fullscreen(self):
         return self._is_fullscreen

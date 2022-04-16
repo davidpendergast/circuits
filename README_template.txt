@@ -1,6 +1,8 @@
 # Circuits
 A platformer about robots.
 
+This project is now [released](https://ghastly.itch.io/resync)!
+
 Here are the five most recent gifs committed:
 
 ![{file_0}](gifs/{file_0}?raw=true "{name_0}")
