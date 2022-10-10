@@ -276,6 +276,9 @@ class RenderEngine:
     def set_colors_enabled(self, val):
         raise NotImplementedError()
 
+    def set_depth_test_enabled(self, val):
+        raise NotImplementedError()
+
     def set_colors(self, data):
         raise NotImplementedError()
 
@@ -334,7 +337,6 @@ class RenderEngine:
         glEnable(GL_TEXTURE_2D)
 
         glEnable(GL_BLEND)
-
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         self.raw_texture_data = (img_data, width, height)
@@ -390,14 +392,15 @@ class RenderEngine:
 
             if layer.get_layer_id() in self.hidden_layers:
                 continue
-            
+
+            glClear(GL_DEPTH_BUFFER_BIT)
             self.render_layer(layer)
 
     def render_layer(self, layer):
         layer.render(self)
 
-    def draw_elements(self, indices):
-        glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, indices)
+    def draw_elements(self, indices, n=None):
+        glDrawElements(GL_TRIANGLES, n if n is not None else len(indices), GL_UNSIGNED_INT, indices)
 
     def cleanup(self):
         self.shader.end()
@@ -600,6 +603,12 @@ class RenderEngine130(RenderEngine):
         else:
             glDisableVertexAttribArray(self._color_attrib_loc)
         printOpenGLError()
+
+    def set_depth_test_enabled(self, val):
+        if val:
+            glEnable(GL_DEPTH_TEST)
+        else:
+            glDisable(GL_DEPTH_TEST)
 
     def set_colors(self, data):
         glVertexAttribPointer(self._color_attrib_loc, 3, GL_FLOAT, GL_FALSE, 0, data)

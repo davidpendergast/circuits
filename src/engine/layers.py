@@ -106,11 +106,12 @@ class ImageLayer(_Layer):
 
         self._last_known_last_modified_ticks = {}  # image id -> int
 
-        # these are the pointers the layer passes to gl
+        # these are the arrays the layer passes to gl
         self.vertices = numpy.array([], dtype=float)
         self.tex_coords = numpy.array([], dtype=float)
         self.indices = numpy.array([], dtype=float)
         self.colors = numpy.array([], dtype=float) if use_color else None
+        self._array_capacity = 0
 
         self._dirty_sprites = []
         self._to_remove = []
@@ -153,18 +154,22 @@ class ImageLayer(_Layer):
         return 4 * 3
 
     def populate_data_arrays(self, sprite_info_lookup):
-        n_sprites = len(self.images)
+        capacity_needed = self.get_num_sprites()
+        old_capacity = self._array_capacity
+        if 0 < capacity_needed <= old_capacity // 4:
+            self._array_capacity = capacity_needed
+        else:
+            self._array_capacity = max(util.next_power_of_2(capacity_needed), old_capacity)
 
-        # need refcheck to be false or else Pycharm's debugger can cause this to fail (due to holding a ref)
-        self.vertices.resize(self.vertex_stride() * n_sprites, refcheck=False)
-        self.tex_coords.resize(self.texture_stride() * n_sprites, refcheck=False)
-        self.indices.resize(self.index_stride() * n_sprites, refcheck=False)
-        if self.is_color():
-            self.colors.resize(self.color_stride() * n_sprites, refcheck=False)
+        if self._array_capacity != old_capacity:
+            # need refcheck=False or else Pycharm's debugger can cause this to fail (due to holding a ref?)
+            self.vertices.resize(self.vertex_stride() * self._array_capacity, refcheck=False)
+            self.tex_coords.resize(self.texture_stride() * self._array_capacity, refcheck=False)
+            self.indices.resize(self.index_stride() * self._array_capacity, refcheck=False)
+            if self.is_color():
+                self.colors.resize(self.color_stride() * self._array_capacity, refcheck=False)
 
-        # TODO - we only need to iterate over dirty indices here
-        # TODO - even better, can we numpyify this whole thing?
-        for i in range(0, n_sprites):
+        for i in range(0, capacity_needed):
             sprite = sprite_info_lookup[self.images[i]].sprite
             sprite.add_urself(
                 i,
@@ -193,7 +198,9 @@ class ImageLayer(_Layer):
         self._dirty_sprites.clear()
 
         if self.is_sorted():
-            self.images.sort(key=lambda x: -sprite_info_lookup[x].sprite.depth())
+            import random
+            random.shuffle(self.images)
+            # self.images.sort(key=lambda x: -sprite_info_lookup[x].sprite.depth())
 
         self.populate_data_arrays(sprite_info_lookup)
 
@@ -220,6 +227,7 @@ class ImageLayer(_Layer):
         engine.set_texture_coords_enabled(enable)
         if self.is_color():
             engine.set_colors_enabled(enable)
+        engine.set_depth_test_enabled(enable)
 
     def _pass_attributes(self, engine):
         engine.set_vertices(self.vertices)
@@ -228,7 +236,7 @@ class ImageLayer(_Layer):
             engine.set_colors(self.colors)
 
     def _draw_elements(self, engine):
-        engine.draw_elements(self.indices)
+        engine.draw_elements(self.indices, n=self.get_num_sprites() * self.index_stride())
 
     def __contains__(self, uid):
         return uid in self._image_set
