@@ -50,6 +50,9 @@ class AbstractSprite:
     def all_sprites_nullable(self):
         yield
 
+    def is_translucent(self):
+        return False
+
     def all_sprites(self):
         for spr in self.all_sprites_nullable():
             if spr is not None:
@@ -116,7 +119,7 @@ class TriangleSprite(AbstractSprite):
         p2 = self.p2()
         p3 = self.p3()
 
-        z = self.depth() / 1000000
+        z = self.depth() / 1000
 
         vertices[i * 9 + 0] = p1[0]
         vertices[i * 9 + 1] = p1[1]
@@ -264,6 +267,10 @@ class ImageSprite(AbstractSprite):
     def ratio(self):
         return self._ratio
 
+    def is_translucent(self):
+        mod = self.model()
+        return False if mod is None else mod.is_translucent()
+
     def raw_size(self):
         return self._raw_size
         
@@ -291,7 +298,8 @@ class ImageSprite(AbstractSprite):
             w = h
             h = temp_w
 
-        z = self.depth() / 1000000
+        # some places are irresponsibly using depths like -5000
+        z = (self.depth() + 5000) / 10000
 
         vertices[i*12 + 0] = x
         vertices[i*12 + 1] = y
@@ -367,7 +375,7 @@ def _get_next_model_uid():
 
 class ImageModel:
 
-    def __init__(self, x, y, w, h, offset=(0, 0), texture_size=None):
+    def __init__(self, x, y, w, h, offset=(0, 0), translucent=False, texture_size=None):
         # sheet coords, origin top left corner
         self.x = x + offset[0]
         self.y = y + offset[1]
@@ -385,6 +393,8 @@ class ImageModel:
         self.tx2 = self.x + self.w
         self.ty2 = tex_size[1] - self.y
 
+        self.translucent = translucent
+
         self._uid = _get_next_model_uid()
         
     def rect(self):
@@ -398,6 +408,9 @@ class ImageModel:
         
     def height(self):
         return self.h
+
+    def is_translucent(self):
+        return self.translucent
 
     def uid(self):
         return self._uid

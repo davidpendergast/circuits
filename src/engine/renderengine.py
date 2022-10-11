@@ -279,6 +279,12 @@ class RenderEngine:
     def set_depth_test_enabled(self, val):
         raise NotImplementedError()
 
+    def set_depth_write_enabled(self, val):
+        raise NotImplementedError()
+
+    def set_alpha_test_enabled(self, val):
+        raise NotImplementedError()
+
     def set_colors(self, data):
         raise NotImplementedError()
 
@@ -609,6 +615,17 @@ class RenderEngine130(RenderEngine):
             glEnable(GL_DEPTH_TEST)
         else:
             glDisable(GL_DEPTH_TEST)
+
+    def set_depth_write_enabled(self, val):
+        glDepthMask(GL_TRUE if val else GL_FALSE)
+
+    def set_alpha_test_enabled(self, val, thresh=0.0):
+        if val:
+            glAlphaFunc(GL_GREATER, thresh)
+            glEnable(GL_ALPHA_TEST)
+        else:
+            glAlphaFunc(GL_ALWAYS, 0.0)
+            glDisable(GL_ALPHA_TEST)
 
     def set_colors(self, data):
         glVertexAttribPointer(self._color_attrib_loc, 3, GL_FLOAT, GL_FALSE, 0, data)

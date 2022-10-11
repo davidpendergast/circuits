@@ -38,8 +38,8 @@ def all_3d_layers():
     yield THREEDEE_LAYER
 
 
-def _img(x, y, w, h, offs=(0, 0)):
-    return sprites.ImageModel(x, y, w, h, offset=offs)
+def _img(x, y, w, h, offs=(0, 0), trans=False):
+    return sprites.ImageModel(x, y, w, h, offset=offs, translucent=trans)
 
 
 def get_color(color_id, dark=False):
@@ -462,7 +462,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
         for i in range(0, n):
             dest_rect = self._next_extra_space_rect((base_rect[2], base_rect[3]))
             artutils.draw_with_transparency(src_sheet, base_rect, atlas, dest_rect, (i + 1) / n)
-            result_models.append(_img(dest_rect[0], dest_rect[1], dest_rect[2], dest_rect[3]))
+            result_models.append(_img(dest_rect[0], dest_rect[1], dest_rect[2], dest_rect[3], trans=True))
         return result_models
 
     def _handle_rotated_player_pieces(self, base_rect, n_pieces, n_rots, atlas, start_pos):
@@ -488,7 +488,7 @@ class _ObjectSheet(spritesheets.SpriteSheet):
             return (rect[0], rect[1])
         raw_rects = artutils.draw_vertical_line_phasing_animation(atlas, base_rect, n_frames, atlas, get_pos,
                                                                   min_fade_dur=10, rand_seed=12345, fade_out=fade_out)
-        return [_img(r[0], r[1], r[2], r[3]) for r in raw_rects]  # start_pos offset is already baked in
+        return [_img(r[0], r[1], r[2], r[3], trans=True) for r in raw_rects]  # start_pos offset is already baked in
 
 
 class _PlayerCSheet(spritesheets.SpriteSheet):
@@ -952,9 +952,9 @@ class _StarSheet(spritesheets.SpriteSheet):
             table = {"small": [],
                      "large": []}
             for r in small_rects:
-                table["small"].append(_img(r[0], r[1] + y, r[2], r[3], offs=start_pos))
+                table["small"].append(_img(r[0], r[1] + y, r[2], r[3], offs=start_pos, trans=True))
             for r in large_rects:
-                table["large"].append(_img(r[0], r[1] + y, r[2], r[3], offs=start_pos))
+                table["large"].append(_img(r[0], r[1] + y, r[2], r[3], offs=start_pos, trans=True))
             self.stars.append(table)
         self.stars.reverse()
 

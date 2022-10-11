@@ -51,6 +51,10 @@ class ThreeDeeLayer(layers.ImageLayer):
         super().__init__(layer_id, layer_z, sort_sprites=False, use_color=False)
         self.camera = Camera3D()
 
+        self.vertices = numpy.array([], dtype=float)
+        self.tex_coords = numpy.array([], dtype=float)
+        self.indices = numpy.array([], dtype=float)
+
     def set_camera(self, cam):
         self.camera = cam.get_snapshot()
 
@@ -82,7 +86,7 @@ class ThreeDeeLayer(layers.ImageLayer):
             model = model_ids_to_sprites[model_id][0].model()
             self._pass_attributes_for_model(engine, model)
 
-            # draw each sprite with that model, using the same data data, but different uniforms
+            # draw each sprite with that model, using the same data, but different uniforms
             for spr_3d in model_ids_to_sprites[model_id]:
                 self._set_uniforms_for_sprite(engine, spr_3d)
                 glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, self.indices)

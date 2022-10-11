@@ -93,6 +93,65 @@ class _Layer:
         return self.get_num_sprites()
 
 
+class ImageDataArray:
+
+    def __init__(self, parent: 'ImageLayer', min_capacity=256):
+        self._parent_layer = parent
+        self._array_capacity = 0
+        self._min_capacity = min_capacity
+        self._size = 0
+
+        self.vertices = numpy.array([], dtype=float)
+        self.tex_coords = numpy.array([], dtype=float)
+        self.indices = numpy.array([], dtype=float)
+        self.colors = numpy.array([], dtype=float) if parent.is_color() else None
+
+    def __len__(self):
+        return self._size
+
+    def _ensure_capacity(self, n):
+        self._size = n
+
+        cur_capacity = self._array_capacity
+        capacity = util.next_power_of_2(n)
+
+        if capacity == cur_capacity:
+            return  # already correct size
+        elif capacity <= self._min_capacity and cur_capacity == self._min_capacity:
+            return  # not allowed to shrink smaller
+        if cur_capacity // 4 < capacity < cur_capacity:
+            # don't shrink until we're only using 25% of array (want to prevent repeatedly
+            # shrinking & growing if we're near the border of two thresholds).
+            return
+
+        # pycharm's debugger likes to hold refs to these in debug mode~
+        self.vertices.resize(capacity * self._parent_layer.vertex_stride(), refcheck=False)
+        self.tex_coords.resize(capacity * self._parent_layer.texture_stride(), refcheck=False)
+        self.indices.resize(capacity * self._parent_layer.index_stride(), refcheck=False)
+        if self.colors is not None:
+            self.colors.resize(capacity * self._parent_layer.color_stride(), refcheck=False)
+
+        self._array_capacity = capacity
+
+    def update(self, spr_list):
+        self._size = len(spr_list)
+        self._ensure_capacity(self._size)
+        for i, spr in enumerate(spr_list):
+            spr.add_urself(
+                i,
+                self.vertices,
+                self.tex_coords,
+                self.colors,
+                self.indices)
+
+    def pass_attributes_and_draw(self, engine):
+        engine.set_vertices(self.vertices)
+        engine.set_texture_coords(self.tex_coords)
+        if self.colors is not None:
+            engine.set_colors(self.colors)
+        engine.draw_elements(self.indices, n=self._size * self._parent_layer.index_stride())
+
+
 class ImageLayer(_Layer):
     """
         Layer for ImageSprites.
@@ -106,12 +165,8 @@ class ImageLayer(_Layer):
 
         self._last_known_last_modified_ticks = {}  # image id -> int
 
-        # these are the arrays the layer passes to gl
-        self.vertices = numpy.array([], dtype=float)
-        self.tex_coords = numpy.array([], dtype=float)
-        self.indices = numpy.array([], dtype=float)
-        self.colors = numpy.array([], dtype=float) if use_color else None
-        self._array_capacity = 0
+        self.opaque_data_arrays = ImageDataArray(self)
+        self.trans_data_arrays = ImageDataArray(self)
 
         self._dirty_sprites = []
         self._to_remove = []
@@ -154,29 +209,14 @@ class ImageLayer(_Layer):
         return 4 * 3
 
     def populate_data_arrays(self, sprite_info_lookup):
-        capacity_needed = self.get_num_sprites()
-        old_capacity = self._array_capacity
-        if 0 < capacity_needed <= old_capacity // 4:
-            self._array_capacity = capacity_needed
-        else:
-            self._array_capacity = max(util.next_power_of_2(capacity_needed), old_capacity)
+        opaques, trans = util.partition((sprite_info_lookup[idx].sprite for idx in self.images),
+                                        lambda spr: not spr.is_translucent())
+        # order doesn't matter for opaque sprites
+        self.opaque_data_arrays.update(opaques)
 
-        if self._array_capacity != old_capacity:
-            # need refcheck=False or else Pycharm's debugger can cause this to fail (due to holding a ref?)
-            self.vertices.resize(self.vertex_stride() * self._array_capacity, refcheck=False)
-            self.tex_coords.resize(self.texture_stride() * self._array_capacity, refcheck=False)
-            self.indices.resize(self.index_stride() * self._array_capacity, refcheck=False)
-            if self.is_color():
-                self.colors.resize(self.color_stride() * self._array_capacity, refcheck=False)
-
-        for i in range(0, capacity_needed):
-            sprite = sprite_info_lookup[self.images[i]].sprite
-            sprite.add_urself(
-                i,
-                self.vertices,
-                self.tex_coords,
-                self.colors,
-                self.indices)
+        # translucent sprites must be sorted for proper rendering
+        trans.sort(key=lambda spr: -spr.depth())
+        self.trans_data_arrays.update(trans)
 
     def rebuild(self, sprite_info_lookup):
         if len(self._to_remove) > 0:
@@ -200,7 +240,6 @@ class ImageLayer(_Layer):
         if self.is_sorted():
             import random
             random.shuffle(self.images)
-            # self.images.sort(key=lambda x: -sprite_info_lookup[x].sprite.depth())
 
         self.populate_data_arrays(sprite_info_lookup)
 
@@ -209,15 +248,22 @@ class ImageLayer(_Layer):
             # split up like this to make it easier to find performance bottlenecks
             self.set_client_states(True, engine)
             self._set_uniforms(engine)
-            self._pass_attributes(engine)
-            self._draw_elements(engine)
+
+            self.opaque_data_arrays.pass_attributes_and_draw(engine)
+
+            engine.set_depth_write_enabled(False)
+            self.trans_data_arrays.pass_attributes_and_draw(engine)
+            engine.set_depth_write_enabled(True)
+
             self.set_client_states(False, engine)
         else:
             # compatibility mode
             engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
-            for i in range(0, len(self.images)):
-                sprite = engine.sprite_info_lookup[self.images[i]].sprite
-                engine.blit_sprite(sprite)
+
+            all_sprites = [engine.sprite_info_lookup[spr_id].sprite for spr_id in self.images]
+            all_sprites.sort(key=lambda spr: -spr.depth())
+            for spr in all_sprites:
+                engine.blit_sprite(spr)
 
     def _set_uniforms(self, engine):
         engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
@@ -227,13 +273,8 @@ class ImageLayer(_Layer):
         engine.set_texture_coords_enabled(enable)
         if self.is_color():
             engine.set_colors_enabled(enable)
+        engine.set_alpha_test_enabled(enable)
         engine.set_depth_test_enabled(enable)
-
-    def _pass_attributes(self, engine):
-        engine.set_vertices(self.vertices)
-        engine.set_texture_coords(self.tex_coords)
-        if self.is_color():
-            engine.set_colors(self.colors)
 
     def _draw_elements(self, engine):
         engine.draw_elements(self.indices, n=self.get_num_sprites() * self.index_stride())

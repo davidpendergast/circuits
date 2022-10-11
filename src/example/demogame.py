@@ -33,7 +33,7 @@ class DemoSheet(spritesheets.SpriteSheet):
         self.tv_models = [sprites.ImageModel(32 + 16 * i, 0, 16, 32, offset=start_pos) for i in range(0, 2)]
         self.floor_model = sprites.ImageModel(64, 16, 16, 16, offset=start_pos)
         self.wall_model = sprites.ImageModel(80, 16, 16, 16, offset=start_pos)
-        self.shadow_model = sprites.ImageModel(64, 0, 16, 16, offset=start_pos)
+        self.shadow_model = sprites.ImageModel(64, 0, 16, 16, offset=start_pos, translucent=True)
 
         self.border_models = []
         for y in range(0, 3):

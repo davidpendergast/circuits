@@ -193,7 +193,8 @@ class WhiteSquare(SpriteSheet):
                     WhiteSquare._SIZE[1]]
             alpha = int(255 * (1 - i / (WhiteSquare._OPACITY_LEVELS - 1)))
             pygame.draw.rect(atlas, (255, 255, 255, alpha), rect)
-            self.white_boxes.append(sprites.ImageModel(rect[0], rect[1], rect[2], rect[3]))
+            self.white_boxes.append(sprites.ImageModel(rect[0], rect[1], rect[2], rect[3],
+                                                       translucent=0 < alpha < 255))
 
 
 def get_white_square_img(opacity=1.0):
@@ -202,9 +203,10 @@ def get_white_square_img(opacity=1.0):
 
 class SingleImageSheet(SpriteSheet):
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, translucent=False):
         SpriteSheet.__init__(self, filepath, filepath)
         self._img = None
+        self._translucent = translucent
 
     def get_size(self, img_size):
         return img_size
@@ -215,7 +217,8 @@ class SingleImageSheet(SpriteSheet):
     def draw_to_atlas(self, atlas, sheet, start_pos=(0, 0)):
         super().draw_to_atlas(atlas, sheet, start_pos=start_pos)
 
-        self._img = sprites.ImageModel(0, 0, sheet.get_width(), sheet.get_height(), offset=start_pos)
+        self._img = sprites.ImageModel(0, 0, sheet.get_width(), sheet.get_height(),
+                                       offset=start_pos, translucent=self._translucent)
 
 
 _SINGLETON = None

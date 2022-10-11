@@ -589,6 +589,17 @@ def index_into(l, val, wrap=False):
     return l[int(val * len(l))]
 
 
+def partition(l, cond):
+    l_true = []
+    l_false = []
+    for item in l:
+        if cond(item):
+            l_true.append(item)
+        else:
+            l_false.append(item)
+    return l_true, l_false
+
+
 def min_component(v_list, i):
     res = None
     for v in v_list:
