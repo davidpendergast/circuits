@@ -133,10 +133,11 @@ class ImageDataArray:
                 self.indices)
 
     def pass_attributes_and_draw(self, engine):
-        engine.set_vertices(self.vertices)
-        engine.set_texture_coords(self.tex_coords)
-        engine.set_colors(self.colors)
-        engine.draw_elements(self.indices, n=self._size * self._parent_layer.index_stride())
+        if len(self) > 0:
+            engine.set_vertices(self.vertices)
+            engine.set_texture_coords(self.tex_coords)
+            engine.set_colors(self.colors)
+            engine.draw_elements(self.indices, n=self._size * self._parent_layer.index_stride())
 
 
 class ImageLayer(_Layer):
@@ -202,7 +203,6 @@ class ImageLayer(_Layer):
         return 4 * 3
 
     def populate_data_arrays(self, opaque_ids, translucent_ids, sprite_info_lookup, first_dirty_opaque_idx=0):
-        # order doesn't matter for opaque sprites
         opaques = [sprite_info_lookup[spr_id].sprite for spr_id in opaque_ids]
         self.opaque_data_arrays.update(opaques, start_idx=first_dirty_opaque_idx)
 
@@ -236,8 +236,8 @@ class ImageLayer(_Layer):
         self._to_add.clear()
 
         super_clean_sprites = self.opaque_images[0:first_dirty_idx]
-        dirty_opaque_sprites = []
         clean_opaque_sprites = []
+        dirty_opaque_sprites = []
         for i in range(first_dirty_idx, len(self.opaque_images)):
             spr_id = self.opaque_images[i]
             if spr_id not in self._dirty_sprites:
@@ -249,9 +249,9 @@ class ImageLayer(_Layer):
                 dirty_opaque_sprites.append(spr_id)
         self._dirty_sprites.clear()
 
-        # This is the point of all the convoluted logic above. We essentially want the static (aka 'super clean')
-        # sprites to percolate towards the beginning of the list so that we can skip over them when updating the
-        # data arrays. This way large number of static sprites can be kept in layers almost for free.
+        # This is the point of the convoluted logic above. We essentially want the static (aka 'super clean') sprites
+        # to percolate towards the beginning of the list so that we can skip them when updating the data arrays.
+        # This way, highly static sprites can be kept in layers almost for free.
         self.opaque_images = super_clean_sprites + clean_opaque_sprites + dirty_opaque_sprites + new_opaque_sprites
         self._first_dirty_idx = len(self.opaque_images)
 
@@ -263,11 +263,10 @@ class ImageLayer(_Layer):
         self.populate_data_arrays(self.opaque_images, self.trans_images, sprite_info_lookup,
                                   first_dirty_opaque_idx=first_dirty_idx)
 
-        # if self.get_num_sprites() > 100:
-        #     print(f"INFO: Rebuilt {self.get_num_sprites()} sprites with a no-op rate of: "
-        #           f"{(first_dirty_idx + 1) / len(self.opaque_images)}")
-
     def render(self, engine):
+        if self.get_num_sprites() == 0:
+            return  # nothing to render
+
         engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
 
         if engine.is_opengl():

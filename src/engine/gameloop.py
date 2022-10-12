@@ -177,13 +177,8 @@ class _GameLoop:
             input_state.update()
             sounds.update()
 
-            # updates the actual game state
-            still_running = self._game.update()
+            running &= self._game.update()
 
-            if still_running is False:
-                running = False
-
-            # draws the actual game state
             for spr in self._game.all_sprites():
                 if spr is not None:
                     renderengine.get_instance().update(spr)
@@ -196,8 +191,7 @@ class _GameLoop:
             slo_mo_mode = configs.is_dev and input_state.is_held(pygame.K_TAB)
             target_fps = configs.target_fps if not slo_mo_mode else configs.target_fps // 4
 
-            self._wait_until_next_frame(target_fps)
-
+            self._clock.tick(target_fps)
             globaltimer.inc_tick_count()
 
             if globaltimer.get_show_fps():
@@ -218,12 +212,6 @@ class _GameLoop:
 
         print("INFO: quitting game")
         pygame.quit()
-
-    def _wait_until_next_frame(self, target_fps):
-        if configs.precise_fps:
-            self._clock.tick_busy_loop(target_fps)
-        else:
-            self._clock.tick(target_fps)
 
 
 
