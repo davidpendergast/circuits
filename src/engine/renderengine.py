@@ -376,8 +376,10 @@ class RenderEngine:
             else:
                 raise ValueError("Incompatible sprite type: {}".format(sprite.sprite_type()))
 
-    def clear_screen(self):
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    def clear_screen(self, color=True, depth=True):
+        m = (color and GL_COLOR_BUFFER_BIT) | (depth and GL_DEPTH_BUFFER_BIT)
+        if m:
+            glClear(m)
 
     def render_layers(self):
         self.clear_screen()
@@ -399,7 +401,7 @@ class RenderEngine:
             if layer.get_layer_id() in self.hidden_layers:
                 continue
 
-            glClear(GL_DEPTH_BUFFER_BIT)
+            self.clear_screen(color=False, depth=True)
             self.render_layer(layer)
 
     def render_layer(self, layer):
@@ -826,6 +828,7 @@ class PurePygameRenderEngine(RenderEngine):
             temp = pygame.transform.scale(self.camera_surface, display_surf.get_size())
             display_surf.blit(temp, (0, 0), temp.get_rect(), pygame.BLEND_PREMULTIPLIED)
 
-    def clear_screen(self):
-        self._get_drawing_surface().fill(self.clear_color)
+    def clear_screen(self, color=True, depth=True):
+        if color:
+            self._get_drawing_surface().fill(self.clear_color)
 

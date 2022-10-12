@@ -84,7 +84,7 @@ class _Layer:
 
 class ImageDataArray:
 
-    def __init__(self, parent: 'ImageLayer', min_capacity=256):
+    def __init__(self, parent: 'ImageLayer', min_capacity=8):
         self._parent_layer = parent
         self._array_capacity = 0
         self._min_capacity = min_capacity
@@ -94,6 +94,8 @@ class ImageDataArray:
         self.tex_coords = numpy.array([], dtype=float)
         self.indices = numpy.array([], dtype=float)
         self.colors = numpy.array([], dtype=float)
+
+        self._ensure_capacity(self._min_capacity)
 
     def __len__(self):
         return self._size
