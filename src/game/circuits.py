@@ -152,17 +152,17 @@ class CircuitsGame(game.Game):
 
     def get_layers(self):
         yield threedee.ThreeDeeLayer(spriteref.THREEDEE_LAYER, 1)
-        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 3, sort_sprites=True)
+        yield layers.PolygonLayer(spriteref.POLYGON_LAYER, 3)
 
-        yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5, sort_sprites=True, use_color=True)
-        yield layers.ImageLayer(spriteref.ENTITY_LAYER, 10, sort_sprites=True, use_color=True)
-        yield layers.ImageLayer(spriteref.WORLD_UI_LAYER, 12, sort_sprites=True, use_color=True)
+        yield layers.ImageLayer(spriteref.BLOCK_LAYER, 5)
+        yield layers.ImageLayer(spriteref.ENTITY_LAYER, 10)
+        yield layers.ImageLayer(spriteref.WORLD_UI_LAYER, 12)
 
-        yield layers.PolygonLayer(spriteref.POLYGON_UI_BG_LAYER, 15, sort_sprites=True)
-        yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19, sort_sprites=True, use_color=True)
-        yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20, sort_sprites=True, use_color=True)
-        yield layers.PolygonLayer(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER, 10000, sort_sprites=True)
-        yield layers.ImageLayer(spriteref.ULTRA_OMEGA_GAMMA_TOP_IMAGE_LAYER, 10005, sort_sprites=True)
+        yield layers.PolygonLayer(spriteref.POLYGON_UI_BG_LAYER, 15)
+        yield layers.ImageLayer(spriteref.UI_BG_LAYER, 19)
+        yield layers.ImageLayer(spriteref.UI_FG_LAYER, 20)
+        yield layers.PolygonLayer(spriteref.POLYGON_ULTRA_OMEGA_TOP_LAYER, 10000)
+        yield layers.ImageLayer(spriteref.ULTRA_OMEGA_GAMMA_TOP_IMAGE_LAYER, 10005)
 
     def update(self):
         self._handle_global_keybinds()

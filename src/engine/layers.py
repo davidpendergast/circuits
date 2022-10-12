@@ -13,18 +13,13 @@ def assert_int(val):
 
 class _Layer:
 
-    def __init__(self, layer_id, layer_height, sort_sprites=True, use_color=True):
+    def __init__(self, layer_id, layer_height):
         """
             layer_id: The string identifier for this layer.
             layer_z: The z-depth of this layer, in relation to other layers in the engine. Higher z = on top.
-            sort_sprites: Whether the sprites in this layer should be sorted by their depth.
-            use_color: Whether this layer should use the color information in its sprites.
         """
         self._layer_id = layer_id
         self._layer_z = layer_height
-
-        self._sort_sprites = sort_sprites
-        self._use_color = use_color
 
         self._offset = (0, 0)
         self._scale = 1
@@ -43,12 +38,6 @@ class _Layer:
 
     def get_offset(self):
         return self._offset
-
-    def is_sorted(self):
-        return self._sort_sprites
-
-    def is_color(self):
-        return self._use_color
 
     def accepts_sprite_type(self, sprite_type):
         raise NotImplementedError()
@@ -104,7 +93,7 @@ class ImageDataArray:
         self.vertices = numpy.array([], dtype=float)
         self.tex_coords = numpy.array([], dtype=float)
         self.indices = numpy.array([], dtype=float)
-        self.colors = numpy.array([], dtype=float) if parent.is_color() else None
+        self.colors = numpy.array([], dtype=float)
 
     def __len__(self):
         return self._size
@@ -128,17 +117,16 @@ class ImageDataArray:
         self.vertices.resize(capacity * self._parent_layer.vertex_stride(), refcheck=False)
         self.tex_coords.resize(capacity * self._parent_layer.texture_stride(), refcheck=False)
         self.indices.resize(capacity * self._parent_layer.index_stride(), refcheck=False)
-        if self.colors is not None:
-            self.colors.resize(capacity * self._parent_layer.color_stride(), refcheck=False)
+        self.colors.resize(capacity * self._parent_layer.color_stride(), refcheck=False)
 
         self._array_capacity = capacity
 
-    def update(self, spr_list):
+    def update(self, spr_list, start_idx=0):
         self._size = len(spr_list)
         self._ensure_capacity(self._size)
-        for i, spr in enumerate(spr_list):
+        for i, spr in enumerate(spr_list[start_idx:]):
             spr.add_urself(
-                i,
+                i + start_idx,
                 self.vertices,
                 self.tex_coords,
                 self.colors,
@@ -147,8 +135,7 @@ class ImageDataArray:
     def pass_attributes_and_draw(self, engine):
         engine.set_vertices(self.vertices)
         engine.set_texture_coords(self.tex_coords)
-        if self.colors is not None:
-            engine.set_colors(self.colors)
+        engine.set_colors(self.colors)
         engine.draw_elements(self.indices, n=self._size * self._parent_layer.index_stride())
 
 
@@ -157,37 +144,43 @@ class ImageLayer(_Layer):
         Layer for ImageSprites.
     """
 
-    def __init__(self, layer_id, layer_z, sort_sprites=True, use_color=True):
-        _Layer.__init__(self, layer_id, layer_z, sort_sprites=sort_sprites, use_color=use_color)
+    def __init__(self, layer_id, layer_z):
+        _Layer.__init__(self, layer_id, layer_z)
 
-        self.images = []  # ordered list of image ids
-        self._image_set = set()  # set of image ids
+        self.opaque_images = []
+        self.trans_images = []
+        self._id_to_idx = {}
 
         self._last_known_last_modified_ticks = {}  # image id -> int
 
         self.opaque_data_arrays = ImageDataArray(self)
         self.trans_data_arrays = ImageDataArray(self)
 
-        self._dirty_sprites = []
-        self._to_remove = []
-        self._to_add = []
+        self._first_dirty_idx = 0
+        self._dirty_sprites = set()
+        self._to_remove = set()
+        self._to_add = set()
 
     def update(self, sprite_id, last_mod_time):
         assert_int(sprite_id)
-        if sprite_id in self._image_set:
+        if sprite_id in self._id_to_idx:
             if last_mod_time > self._last_known_last_modified_ticks[sprite_id]:
-                self._dirty_sprites.append(sprite_id)
+                self._dirty_sprites.add(sprite_id)
+
+                opaque_idx = self._id_to_idx[sprite_id]
+                if opaque_idx >= 0:
+                    self._first_dirty_idx = min(self._first_dirty_idx, opaque_idx)
         else:
-            self._image_set.add(sprite_id)
-            self._to_add.append(sprite_id)
+            self._id_to_idx[sprite_id] = -1
+            self._to_add.add(sprite_id)
 
         self._last_known_last_modified_ticks[sprite_id] = last_mod_time
 
     def remove(self, sprite_id):
         assert_int(sprite_id)
-        if sprite_id in self._image_set:
-            self._image_set.remove(sprite_id)
-            self._to_remove.append(sprite_id)
+        if sprite_id in self._id_to_idx:
+            del self._id_to_idx[sprite_id]
+            self._to_remove.add(sprite_id)
             del self._last_known_last_modified_ticks[sprite_id]
 
     def is_dirty(self):
@@ -208,47 +201,77 @@ class ImageLayer(_Layer):
     def color_stride(self):
         return 4 * 3
 
-    def populate_data_arrays(self, sprite_info_lookup):
-        opaques, trans = util.partition((sprite_info_lookup[idx].sprite for idx in self.images),
-                                        lambda spr: not spr.is_translucent())
+    def populate_data_arrays(self, opaque_ids, translucent_ids, sprite_info_lookup, first_dirty_opaque_idx=0):
         # order doesn't matter for opaque sprites
-        self.opaque_data_arrays.update(opaques)
+        opaques = [sprite_info_lookup[spr_id].sprite for spr_id in opaque_ids]
+        self.opaque_data_arrays.update(opaques, start_idx=first_dirty_opaque_idx)
 
-        # translucent sprites must be sorted for proper rendering
-        trans.sort(key=lambda spr: -spr.depth())
+        # translucent sprites should already be sorted (necessary for proper rendering)
+        trans = [sprite_info_lookup[spr_id].sprite for spr_id in translucent_ids]
         self.trans_data_arrays.update(trans)
 
     def rebuild(self, sprite_info_lookup):
+        first_dirty_idx = self._first_dirty_idx
         if len(self._to_remove) > 0:
-            # this is all here to handle the case where you add and remove a sprite on the same frame
             for sprite_id in self._to_remove:
-                if sprite_id in self._image_set:
-                    self._image_set.remove(sprite_id)
+                if sprite_id in self._id_to_idx:
+                    del self._id_to_idx[sprite_id]
                 if sprite_id in self._last_known_last_modified_ticks:
                     del self._last_known_last_modified_ticks[sprite_id]
 
-            util.remove_all_from_list_in_place(self.images, self._to_remove)
-            util.remove_all_from_list_in_place(self._to_add, self._to_remove)
+            self._to_add.difference_update(self._to_remove)
+            util.remove_all_from_list_in_place(self.trans_images, self._to_remove)
+
+            rm_idx = util.remove_all_from_list_in_place(self.opaque_images, self._to_remove)
+            if rm_idx >= 0:
+                first_dirty_idx = min(rm_idx, first_dirty_idx)
             self._to_remove.clear()
 
-        if len(self._to_add) > 0:
-            self.images.extend(self._to_add)
-            self._to_add.clear()
+        new_opaque_sprites = []
+        for spr_id in self._to_add:
+            if sprite_info_lookup[spr_id].sprite.is_translucent():
+                self.trans_images.append(spr_id)
+            else:
+                new_opaque_sprites.append(spr_id)
+        self._to_add.clear()
 
+        super_clean_sprites = self.opaque_images[0:first_dirty_idx]
+        dirty_opaque_sprites = []
+        clean_opaque_sprites = []
+        for i in range(first_dirty_idx, len(self.opaque_images)):
+            spr_id = self.opaque_images[i]
+            if spr_id not in self._dirty_sprites:
+                clean_opaque_sprites.append(spr_id)
+            elif sprite_info_lookup[spr_id].sprite.is_translucent():
+                self._id_to_idx[spr_id] = -1
+                self.trans_images.append(spr_id)  # opaque sprite became translucent
+            else:
+                dirty_opaque_sprites.append(spr_id)
         self._dirty_sprites.clear()
 
-        if self.is_sorted():
-            import random
-            random.shuffle(self.images)
+        # This is the point of all the convoluted logic above. We essentially want the static (aka 'super clean')
+        # sprites to percolate towards the beginning of the list so that we can skip over them when updating the
+        # data arrays. This way large number of static sprites can be kept in layers almost for free.
+        self.opaque_images = super_clean_sprites + clean_opaque_sprites + dirty_opaque_sprites + new_opaque_sprites
+        self._first_dirty_idx = len(self.opaque_images)
 
-        self.populate_data_arrays(sprite_info_lookup)
+        self.trans_images.sort(key=lambda x: -sprite_info_lookup[x].sprite.depth())
+
+        for idx in range(len(super_clean_sprites), len(self.opaque_images)):
+            self._id_to_idx[self.opaque_images[idx]] = idx
+
+        self.populate_data_arrays(self.opaque_images, self.trans_images, sprite_info_lookup,
+                                  first_dirty_opaque_idx=first_dirty_idx)
+
+        # if self.get_num_sprites() > 100:
+        #     print(f"INFO: Rebuilt {self.get_num_sprites()} sprites with a no-op rate of: "
+        #           f"{(first_dirty_idx + 1) / len(self.opaque_images)}")
 
     def render(self, engine):
-        if engine.is_opengl():
-            # split up like this to make it easier to find performance bottlenecks
-            self.set_client_states(True, engine)
-            self._set_uniforms(engine)
+        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
 
+        if engine.is_opengl():
+            self.set_client_states(True, engine)
             self.opaque_data_arrays.pass_attributes_and_draw(engine)
 
             engine.set_depth_write_enabled(False)
@@ -258,42 +281,32 @@ class ImageLayer(_Layer):
             self.set_client_states(False, engine)
         else:
             # compatibility mode
-            engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
-
-            all_sprites = [engine.sprite_info_lookup[spr_id].sprite for spr_id in self.images]
-            all_sprites.sort(key=lambda spr: -spr.depth())
+            all_sprites = [engine.sprite_info_lookup[spr_id].sprite for spr_id in self._id_to_idx]
+            all_sprites.sort(key=lambda sprite: -sprite.depth())
             for spr in all_sprites:
                 engine.blit_sprite(spr)
-
-    def _set_uniforms(self, engine):
-        engine.set_camera_2d(self.get_offset(), scale=[self.get_scale()] * 2)
 
     def set_client_states(self, enable, engine):
         engine.set_vertices_enabled(enable)
         engine.set_texture_coords_enabled(enable)
-        if self.is_color():
-            engine.set_colors_enabled(enable)
+        engine.set_colors_enabled(enable)
         engine.set_alpha_test_enabled(enable)
         engine.set_depth_test_enabled(enable)
 
-    def _draw_elements(self, engine):
-        engine.draw_elements(self.indices, n=self.get_num_sprites() * self.index_stride())
-
     def __contains__(self, uid):
-        return uid in self._image_set
+        return uid in self._id_to_idx
 
     def get_num_sprites(self):
-        return len(self.images)
+        return len(self._id_to_idx)
 
     def __repr__(self):
-        return "{}({}, {}, {}, {})".format(type(self).__name__, self.get_layer_id(), self.get_layer_z(),
-                                           self.is_sorted(), self.is_color())
+        return "{}({}, {})".format(type(self).__name__, self.get_layer_id(), self.get_layer_z())
 
 
 class PolygonLayer(ImageLayer):
 
-    def __init__(self, layer_id, layer_z, sort_sprites=True):
-        ImageLayer.__init__(self, layer_id, layer_z, sort_sprites=sort_sprites, use_color=True)
+    def __init__(self, layer_id, layer_z):
+        ImageLayer.__init__(self, layer_id, layer_z)
 
     def accepts_sprite_type(self, sprite_type):
         return sprite_type == sprites.SpriteTypes.TRIANGLE

@@ -48,7 +48,7 @@ class Camera3D:
 class ThreeDeeLayer(layers.ImageLayer):
 
     def __init__(self, layer_id, layer_z):
-        super().__init__(layer_id, layer_z, sort_sprites=False, use_color=False)
+        super().__init__(layer_id, layer_z)
         self.camera = Camera3D()
 
         self.vertices = numpy.array([], dtype=float)
@@ -61,12 +61,12 @@ class ThreeDeeLayer(layers.ImageLayer):
     def accepts_sprite_type(self, sprite_type):
         return sprite_type == sprites.SpriteTypes.THREE_DEE
 
-    def populate_data_arrays(self, sprite_info_lookup):
+    def populate_data_arrays(self, opaque_ids, translucent_ids, sprite_info_lookup, first_dirty_opaque_idx=0):
         pass  # we don't actually use these
 
     def get_sprites_grouped_by_model_id(self, engine):
         res = {}  # model_id -> list of Sprite3D
-        for sprite_id in self.images:
+        for sprite_id in self.opaque_images:
             spr_3d = engine.sprite_info_lookup[sprite_id].sprite
             if spr_3d.model().get_model_id() not in res:
                 res[spr_3d.model().get_model_id()] = []
@@ -90,10 +90,14 @@ class ThreeDeeLayer(layers.ImageLayer):
             for spr_3d in model_ids_to_sprites[model_id]:
                 self._set_uniforms_for_sprite(engine, spr_3d)
                 glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, self.indices)
+
         self.set_client_states(False, engine)
 
     def set_client_states(self, enable, engine):
-        super().set_client_states(enable, engine)
+        engine.set_vertices_enabled(enable)
+        engine.set_texture_coords_enabled(enable)
+        engine.set_alpha_test_enabled(enable)
+        engine.set_depth_test_enabled(enable)
 
         if enable:
             glEnable(GL_DEPTH_TEST)
